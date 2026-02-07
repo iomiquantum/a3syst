@@ -5,12 +5,16 @@ import {
   Users,
   Calendar,
   MessageSquare,
-  FileText,
   Settings,
   LogOut,
   ChevronLeft,
   Bell,
   Search,
+  DollarSign,
+  UserCog,
+  Building2,
+  Stethoscope,
+  Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -21,13 +25,20 @@ interface AppLayoutProps {
   children: ReactNode;
 }
 
-const navItems = [
+const mainNav = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Users, label: "Pacientes", path: "/pacientes" },
   { icon: Calendar, label: "Agenda", path: "/agenda" },
+  { icon: DollarSign, label: "Ventas", path: "/ventas" },
   { icon: MessageSquare, label: "Mensajes", path: "/mensajes" },
-  { icon: FileText, label: "Historial", path: "/historial" },
-  { icon: Settings, label: "Configuración", path: "/configuracion" },
+];
+
+const configNav = [
+  { icon: Building2, label: "Sucursales", path: "/configuracion/sucursales" },
+  { icon: Stethoscope, label: "Tratamientos", path: "/configuracion/tratamientos" },
+  { icon: Briefcase, label: "Profesionales", path: "/configuracion/profesionales" },
+  { icon: UserCog, label: "Usuarios", path: "/configuracion/usuarios" },
+  { icon: Settings, label: "Ajustes", path: "/configuracion/ajustes" },
 ];
 
 const AppLayout = ({ children }: AppLayoutProps) => {
@@ -35,38 +46,40 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
 
+  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + "/");
+
   return (
     <div className="min-h-screen flex bg-background">
-      {/* Sidebar */}
       <aside
         className={cn(
-          "h-screen sticky top-0 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300",
+          "h-screen sticky top-0 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 overflow-hidden",
           collapsed ? "w-[72px]" : "w-[250px]"
         )}
       >
-        {/* Logo */}
         <div className="h-16 flex items-center px-5 border-b border-sidebar-border">
           <div className="flex items-center gap-2 overflow-hidden">
             <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shrink-0">
-              <span className="text-primary-foreground font-bold text-sm">C</span>
+              <span className="text-primary-foreground font-bold text-[10px]">IO</span>
             </div>
             {!collapsed && (
-              <span className="text-lg font-semibold text-foreground tracking-tight">clinera</span>
+              <div>
+                <span className="text-lg font-bold text-foreground tracking-tight leading-none">IOMI</span>
+                <span className="text-[9px] block text-muted-foreground tracking-[0.2em] leading-none">CLÍNICAS</span>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 py-4 px-3 space-y-1">
-          {navItems.map(({ icon: Icon, label, path }) => {
-            const active = location.pathname === path;
-            return (
+        <nav className="flex-1 py-4 px-3 space-y-6 overflow-y-auto">
+          <div className="space-y-1">
+            {!collapsed && <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2">Principal</p>}
+            {mainNav.map(({ icon: Icon, label, path }) => (
               <button
                 key={path}
                 onClick={() => navigate(path)}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  active
+                  isActive(path)
                     ? "bg-sidebar-accent text-sidebar-accent-foreground"
                     : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                 )}
@@ -74,11 +87,29 @@ const AppLayout = ({ children }: AppLayoutProps) => {
                 <Icon className="w-5 h-5 shrink-0" />
                 {!collapsed && <span>{label}</span>}
               </button>
-            );
-          })}
+            ))}
+          </div>
+
+          <div className="space-y-1">
+            {!collapsed && <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2">Configuración</p>}
+            {configNav.map(({ icon: Icon, label, path }) => (
+              <button
+                key={path}
+                onClick={() => navigate(path)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                  isActive(path)
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                )}
+              >
+                <Icon className="w-5 h-5 shrink-0" />
+                {!collapsed && <span>{label}</span>}
+              </button>
+            ))}
+          </div>
         </nav>
 
-        {/* Bottom */}
         <div className="p-3 border-t border-sidebar-border space-y-1">
           <button
             onClick={() => setCollapsed(!collapsed)}
@@ -97,9 +128,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         </div>
       </aside>
 
-      {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen">
-        {/* Top bar */}
         <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-10">
           <div className="relative w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -112,21 +141,16 @@ const AppLayout = ({ children }: AppLayoutProps) => {
             </button>
             <div className="flex items-center gap-3">
               <Avatar className="w-8 h-8">
-                <AvatarFallback className="gradient-primary text-primary-foreground text-xs font-semibold">
-                  VF
-                </AvatarFallback>
+                <AvatarFallback className="gradient-primary text-primary-foreground text-xs font-semibold">VF</AvatarFallback>
               </Avatar>
-              {!collapsed && (
-                <div className="hidden md:block">
-                  <p className="text-sm font-medium text-foreground">VitalFarme</p>
-                  <p className="text-xs text-muted-foreground">Administrador</p>
-                </div>
-              )}
+              <div className="hidden md:block">
+                <p className="text-sm font-medium text-foreground">VitalFarme</p>
+                <p className="text-xs text-muted-foreground">Administrador</p>
+              </div>
             </div>
           </div>
         </header>
 
-        {/* Page content */}
         <main className="flex-1 p-6">{children}</main>
       </div>
     </div>
