@@ -4,49 +4,17 @@ import {
   TrendingUp,
   Clock,
   ArrowUpRight,
-  ArrowDownRight,
   MessageSquare,
+  DollarSign,
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const stats = [
-  {
-    label: "Pacientes Totales",
-    value: "1,248",
-    change: "+12%",
-    trend: "up" as const,
-    icon: Users,
-    color: "text-primary",
-    bg: "bg-primary/10",
-  },
-  {
-    label: "Citas Hoy",
-    value: "24",
-    change: "+3",
-    trend: "up" as const,
-    icon: Calendar,
-    color: "text-info",
-    bg: "bg-info/10",
-  },
-  {
-    label: "Ingresos del Mes",
-    value: "$45,200",
-    change: "+8.2%",
-    trend: "up" as const,
-    icon: TrendingUp,
-    color: "text-success",
-    bg: "bg-success/10",
-  },
-  {
-    label: "Mensajes Pendientes",
-    value: "7",
-    change: "-2",
-    trend: "down" as const,
-    icon: MessageSquare,
-    color: "text-warning",
-    bg: "bg-warning/10",
-  },
+  { label: "Pacientes Totales", value: "1,248", change: "+12%", icon: Users, color: "text-primary", bg: "bg-primary/10" },
+  { label: "Citas Hoy", value: "24", change: "+3", icon: Calendar, color: "text-info", bg: "bg-info/10" },
+  { label: "Ingresos del Mes", value: "$45,200", change: "+8.2%", icon: DollarSign, color: "text-success", bg: "bg-success/10" },
+  { label: "Mensajes Pendientes", value: "7", change: "-2", icon: MessageSquare, color: "text-warning", bg: "bg-warning/10" },
 ];
 
 const upcomingAppointments = [
@@ -71,10 +39,9 @@ const Dashboard = () => {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">Resumen general de tu clínica</p>
+          <p className="text-muted-foreground">Resumen general de tu clínica — IOMI Clínicas</p>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((stat) => (
             <Card key={stat.label} className="shadow-card hover:shadow-card-hover transition-shadow">
@@ -84,11 +51,7 @@ const Dashboard = () => {
                     <p className="text-sm text-muted-foreground">{stat.label}</p>
                     <p className="text-2xl font-bold text-foreground mt-1">{stat.value}</p>
                     <div className="flex items-center gap-1 mt-2">
-                      {stat.trend === "up" ? (
-                        <ArrowUpRight className="w-3.5 h-3.5 text-success" />
-                      ) : (
-                        <ArrowDownRight className="w-3.5 h-3.5 text-success" />
-                      )}
+                      <ArrowUpRight className="w-3.5 h-3.5 text-success" />
                       <span className="text-xs font-medium text-success">{stat.change}</span>
                       <span className="text-xs text-muted-foreground">vs mes anterior</span>
                     </div>
@@ -102,9 +65,7 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* Bottom grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Upcoming appointments */}
           <Card className="lg:col-span-2 shadow-card">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -115,10 +76,7 @@ const Dashboard = () => {
             <CardContent>
               <div className="space-y-3">
                 {upcomingAppointments.map((apt, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-muted/50 transition-colors"
-                  >
+                  <div key={i} className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-muted/50 transition-colors">
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Clock className="w-4 h-4" />
@@ -129,22 +87,13 @@ const Dashboard = () => {
                         <p className="text-xs text-muted-foreground">{apt.type}</p>
                       </div>
                     </div>
-                    <span
-                      className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                        apt.status === "confirmada"
-                          ? "bg-success/10 text-success"
-                          : "bg-warning/10 text-warning"
-                      }`}
-                    >
-                      {apt.status}
-                    </span>
+                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${apt.status === "confirmada" ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>{apt.status}</span>
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
 
-          {/* Recent patients */}
           <Card className="shadow-card">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -155,14 +104,9 @@ const Dashboard = () => {
             <CardContent>
               <div className="space-y-3">
                 {recentPatients.map((patient, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                  >
+                  <div key={i} className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
                     <div className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center shrink-0">
-                      <span className="text-xs font-semibold text-primary-foreground">
-                        {patient.initials}
-                      </span>
+                      <span className="text-xs font-semibold text-primary-foreground">{patient.initials}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{patient.name}</p>

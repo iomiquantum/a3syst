@@ -19,15 +19,16 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen flex bg-card">
-      {/* Left - Form */}
       <div className="flex-1 flex flex-col justify-center px-8 md:px-20 lg:px-32">
-        {/* Logo */}
         <div className="mb-12">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">C</span>
+            <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-sm">IO</span>
             </div>
-            <span className="text-xl font-semibold text-foreground tracking-tight">clinera</span>
+            <div>
+              <span className="text-xl font-bold text-foreground tracking-tight">IOMI</span>
+              <span className="text-xs block text-muted-foreground -mt-1 tracking-widest">CLÍNICAS</span>
+            </div>
           </div>
         </div>
 
@@ -106,12 +107,9 @@ const LoginPage = () => {
         </div>
       </div>
 
-      {/* Right - Chat Preview */}
       <div className="hidden lg:flex flex-1 items-center justify-center gradient-subtle p-12">
         <div className="w-full max-w-md">
-          {/* Mock chat interface */}
           <div className="bg-card rounded-2xl shadow-elevated p-6 space-y-4">
-            {/* Chat header mock */}
             <div className="flex gap-2">
               {[...Array(6)].map((_, i) => (
                 <div key={i} className="h-8 rounded-md bg-muted flex-1" />
@@ -122,18 +120,13 @@ const LoginPage = () => {
                 <div key={i} className="h-8 rounded-md bg-muted flex-1" />
               ))}
             </div>
-
-            {/* Chat messages */}
             <div className="space-y-3 pt-4">
               <div>
                 <div className="bg-muted rounded-xl rounded-bl-sm p-3 max-w-[80%]">
-                  <p className="text-sm text-foreground">
-                    Hola, ¿te gustaría confirmar tu cita para mañana?
-                  </p>
+                  <p className="text-sm text-foreground">Hola, ¿te gustaría confirmar tu cita para mañana?</p>
                 </div>
                 <span className="text-xs text-muted-foreground mt-1 block">10:28</span>
               </div>
-
               <div className="flex justify-end">
                 <div>
                   <div className="gradient-primary rounded-xl rounded-br-sm p-3">
@@ -142,24 +135,18 @@ const LoginPage = () => {
                   <span className="text-xs text-muted-foreground mt-1 block text-right">10:30 ✓✓</span>
                 </div>
               </div>
-
               <div>
                 <div className="bg-muted rounded-xl rounded-bl-sm p-3 max-w-[80%]">
-                  <p className="text-sm text-foreground">
-                    Listo. Envié el recordatorio por WhatsApp 📅
-                  </p>
+                  <p className="text-sm text-foreground">Listo. Envié el recordatorio por WhatsApp 📅</p>
                 </div>
                 <span className="text-xs text-muted-foreground mt-1 block">10:31</span>
               </div>
-
               <div className="flex items-center gap-1 text-muted-foreground">
                 <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" />
-                <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse delay-100" />
-                <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse delay-200" />
+                <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" />
               </div>
             </div>
-
-            {/* Mock dashboard cards */}
             <div className="grid grid-cols-3 gap-2 pt-2">
               {[...Array(3)].map((_, i) => (
                 <div key={i} className="h-16 rounded-lg bg-primary/20" />
