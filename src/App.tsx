@@ -3,7 +3,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
+import { ClinicProvider } from "@/hooks/useClinic";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 import Dashboard from "./pages/Dashboard";
 import PacientesPage from "./pages/PacientesPage";
 import AgendaPage from "./pages/AgendaPage";
@@ -22,20 +26,25 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<LoginPage />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/pacientes" element={<PacientesPage />} />
-          <Route path="/agenda" element={<AgendaPage />} />
-          <Route path="/ventas" element={<VentasPage />} />
-          <Route path="/mensajes" element={<Dashboard />} />
-          <Route path="/configuracion/sucursales" element={<SucursalesPage />} />
-          <Route path="/configuracion/tratamientos" element={<TratamientosPage />} />
-          <Route path="/configuracion/profesionales" element={<ProfesionalesPage />} />
-          <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
-          <Route path="/configuracion/ajustes" element={<Dashboard />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <ClinicProvider>
+            <Routes>
+              <Route path="/" element={<LoginPage />} />
+              <Route path="/registro" element={<RegisterPage />} />
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/pacientes" element={<ProtectedRoute><PacientesPage /></ProtectedRoute>} />
+              <Route path="/agenda" element={<ProtectedRoute><AgendaPage /></ProtectedRoute>} />
+              <Route path="/ventas" element={<ProtectedRoute><VentasPage /></ProtectedRoute>} />
+              <Route path="/mensajes" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/configuracion/sucursales" element={<ProtectedRoute><SucursalesPage /></ProtectedRoute>} />
+              <Route path="/configuracion/tratamientos" element={<ProtectedRoute><TratamientosPage /></ProtectedRoute>} />
+              <Route path="/configuracion/profesionales" element={<ProtectedRoute><ProfesionalesPage /></ProtectedRoute>} />
+              <Route path="/configuracion/usuarios" element={<ProtectedRoute><UsuariosPage /></ProtectedRoute>} />
+              <Route path="/configuracion/ajustes" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </ClinicProvider>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
