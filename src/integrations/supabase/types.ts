@@ -297,6 +297,50 @@ export type Database = {
           },
         ]
       }
+      channel_credentials: {
+        Row: {
+          channel: string
+          clinic_id: string
+          created_at: string
+          credentials: Json
+          id: string
+          is_active: boolean
+          setup_completed: boolean
+          updated_at: string
+          webhook_url: string | null
+        }
+        Insert: {
+          channel: string
+          clinic_id: string
+          created_at?: string
+          credentials?: Json
+          id?: string
+          is_active?: boolean
+          setup_completed?: boolean
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Update: {
+          channel?: string
+          clinic_id?: string
+          created_at?: string
+          credentials?: Json
+          id?: string
+          is_active?: boolean
+          setup_completed?: boolean
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_credentials_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinics: {
         Row: {
           address: string | null
