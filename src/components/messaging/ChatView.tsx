@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Smile, Paperclip, Bot } from "lucide-react";
+import { Send, Smile, Paperclip, Bot, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Conversation, Message } from "@/hooks/useMessaging";
 import ChannelIcon from "@/components/messaging/ChannelIcon";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { useClinic } from "@/hooks/useClinic";
+import { toast } from "sonner";
 
 interface Props {
   conversation: Conversation;
@@ -17,7 +19,9 @@ interface Props {
 
 const ChatView = ({ conversation, messages, sending, onSend }: Props) => {
   const [input, setInput] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { clinicId } = useClinic();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -35,6 +39,25 @@ const ChatView = ({ conversation, messages, sending, onSend }: Props) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+  };
+
+  const handleAIReply = async () => {
+    if (!clinicId || aiLoading) return;
+    setAiLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-agent-reply", {
+        body: { conversation_id: conversation.id, clinic_id: clinicId },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+      }
+      // The realtime subscription will pick up the new message
+    } catch (e: any) {
+      toast.error(e.message || "Error al generar respuesta IA");
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -76,7 +99,7 @@ const ChatView = ({ conversation, messages, sending, onSend }: Props) => {
         </div>
         <div className="ml-auto flex items-center gap-2">
           {conversation.chatbot_active && (
-            <span className="flex items-center gap-1 text-xs bg-success/10 text-success px-2 py-1 rounded-full">
+            <span className="flex items-center gap-1 text-xs bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] px-2 py-1 rounded-full">
               <Bot className="w-3 h-3" /> Chatbot ON
             </span>
           )}
@@ -122,11 +145,18 @@ const ChatView = ({ conversation, messages, sending, onSend }: Props) => {
       <div className="border-t border-border bg-card p-3 shrink-0">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-success"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
+            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-[hsl(var(--success))]"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
             {conversation.contact?.phone}
           </span>
-          <Button variant="outline" size="sm" className="h-7 text-xs ml-auto">
-            <Bot className="w-3 h-3 mr-1" /> Asistente IA
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs ml-auto"
+            onClick={handleAIReply}
+            disabled={aiLoading}
+          >
+            {aiLoading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Bot className="w-3 h-3 mr-1" />}
+            {aiLoading ? "Pensando..." : "Respuesta IA"}
           </Button>
         </div>
         <div className="flex items-end gap-2">
