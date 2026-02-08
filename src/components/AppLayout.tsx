@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Users, Calendar, MessageSquare, Settings,
   LogOut, ChevronLeft, Bell, Search, DollarSign, UserCog,
   Building2, Stethoscope, Briefcase, ShieldCheck, Globe, PhoneCall, Megaphone, Bot,
+  Sun, Moon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -13,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/hooks/useAuth";
 import { useClinic } from "@/hooks/useClinic";
 import SidebarTooltip from "@/components/SidebarTooltip";
+import { useTheme } from "@/hooks/useTheme";
 
 interface AppLayoutProps { children: ReactNode; }
 
@@ -42,6 +44,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const { user, signOut } = useAuth();
   const { clinicName, isSuperAdmin, allClinics, selectClinic, clinicId } = useClinic();
+  const { theme, toggleTheme } = useTheme();
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + "/");
 
@@ -109,6 +112,12 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         </nav>
 
         <div className="p-2 border-t border-sidebar-border space-y-1">
+          <SidebarTooltip label={theme === "dark" ? "Modo claro" : "Modo oscuro"} show={collapsed}>
+            <button onClick={toggleTheme} className={cn("w-full flex items-center gap-3 rounded-lg text-sm text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all", collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5")}>
+              {theme === "dark" ? <Sun className="w-5 h-5 shrink-0" /> : <Moon className="w-5 h-5 shrink-0" />}
+              {!collapsed && <span>{theme === "dark" ? "Modo claro" : "Modo oscuro"}</span>}
+            </button>
+          </SidebarTooltip>
           <SidebarTooltip label={collapsed ? "Expandir" : "Colapsar"} show={collapsed}>
             <button onClick={() => setCollapsed(!collapsed)} className={cn("w-full flex items-center gap-3 rounded-lg text-sm text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all", collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5")}>
               <ChevronLeft className={cn("w-5 h-5 shrink-0 transition-transform", collapsed && "rotate-180")} />
