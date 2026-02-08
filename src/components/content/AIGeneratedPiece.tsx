@@ -69,12 +69,48 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
 
   const isApproved = piece.status === "approved";
 
+  const resizeImage = (blob: Blob, targetW: number, targetH: number): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = targetW;
+        canvas.height = targetH;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(blob); return; }
+        // Draw image covering the full canvas (cover mode)
+        const srcRatio = img.width / img.height;
+        const dstRatio = targetW / targetH;
+        let sx = 0, sy = 0, sw = img.width, sh = img.height;
+        if (srcRatio > dstRatio) {
+          sw = img.height * dstRatio;
+          sx = (img.width - sw) / 2;
+        } else {
+          sh = img.width / dstRatio;
+          sy = (img.height - sh) / 2;
+        }
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH);
+        canvas.toBlob((resized) => {
+          resolve(resized || blob);
+        }, "image/png", 1.0);
+      };
+      img.onerror = () => resolve(blob);
+      img.crossOrigin = "anonymous";
+      img.src = URL.createObjectURL(blob);
+    });
+  };
+
   const handleDownloadImage = async () => {
     if (!piece.imageUrl) return;
     setDownloading(true);
     try {
       const response = await fetch(piece.imageUrl);
-      const blob = await response.blob();
+      let blob = await response.blob();
+
+      // Resize to target dimensions if specified
+      if (sizeW && sizeH) {
+        blob = await resizeImage(blob, sizeW, sizeH);
+      }
 
       // Build descriptive filename
       const shortDesc = (piece.copy || piece.instruction || "imagen")
@@ -158,7 +194,7 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
               disabled={downloading}
             >
               {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-              Descargar HD
+              {sizeW && sizeH ? `Descargar ${sizeW}×${sizeH}` : "Descargar HD"}
             </Button>
           </div>
         )}
@@ -172,7 +208,7 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
               disabled={downloading}
             >
               {downloading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
-              Descargar HD
+              {sizeW && sizeH ? `${sizeW}×${sizeH}` : "HD"}
             </Button>
           </div>
         )}
