@@ -33,6 +33,25 @@ serve(async (req) => {
       });
     }
 
+    // Dedup: check if there's already a recent outbound message (within last 5 seconds)
+    const { data: recentOutbound } = await supabase
+      .from("messages")
+      .select("id, created_at")
+      .eq("conversation_id", conversation_id)
+      .eq("direction", "outbound")
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (recentOutbound && recentOutbound.length > 0) {
+      const lastOutbound = new Date(recentOutbound[0].created_at).getTime();
+      const now = Date.now();
+      if (now - lastOutbound < 5000) {
+        return new Response(JSON.stringify({ skipped: true, reason: "duplicate prevention" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Fetch recent messages for context (last 20)
     const { data: recentMessages } = await supabase
       .from("messages")
