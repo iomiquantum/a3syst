@@ -10,7 +10,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { conversation_id, clinic_id } = await req.json();
+    const { conversation_id, clinic_id, triggered_by } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
@@ -108,6 +108,10 @@ IMPORTANTE:
 
     const aiData = await aiResponse.json();
     const reply = aiData.choices?.[0]?.message?.content || "Lo siento, no pude generar una respuesta.";
+    const usage = aiData.usage || {};
+    const tokensInput = usage.prompt_tokens || 0;
+    const tokensOutput = usage.completion_tokens || 0;
+    const modelUsed = aiData.model || "google/gemini-3-flash-preview";
 
     // Save the AI reply as an outbound message
     const { data: savedMsg, error: msgError } = await supabase.from("messages").insert({
@@ -126,6 +130,16 @@ IMPORTANTE:
       last_message_at: new Date().toISOString(),
       last_message_preview: reply.substring(0, 100),
     }).eq("id", conversation_id);
+
+    // Log usage
+    await supabase.from("ai_agent_usage").insert({
+      clinic_id,
+      conversation_id,
+      tokens_input: tokensInput,
+      tokens_output: tokensOutput,
+      model: modelUsed,
+      triggered_by: triggered_by || "manual",
+    });
 
     return new Response(JSON.stringify({ reply, message: savedMsg }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

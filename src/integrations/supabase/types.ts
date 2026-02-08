@@ -67,6 +67,54 @@ export type Database = {
           },
         ]
       }
+      ai_agent_usage: {
+        Row: {
+          clinic_id: string
+          conversation_id: string
+          created_at: string
+          id: string
+          model: string
+          tokens_input: number
+          tokens_output: number
+          triggered_by: string
+        }
+        Insert: {
+          clinic_id: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          model?: string
+          tokens_input?: number
+          tokens_output?: number
+          triggered_by?: string
+        }
+        Update: {
+          clinic_id?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          model?: string
+          tokens_input?: number
+          tokens_output?: number
+          triggered_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agent_usage_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_usage_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           branch_id: string | null

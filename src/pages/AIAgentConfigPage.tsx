@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useAIAgentConfig, ServiceItem } from "@/hooks/useAIAgentConfig";
 import { Skeleton } from "@/components/ui/skeleton";
+import AIUsageHistory from "@/components/ai/AIUsageHistory";
 
 const AIAgentConfigPage = () => {
   const { config, setConfig, loading, saving, save } = useAIAgentConfig();
@@ -191,6 +192,10 @@ ${config.greeting}`}
             </div>
           </CardContent>
         </Card>
+
+        {/* Usage History */}
+        <Separator />
+        <AIUsageHistory />
       </div>
     </AppLayout>
   );
