@@ -56,8 +56,10 @@ const KanbanBoard = ({ contacts, selected, onSelect, onMoveStage }: Props) => {
     setDraggingId(null);
   };
 
+  const columnCount = FUNNEL_STAGES.length;
+
   return (
-    <div className="flex gap-3 h-full p-4 overflow-x-auto">
+    <div className="grid h-full p-4 gap-3 overflow-x-auto" style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(200px, 1fr))` }}>
       {FUNNEL_STAGES.map(stage => {
         const stageContacts = contactsByStage[stage.value] || [];
         const isDragOver = dragOverStage === stage.value;
@@ -66,7 +68,7 @@ const KanbanBoard = ({ contacts, selected, onSelect, onMoveStage }: Props) => {
           <div
             key={stage.value}
             className={cn(
-              "flex flex-col w-[260px] min-w-[260px] rounded-lg border border-border bg-muted/30 transition-colors",
+              "flex flex-col min-w-0 rounded-lg border border-border bg-muted/30 transition-colors",
               isDragOver && "border-primary bg-primary/5"
             )}
             onDragOver={e => handleDragOver(e, stage.value)}
