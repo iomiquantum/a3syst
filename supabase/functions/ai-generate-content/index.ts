@@ -1,11 +1,30 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+// Map width/height to closest Gemini-supported aspect ratio
+function getClosestAspectRatio(w?: number, h?: number): string | null {
+  if (!w || !h) return null;
+  const ratio = w / h;
+  const supported = [
+    { r: 1,        label: "1:1" },
+    { r: 3 / 4,    label: "3:4" },
+    { r: 4 / 3,    label: "4:3" },
+    { r: 9 / 16,   label: "9:16" },
+    { r: 16 / 9,   label: "16:9" },
+  ];
+  let closest = supported[0];
+  let minDiff = Math.abs(ratio - closest.r);
+  for (const s of supported) {
+    const diff = Math.abs(ratio - s.r);
+    if (diff < minDiff) { closest = s; minDiff = diff; }
+  }
+  return closest.label;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -56,8 +75,13 @@ Reglas:
 
     // --- IMAGE GENERATION ---
     if (type === "image") {
-      const sizeInstruction = width && height ? ` The image MUST be designed for exactly ${width}x${height} pixels. Compose and layout all elements for this exact aspect ratio and dimensions.` : "";
+      const sizeInstruction = width && height
+        ? ` The image MUST be designed for exactly ${width}x${height} pixels. Compose and layout all elements for this exact aspect ratio and dimensions.`
+        : "";
       const imagePrompt = `${prompt}${sizeInstruction}`;
+      const aspectRatio = getClosestAspectRatio(width, height);
+
+      console.log("Image generation - requested:", width, "x", height, "-> aspectRatio:", aspectRatio);
 
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -69,6 +93,7 @@ Reglas:
           model: "google/gemini-2.5-flash-image",
           messages: [{ role: "user", content: imagePrompt }],
           modalities: ["image", "text"],
+          ...(aspectRatio ? { image_generation_config: { aspectRatio } } : {}),
         }),
       });
 
@@ -94,7 +119,6 @@ Reglas:
       const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-      // Decode base64 image
       const base64Content = imageData.replace(/^data:image\/\w+;base64,/, "");
       const imageBytes = Uint8Array.from(atob(base64Content), (c) => c.charCodeAt(0));
       
@@ -105,7 +129,6 @@ Reglas:
 
       if (uploadError) {
         console.error("Upload error:", uploadError);
-        // Return base64 directly as fallback
         return new Response(JSON.stringify({ content: textContent, imageUrl: imageData }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
