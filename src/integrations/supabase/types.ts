@@ -145,6 +145,57 @@ export type Database = {
           },
         ]
       }
+      call_logs: {
+        Row: {
+          call_type: string
+          clinic_id: string
+          contact_id: string
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          logged_by: string | null
+          notes: string | null
+          outcome: string
+        }
+        Insert: {
+          call_type?: string
+          clinic_id: string
+          contact_id: string
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          logged_by?: string | null
+          notes?: string | null
+          outcome?: string
+        }
+        Update: {
+          call_type?: string
+          clinic_id?: string
+          contact_id?: string
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          logged_by?: string | null
+          notes?: string | null
+          outcome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_logs_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinics: {
         Row: {
           address: string | null
