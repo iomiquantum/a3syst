@@ -14,6 +14,229 @@ export type Database = {
   }
   public: {
     Tables: {
+      ads_accounts: {
+        Row: {
+          clinic_id: string
+          config: Json
+          connected_at: string | null
+          created_at: string
+          credentials: Json
+          id: string
+          platform: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          config?: Json
+          connected_at?: string | null
+          created_at?: string
+          credentials?: Json
+          id?: string
+          platform: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          config?: Json
+          connected_at?: string | null
+          created_at?: string
+          credentials?: Json
+          id?: string
+          platform?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_accounts_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ads_business_briefs: {
+        Row: {
+          answers: Json
+          audio_url: string | null
+          business_name: string | null
+          clinic_id: string
+          created_at: string
+          description: string | null
+          id: string
+          industry: string | null
+          is_active: boolean
+          locations: Json
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json
+          audio_url?: string | null
+          business_name?: string | null
+          clinic_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          industry?: string | null
+          is_active?: boolean
+          locations?: Json
+          name?: string
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          audio_url?: string | null
+          business_name?: string | null
+          clinic_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          industry?: string | null
+          is_active?: boolean
+          locations?: Json
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_business_briefs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ads_campaigns: {
+        Row: {
+          account_id: string | null
+          clinic_id: string
+          created_at: string
+          creatives_count: number
+          currency: string
+          daily_budget: number
+          external_campaign_id: string | null
+          id: string
+          metrics: Json
+          name: string
+          platform: string
+          status: string
+          template_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id?: string | null
+          clinic_id: string
+          created_at?: string
+          creatives_count?: number
+          currency?: string
+          daily_budget?: number
+          external_campaign_id?: string | null
+          id?: string
+          metrics?: Json
+          name: string
+          platform?: string
+          status?: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string | null
+          clinic_id?: string
+          created_at?: string
+          creatives_count?: number
+          currency?: string
+          daily_budget?: number
+          external_campaign_id?: string | null
+          id?: string
+          metrics?: Json
+          name?: string
+          platform?: string
+          status?: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_campaigns_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "ads_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ads_campaigns_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ads_campaigns_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "ads_strategy_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ads_strategy_templates: {
+        Row: {
+          channel: string
+          clinic_id: string | null
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          is_global: boolean
+          media_count: number
+          media_type: string
+          min_budget: number
+          name: string
+          objective: string
+        }
+        Insert: {
+          channel: string
+          clinic_id?: string | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          is_global?: boolean
+          media_count?: number
+          media_type: string
+          min_budget?: number
+          name: string
+          objective?: string
+        }
+        Update: {
+          channel?: string
+          clinic_id?: string | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          is_global?: boolean
+          media_count?: number
+          media_type?: string
+          min_budget?: number
+          name?: string
+          objective?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_strategy_templates_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_agent_config: {
         Row: {
           agent_name: string
