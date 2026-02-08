@@ -175,7 +175,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clinic_id: CLINIC_ID,
-          name: 'Visitante',
+          conversation_id: conversationId,
           message: msg,
         }),
       });
