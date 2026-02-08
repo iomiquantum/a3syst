@@ -75,6 +75,7 @@ const ContentAIGenerator = ({ content }: Props) => {
     archetype: string; brand_voice: string; persuasion_trigger: string; generation: string; advanced_tech: string;
   } | null>(null);
   const [imageFromCopy, setImageFromCopy] = useState(false);
+  const [imageModel, setImageModel] = useState<"flash" | "pro">("pro");
   const [generating, setGenerating] = useState(false);
   const [pieces, setPieces] = useState<GeneratedPiece[]>([]);
   const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
@@ -154,7 +155,7 @@ const ContentAIGenerator = ({ content }: Props) => {
       const results: GeneratedPiece[] = [];
       for (let i = 0; i < count; i++) {
         const piece = await generateVariationWithCopyBasedImage(
-          mainPrompt, i + 1, count, tone, platform, lengthInfo, sizeInfo, selectedStrategy, extraNotes, imgTpl, copyTpl
+          mainPrompt, i + 1, count, tone, platform, lengthInfo, sizeInfo, selectedStrategy, extraNotes, imgTpl, copyTpl, imageModel
         ).catch(err => {
           console.error(`Variación ${i + 1} falló:`, err);
           toast.error(`Error generando variación #${i + 1}`);
@@ -166,7 +167,7 @@ const ContentAIGenerator = ({ content }: Props) => {
     } else {
       const results = await Promise.allSettled(
         Array.from({ length: count }, (_, i) =>
-          generateVariation(mainPrompt, i + 1, count, tone, platform, lengthInfo, sizeInfo, selectedStrategy, extraNotes, imgTpl, copyTpl)
+          generateVariation(mainPrompt, i + 1, count, tone, platform, lengthInfo, sizeInfo, selectedStrategy, extraNotes, imgTpl, copyTpl, imageModel)
         )
       );
       setPieces(results.map((r, i) => {
@@ -207,7 +208,7 @@ const ContentAIGenerator = ({ content }: Props) => {
     }
     try {
       const { data, error } = await supabase.functions.invoke("ai-generate-content", {
-        body: { prompt, tone, platform, type: "image", width: sizeInfo?.w, height: sizeInfo?.h },
+        body: { prompt, tone, platform, type: "image", width: sizeInfo?.w, height: sizeInfo?.h, imageModel },
       });
       if (error) throw error;
       setPieces(prev => prev.map(p => (p.id === id ? { ...p, imageUrl: data?.imageUrl || p.imageUrl, imagePrompt: prompt } : p)));
@@ -433,6 +434,35 @@ const ContentAIGenerator = ({ content }: Props) => {
         )}
       </div>
 
+      {/* Image model selector */}
+      <div className="p-4 rounded-xl border border-border bg-card space-y-3">
+        <Label className="text-sm font-medium">Modelo de generación de imagen</Label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setImageModel("flash")}
+            className={`p-3 rounded-lg border text-left transition-all ${imageModel === "flash" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-sm font-semibold">⚡ Flash</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-600 border border-green-500/20">Económico</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Rápido y barato. Genera imágenes cuadradas (~1024px). Al descargar puedes elegir dimensiones exactas o cuadrada.</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => setImageModel("pro")}
+            className={`p-3 rounded-lg border text-left transition-all ${imageModel === "pro" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-sm font-semibold">🎨 Pro</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">Mayor costo</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Mayor calidad. Genera imágenes en las proporciones nativas solicitadas. Más lento y consume más tokens.</p>
+          </button>
+        </div>
+      </div>
+
       {/* Image from copy checkbox */}
       <div className="flex items-center gap-2 p-3 rounded-lg border border-border bg-muted/30">
         <Checkbox
@@ -505,6 +535,7 @@ const ContentAIGenerator = ({ content }: Props) => {
                 sizeLabel={sizeInfo?.label}
                 sizeW={sizeInfo?.w}
                 sizeH={sizeInfo?.h}
+                imageModel={imageModel}
               />
             );
           })}
@@ -609,14 +640,14 @@ async function generateVariation(
   lengthInfo: { value: string; label: string; desc: string },
   sizeInfo: { label: string; w: number; h: number },
   strategy?: any, extraNotes?: string,
-  imgTpl?: string, copyTpl?: string,
+  imgTpl?: string, copyTpl?: string, imageModel?: string,
 ): Promise<GeneratedPiece> {
   const variationPrompt = buildCopyPrompt(mainPrompt, variationNum, totalVariations, lengthInfo, strategy, extraNotes, copyTpl);
   const imagePrompt = buildImagePrompt(mainPrompt, variationNum, totalVariations, sizeInfo, strategy, imgTpl);
 
   const [copyResult, imgResult] = await Promise.allSettled([
     supabase.functions.invoke("ai-generate-content", { body: { prompt: variationPrompt, tone, platform, type: "copy" } }),
-    supabase.functions.invoke("ai-generate-content", { body: { prompt: imagePrompt, tone, platform, type: "image", width: sizeInfo.w, height: sizeInfo.h } }),
+    supabase.functions.invoke("ai-generate-content", { body: { prompt: imagePrompt, tone, platform, type: "image", width: sizeInfo.w, height: sizeInfo.h, imageModel } }),
   ]);
 
   const copy = copyResult.status === "fulfilled" && !copyResult.value.error ? copyResult.value.data?.content || "" : null;
@@ -631,7 +662,7 @@ async function generateVariationWithCopyBasedImage(
   lengthInfo: { value: string; label: string; desc: string },
   sizeInfo: { label: string; w: number; h: number },
   strategy?: any, extraNotes?: string,
-  imgTpl?: string, copyTpl?: string,
+  imgTpl?: string, copyTpl?: string, imageModel?: string,
 ): Promise<GeneratedPiece> {
   const variationPrompt = buildCopyPrompt(mainPrompt, variationNum, totalVariations, lengthInfo, strategy, extraNotes, copyTpl);
 
@@ -643,7 +674,7 @@ async function generateVariationWithCopyBasedImage(
   const imagePrompt = buildCopyBasedImagePrompt(copy || mainPrompt, variationNum, totalVariations, sizeInfo, strategy, imgTpl);
 
   const { data: imgData, error: imgError } = await supabase.functions.invoke("ai-generate-content", {
-    body: { prompt: imagePrompt, tone, platform, type: "image", width: sizeInfo.w, height: sizeInfo.h },
+    body: { prompt: imagePrompt, tone, platform, type: "image", width: sizeInfo.w, height: sizeInfo.h, imageModel },
   });
   const imageUrl = !imgError ? imgData?.imageUrl || null : null;
 
