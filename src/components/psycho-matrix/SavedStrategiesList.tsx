@@ -3,30 +3,30 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { usePsychoStrategies, type PsychoStrategy } from "@/hooks/usePsychoMatrix";
 import {
-  digitalArchetypes, brandArchetypes, persuasionTriggers,
-  generationalCodes, advancedPsychology,
+  arquetiposDigitales, arquetiposMarca, disparadoresPersuasion,
+  codigosGeneracionales, psicologiaAvanzada,
 } from "@/lib/psychoMatrixData";
 import { Copy, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const find = (list: { id: string; label: string }[], id: string) => list.find((i) => i.id === id)?.label || id;
+const buscar = (lista: { id: string; label: string }[], id: string) => lista.find((i) => i.id === id)?.label || id;
 
 const SavedStrategiesList = () => {
-  const { data: strategies = [], isLoading } = usePsychoStrategies();
+  const { data: estrategias = [], isLoading } = usePsychoStrategies();
   const { toast } = useToast();
 
-  const copyPrompt = (prompt: string | null) => {
+  const copiarPrompt = (prompt: string | null) => {
     if (!prompt) return;
     navigator.clipboard.writeText(prompt);
     toast({ title: "Prompt copiado" });
   };
 
   if (isLoading) return <p className="text-sm text-muted-foreground text-center py-8">Cargando estrategias...</p>;
-  if (strategies.length === 0) return <p className="text-sm text-muted-foreground text-center py-8">No hay estrategias guardadas aún.</p>;
+  if (estrategias.length === 0) return <p className="text-sm text-muted-foreground text-center py-8">No hay estrategias guardadas aún.</p>;
 
   return (
     <div className="grid gap-3">
-      {strategies.map((s) => (
+      {estrategias.map((s) => (
         <Card key={s.id} className="hover:border-primary/30 transition-colors">
           <CardContent className="p-4">
             <div className="flex items-start justify-between gap-3">
@@ -36,14 +36,14 @@ const SavedStrategiesList = () => {
                   <p className="font-medium text-foreground truncate">{s.name}</p>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  <Badge variant="secondary" className="text-[10px]">{find(digitalArchetypes, s.archetype)}</Badge>
-                  <Badge variant="secondary" className="text-[10px]">{find(brandArchetypes, s.brand_voice)}</Badge>
-                  <Badge variant="secondary" className="text-[10px]">{find(persuasionTriggers, s.persuasion_trigger)}</Badge>
-                  <Badge variant="secondary" className="text-[10px]">{find(generationalCodes, s.generation)}</Badge>
-                  {s.advanced_tech && <Badge variant="outline" className="text-[10px]">{find(advancedPsychology, s.advanced_tech)}</Badge>}
+                  <Badge variant="secondary" className="text-[10px]">{buscar(arquetiposDigitales, s.archetype)}</Badge>
+                  <Badge variant="secondary" className="text-[10px]">{buscar(arquetiposMarca, s.brand_voice)}</Badge>
+                  <Badge variant="secondary" className="text-[10px]">{buscar(disparadoresPersuasion, s.persuasion_trigger)}</Badge>
+                  <Badge variant="secondary" className="text-[10px]">{buscar(codigosGeneracionales, s.generation)}</Badge>
+                  {s.advanced_tech && <Badge variant="outline" className="text-[10px]">{buscar(psicologiaAvanzada, s.advanced_tech)}</Badge>}
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => copyPrompt(s.generated_prompt)} className="shrink-0">
+              <Button variant="ghost" size="icon" onClick={() => copiarPrompt(s.generated_prompt)} className="shrink-0">
                 <Copy className="w-4 h-4" />
               </Button>
             </div>

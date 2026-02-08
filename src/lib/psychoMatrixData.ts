@@ -1,71 +1,70 @@
-// ── Psycho-Matrix AI Knowledge Base ──
+// ── Psycho-Matrix AI - Base de Conocimiento ──
 
 export interface MatrixOption {
   id: string;
   label: string;
   description: string;
-  icon?: string;
 }
 
-export const digitalArchetypes: MatrixOption[] = [
-  { id: "aspirational", label: "The Aspirational", description: "Motivado por estatus y transformación personal. Busca verse y sentirse mejor que los demás." },
-  { id: "skeptic", label: "The Skeptic", description: "Necesita lógica, datos y pruebas. No confía en promesas vacías, quiere evidencia." },
-  { id: "shortcut_seeker", label: "The Shortcut Seeker", description: "Busca eficiencia y resultados rápidos. Quiere la solución más directa posible." },
-  { id: "hater_debater", label: "The Hater/Debater", description: "Se activa con el conflicto y la polémica. Responde a contenido provocador." },
-  { id: "intellectual", label: "The Intellectual", description: "Valora el conocimiento profundo. Quiere entender el 'por qué' detrás de todo." },
-  { id: "empath", label: "The Empath", description: "Conecta emocionalmente. Toma decisiones basadas en sentimientos y conexión humana." },
+export const arquetiposDigitales: MatrixOption[] = [
+  { id: "aspiracional", label: "El Aspiracional", description: "Motivado por estatus y transformación personal. Busca verse y sentirse mejor que los demás." },
+  { id: "esceptico", label: "El Escéptico", description: "Necesita lógica, datos y pruebas. No confía en promesas vacías, quiere evidencia." },
+  { id: "buscador_atajos", label: "El Buscador de Atajos", description: "Busca eficiencia y resultados rápidos. Quiere la solución más directa posible." },
+  { id: "polemico", label: "El Polémico / Debatidor", description: "Se activa con el conflicto y la polémica. Responde a contenido provocador." },
+  { id: "intelectual", label: "El Intelectual", description: "Valora el conocimiento profundo. Quiere entender el 'por qué' detrás de todo." },
+  { id: "empatico", label: "El Empático", description: "Conecta emocionalmente. Toma decisiones basadas en sentimientos y conexión humana." },
 ];
 
-export const brandArchetypes: MatrixOption[] = [
-  { id: "creator", label: "Creator", description: "Innovador, visionario. Crea cosas nuevas y únicas." },
-  { id: "caregiver", label: "Caregiver", description: "Protector, compasivo. Cuida y nutre a los demás." },
-  { id: "ruler", label: "Ruler", description: "Líder, autoritario. Proyecta control y exclusividad." },
-  { id: "lover", label: "Lover", description: "Pasional, sensorial. Apela a la belleza y el placer." },
-  { id: "jester", label: "Jester", description: "Divertido, irreverente. Usa el humor para conectar." },
-  { id: "citizen", label: "Citizen", description: "Accesible, igualitario. Pertenencia y comunidad." },
-  { id: "hero", label: "Hero", description: "Valiente, determinado. Supera obstáculos y desafíos." },
-  { id: "rebel", label: "Rebel", description: "Disruptivo, rompe reglas. Desafía el status quo." },
-  { id: "magician", label: "Magician", description: "Transformador, misterioso. Convierte sueños en realidad." },
-  { id: "innocent", label: "Innocent", description: "Puro, optimista. Promete simplicidad y felicidad." },
-  { id: "explorer", label: "Explorer", description: "Aventurero, libre. Busca descubrir y experimentar." },
-  { id: "sage", label: "Sage", description: "Sabio, experto. Comparte conocimiento y verdad." },
+export const arquetiposMarca: MatrixOption[] = [
+  { id: "creador", label: "Creador", description: "Innovador, visionario. Crea cosas nuevas y únicas." },
+  { id: "cuidador", label: "Cuidador", description: "Protector, compasivo. Cuida y nutre a los demás." },
+  { id: "gobernante", label: "Gobernante", description: "Líder, autoritario. Proyecta control y exclusividad." },
+  { id: "amante", label: "Amante", description: "Pasional, sensorial. Apela a la belleza y el placer." },
+  { id: "bufon", label: "Bufón", description: "Divertido, irreverente. Usa el humor para conectar." },
+  { id: "ciudadano", label: "Ciudadano", description: "Accesible, igualitario. Pertenencia y comunidad." },
+  { id: "heroe", label: "Héroe", description: "Valiente, determinado. Supera obstáculos y desafíos." },
+  { id: "rebelde", label: "Rebelde", description: "Disruptivo, rompe reglas. Desafía el status quo." },
+  { id: "mago", label: "Mago", description: "Transformador, misterioso. Convierte sueños en realidad." },
+  { id: "inocente", label: "Inocente", description: "Puro, optimista. Promete simplicidad y felicidad." },
+  { id: "explorador", label: "Explorador", description: "Aventurero, libre. Busca descubrir y experimentar." },
+  { id: "sabio", label: "Sabio", description: "Experto, conocedor. Comparte conocimiento y verdad." },
 ];
 
-export const persuasionTriggers: MatrixOption[] = [
-  { id: "scarcity", label: "Scarcity / Urgency", description: "Crea presión temporal. 'Solo quedan 3 cupos' o 'Oferta termina hoy'." },
-  { id: "authority", label: "Authority", description: "Posiciona al experto. Credenciales, certificaciones, años de experiencia." },
-  { id: "social_proof", label: "Social Proof", description: "Testimonios, casos de éxito, números de clientes satisfechos." },
-  { id: "reciprocity", label: "Reciprocity", description: "Da valor primero. Contenido gratuito que genera obligación de devolver." },
-  { id: "enemy_commonality", label: "Enemy Commonality", description: "'Nosotros vs Ellos'. Crea un enemigo común (industria, ignorancia, etc.)." },
-  { id: "zeigarnik", label: "Zeigarnik Effect", description: "Open loops. Deja historias incompletas que obligan a seguir leyendo." },
+export const disparadoresPersuasion: MatrixOption[] = [
+  { id: "escasez", label: "Escasez / Urgencia", description: "Crea presión temporal. 'Solo quedan 3 cupos' o 'Oferta termina hoy'." },
+  { id: "autoridad", label: "Autoridad", description: "Posiciona al experto. Credenciales, certificaciones, años de experiencia." },
+  { id: "prueba_social", label: "Prueba Social", description: "Testimonios, casos de éxito, números de clientes satisfechos." },
+  { id: "reciprocidad", label: "Reciprocidad", description: "Da valor primero. Contenido gratuito que genera obligación de devolver." },
+  { id: "enemigo_comun", label: "Enemigo Común", description: "'Nosotros vs Ellos'. Crea un enemigo común (industria, ignorancia, etc.)." },
+  { id: "zeigarnik", label: "Efecto Zeigarnik", description: "Bucles abiertos. Deja historias incompletas que obligan a seguir leyendo." },
 ];
 
-export const generationalCodes: MatrixOption[] = [
+export const codigosGeneracionales: MatrixOption[] = [
   { id: "boomers", label: "Boomers", description: "Valoran seguridad, estatus y tradición. Responden a autoridad y estabilidad." },
-  { id: "gen_x", label: "Gen X", description: "Independientes y lógicos. Escépticos pero leales cuando confían." },
+  { id: "gen_x", label: "Generación X", description: "Independientes y lógicos. Escépticos pero leales cuando confían." },
   { id: "millennials", label: "Millennials", description: "Buscan experiencias y propósito. Valoran autenticidad y causas sociales." },
-  { id: "gen_z", label: "Gen Z", description: "Autenticidad radical y caos creativo. Rechazan lo corporativo y tradicional." },
+  { id: "gen_z", label: "Generación Z", description: "Autenticidad radical y caos creativo. Rechazan lo corporativo y tradicional." },
 ];
 
-export const advancedPsychology: MatrixOption[] = [
-  { id: "reframing", label: "Gaslighting / Reframing", description: "Reformula la realidad del prospecto. Cambia su percepción del problema." },
-  { id: "embedded_commands", label: "Embedded Commands (NLP)", description: "Comandos ocultos en el texto que el subconsciente procesa como instrucciones." },
-  { id: "mimetic_desire", label: "Mimetic Desire", description: "Deseo por imitación. 'Si ellos lo tienen, yo también lo quiero'." },
-  { id: "barnum_effect", label: "Barnum Effect", description: "Afirmaciones vagas que parecen personalizadas. 'Sé que has sentido esto...'." },
-  { id: "bite_model", label: "BITE Model (Cult Dynamics)", description: "Control de Behavior, Information, Thought, Emotion. Crea pertenencia extrema." },
+export const psicologiaAvanzada: MatrixOption[] = [
+  { id: "reencuadre", label: "Gaslighting / Reencuadre", description: "Reformula la realidad del prospecto. Cambia su percepción del problema." },
+  { id: "comandos_embebidos", label: "Comandos Embebidos (PNL)", description: "Comandos ocultos en el texto que el subconsciente procesa como instrucciones." },
+  { id: "deseo_mimetico", label: "Deseo Mimético", description: "Deseo por imitación. 'Si ellos lo tienen, yo también lo quiero'." },
+  { id: "efecto_barnum", label: "Efecto Barnum", description: "Afirmaciones vagas que parecen personalizadas. 'Sé que has sentido esto...'." },
+  { id: "modelo_bite", label: "Modelo BITE (Dinámicas de Culto)", description: "Control de Conducta, Información, Pensamiento, Emoción. Crea pertenencia extrema." },
 ];
 
-export function buildPrompt(
-  service: { name: string; core_benefit: string },
-  archetype: string,
-  brandVoice: string,
-  trigger: string,
-  generation: string,
-  advancedTech?: string
+export function construirPrompt(
+  servicio: { name: string; core_benefit: string },
+  arquetipo: string,
+  vozMarca: string,
+  disparador: string,
+  generacion: string,
+  tecAvanzada?: string
 ): string {
-  const base = `Act as a world-class copywriter using the "${brandVoice}" archetype. Sell "${service.name}" to a ${generation} audience who behaves like "${archetype}". Use the "${trigger}" persuasion technique to convince them. The core benefit is: "${service.core_benefit}".`;
-  if (advancedTech) {
-    return `${base} Apply the "${advancedTech}" advanced psychological technique in the closing.`;
+  const base = `Actúa como un copywriter de clase mundial usando el arquetipo de marca "${vozMarca}". Vende "${servicio.name}" a una audiencia ${generacion} que se comporta como "${arquetipo}". Usa la técnica de persuasión "${disparador}" para convencerlos. El beneficio principal es: "${servicio.core_benefit}".`;
+  if (tecAvanzada) {
+    return `${base} Aplica la técnica psicológica avanzada "${tecAvanzada}" en el cierre.`;
   }
   return base;
 }

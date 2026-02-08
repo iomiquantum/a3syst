@@ -5,30 +5,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import {
-  digitalArchetypes, brandArchetypes, persuasionTriggers,
-  generationalCodes, advancedPsychology, type MatrixOption,
+  arquetiposDigitales, arquetiposMarca, disparadoresPersuasion,
+  codigosGeneracionales, psicologiaAvanzada, type MatrixOption,
 } from "@/lib/psychoMatrixData";
 import type { PsychoService } from "@/hooks/usePsychoMatrix";
 import { Beaker, Brain, Megaphone, Users, Skull, Zap, Info, ArrowLeft } from "lucide-react";
 
-interface Selection {
-  archetype: string;
-  brandVoice: string;
-  trigger: string;
-  generation: string;
-  advancedTech: string;
+export interface Seleccion {
+  arquetipo: string;
+  vozMarca: string;
+  disparador: string;
+  generacion: string;
+  tecAvanzada: string;
 }
 
 interface Props {
   service: PsychoService;
-  onGenerate: (selection: Selection) => void;
+  onGenerate: (sel: Seleccion) => void;
   onBack: () => void;
 }
 
-const priceBadge: Record<string, string> = { low: "Low Ticket", mid: "Mid Ticket", high: "High Ticket" };
+const etiquetaPrecio: Record<string, string> = { low: "Ticket Bajo", mid: "Ticket Medio", high: "Ticket Alto" };
 
-function MatrixSelect({ label, icon: Icon, options, value, onChange, optional }: {
-  label: string; icon: React.ElementType; options: MatrixOption[]; value: string; onChange: (v: string) => void; optional?: boolean;
+function SelectorMatrix({ label, icon: Icon, options, value, onChange, opcional }: {
+  label: string; icon: React.ElementType; options: MatrixOption[]; value: string; onChange: (v: string) => void; opcional?: boolean;
 }) {
   return (
     <Card className="border-border/50 hover:border-primary/30 transition-colors">
@@ -36,7 +36,7 @@ function MatrixSelect({ label, icon: Icon, options, value, onChange, optional }:
         <CardTitle className="text-sm flex items-center gap-2">
           <Icon className="w-4 h-4 text-primary" />
           {label}
-          {optional && <Badge variant="outline" className="text-[10px] ml-auto">Opcional</Badge>}
+          {opcional && <Badge variant="outline" className="text-[10px] ml-auto">Opcional</Badge>}
         </CardTitle>
       </CardHeader>
       <CardContent className="px-4 pb-4">
@@ -45,7 +45,7 @@ function MatrixSelect({ label, icon: Icon, options, value, onChange, optional }:
             <SelectValue placeholder="Seleccionar..." />
           </SelectTrigger>
           <SelectContent>
-            {optional && <SelectItem value="none">— Ninguno —</SelectItem>}
+            {opcional && <SelectItem value="none">— Ninguno —</SelectItem>}
             {options.map((opt) => (
               <SelectItem key={opt.id} value={opt.id}>
                 <div className="flex items-center gap-2">
@@ -63,7 +63,6 @@ function MatrixSelect({ label, icon: Icon, options, value, onChange, optional }:
             ))}
           </SelectContent>
         </Select>
-        {/* Show selected description */}
         {value && value !== "none" && (
           <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
             {options.find((o) => o.id === value)?.description}
@@ -75,15 +74,15 @@ function MatrixSelect({ label, icon: Icon, options, value, onChange, optional }:
 }
 
 const MatrixMixer = ({ service, onGenerate, onBack }: Props) => {
-  const [sel, setSel] = useState<Selection>({
-    archetype: "", brandVoice: "", trigger: "", generation: "", advancedTech: "",
+  const [sel, setSel] = useState<Seleccion>({
+    arquetipo: "", vozMarca: "", disparador: "", generacion: "", tecAvanzada: "",
   });
 
-  const isReady = sel.archetype && sel.brandVoice && sel.trigger && sel.generation;
+  const listo = sel.arquetipo && sel.vozMarca && sel.disparador && sel.generacion;
 
   return (
     <div className="space-y-6">
-      {/* Service header */}
+      {/* Encabezado del servicio */}
       <Card className="gradient-subtle border-primary/20">
         <CardContent className="p-4 flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
@@ -96,23 +95,23 @@ const MatrixMixer = ({ service, onGenerate, onBack }: Props) => {
             <p className="font-semibold text-foreground truncate">{service.name}</p>
             <p className="text-xs text-muted-foreground">{service.core_benefit} · {service.pain_point}</p>
           </div>
-          <Badge variant="secondary">{priceBadge[service.target_price] || service.target_price}</Badge>
+          <Badge variant="secondary">{etiquetaPrecio[service.target_price] || service.target_price}</Badge>
         </CardContent>
       </Card>
 
-      {/* 5 select cards */}
+      {/* 5 selectores */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <MatrixSelect label="Target Archetype" icon={Users} options={digitalArchetypes} value={sel.archetype} onChange={(v) => setSel({ ...sel, archetype: v })} />
-        <MatrixSelect label="Brand Voice" icon={Megaphone} options={brandArchetypes} value={sel.brandVoice} onChange={(v) => setSel({ ...sel, brandVoice: v })} />
-        <MatrixSelect label="Persuasion Trigger" icon={Brain} options={persuasionTriggers} value={sel.trigger} onChange={(v) => setSel({ ...sel, trigger: v })} />
-        <MatrixSelect label="Generation" icon={Users} options={generationalCodes} value={sel.generation} onChange={(v) => setSel({ ...sel, generation: v })} />
-        <MatrixSelect label="Advanced Tech" icon={Skull} options={advancedPsychology} value={sel.advancedTech} onChange={(v) => setSel({ ...sel, advancedTech: v })} optional />
+        <SelectorMatrix label="Arquetipo Objetivo" icon={Users} options={arquetiposDigitales} value={sel.arquetipo} onChange={(v) => setSel({ ...sel, arquetipo: v })} />
+        <SelectorMatrix label="Voz de Marca" icon={Megaphone} options={arquetiposMarca} value={sel.vozMarca} onChange={(v) => setSel({ ...sel, vozMarca: v })} />
+        <SelectorMatrix label="Disparador de Persuasión" icon={Brain} options={disparadoresPersuasion} value={sel.disparador} onChange={(v) => setSel({ ...sel, disparador: v })} />
+        <SelectorMatrix label="Generación" icon={Users} options={codigosGeneracionales} value={sel.generacion} onChange={(v) => setSel({ ...sel, generacion: v })} />
+        <SelectorMatrix label="Técnica Avanzada" icon={Skull} options={psicologiaAvanzada} value={sel.tecAvanzada} onChange={(v) => setSel({ ...sel, tecAvanzada: v })} opcional />
       </div>
 
-      {/* Generate button */}
-      <Button onClick={() => onGenerate(sel)} disabled={!isReady} className="w-full h-12 gradient-primary text-primary-foreground text-base font-semibold" size="lg">
+      {/* Botón generar */}
+      <Button onClick={() => onGenerate(sel)} disabled={!listo} className="w-full h-12 gradient-primary text-primary-foreground text-base font-semibold" size="lg">
         <Zap className="w-5 h-5 mr-2" />
-        Generate Strategy Profile
+        Generar Perfil de Estrategia
       </Button>
     </div>
   );
