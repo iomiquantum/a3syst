@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, RefreshCw, Loader2, Pencil, Image as ImageIcon, RotateCcw, Eye, EyeOff, Send } from "lucide-react";
+import { Check, RefreshCw, Loader2, Pencil, Image as ImageIcon, RotateCcw, Eye, EyeOff, Send, Download } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -24,21 +24,24 @@ interface Props {
   onApprove: (id: number) => void;
   regeneratingImage: boolean;
   regeneratingCopy: boolean;
+  platform?: string;
+  sizeLabel?: string;
+  sizeW?: number;
+  sizeH?: number;
 }
 
-const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerateCopy, onApprove, regeneratingImage, regeneratingCopy }: Props) => {
+const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerateCopy, onApprove, regeneratingImage, regeneratingCopy, platform, sizeLabel, sizeW, sizeH }: Props) => {
   const [editingCopy, setEditingCopy] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState(false);
   const [customPrompt, setCustomPrompt] = useState(piece.imagePrompt);
   const [imgProgress, setImgProgress] = useState(0);
+  const [copyProgress, setCopyProgress] = useState(0);
+  const [downloading, setDownloading] = useState(false);
 
   // Simulate progress while regenerating image
   useEffect(() => {
-    if (!regeneratingImage) {
-      setImgProgress(0);
-      return;
-    }
+    if (!regeneratingImage) { setImgProgress(0); return; }
     setImgProgress(5);
     const interval = setInterval(() => {
       setImgProgress(prev => {
@@ -49,9 +52,58 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
     return () => clearInterval(interval);
   }, [regeneratingImage]);
 
+  // Simulate progress while regenerating copy
+  useEffect(() => {
+    if (!regeneratingCopy) { setCopyProgress(0); return; }
+    setCopyProgress(5);
+    const interval = setInterval(() => {
+      setCopyProgress(prev => {
+        if (prev >= 90) { clearInterval(interval); return 90; }
+        return prev + Math.random() * 12;
+      });
+    }, 300);
+    return () => clearInterval(interval);
+  }, [regeneratingCopy]);
+
   if (piece.status === "idle" || piece.status === "generating") return null;
 
   const isApproved = piece.status === "approved";
+
+  const handleDownloadImage = async () => {
+    if (!piece.imageUrl) return;
+    setDownloading(true);
+    try {
+      const response = await fetch(piece.imageUrl);
+      const blob = await response.blob();
+
+      // Build descriptive filename
+      const shortDesc = (piece.copy || piece.instruction || "imagen")
+        .replace(/[#*\n]/g, " ")
+        .trim()
+        .split(/\s+/)
+        .slice(0, 5)
+        .join("-")
+        .replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ\-]/g, "")
+        .substring(0, 40);
+      const dims = sizeW && sizeH ? `${sizeW}x${sizeH}` : "HD";
+      const plat = (platform || "social").toLowerCase();
+      const sLabel = (sizeLabel || "").replace(/\s+/g, "-").toLowerCase();
+      const fileName = `${shortDesc}_${plat}_${sLabel}_${dims}.png`;
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("Download error:", e);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <div className={cn(
@@ -88,16 +140,39 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
           </div>
         )}
         {!isApproved && piece.imageUrl && !regeneratingImage && (
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
             <Button
               variant="secondary"
               size="sm"
               className="gap-1.5"
               onClick={() => onRegenerateImage(piece.id)}
-              disabled={regeneratingImage}
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              Regenerar imagen
+              Regenerar
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="gap-1.5"
+              onClick={handleDownloadImage}
+              disabled={downloading}
+            >
+              {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+              Descargar HD
+            </Button>
+          </div>
+        )}
+        {isApproved && piece.imageUrl && !regeneratingImage && (
+          <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={handleDownloadImage}
+              disabled={downloading}
+            >
+              {downloading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+              Descargar HD
             </Button>
           </div>
         )}
@@ -169,10 +244,10 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-muted-foreground">Copy</span>
-          {!isApproved && (
+          {!isApproved && !regeneratingCopy && (
             <div className="flex gap-1">
               <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1" onClick={() => onRegenerateCopy(piece.id)} disabled={regeneratingCopy}>
-                {regeneratingCopy ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+                <RotateCcw className="w-3 h-3" />
                 Regenerar
               </Button>
               <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1" onClick={() => setEditingCopy(!editingCopy)}>
@@ -182,7 +257,15 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
             </div>
           )}
         </div>
-        {editingCopy && !isApproved ? (
+        {regeneratingCopy ? (
+          <div className="bg-muted/50 rounded-lg p-4 flex flex-col items-center gap-2 animate-pulse min-h-[60px]">
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            <p className="text-xs text-muted-foreground font-medium">Regenerando copy…</p>
+            <div className="w-2/3">
+              <Progress value={copyProgress} className="h-1" />
+            </div>
+          </div>
+        ) : editingCopy && !isApproved ? (
           <Textarea
             value={piece.copy || ""}
             onChange={e => onCopyChange(piece.id, e.target.value)}
