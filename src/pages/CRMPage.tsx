@@ -1,16 +1,17 @@
 import { useState } from "react";
-import { Phone, Users, LayoutList, Columns3, Plus } from "lucide-react";
+import { Phone, Users, LayoutList, Columns3, Plus, BarChart3 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import ContactList from "@/components/crm/ContactList";
 import ContactDetail from "@/components/crm/ContactDetail";
 import KanbanBoard from "@/components/crm/KanbanBoard";
 import NewContactDialog from "@/components/crm/NewContactDialog";
 import CRMFilters from "@/components/crm/CRMFilters";
+import CallCenterDashboard from "@/components/crm/CallCenterDashboard";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCRM } from "@/hooks/useCRM";
 
-type ViewMode = "list" | "kanban";
+type ViewMode = "list" | "kanban" | "dashboard";
 
 const CRMPage = () => {
   const {
@@ -52,6 +53,12 @@ const CRMPage = () => {
               >
                 <Columns3 className="w-3.5 h-3.5" /> Pipeline
               </button>
+              <button
+                onClick={() => setViewMode("dashboard")}
+                className={cn("px-2.5 py-1.5 text-xs flex items-center gap-1 transition-colors", viewMode === "dashboard" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted")}
+              >
+                <BarChart3 className="w-3.5 h-3.5" /> Métricas
+              </button>
             </div>
           </div>
         </div>
@@ -69,10 +76,15 @@ const CRMPage = () => {
             onAgentChange={setAgentFilter}
           />
         </div>
+        {/* Content */}
         <div className="flex-1 flex min-h-0">
-          {loading ? (
+          {loading && viewMode !== "dashboard" ? (
             <div className="flex-1 flex items-center justify-center">
               <p className="text-sm text-muted-foreground">Cargando contactos...</p>
+            </div>
+          ) : viewMode === "dashboard" ? (
+            <div className="flex-1 overflow-hidden">
+              <CallCenterDashboard />
             </div>
           ) : viewMode === "list" ? (
             <>
