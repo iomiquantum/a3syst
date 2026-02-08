@@ -55,14 +55,14 @@ const AppLayout = ({ children }: AppLayoutProps) => {
 
   return (
     <div className="min-h-screen flex bg-background">
-      <aside className={cn("h-screen sticky top-0 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 overflow-hidden", collapsed ? "w-[72px]" : "w-[250px]")}>
-        <div className="h-16 flex items-center px-5 border-b border-sidebar-border">
+      <aside className={cn("h-screen sticky top-0 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300", collapsed ? "w-[60px]" : "w-[230px]")}>
+        <div className={cn("h-16 flex items-center border-b border-sidebar-border", collapsed ? "justify-center px-2" : "px-5")}>
           <div className="flex items-center gap-2 overflow-hidden">
             <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shrink-0">
               <span className="text-primary-foreground font-bold text-[10px]">IO</span>
             </div>
             {!collapsed && (
-              <div>
+              <div className="min-w-0">
                 <span className="text-lg font-bold text-foreground tracking-tight leading-none">IOMI</span>
                 <span className="text-[9px] block text-muted-foreground tracking-[0.2em] leading-none">CLÍNICAS</span>
               </div>
@@ -70,14 +70,13 @@ const AppLayout = ({ children }: AppLayoutProps) => {
           </div>
         </div>
 
-        <nav className="flex-1 py-4 px-3 space-y-6 overflow-y-auto">
-          {/* Super Admin nav */}
+        <nav className="flex-1 py-4 px-2 space-y-6 overflow-y-auto overflow-x-hidden">
           {isSuperAdmin && (
             <div className="space-y-1">
               {!collapsed && <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2">Super Admin</p>}
-              <button onClick={() => navigate("/admin")} className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all", isActive("/admin") ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50")}>
+              <button title="Panel Admin" onClick={() => navigate("/admin")} className={cn("w-full flex items-center gap-3 rounded-lg text-sm font-medium transition-all", collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5", isActive("/admin") ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50")}>
                 <ShieldCheck className="w-5 h-5 shrink-0" />
-                {!collapsed && <span>Panel Admin</span>}
+                {!collapsed && <span className="truncate">Panel Admin</span>}
               </button>
             </div>
           )}
@@ -85,29 +84,29 @@ const AppLayout = ({ children }: AppLayoutProps) => {
           <div className="space-y-1">
             {!collapsed && <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2">Principal</p>}
             {mainNav.map(({ icon: Icon, label, path }) => (
-              <button key={path} onClick={() => navigate(path)} className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all", isActive(path) ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50")}>
+              <button key={path} title={label} onClick={() => navigate(path)} className={cn("w-full flex items-center gap-3 rounded-lg text-sm font-medium transition-all", collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5", isActive(path) ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50")}>
                 <Icon className="w-5 h-5 shrink-0" />
-                {!collapsed && <span>{label}</span>}
+                {!collapsed && <span className="truncate">{label}</span>}
               </button>
             ))}
           </div>
           <div className="space-y-1">
             {!collapsed && <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2">Configuración</p>}
             {configNav.map(({ icon: Icon, label, path }) => (
-              <button key={path} onClick={() => navigate(path)} className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all", isActive(path) ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50")}>
+              <button key={path} title={label} onClick={() => navigate(path)} className={cn("w-full flex items-center gap-3 rounded-lg text-sm font-medium transition-all", collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5", isActive(path) ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50")}>
                 <Icon className="w-5 h-5 shrink-0" />
-                {!collapsed && <span>{label}</span>}
+                {!collapsed && <span className="truncate">{label}</span>}
               </button>
             ))}
           </div>
         </nav>
 
-        <div className="p-3 border-t border-sidebar-border space-y-1">
-          <button onClick={() => setCollapsed(!collapsed)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all">
+        <div className="p-2 border-t border-sidebar-border space-y-1">
+          <button onClick={() => setCollapsed(!collapsed)} title={collapsed ? "Expandir" : "Colapsar"} className={cn("w-full flex items-center gap-3 rounded-lg text-sm text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all", collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5")}>
             <ChevronLeft className={cn("w-5 h-5 shrink-0 transition-transform", collapsed && "rotate-180")} />
             {!collapsed && <span>Colapsar</span>}
           </button>
-          <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-all">
+          <button onClick={handleSignOut} title="Cerrar sesión" className={cn("w-full flex items-center gap-3 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-all", collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5")}>
             <LogOut className="w-5 h-5 shrink-0" />
             {!collapsed && <span>Cerrar sesión</span>}
           </button>
