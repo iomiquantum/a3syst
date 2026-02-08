@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check, RefreshCw, Loader2, Pencil, Image as ImageIcon, RotateCcw, Eye, EyeOff, Send } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +31,23 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
   const [showPrompt, setShowPrompt] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState(false);
   const [customPrompt, setCustomPrompt] = useState(piece.imagePrompt);
+  const [imgProgress, setImgProgress] = useState(0);
+
+  // Simulate progress while regenerating image
+  useEffect(() => {
+    if (!regeneratingImage) {
+      setImgProgress(0);
+      return;
+    }
+    setImgProgress(5);
+    const interval = setInterval(() => {
+      setImgProgress(prev => {
+        if (prev >= 92) { clearInterval(interval); return 92; }
+        return prev + Math.random() * 8;
+      });
+    }, 400);
+    return () => clearInterval(interval);
+  }, [regeneratingImage]);
 
   if (piece.status === "idle" || piece.status === "generating") return null;
 
@@ -53,14 +72,22 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
 
       {/* Image */}
       <div className="rounded-lg overflow-hidden border border-border relative group">
-        {piece.imageUrl ? (
+        {regeneratingImage ? (
+          <div className="w-full h-[280px] bg-muted flex flex-col items-center justify-center gap-3 animate-pulse">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <p className="text-xs text-muted-foreground font-medium">Generando imagen…</p>
+            <div className="w-3/4">
+              <Progress value={imgProgress} className="h-1.5" />
+            </div>
+          </div>
+        ) : piece.imageUrl ? (
           <img src={piece.imageUrl} alt={`Generada #${piece.id}`} className="w-full max-h-[280px] object-contain bg-muted" />
         ) : (
           <div className="w-full h-[200px] bg-muted flex items-center justify-center">
             <ImageIcon className="w-8 h-8 text-muted-foreground" />
           </div>
         )}
-        {!isApproved && piece.imageUrl && (
+        {!isApproved && piece.imageUrl && !regeneratingImage && (
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
             <Button
               variant="secondary"
@@ -69,7 +96,7 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
               onClick={() => onRegenerateImage(piece.id)}
               disabled={regeneratingImage}
             >
-              {regeneratingImage ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+              <RefreshCw className="w-3.5 h-3.5" />
               Regenerar imagen
             </Button>
           </div>
