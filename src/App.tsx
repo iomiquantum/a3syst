@@ -22,6 +22,7 @@ import WidgetConfigPage from "./pages/WidgetConfigPage";
 import CRMPage from "./pages/CRMPage";
 import MarketingPage from "./pages/MarketingPage";
 import AIAgentConfigPage from "./pages/AIAgentConfigPage";
+import AdsPage from "./pages/AdsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,7 @@ const App = () => (
               <Route path="/configuracion/usuarios" element={<ProtectedRoute><UsuariosPage /></ProtectedRoute>} />
               <Route path="/configuracion/ajustes" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
+              <Route path="/ads" element={<ProtectedRoute><AdsPage /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ClinicProvider>
