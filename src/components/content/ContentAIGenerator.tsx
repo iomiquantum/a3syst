@@ -89,7 +89,7 @@ const ContentAIGenerator = ({ content }: Props) => {
 
   const hacerMagia = () => {
     setTone(tones[Math.floor(Math.random() * tones.length)]);
-    setCopyLength(copyLengths[Math.floor(Math.random() * copyLengths.length)].value);
+    // copyLength is no longer randomized - user controls it independently
     setMagicFormula({
       archetype: randomPick(arquetiposDigitales),
       brand_voice: randomPick(arquetiposMarca),
@@ -402,21 +402,19 @@ const ContentAIGenerator = ({ content }: Props) => {
           </div>
         )}
 
-        {!magicMode && (
-          <div>
-            <Label className="text-sm font-medium">Tamaño del copy</Label>
-            <Select value={copyLength} onValueChange={setCopyLength}>
-              <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {copyLengths.map(c => (
-                  <SelectItem key={c.value} value={c.value}>
-                    {c.label} <span className="text-muted-foreground ml-1">({c.desc})</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+        <div>
+          <Label className="text-sm font-medium">Tamaño del copy</Label>
+          <Select value={copyLength} onValueChange={setCopyLength}>
+            <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {copyLengths.map(c => (
+                <SelectItem key={c.value} value={c.value}>
+                  {c.label} <span className="text-muted-foreground ml-1">({c.desc})</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Image from copy checkbox */}
