@@ -168,10 +168,21 @@ const ContentAIGenerator = ({ content }: Props) => {
     if (!piece) return;
     setRegeneratingId(id);
     const sizeInfo = getImageSizeInfo();
-    const sizeHint = sizeInfo ? ` Formato: ${sizeInfo.label} (${sizeInfo.w}x${sizeInfo.h}px). La imagen DEBE tener estas dimensiones exactas.` : "";
-    const prompt = customPrompt
-      ? `${customPrompt}${sizeHint}`
-      : `Variación visual diferente para: ${piece.instruction}. Crear una imagen completamente distinta a las anteriores, con otro estilo, composición y enfoque visual.${sizeHint}`;
+    const selectedStrategy = magicMode && magicFormula
+      ? magicFormula
+      : strategies.find(s => s.id === selectedStrategyId);
+
+    let prompt: string;
+    if (customPrompt) {
+      prompt = buildImagePrompt(customPrompt, piece.id, pieces.length, sizeInfo, selectedStrategy);
+    } else if (imageFromCopy && piece.copy) {
+      prompt = buildCopyBasedImagePrompt(piece.copy, piece.id, pieces.length, sizeInfo, selectedStrategy);
+    } else {
+      prompt = buildImagePrompt(
+        `${piece.instruction}. Crear una imagen completamente distinta a las anteriores, con otro estilo, composición y enfoque visual.`,
+        piece.id, pieces.length, sizeInfo, selectedStrategy,
+      );
+    }
     try {
       const { data, error } = await supabase.functions.invoke("ai-generate-content", {
         body: { prompt, tone, platform, type: "image", width: sizeInfo?.w, height: sizeInfo?.h },
@@ -190,8 +201,14 @@ const ContentAIGenerator = ({ content }: Props) => {
     const piece = pieces.find(p => p.id === id);
     if (!piece) return;
     setRegeneratingCopyId(id);
+    const selectedStrategy = magicMode && magicFormula
+      ? magicFormula
+      : strategies.find(s => s.id === selectedStrategyId);
+    const lengthInfo = getEffectiveCopyLength();
     try {
-      const variationPrompt = `${piece.instruction}\n\nIMPORTANTE: Genera un copy COMPLETAMENTE NUEVO y DIFERENTE al anterior. Usa un enfoque, ángulo o estilo de escritura distinto. Sé creativo y original.`;
+      const variationPrompt = buildCopyPrompt(
+        piece.instruction, piece.id, pieces.length, lengthInfo, selectedStrategy, extraNotes,
+      ) + `\n\nIMPORTANTE: Genera un copy COMPLETAMENTE NUEVO y DIFERENTE al anterior. Usa un enfoque, ángulo o estilo de escritura distinto. Sé creativo y original.`;
       const { data, error } = await supabase.functions.invoke("ai-generate-content", {
         body: { prompt: variationPrompt, tone, platform, type: "copy" },
       });
@@ -532,12 +549,8 @@ async function generateVariationWithCopyBasedImage(
   });
   const copy = !copyError ? copyData?.content || "" : null;
 
-  // Step 2: generate image based on copy
-  const imageSource = copy || mainPrompt;
-  const imagePrompt = buildImagePrompt(
-    `Crea una imagen que represente visualmente este contenido: "${imageSource}"`,
-    variationNum, totalVariations, sizeInfo, strategy,
-  );
+  // Step 2: generate image based on copy — extract key elements, don't dump full text
+  const imagePrompt = buildCopyBasedImagePrompt(copy || mainPrompt, variationNum, totalVariations, sizeInfo, strategy);
 
   const { data: imgData, error: imgError } = await supabase.functions.invoke("ai-generate-content", {
     body: { prompt: imagePrompt, tone, platform, type: "image", width: sizeInfo.w, height: sizeInfo.h },
@@ -545,4 +558,41 @@ async function generateVariationWithCopyBasedImage(
   const imageUrl = !imgError ? imgData?.imageUrl || null : null;
 
   return { id: variationNum, instruction: mainPrompt, imagePrompt, copy, imageUrl, status: "done" };
+}
+
+function buildCopyBasedImagePrompt(
+  copyText: string, variationNum: number, totalVariations: number,
+  sizeInfo?: { label: string; w: number; h: number },
+  strategy?: any,
+): string {
+  const sizeHint = sizeInfo
+    ? `\nDIMENSIONES OBLIGATORIAS: ${sizeInfo.w}x${sizeInfo.h}px (${sizeInfo.label}). Diseña la composición específicamente para este formato y aspecto.`
+    : "";
+  const strategyHint = buildStrategyContext(strategy);
+
+  return `Eres un diseñador gráfico profesional y prompt engineer experto. A partir del siguiente copy de marketing, debes crear una imagen publicitaria profesional para redes sociales.
+
+COPY DE REFERENCIA:
+"${copyText}"
+
+INSTRUCCIONES DE DISEÑO:
+1. EXTRACCIÓN DE TEXTO PARA LA IMAGEN: Analiza el copy y extrae SOLAMENTE:
+   - El título principal o frase gancho (máximo 6-8 palabras)
+   - El call-to-action (CTA) principal (ej: "Reserva ahora", "50% OFF", etc.)
+   - Opcionalmente, un dato clave numérico o porcentaje si existe
+   NO incluyas el copy completo. Solo las frases más impactantes y cortas.
+
+2. COMPOSICIÓN TIPOGRÁFICA: El texto extraído debe estar integrado en la imagen como parte del diseño gráfico:
+   - Título principal: tipografía grande, bold, con alto contraste sobre el fondo
+   - CTA: destacado visualmente (botón, banner, o badge)
+   - Asegura legibilidad total del texto sobre la imagen
+
+3. DISEÑO VISUAL: Crea una imagen profesional de marketing que:
+   - Tenga una paleta de colores coherente y atractiva
+   - Use imágenes o ilustraciones relevantes al contenido
+   - Sea visualmente impactante y detenga el scroll
+   - Tenga una jerarquía visual clara (imagen > título > CTA)
+${sizeHint}${strategyHint}
+
+Variación visual #${variationNum} de ${totalVariations}: Usa un estilo, composición y paleta COMPLETAMENTE DIFERENTE a las otras variaciones.`;
 }
