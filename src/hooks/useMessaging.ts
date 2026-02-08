@@ -182,22 +182,38 @@ export const useMessaging = () => {
 
   useEffect(() => { fetchConversations(); }, [clinicId]);
 
-  // Realtime subscription
+  // Keep a ref to selectedConversation for realtime callback
+  const selectedConvRef = useRef<Conversation | null>(null);
+  useEffect(() => {
+    selectedConvRef.current = selectedConversation;
+  }, [selectedConversation]);
+
+  // Realtime subscription — stable channel, uses ref to avoid stale closures
   useEffect(() => {
     if (!clinicId) return;
     const channel = supabase
-      .channel("messages-realtime")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
+      .channel("messages-realtime-" + clinicId)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "messages",
+        filter: `clinic_id=eq.${clinicId}`,
+      }, (payload) => {
         const newMsg = payload.new as Message;
-        if (selectedConversation && newMsg.conversation_id === selectedConversation.id) {
-          setMessages(prev => [...prev, newMsg]);
+        const currentConv = selectedConvRef.current;
+        if (currentConv && newMsg.conversation_id === currentConv.id) {
+          setMessages(prev => {
+            // Avoid duplicates
+            if (prev.some(m => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
         }
         fetchConversations();
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [clinicId, selectedConversation?.id]);
+  }, [clinicId]);
 
   return {
     conversations: filteredConversations,
