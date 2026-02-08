@@ -387,6 +387,7 @@ export type Database = {
           notes: string | null
           patient_id: string | null
           phone: string
+          phone2: string | null
           source: string | null
           tags: string[] | null
           updated_at: string
@@ -403,6 +404,7 @@ export type Database = {
           notes?: string | null
           patient_id?: string | null
           phone: string
+          phone2?: string | null
           source?: string | null
           tags?: string[] | null
           updated_at?: string
@@ -419,6 +421,7 @@ export type Database = {
           notes?: string | null
           patient_id?: string | null
           phone?: string
+          phone2?: string | null
           source?: string | null
           tags?: string[] | null
           updated_at?: string
