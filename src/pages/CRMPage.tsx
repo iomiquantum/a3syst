@@ -5,6 +5,7 @@ import ContactList from "@/components/crm/ContactList";
 import ContactDetail from "@/components/crm/ContactDetail";
 import KanbanBoard from "@/components/crm/KanbanBoard";
 import NewContactDialog from "@/components/crm/NewContactDialog";
+import CRMFilters from "@/components/crm/CRMFilters";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCRM } from "@/hooks/useCRM";
@@ -14,7 +15,9 @@ type ViewMode = "list" | "kanban";
 const CRMPage = () => {
   const {
     contacts, callLogs, loading, selectedContact, stageFilter, searchQuery,
+    datePreset, dateRange, agentFilter, agents, isAdmin,
     setSelectedContact, setStageFilter, setSearchQuery,
+    setDatePreset, setDateRange, setAgentFilter,
     createContact, updateContact, logCall, convertToPatient,
   } = useCRM();
   const [newContactOpen, setNewContactOpen] = useState(false);
@@ -53,7 +56,19 @@ const CRMPage = () => {
           </div>
         </div>
 
-        {/* Content */}
+        {/* Date & Agent filters */}
+        <div className="px-4 py-2 border-b border-border shrink-0">
+          <CRMFilters
+            datePreset={datePreset}
+            dateRange={dateRange}
+            agentFilter={agentFilter}
+            agents={agents}
+            showAgentFilter={isAdmin}
+            onDatePresetChange={setDatePreset}
+            onDateRangeChange={setDateRange}
+            onAgentChange={setAgentFilter}
+          />
+        </div>
         <div className="flex-1 flex min-h-0">
           {loading ? (
             <div className="flex-1 flex items-center justify-center">

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { DatePreset, DateRange, AgentOption, getDateRangeFromPreset } from "@/components/crm/CRMFilters";
 
 export interface CRMContact {
   id: string;
@@ -57,10 +58,67 @@ export const useCRM = () => {
   const [selectedContact, setSelectedContact] = useState<CRMContact | null>(null);
   const [stageFilter, setStageFilter] = useState<string>("todos");
   const [searchQuery, setSearchQuery] = useState("");
+  const [datePreset, setDatePreset] = useState<DatePreset>("todos");
+  const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
+  const [agentFilter, setAgentFilter] = useState("todos");
+  const [agents, setAgents] = useState<AgentOption[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check if user is admin/super_admin
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (!user || !clinicId) return;
+      const { data: isSuperAdmin } = await supabase.rpc("is_super_admin");
+      if (isSuperAdmin) { setIsAdmin(true); return; }
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("clinic_id", clinicId);
+      setIsAdmin(roles?.some(r => r.role === "admin") || false);
+    };
+    checkAdmin();
+  }, [user, clinicId]);
+
+  // Fetch agents (profiles with roles in this clinic)
+  useEffect(() => {
+    if (!clinicId || !isAdmin) return;
+    const fetchAgents = async () => {
+      const { data: roleUsers } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("clinic_id", clinicId);
+      if (!roleUsers || roleUsers.length === 0) return;
+      const userIds = roleUsers.map(r => r.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", userIds);
+      setAgents((profiles || []).map(p => ({ id: p.user_id, name: p.full_name || p.user_id })));
+    };
+    fetchAgents();
+  }, [clinicId, isAdmin]);
 
   const fetchContacts = useCallback(async () => {
     if (!clinicId) return;
     setLoading(true);
+
+    // If agent filter is active, we need to find contact IDs from call_logs by that agent
+    let agentContactIds: string[] | null = null;
+    if (agentFilter !== "todos") {
+      const { data: agentLogs } = await supabase
+        .from("call_logs")
+        .select("contact_id")
+        .eq("clinic_id", clinicId)
+        .eq("logged_by", agentFilter);
+      agentContactIds = [...new Set((agentLogs || []).map(l => l.contact_id))];
+      if (agentContactIds.length === 0) {
+        setContacts([]);
+        setLoading(false);
+        return;
+      }
+    }
+
     let query = supabase
       .from("contacts")
       .select("*")
@@ -73,11 +131,20 @@ export const useCRM = () => {
     if (searchQuery.trim()) {
       query = query.or(`name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
     }
+    if (dateRange.from) {
+      query = query.gte("created_at", dateRange.from.toISOString());
+    }
+    if (dateRange.to) {
+      query = query.lte("created_at", dateRange.to.toISOString());
+    }
+    if (agentContactIds) {
+      query = query.in("id", agentContactIds);
+    }
 
     const { data, error } = await query;
     if (!error) setContacts(data || []);
     setLoading(false);
-  }, [clinicId, stageFilter, searchQuery]);
+  }, [clinicId, stageFilter, searchQuery, dateRange, agentFilter]);
 
   const fetchCallLogs = useCallback(async (contactId: string) => {
     if (!clinicId) return;
@@ -178,7 +245,9 @@ export const useCRM = () => {
 
   return {
     contacts, callLogs, loading, selectedContact, stageFilter, searchQuery,
+    datePreset, dateRange, agentFilter, agents, isAdmin,
     setSelectedContact, setStageFilter, setSearchQuery,
+    setDatePreset, setDateRange, setAgentFilter,
     createContact, updateContact, logCall, convertToPatient, fetchContacts,
   };
 };
