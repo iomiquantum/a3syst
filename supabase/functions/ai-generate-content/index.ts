@@ -30,7 +30,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { prompt, tone, platform, type, width, height } = await req.json();
+    const { prompt, tone, platform, type, width, height, imageModel } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -88,7 +88,7 @@ Reglas:
         : "";
       const imagePrompt = `${prompt}${sizeInstruction}`;
 
-      console.log("Image generation - requested:", width, "x", height, "-> aspectRatio:", aspectRatio);
+      console.log("Image generation - model:", imageModel || "pro", "- requested:", width, "x", height, "-> aspectRatio:", aspectRatio);
 
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -97,7 +97,7 @@ Reglas:
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-pro-image-preview",
+          model: imageModel === "flash" ? "google/gemini-2.5-flash-image" : "google/gemini-3-pro-image-preview",
           messages: [{ role: "user", content: imagePrompt }],
           modalities: ["image", "text"],
           ...(aspectRatio ? { aspect_ratio: aspectRatio, image_generation_config: { aspectRatio } } : {}),

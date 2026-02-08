@@ -28,9 +28,10 @@ interface Props {
   sizeLabel?: string;
   sizeW?: number;
   sizeH?: number;
+  imageModel?: "flash" | "pro";
 }
 
-const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerateCopy, onApprove, regeneratingImage, regeneratingCopy, platform, sizeLabel, sizeW, sizeH }: Props) => {
+const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerateCopy, onApprove, regeneratingImage, regeneratingCopy, platform, sizeLabel, sizeW, sizeH, imageModel = "pro" }: Props) => {
   const [editingCopy, setEditingCopy] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState(false);
@@ -101,31 +102,30 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
     }
   };
 
-  const handleDownloadImage = async () => {
+  const handleDownloadImage = async (mode: "original" | "resized" | "contain" = "resized") => {
     if (!piece.imageUrl) return;
     setDownloading(true);
     try {
       const response = await fetch(piece.imageUrl);
       let blob = await response.blob();
 
-      // Resize to exact target dimensions using cover mode (no white bars, crops edges if needed)
-      if (sizeW && sizeH) {
+      let dimsLabel = "HD";
+      if (mode === "resized" && sizeW && sizeH) {
         blob = await resizeImageCover(blob, sizeW, sizeH);
+        dimsLabel = `${sizeW}x${sizeH}`;
+      } else if (mode === "contain" && sizeW && sizeH) {
+        blob = await resizeImageContain(blob, sizeW, sizeH);
+        dimsLabel = `${sizeW}x${sizeH}-contain`;
+      } else {
+        dimsLabel = "original";
       }
 
-      // Build descriptive filename
       const shortDesc = (piece.copy || piece.instruction || "imagen")
-        .replace(/[#*\n]/g, " ")
-        .trim()
-        .split(/\s+/)
-        .slice(0, 5)
-        .join("-")
-        .replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ\-]/g, "")
-        .substring(0, 40);
-      const dims = sizeW && sizeH ? `${sizeW}x${sizeH}` : "HD";
+        .replace(/[#*\n]/g, " ").trim().split(/\s+/).slice(0, 5).join("-")
+        .replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ\-]/g, "").substring(0, 40);
       const plat = (platform || "social").toLowerCase();
       const sLabel = (sizeLabel || "").replace(/\s+/g, "-").toLowerCase();
-      const fileName = `${shortDesc}_${plat}_${sLabel}_${dims}.png`;
+      const fileName = `${shortDesc}_${plat}_${sLabel}_${dimsLabel}.png`;
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -139,6 +139,37 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
       console.error("Download error:", e);
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const resizeImageContain = async (blob: Blob, targetW: number, targetH: number): Promise<Blob> => {
+    try {
+      const bitmap = await createImageBitmap(blob);
+      const canvas = document.createElement("canvas");
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return blob;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, targetW, targetH);
+      const srcRatio = bitmap.width / bitmap.height;
+      const dstRatio = targetW / targetH;
+      let dx = 0, dy = 0, dw = targetW, dh = targetH;
+      if (srcRatio > dstRatio) {
+        dh = targetW / srcRatio;
+        dy = (targetH - dh) / 2;
+      } else {
+        dw = targetH * srcRatio;
+        dx = (targetW - dw) / 2;
+      }
+      ctx.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height, dx, dy, dw, dh);
+      bitmap.close();
+      return new Promise<Blob>((resolve) => {
+        canvas.toBlob((resized) => resolve(resized || blob), "image/png", 1.0);
+      });
+    } catch (e) {
+      console.error("Contain resize error:", e);
+      return blob;
     }
   };
 
@@ -188,37 +219,36 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
           </div>
         )}
         {!isApproved && piece.imageUrl && !regeneratingImage && (
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="gap-1.5"
-              onClick={() => onRegenerateImage(piece.id)}
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Regenerar
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 flex-wrap px-4">
+            <Button variant="secondary" size="sm" className="gap-1.5" onClick={() => onRegenerateImage(piece.id)}>
+              <RefreshCw className="w-3.5 h-3.5" /> Regenerar
             </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="gap-1.5"
-              onClick={handleDownloadImage}
-              disabled={downloading}
-            >
-              {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-              {sizeW && sizeH ? `Descargar ${sizeW}×${sizeH}` : "Descargar HD"}
-            </Button>
+            {imageModel === "flash" && sizeW && sizeH && sizeW !== sizeH ? (
+              <>
+                <Button variant="secondary" size="sm" className="gap-1.5" onClick={() => handleDownloadImage("original")} disabled={downloading}>
+                  {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                  Original
+                </Button>
+                <Button variant="secondary" size="sm" className="gap-1.5" onClick={() => handleDownloadImage("resized")} disabled={downloading}>
+                  {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                  {sizeW}×{sizeH} (recorte)
+                </Button>
+                <Button variant="secondary" size="sm" className="gap-1.5" onClick={() => handleDownloadImage("contain")} disabled={downloading}>
+                  {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                  {sizeW}×{sizeH} (fondo)
+                </Button>
+              </>
+            ) : (
+              <Button variant="secondary" size="sm" className="gap-1.5" onClick={() => handleDownloadImage("resized")} disabled={downloading}>
+                {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                {sizeW && sizeH ? `Descargar ${sizeW}×${sizeH}` : "Descargar HD"}
+              </Button>
+            )}
           </div>
         )}
         {isApproved && piece.imageUrl && !regeneratingImage && (
-          <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="gap-1.5 text-xs"
-              onClick={handleDownloadImage}
-              disabled={downloading}
-            >
+          <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+            <Button variant="secondary" size="sm" className="gap-1.5 text-xs" onClick={() => handleDownloadImage("resized")} disabled={downloading}>
               {downloading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
               {sizeW && sizeH ? `${sizeW}×${sizeH}` : "HD"}
             </Button>
