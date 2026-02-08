@@ -69,14 +69,48 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
 
   const isApproved = piece.status === "approved";
 
-  // No client-side resize needed — images are generated at the correct aspect ratio by the AI
+  const resizeImageCover = (blob: Blob, targetW: number, targetH: number): Promise<Blob> => {
+    return new Promise((resolve) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = targetW;
+        canvas.height = targetH;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(blob); return; }
+        // "Cover" mode: crop source to fill target entirely, no white bars
+        const srcRatio = img.width / img.height;
+        const dstRatio = targetW / targetH;
+        let sx = 0, sy = 0, sw = img.width, sh = img.height;
+        if (srcRatio > dstRatio) {
+          // Source wider: crop sides
+          sw = img.height * dstRatio;
+          sx = (img.width - sw) / 2;
+        } else {
+          // Source taller: crop top/bottom
+          sh = img.width / dstRatio;
+          sy = (img.height - sh) / 2;
+        }
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH);
+        canvas.toBlob((resized) => resolve(resized || blob), "image/png", 1.0);
+      };
+      img.onerror = () => resolve(blob);
+      img.crossOrigin = "anonymous";
+      img.src = URL.createObjectURL(blob);
+    });
+  };
 
   const handleDownloadImage = async () => {
     if (!piece.imageUrl) return;
     setDownloading(true);
     try {
       const response = await fetch(piece.imageUrl);
-      const blob = await response.blob();
+      let blob = await response.blob();
+
+      // Resize to exact target dimensions using cover mode (no white bars, crops edges if needed)
+      if (sizeW && sizeH) {
+        blob = await resizeImageCover(blob, sizeW, sizeH);
+      }
 
       // Build descriptive filename
       const shortDesc = (piece.copy || piece.instruction || "imagen")
@@ -141,8 +175,8 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
           <img
             src={piece.imageUrl}
             alt={`Generada #${piece.id}`}
-            className="w-full object-contain bg-muted"
-            style={{ aspectRatio: sizeW && sizeH ? `${sizeW}/${sizeH}` : undefined, maxHeight: 400 }}
+            className="w-full object-cover bg-muted"
+            style={{ aspectRatio: sizeW && sizeH ? `${sizeW}/${sizeH}` : undefined, maxHeight: 500 }}
           />
         ) : (
           <div
