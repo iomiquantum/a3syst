@@ -43,6 +43,7 @@ const ContentAIGenerator = ({ content }: Props) => {
     setPieces(Array.from({ length: count }, (_, i) => ({
       id: i + 1,
       instruction: mainPrompt,
+      imagePrompt: "",
       copy: null,
       imageUrl: null,
       status: "generating",
@@ -62,6 +63,7 @@ const ContentAIGenerator = ({ content }: Props) => {
       return {
         id: i + 1,
         instruction: mainPrompt,
+        imagePrompt: "",
         copy: null,
         imageUrl: null,
         status: "done" as const,
@@ -75,22 +77,19 @@ const ContentAIGenerator = ({ content }: Props) => {
     setPieces(prev => prev.map(p => (p.id === id ? { ...p, copy } : p)));
   };
 
-  const handleRegenerateImage = async (id: number) => {
+  const handleRegenerateImage = async (id: number, customPrompt?: string) => {
     const piece = pieces.find(p => p.id === id);
     if (!piece) return;
     setRegeneratingId(id);
 
+    const prompt = customPrompt || `Variación visual diferente para: ${piece.instruction}. Crear una imagen completamente distinta a las anteriores, con otro estilo, composición y enfoque visual.`;
+
     try {
       const { data, error } = await supabase.functions.invoke("ai-generate-content", {
-        body: {
-          prompt: `Variación visual diferente para: ${piece.instruction}. Crear una imagen completamente distinta a las anteriores, con otro estilo, composición y enfoque visual.`,
-          tone,
-          platform,
-          type: "image",
-        },
+        body: { prompt, tone, platform, type: "image" },
       });
       if (error) throw error;
-      setPieces(prev => prev.map(p => (p.id === id ? { ...p, imageUrl: data?.imageUrl || p.imageUrl } : p)));
+      setPieces(prev => prev.map(p => (p.id === id ? { ...p, imageUrl: data?.imageUrl || p.imageUrl, imagePrompt: prompt } : p)));
     } catch (err) {
       console.error(err);
       toast.error("Error regenerando imagen");
@@ -287,6 +286,7 @@ Variación visual #${variationNum} de ${totalVariations}: Crear una imagen con e
   return {
     id: variationNum,
     instruction: mainPrompt,
+    imagePrompt,
     copy,
     imageUrl,
     status: "done",
