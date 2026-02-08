@@ -69,52 +69,14 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
 
   const isApproved = piece.status === "approved";
 
-  const resizeImage = (blob: Blob, targetW: number, targetH: number): Promise<Blob> => {
-    return new Promise((resolve, reject) => {
-      const img = new window.Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = targetW;
-        canvas.height = targetH;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) { resolve(blob); return; }
-        // Fill background with white/neutral then draw image in "contain" mode
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, targetW, targetH);
-        const srcRatio = img.width / img.height;
-        const dstRatio = targetW / targetH;
-        let dx = 0, dy = 0, dw = targetW, dh = targetH;
-        if (srcRatio > dstRatio) {
-          // Image is wider than target: fit width, center vertically
-          dh = targetW / srcRatio;
-          dy = (targetH - dh) / 2;
-        } else {
-          // Image is taller than target: fit height, center horizontally
-          dw = targetH * srcRatio;
-          dx = (targetW - dw) / 2;
-        }
-        ctx.drawImage(img, 0, 0, img.width, img.height, dx, dy, dw, dh);
-        canvas.toBlob((resized) => {
-          resolve(resized || blob);
-        }, "image/png", 1.0);
-      };
-      img.onerror = () => resolve(blob);
-      img.crossOrigin = "anonymous";
-      img.src = URL.createObjectURL(blob);
-    });
-  };
+  // No client-side resize needed — images are generated at the correct aspect ratio by the AI
 
   const handleDownloadImage = async () => {
     if (!piece.imageUrl) return;
     setDownloading(true);
     try {
       const response = await fetch(piece.imageUrl);
-      let blob = await response.blob();
-
-      // Resize to target dimensions if specified
-      if (sizeW && sizeH) {
-        blob = await resizeImage(blob, sizeW, sizeH);
-      }
+      const blob = await response.blob();
 
       // Build descriptive filename
       const shortDesc = (piece.copy || piece.instruction || "imagen")
