@@ -14,6 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_agent_config: {
+        Row: {
+          agent_name: string
+          clinic_id: string
+          created_at: string
+          enabled: boolean
+          greeting: string
+          id: string
+          language: string
+          objective: string
+          services: Json
+          special_instructions: string
+          tone: string
+          updated_at: string
+        }
+        Insert: {
+          agent_name?: string
+          clinic_id: string
+          created_at?: string
+          enabled?: boolean
+          greeting?: string
+          id?: string
+          language?: string
+          objective?: string
+          services?: Json
+          special_instructions?: string
+          tone?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_name?: string
+          clinic_id?: string
+          created_at?: string
+          enabled?: boolean
+          greeting?: string
+          id?: string
+          language?: string
+          objective?: string
+          services?: Json
+          special_instructions?: string
+          tone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agent_config_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           branch_id: string | null
