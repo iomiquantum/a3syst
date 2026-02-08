@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.validate-channel]
 verify_jwt = false
+
+[functions.ai-generate-content]
+verify_jwt = false
