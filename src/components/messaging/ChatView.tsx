@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Smile, Paperclip, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Conversation, Message } from "@/hooks/useMessaging";
+import ChannelIcon from "@/components/messaging/ChannelIcon";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -68,9 +69,9 @@ const ChatView = ({ conversation, messages, sending, onSend }: Props) => {
         </div>
         <div>
           <p className="text-sm font-medium text-foreground">{conversation.contact?.name || "Sin nombre"}</p>
-          <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-success" />
-            <span className="text-xs text-muted-foreground">{conversation.contact?.funnel_stage || "Nuevos"}</span>
+          <div className="flex items-center gap-2">
+            <ChannelIcon channel={conversation.channel || "whatsapp"} size="sm" showLabel />
+            <span className="text-xs text-muted-foreground">· {conversation.contact?.funnel_stage || "Nuevos"}</span>
           </div>
         </div>
         <div className="ml-auto flex items-center gap-2">

@@ -14,7 +14,9 @@ const MensajesPage = () => {
     loading,
     sendingMessage,
     funnelFilter,
+    channelFilter,
     setFunnelFilter,
+    setChannelFilter,
     selectConversation,
     sendMessage,
     updateContactStage,
@@ -35,8 +37,10 @@ const MensajesPage = () => {
               allConversations={allConversations}
               selected={selectedConversation}
               funnelFilter={funnelFilter}
+              channelFilter={channelFilter}
               onSelect={selectConversation}
               onFilterChange={setFunnelFilter}
+              onChannelFilterChange={setChannelFilter}
             />
           )}
         </div>
