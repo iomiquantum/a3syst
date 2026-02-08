@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
-import { Wand2, Loader2, Plus, Minus, Sparkles } from "lucide-react";
+import { Wand2, Loader2, Plus, Minus, Sparkles, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import type { ContentPost } from "@/hooks/useContentPosts";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,17 +45,15 @@ const ContentAIGenerator = ({ content }: Props) => {
     setCount(Math.max(1, Math.min(MAX_PIECES, n)));
   };
 
-  // When magic mode is toggled on, randomize fields
-  useEffect(() => {
-    if (magicMode) {
-      setTone(tones[Math.floor(Math.random() * tones.length)]);
-      setCopyLength(copyLengths[Math.floor(Math.random() * copyLengths.length)].value);
-      if (strategies.length > 0) {
-        const rand = strategies[Math.floor(Math.random() * strategies.length)];
-        setSelectedStrategyId(rand.id);
-      }
+  const hacerMagia = () => {
+    setTone(tones[Math.floor(Math.random() * tones.length)]);
+    setCopyLength(copyLengths[Math.floor(Math.random() * copyLengths.length)].value);
+    if (strategies.length > 0) {
+      const rand = strategies[Math.floor(Math.random() * strategies.length)];
+      setSelectedStrategyId(rand.id);
     }
-  }, [magicMode, strategies]);
+    setMagicMode(true);
+  };
 
   const getEffectiveCopyLength = () => copyLengths.find(c => c.value === copyLength) || copyLengths[1];
 
@@ -167,21 +164,19 @@ const ContentAIGenerator = ({ content }: Props) => {
         </p>
       </div>
 
-      {/* ✨ Hacer Magia checkbox */}
+      {/* ✨ Hacer Magia + Abra cadabra */}
       <div className="flex items-center gap-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
-        <Checkbox
-          id="magic-mode"
-          checked={magicMode}
-          onCheckedChange={(checked) => setMagicMode(checked === true)}
-          className="h-5 w-5"
-        />
-        <label htmlFor="magic-mode" className="flex items-center gap-2 cursor-pointer select-none">
-          <Sparkles className="w-5 h-5 text-primary" />
-          <div>
-            <span className="text-sm font-bold text-foreground">Hacer magia</span>
-            <p className="text-xs text-muted-foreground">Déjanos a nosotros hacer la magia ✨</p>
-          </div>
-        </label>
+        <Button onClick={hacerMagia} className="gradient-primary text-primary-foreground gap-2">
+          <Sparkles className="w-4 h-4" />
+          ✨ Hacer magia
+        </Button>
+        {magicMode && (
+          <Button variant="outline" onClick={hacerMagia} className="gap-2 border-primary/30 text-primary hover:bg-primary/10">
+            <RefreshCw className="w-4 h-4" />
+            Abra cadabra
+          </Button>
+        )}
+        <p className="text-xs text-muted-foreground ml-1">Déjanos a nosotros hacer la magia ✨</p>
       </div>
 
       {/* Main prompt */}
