@@ -69,7 +69,7 @@ export function useCreateService() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (svc: { name: string; core_benefit: string; pain_point: string; target_price: string }) => {
-      if (!clinicId) throw new Error("No clinic");
+      if (!clinicId) throw new Error("No hay clínica seleccionada");
       const { data, error } = await supabase
         .from("psycho_matrix_services" as any)
         .insert({ ...svc, clinic_id: clinicId })
@@ -81,6 +81,10 @@ export function useCreateService() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["psycho-services"] });
       toast({ title: "Servicio creado" });
+    },
+    onError: (error: any) => {
+      console.error("Error creando servicio:", error);
+      toast({ title: "Error al crear servicio", description: error.message, variant: "destructive" });
     },
   });
 }
