@@ -20,8 +20,8 @@ const platforms = ["Instagram", "Facebook", "TikTok"];
 const MAX_PIECES = 4;
 
 const ContentAIGenerator = ({ content }: Props) => {
-  const [count, setCount] = useState(1);
-  const [instructions, setInstructions] = useState<string[]>([""]);
+  const [count, setCount] = useState(2);
+  const [mainPrompt, setMainPrompt] = useState("");
   const [tone, setTone] = useState("Profesional");
   const [platform, setPlatform] = useState("Instagram");
   const [generating, setGenerating] = useState(false);
@@ -29,67 +29,38 @@ const ContentAIGenerator = ({ content }: Props) => {
   const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
 
   const updateCount = (n: number) => {
-    const next = Math.max(1, Math.min(MAX_PIECES, n));
-    setCount(next);
-    setInstructions(prev => {
-      const copy = [...prev];
-      while (copy.length < next) copy.push("");
-      return copy.slice(0, next);
-    });
-  };
-
-  const updateInstruction = (idx: number, val: string) => {
-    setInstructions(prev => prev.map((v, i) => (i === idx ? val : v)));
+    setCount(Math.max(1, Math.min(MAX_PIECES, n)));
   };
 
   const handleGenerate = async () => {
-    const valid = instructions.slice(0, count);
-    if (valid.some(v => !v.trim())) {
-      toast.error("Completa todas las instrucciones");
+    if (!mainPrompt.trim()) {
+      toast.error("Describe tu campaña o idea");
       return;
     }
 
     setGenerating(true);
-    setPieces(valid.map((inst, i) => ({
+    setPieces(Array.from({ length: count }, (_, i) => ({
       id: i + 1,
-      instruction: inst,
+      instruction: mainPrompt,
       copy: null,
       imageUrl: null,
       status: "generating",
     })));
 
-    // Generate all pieces in parallel
+    // Generate all variations in parallel — each call gets a unique variation prompt
     const results = await Promise.allSettled(
-      valid.map(async (inst, i) => {
-        // Generate copy
-        const { data: copyData, error: copyErr } = await supabase.functions.invoke("ai-generate-content", {
-          body: { prompt: inst, tone, platform, type: "copy" },
-        });
-        if (copyErr) throw copyErr;
-
-        // Generate image
-        const { data: imgData, error: imgErr } = await supabase.functions.invoke("ai-generate-content", {
-          body: { prompt: inst, tone, platform, type: "image" },
-        });
-        if (imgErr) throw imgErr;
-
-        return {
-          id: i + 1,
-          instruction: inst,
-          copy: copyData?.content || "",
-          imageUrl: imgData?.imageUrl || null,
-          status: "done" as const,
-        };
-      })
+      Array.from({ length: count }, (_, i) =>
+        generateVariation(mainPrompt, i + 1, count, tone, platform)
+      )
     );
 
     setPieces(results.map((r, i) => {
       if (r.status === "fulfilled") return r.value;
-      console.error(`Piece ${i + 1} failed:`, r.reason);
-      toast.error(`Error generando pieza #${i + 1}`);
+      console.error(`Variación ${i + 1} falló:`, r.reason);
+      toast.error(`Error generando variación #${i + 1}`);
       return {
         id: i + 1,
-        instruction: valid[i],
+        instruction: mainPrompt,
         copy: null,
         imageUrl: null,
         status: "done" as const,
@@ -110,7 +81,12 @@ const ContentAIGenerator = ({ content }: Props) => {
 
     try {
       const { data, error } = await supabase.functions.invoke("ai-generate-content", {
-        body: { prompt: piece.instruction, tone, platform, type: "image" },
+        body: {
+          prompt: `Variación visual diferente para: ${piece.instruction}. Crear una imagen completamente distinta a las anteriores, con otro estilo, composición y enfoque visual.`,
+          tone,
+          platform,
+          type: "image",
+        },
       });
       if (error) throw error;
       setPieces(prev => prev.map(p => (p.id === id ? { ...p, imageUrl: data?.imageUrl || p.imageUrl } : p)));
@@ -128,10 +104,10 @@ const ContentAIGenerator = ({ content }: Props) => {
 
     await content.createPost({
       body: piece.copy,
-      title: piece.instruction.slice(0, 60),
+      title: mainPrompt.slice(0, 60),
       status: "draft",
       ai_generated: true,
-      ai_prompt: piece.instruction,
+      ai_prompt: mainPrompt,
       platforms: [platform.toLowerCase()],
       media_urls: [piece.imageUrl],
       media_type: "image",
@@ -141,48 +117,43 @@ const ContentAIGenerator = ({ content }: Props) => {
   };
 
   const allDone = pieces.length > 0 && pieces.every(p => p.status === "done" || p.status === "approved");
-  const anyGenerating = generating;
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-foreground">Generar contenido con IA</h2>
-        <p className="text-sm text-muted-foreground">Genera múltiples publicaciones (copy + imagen) de una vez. Máximo {MAX_PIECES}.</p>
+        <h2 className="text-xl font-bold text-foreground">Generar campaña con IA</h2>
+        <p className="text-sm text-muted-foreground">
+          Describe tu campaña y elige cuántas variaciones quieres. La IA generará copies e imágenes diferentes,
+          cada uno enfocado a un ángulo o público distinto.
+        </p>
       </div>
 
-      {/* Count selector */}
-      <div className="flex items-center gap-4">
-        <Label className="text-sm font-medium whitespace-nowrap">¿Cuántas publicaciones generar?</Label>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateCount(count - 1)} disabled={count <= 1}>
-            <Minus className="w-4 h-4" />
-          </Button>
-          <span className="text-lg font-bold w-8 text-center">{count}</span>
-          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateCount(count + 1)} disabled={count >= MAX_PIECES}>
-            <Plus className="w-4 h-4" />
-          </Button>
-        </div>
+      {/* Main prompt */}
+      <div className="space-y-1.5">
+        <Label className="text-sm font-medium">¿Qué quieres promocionar?</Label>
+        <Textarea
+          placeholder="Ej: Campaña por el Día de la Madre, promocionar paquetes de blanqueamiento dental y limpieza con 30% de descuento, dirigido a mujeres de 25-50 años..."
+          className="min-h-[120px]"
+          value={mainPrompt}
+          onChange={e => setMainPrompt(e.target.value)}
+        />
       </div>
 
-      {/* Instructions */}
-      <div className="space-y-3">
-        {Array.from({ length: count }).map((_, i) => (
-          <div key={i} className="space-y-1">
-            <Label className="text-sm font-medium">
-              Instrucción #{i + 1}
-            </Label>
-            <Textarea
-              placeholder={`Ej: Publicación sobre blanqueamiento dental con 20% de descuento, estilo moderno...`}
-              className="min-h-[80px]"
-              value={instructions[i] || ""}
-              onChange={e => updateInstruction(i, e.target.value)}
-            />
+      {/* Count + Tone + Platform */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium">Variaciones a generar</Label>
+          <div className="flex items-center gap-2 mt-1.5">
+            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => updateCount(count - 1)} disabled={count <= 1}>
+              <Minus className="w-4 h-4" />
+            </Button>
+            <span className="text-xl font-bold w-8 text-center">{count}</span>
+            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => updateCount(count + 1)} disabled={count >= MAX_PIECES}>
+              <Plus className="w-4 h-4" />
+            </Button>
+            <span className="text-xs text-muted-foreground ml-1">máx. {MAX_PIECES}</span>
           </div>
-        ))}
-      </div>
-
-      {/* Tone & Platform */}
-      <div className="grid gap-4 md:grid-cols-2">
+        </div>
         <div>
           <Label className="text-sm font-medium">Tono</Label>
           <Select value={tone} onValueChange={setTone}>
@@ -205,15 +176,15 @@ const ContentAIGenerator = ({ content }: Props) => {
 
       <Button
         onClick={handleGenerate}
-        disabled={anyGenerating}
+        disabled={generating || !mainPrompt.trim()}
         className="gradient-primary text-primary-foreground gap-2"
       >
-        {anyGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-        {anyGenerating ? "Generando..." : `Generar ${count} publicación${count > 1 ? "es" : ""}`}
+        {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+        {generating ? "Generando variaciones..." : `Generar ${count} variación${count > 1 ? "es" : ""}`}
       </Button>
 
       {/* Generating skeleton */}
-      {anyGenerating && (
+      {generating && (
         <div className="grid gap-4 md:grid-cols-2">
           {Array.from({ length: count }).map((_, i) => (
             <div key={i} className="border border-border rounded-xl p-4 bg-card animate-pulse space-y-3">
@@ -246,3 +217,51 @@ const ContentAIGenerator = ({ content }: Props) => {
 };
 
 export default ContentAIGenerator;
+
+// Helper: generate one variation with unique angle
+async function generateVariation(
+  mainPrompt: string,
+  variationNum: number,
+  totalVariations: number,
+  tone: string,
+  platform: string,
+): Promise<GeneratedPiece> {
+  const variationPrompt = `${mainPrompt}
+
+IMPORTANTE: Esta es la variación #${variationNum} de ${totalVariations} variaciones totales. 
+Genera un copy COMPLETAMENTE DIFERENTE a las demás variaciones. Usa un enfoque, ángulo o público objetivo distinto.
+- Variación 1: enfoque emocional/sentimental
+- Variación 2: enfoque de oferta/urgencia  
+- Variación 3: enfoque educativo/informativo
+- Variación 4: enfoque testimonial/social proof
+Usa el enfoque correspondiente a tu número de variación.`;
+
+  const imagePrompt = `${mainPrompt}. 
+Variación visual #${variationNum} de ${totalVariations}: Crear una imagen con estilo, composición y paleta de colores COMPLETAMENTE DIFERENTE a las otras variaciones. Usar un enfoque visual único y creativo.`;
+
+  // Generate copy and image in parallel
+  const [copyResult, imgResult] = await Promise.allSettled([
+    supabase.functions.invoke("ai-generate-content", {
+      body: { prompt: variationPrompt, tone, platform, type: "copy" },
+    }),
+    supabase.functions.invoke("ai-generate-content", {
+      body: { prompt: imagePrompt, tone, platform, type: "image" },
+    }),
+  ]);
+
+  const copy = copyResult.status === "fulfilled" && !copyResult.value.error
+    ? copyResult.value.data?.content || ""
+    : null;
+
+  const imageUrl = imgResult.status === "fulfilled" && !imgResult.value.error
+    ? imgResult.value.data?.imageUrl || null
+    : null;
+
+  return {
+    id: variationNum,
+    instruction: mainPrompt,
+    copy,
+    imageUrl,
+    status: "done",
+  };
+}
