@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Bot, Save, Plus, Trash2, GripVertical } from "lucide-react";
+import { Bot, Save, Plus, Trash2, GripVertical, Loader2 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,47 +7,40 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
-
-interface ServiceItem {
-  id: string;
-  name: string;
-  price: string;
-  description: string;
-}
+import { useAIAgentConfig, ServiceItem } from "@/hooks/useAIAgentConfig";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const AIAgentConfigPage = () => {
-  const { toast } = useToast();
-  const [agentName, setAgentName] = useState("Asistente IOMI");
-  const [language, setLanguage] = useState("es");
-  const [objective, setObjective] = useState("Atender consultas de pacientes, agendar citas y proporcionar información sobre tratamientos disponibles.");
-  const [tone, setTone] = useState("profesional");
-  const [greeting, setGreeting] = useState("¡Hola! 👋 Soy el asistente virtual de la clínica. ¿En qué puedo ayudarte hoy?");
-  const [specialInstructions, setSpecialInstructions] = useState("- Siempre preguntar nombre y teléfono antes de agendar.\n- No dar diagnósticos médicos.\n- Derivar urgencias al número de emergencia.\n- Ofrecer la primera consulta gratuita cuando el lead muestre interés.");
-  const [enabled, setEnabled] = useState(true);
-  const [services, setServices] = useState<ServiceItem[]>([
-    { id: "1", name: "Limpieza dental", price: "15000", description: "Limpieza profesional con ultrasonido" },
-    { id: "2", name: "Blanqueamiento", price: "45000", description: "Blanqueamiento LED en consultorio" },
-    { id: "3", name: "Ortodoncia", price: "350000", description: "Tratamiento completo con brackets" },
-  ]);
+  const { config, setConfig, loading, saving, save } = useAIAgentConfig();
+
+  const update = <K extends keyof typeof config>(key: K, value: (typeof config)[K]) => {
+    setConfig({ ...config, [key]: value });
+  };
 
   const addService = () => {
-    setServices([...services, { id: crypto.randomUUID(), name: "", price: "", description: "" }]);
+    update("services", [...config.services, { id: crypto.randomUUID(), name: "", price: "", description: "" }]);
   };
 
   const updateService = (id: string, field: keyof ServiceItem, value: string) => {
-    setServices(services.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
+    update("services", config.services.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
   };
 
   const removeService = (id: string) => {
-    setServices(services.filter((s) => s.id !== id));
+    update("services", config.services.filter((s) => s.id !== id));
   };
 
-  const handleSave = () => {
-    toast({ title: "Configuración guardada", description: "La configuración del agente IA se actualizó correctamente." });
-  };
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="max-w-3xl mx-auto space-y-6">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -67,10 +59,11 @@ const AIAgentConfigPage = () => {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <Label htmlFor="agent-toggle" className="text-sm text-muted-foreground">Activo</Label>
-              <Switch id="agent-toggle" checked={enabled} onCheckedChange={setEnabled} />
+              <Switch id="agent-toggle" checked={config.enabled} onCheckedChange={(v) => update("enabled", v)} />
             </div>
-            <Button onClick={handleSave}>
-              <Save className="w-4 h-4 mr-1" /> Guardar
+            <Button onClick={() => save(config)} disabled={saving}>
+              {saving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
+              Guardar
             </Button>
           </div>
         </div>
@@ -85,11 +78,11 @@ const AIAgentConfigPage = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Nombre del agente</Label>
-                <Input value={agentName} onChange={(e) => setAgentName(e.target.value)} placeholder="Ej: Asistente IOMI" />
+                <Input value={config.agent_name} onChange={(e) => update("agent_name", e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label>Idioma</Label>
-                <Select value={language} onValueChange={setLanguage}>
+                <Select value={config.language} onValueChange={(v) => update("language", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="es">Español</SelectItem>
@@ -101,7 +94,7 @@ const AIAgentConfigPage = () => {
             </div>
             <div className="space-y-2">
               <Label>Tono de comunicación</Label>
-              <Select value={tone} onValueChange={setTone}>
+              <Select value={config.tone} onValueChange={(v) => update("tone", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="profesional">Profesional y cálido</SelectItem>
@@ -113,7 +106,7 @@ const AIAgentConfigPage = () => {
             </div>
             <div className="space-y-2">
               <Label>Mensaje de bienvenida</Label>
-              <Textarea value={greeting} onChange={(e) => setGreeting(e.target.value)} rows={2} />
+              <Textarea value={config.greeting} onChange={(e) => update("greeting", e.target.value)} rows={2} />
             </div>
           </CardContent>
         </Card>
@@ -125,7 +118,7 @@ const AIAgentConfigPage = () => {
             <CardDescription>Define la misión principal del agente en cada conversación.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Textarea value={objective} onChange={(e) => setObjective(e.target.value)} rows={3} placeholder="Describe qué debe lograr el agente en cada interacción..." />
+            <Textarea value={config.objective} onChange={(e) => update("objective", e.target.value)} rows={3} />
           </CardContent>
         </Card>
 
@@ -134,43 +127,28 @@ const AIAgentConfigPage = () => {
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-base">Servicios y precios</CardTitle>
-              <CardDescription>El agente usará esta información para responder consultas sobre tratamientos.</CardDescription>
+              <CardDescription>El agente usará esta información para responder consultas.</CardDescription>
             </div>
             <Button size="sm" variant="outline" onClick={addService}>
               <Plus className="w-4 h-4 mr-1" /> Agregar
             </Button>
           </CardHeader>
           <CardContent className="space-y-3">
-            {services.map((s) => (
+            {config.services.map((s) => (
               <div key={s.id} className="flex items-start gap-2 p-3 rounded-lg border border-border bg-background">
-                <GripVertical className="w-4 h-4 text-muted-foreground mt-2.5 shrink-0 cursor-grab" />
+                <GripVertical className="w-4 h-4 text-muted-foreground mt-2.5 shrink-0" />
                 <div className="flex-1 grid grid-cols-[1fr_100px] gap-2">
-                  <Input
-                    value={s.name}
-                    onChange={(e) => updateService(s.id, "name", e.target.value)}
-                    placeholder="Nombre del servicio"
-                    className="h-9 text-sm"
-                  />
-                  <Input
-                    value={s.price}
-                    onChange={(e) => updateService(s.id, "price", e.target.value)}
-                    placeholder="Precio"
-                    className="h-9 text-sm"
-                  />
-                  <Input
-                    value={s.description}
-                    onChange={(e) => updateService(s.id, "description", e.target.value)}
-                    placeholder="Descripción breve"
-                    className="h-9 text-sm col-span-2"
-                  />
+                  <Input value={s.name} onChange={(e) => updateService(s.id, "name", e.target.value)} placeholder="Nombre del servicio" className="h-9 text-sm" />
+                  <Input value={s.price} onChange={(e) => updateService(s.id, "price", e.target.value)} placeholder="Precio" className="h-9 text-sm" />
+                  <Input value={s.description} onChange={(e) => updateService(s.id, "description", e.target.value)} placeholder="Descripción breve" className="h-9 text-sm col-span-2" />
                 </div>
                 <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive shrink-0" onClick={() => removeService(s.id)}>
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
             ))}
-            {services.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">No hay servicios configurados. Agrega uno para que el agente pueda informar sobre precios.</p>
+            {config.services.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">No hay servicios configurados.</p>
             )}
           </CardContent>
         </Card>
@@ -182,13 +160,7 @@ const AIAgentConfigPage = () => {
             <CardDescription>Reglas específicas que el agente debe seguir. Una por línea.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Textarea
-              value={specialInstructions}
-              onChange={(e) => setSpecialInstructions(e.target.value)}
-              rows={6}
-              placeholder="- No dar diagnósticos médicos&#10;- Siempre pedir nombre y teléfono&#10;- Derivar urgencias al +54 11 ..."
-              className="font-mono text-sm"
-            />
+            <Textarea value={config.special_instructions} onChange={(e) => update("special_instructions", e.target.value)} rows={6} className="font-mono text-sm" />
           </CardContent>
         </Card>
 
@@ -201,21 +173,21 @@ const AIAgentConfigPage = () => {
           </CardHeader>
           <CardContent>
             <div className="bg-muted rounded-lg p-4 text-xs font-mono text-muted-foreground leading-relaxed whitespace-pre-wrap">
-{`Eres "${agentName}", un asistente virtual de una clínica dental.
-Idioma: ${language === "es" ? "Español" : language === "en" ? "English" : "Português"}
-Tono: ${tone}
+{`Eres "${config.agent_name}", un asistente virtual de una clínica dental.
+Idioma: ${config.language === "es" ? "Español" : config.language === "en" ? "English" : "Português"}
+Tono: ${config.tone}
 
 OBJETIVO:
-${objective}
+${config.objective}
 
 SERVICIOS DISPONIBLES:
-${services.map((s) => `• ${s.name} — $${s.price} — ${s.description}`).join("\n")}
+${config.services.map((s) => `• ${s.name} — $${s.price} — ${s.description}`).join("\n") || "(sin servicios)"}
 
 INSTRUCCIONES:
-${specialInstructions}
+${config.special_instructions}
 
 SALUDO INICIAL:
-${greeting}`}
+${config.greeting}`}
             </div>
           </CardContent>
         </Card>
