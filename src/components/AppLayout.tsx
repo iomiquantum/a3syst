@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Calendar, MessageSquare, Settings,
   LogOut, ChevronLeft, Bell, Search, DollarSign, UserCog,
   Building2, Stethoscope, Briefcase, ShieldCheck, Globe, PhoneCall, Megaphone, Bot,
-  Sun, Moon, Zap, Palette,
+  Sun, Moon, Zap, Palette, Brain,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -28,6 +28,7 @@ const mainNav = [
   { icon: Megaphone, label: "Marketing", path: "/marketing" },
   { icon: Zap, label: "ADS", path: "/ads" },
   { icon: Palette, label: "Contenido", path: "/contenido" },
+  { icon: Brain, label: "Psycho-Matrix", path: "/psycho-matrix" },
 ];
 
 const configNav = [
