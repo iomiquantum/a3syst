@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import type { ContentPost } from "@/hooks/useContentPosts";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +28,29 @@ const copyLengths = [
   { value: "medium", label: "Mediano", desc: "~150-250 caracteres" },
   { value: "long", label: "Amplio", desc: "~300-500 caracteres" },
 ];
+
+const imageSizesByPlatform: Record<string, { label: string; value: string; w: number; h: number }[]> = {
+  Instagram: [
+    { label: "Feed cuadrado", value: "ig-feed-sq", w: 1080, h: 1080 },
+    { label: "Feed vertical", value: "ig-feed-v", w: 1080, h: 1350 },
+    { label: "Story / Reel", value: "ig-story", w: 1080, h: 1920 },
+    { label: "Anuncio Feed", value: "ig-ad-feed", w: 1080, h: 1080 },
+    { label: "Anuncio Story", value: "ig-ad-story", w: 1080, h: 1920 },
+  ],
+  Facebook: [
+    { label: "Feed horizontal", value: "fb-feed", w: 1200, h: 630 },
+    { label: "Feed cuadrado", value: "fb-feed-sq", w: 1080, h: 1080 },
+    { label: "Story", value: "fb-story", w: 1080, h: 1920 },
+    { label: "Anuncio Feed", value: "fb-ad-feed", w: 1200, h: 628 },
+    { label: "Anuncio Carrusel", value: "fb-ad-carousel", w: 1080, h: 1080 },
+  ],
+  TikTok: [
+    { label: "Video vertical", value: "tt-video", w: 1080, h: 1920 },
+    { label: "Anuncio In-Feed", value: "tt-ad", w: 1080, h: 1920 },
+    { label: "Anuncio cuadrado", value: "tt-ad-sq", w: 1080, h: 1080 },
+  ],
+};
+
 const MAX_PIECES = 4;
 
 const ContentAIGenerator = ({ content }: Props) => {
@@ -34,6 +58,7 @@ const ContentAIGenerator = ({ content }: Props) => {
   const [mainPrompt, setMainPrompt] = useState("");
   const [tone, setTone] = useState("Profesional");
   const [platform, setPlatform] = useState("Instagram");
+  const [imageSize, setImageSize] = useState("ig-feed-sq");
   const [copyLength, setCopyLength] = useState("medium");
   const [extraNotes, setExtraNotes] = useState("");
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>("none");
@@ -41,6 +66,7 @@ const ContentAIGenerator = ({ content }: Props) => {
   const [magicFormula, setMagicFormula] = useState<{
     archetype: string; brand_voice: string; persuasion_trigger: string; generation: string; advanced_tech: string;
   } | null>(null);
+  const [imageFromCopy, setImageFromCopy] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [pieces, setPieces] = useState<GeneratedPiece[]>([]);
   const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
@@ -48,9 +74,7 @@ const ContentAIGenerator = ({ content }: Props) => {
 
   const { data: strategies = [] } = usePsychoStrategies();
 
-  const updateCount = (n: number) => {
-    setCount(Math.max(1, Math.min(MAX_PIECES, n)));
-  };
+  const updateCount = (n: number) => setCount(Math.max(1, Math.min(MAX_PIECES, n)));
 
   const randomPick = <T extends { label: string }>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)].label;
 
@@ -65,10 +89,27 @@ const ContentAIGenerator = ({ content }: Props) => {
       advanced_tech: Math.random() > 0.4 ? randomPick(psicologiaAvanzada) : "",
     });
     setSelectedStrategyId("none");
-    setMagicMode(true);
+  };
+
+  const handleMagicToggle = (checked: boolean) => {
+    setMagicMode(checked);
+    if (checked) hacerMagia();
+    else setMagicFormula(null);
+  };
+
+  // When platform changes, reset image size to first option
+  const handlePlatformChange = (p: string) => {
+    setPlatform(p);
+    const sizes = imageSizesByPlatform[p];
+    if (sizes?.length) setImageSize(sizes[0].value);
   };
 
   const getEffectiveCopyLength = () => copyLengths.find(c => c.value === copyLength) || copyLengths[1];
+
+  const getImageSizeInfo = () => {
+    const sizes = imageSizesByPlatform[platform] || [];
+    return sizes.find(s => s.value === imageSize) || sizes[0];
+  };
 
   const handleGenerate = async () => {
     if (!mainPrompt.trim()) {
@@ -78,33 +119,42 @@ const ContentAIGenerator = ({ content }: Props) => {
 
     setGenerating(true);
     setPieces(Array.from({ length: count }, (_, i) => ({
-      id: i + 1,
-      instruction: mainPrompt,
-      imagePrompt: "",
-      copy: null,
-      imageUrl: null,
-      status: "generating",
+      id: i + 1, instruction: mainPrompt, imagePrompt: "", copy: null, imageUrl: null, status: "generating",
     })));
 
     const selectedStrategy = magicMode && magicFormula
       ? magicFormula
       : strategies.find(s => s.id === selectedStrategyId);
     const lengthInfo = getEffectiveCopyLength();
+    const sizeInfo = getImageSizeInfo();
 
-    const results = await Promise.allSettled(
-      Array.from({ length: count }, (_, i) =>
-        generateVariation(mainPrompt, i + 1, count, tone, platform, lengthInfo, selectedStrategy, extraNotes)
-      )
-    );
-
-    setPieces(results.map((r, i) => {
-      if (r.status === "fulfilled") return r.value;
-      console.error(`Variación ${i + 1} falló:`, r.reason);
-      toast.error(`Error generando variación #${i + 1}`);
-      return {
-        id: i + 1, instruction: mainPrompt, imagePrompt: "", copy: null, imageUrl: null, status: "done" as const,
-      };
-    }));
+    // If imageFromCopy, generate copy first then image based on copy
+    if (imageFromCopy) {
+      const results: GeneratedPiece[] = [];
+      for (let i = 0; i < count; i++) {
+        const piece = await generateVariationWithCopyBasedImage(
+          mainPrompt, i + 1, count, tone, platform, lengthInfo, sizeInfo, selectedStrategy, extraNotes
+        ).catch(err => {
+          console.error(`Variación ${i + 1} falló:`, err);
+          toast.error(`Error generando variación #${i + 1}`);
+          return { id: i + 1, instruction: mainPrompt, imagePrompt: "", copy: null, imageUrl: null, status: "done" as const };
+        });
+        results.push(piece);
+      }
+      setPieces(results);
+    } else {
+      const results = await Promise.allSettled(
+        Array.from({ length: count }, (_, i) =>
+          generateVariation(mainPrompt, i + 1, count, tone, platform, lengthInfo, sizeInfo, selectedStrategy, extraNotes)
+        )
+      );
+      setPieces(results.map((r, i) => {
+        if (r.status === "fulfilled") return r.value;
+        console.error(`Variación ${i + 1} falló:`, r.reason);
+        toast.error(`Error generando variación #${i + 1}`);
+        return { id: i + 1, instruction: mainPrompt, imagePrompt: "", copy: null, imageUrl: null, status: "done" as const };
+      }));
+    }
 
     setGenerating(false);
   };
@@ -168,6 +218,7 @@ const ContentAIGenerator = ({ content }: Props) => {
   };
 
   const allDone = pieces.length > 0 && pieces.every(p => p.status === "done" || p.status === "approved");
+  const currentSizes = imageSizesByPlatform[platform] || [];
 
   return (
     <div className="space-y-6">
@@ -177,21 +228,6 @@ const ContentAIGenerator = ({ content }: Props) => {
           Describe tu campaña y elige cuántas variaciones quieres. La IA generará copies e imágenes diferentes,
           cada uno enfocado a un ángulo o público distinto.
         </p>
-      </div>
-
-      {/* ✨ Hacer Magia + Abra cadabra */}
-      <div className="flex items-center gap-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
-        <Button onClick={hacerMagia} className="gradient-primary text-primary-foreground gap-2">
-          <Sparkles className="w-4 h-4" />
-          ✨ Hacer magia
-        </Button>
-        {magicMode && (
-          <Button variant="outline" onClick={hacerMagia} className="gap-2 border-primary/30 text-primary hover:bg-primary/10">
-            <RefreshCw className="w-4 h-4" />
-            Abra cadabra
-          </Button>
-        )}
-        <p className="text-xs text-muted-foreground ml-1">Déjanos a nosotros hacer la magia ✨</p>
       </div>
 
       {/* Main prompt */}
@@ -205,7 +241,29 @@ const ContentAIGenerator = ({ content }: Props) => {
         />
       </div>
 
-      {/* Strategy selector */}
+      {/* ✨ Hacer Magia checkbox + Abra cadabra */}
+      <div className="flex items-center gap-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="magic-mode"
+            checked={magicMode}
+            onCheckedChange={(checked) => handleMagicToggle(checked === true)}
+          />
+          <label htmlFor="magic-mode" className="flex items-center gap-1.5 text-sm font-medium cursor-pointer text-foreground">
+            <Sparkles className="w-4 h-4 text-primary" />
+            ✨ Hacer magia
+          </label>
+        </div>
+        {magicMode && (
+          <Button variant="outline" onClick={hacerMagia} className="gap-2 border-primary/30 text-primary hover:bg-primary/10">
+            <RefreshCw className="w-4 h-4" />
+            Abra cadabra
+          </Button>
+        )}
+        <p className="text-xs text-muted-foreground ml-1">Genera una estrategia aleatoria del Psycho-Matrix ✨</p>
+      </div>
+
+      {/* Strategy selector (only when NOT magic) */}
       {!magicMode && (
         <div className="space-y-1.5">
           <Label className="text-sm font-medium">Estrategia Psycho-Matrix (opcional)</Label>
@@ -228,7 +286,7 @@ const ContentAIGenerator = ({ content }: Props) => {
         </div>
       )}
 
-      {/* Extra notes */}
+      {/* Extra notes (only when NOT magic) */}
       {!magicMode && (
         <div className="space-y-1.5">
           <Label className="text-sm font-medium">Notas adicionales (opcional)</Label>
@@ -241,10 +299,10 @@ const ContentAIGenerator = ({ content }: Props) => {
         </div>
       )}
 
-      {/* Count + Tone + Platform + Copy Length */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Count + Tone + Platform + Image Size + Copy Length */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <div className="space-y-1.5">
-          <Label className="text-sm font-medium">Variaciones a generar</Label>
+          <Label className="text-sm font-medium">Variaciones</Label>
           <div className="flex items-center gap-2 mt-1.5">
             <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => updateCount(count - 1)} disabled={count <= 1}>
               <Minus className="w-4 h-4" />
@@ -253,7 +311,6 @@ const ContentAIGenerator = ({ content }: Props) => {
             <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => updateCount(count + 1)} disabled={count >= MAX_PIECES}>
               <Plus className="w-4 h-4" />
             </Button>
-            <span className="text-xs text-muted-foreground ml-1">máx. {MAX_PIECES}</span>
           </div>
         </div>
 
@@ -270,11 +327,25 @@ const ContentAIGenerator = ({ content }: Props) => {
         )}
 
         <div>
-          <Label className="text-sm font-medium">Plataforma destino</Label>
-          <Select value={platform} onValueChange={setPlatform}>
+          <Label className="text-sm font-medium">Plataforma</Label>
+          <Select value={platform} onValueChange={handlePlatformChange}>
             <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
             <SelectContent>
               {platforms.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label className="text-sm font-medium">Tamaño imagen</Label>
+          <Select value={imageSize} onValueChange={setImageSize}>
+            <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {currentSizes.map(s => (
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label} <span className="text-muted-foreground ml-1">({s.w}×{s.h})</span>
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -294,6 +365,21 @@ const ContentAIGenerator = ({ content }: Props) => {
             </Select>
           </div>
         )}
+      </div>
+
+      {/* Image from copy checkbox */}
+      <div className="flex items-center gap-2 p-3 rounded-lg border border-border bg-muted/30">
+        <Checkbox
+          id="image-from-copy"
+          checked={imageFromCopy}
+          onCheckedChange={(checked) => setImageFromCopy(checked === true)}
+        />
+        <label htmlFor="image-from-copy" className="text-sm cursor-pointer text-foreground">
+          Generar imagen basada en el copy generado
+        </label>
+        <span className="text-xs text-muted-foreground ml-1">
+          (la imagen se creará a partir del texto generado)
+        </span>
       </div>
 
       {/* Magic mode summary */}
@@ -354,27 +440,18 @@ const ContentAIGenerator = ({ content }: Props) => {
 
 export default ContentAIGenerator;
 
-// Helper: generate one variation with unique angle
-async function generateVariation(
-  mainPrompt: string,
-  variationNum: number,
-  totalVariations: number,
-  tone: string,
-  platform: string,
-  lengthInfo: { value: string; label: string; desc: string },
-  strategy?: any,
-  extraNotes?: string,
-): Promise<GeneratedPiece> {
-  let strategyContext = "";
-  if (strategy) {
-    const arch = strategy.archetype;
-    const voice = strategy.brand_voice;
-    const trigger = strategy.persuasion_trigger;
-    const gen = strategy.generation;
-    const advTech = strategy.advanced_tech;
-    const genPrompt = (strategy as any).generated_prompt;
+// ── Helpers ──
 
-    strategyContext = `\n\nESTRATEGIA DE MARKETING (Psycho-Matrix):
+function buildStrategyContext(strategy: any): string {
+  if (!strategy) return "";
+  const arch = strategy.archetype;
+  const voice = strategy.brand_voice;
+  const trigger = strategy.persuasion_trigger;
+  const gen = strategy.generation;
+  const advTech = strategy.advanced_tech;
+  const genPrompt = (strategy as any).generated_prompt;
+
+  return `\n\nESTRATEGIA DE MARKETING (Psycho-Matrix):
 - Arquetipo: ${arch}
 - Voz de marca: ${voice}
 - Gatillo de persuasión: ${trigger}
@@ -382,13 +459,18 @@ async function generateVariation(
 ${advTech ? `- Técnica avanzada: ${advTech}` : ""}
 ${genPrompt ? `- Prompt estratégico: ${genPrompt}` : ""}
 Aplica esta estrategia al copy generado.`;
-  }
+}
 
+function buildCopyPrompt(
+  mainPrompt: string, variationNum: number, totalVariations: number,
+  lengthInfo: { value: string; label: string; desc: string },
+  strategy?: any, extraNotes?: string,
+): string {
+  const strategyContext = buildStrategyContext(strategy);
   const lengthInstruction = `\nLONGITUD DEL COPY: Genera un copy ${lengthInfo.label.toUpperCase()} (${lengthInfo.desc}). Respeta estrictamente este límite de caracteres.`;
-
   const extraContext = extraNotes?.trim() ? `\nNOTAS ADICIONALES DEL USUARIO: ${extraNotes}` : "";
 
-  const variationPrompt = `${mainPrompt}${strategyContext}${lengthInstruction}${extraContext}
+  return `${mainPrompt}${strategyContext}${lengthInstruction}${extraContext}
 
 IMPORTANTE: Esta es la variación #${variationNum} de ${totalVariations} variaciones totales. 
 Genera un copy COMPLETAMENTE DIFERENTE a las demás variaciones. Usa un enfoque, ángulo o público objetivo distinto.
@@ -397,33 +479,64 @@ Genera un copy COMPLETAMENTE DIFERENTE a las demás variaciones. Usa un enfoque,
 - Variación 3: enfoque educativo/informativo
 - Variación 4: enfoque testimonial/social proof
 Usa el enfoque correspondiente a tu número de variación.`;
+}
 
-  const imagePrompt = `${mainPrompt}. 
+function buildImagePrompt(
+  text: string, variationNum: number, totalVariations: number,
+  sizeInfo?: { label: string; w: number; h: number },
+): string {
+  const sizeHint = sizeInfo ? `\nFormato de imagen: ${sizeInfo.label} (${sizeInfo.w}x${sizeInfo.h}px). Diseña la composición para este formato.` : "";
+  return `${text}.${sizeHint}
 Variación visual #${variationNum} de ${totalVariations}: Crear una imagen con estilo, composición y paleta de colores COMPLETAMENTE DIFERENTE a las otras variaciones. Usar un enfoque visual único y creativo.`;
+}
+
+async function generateVariation(
+  mainPrompt: string, variationNum: number, totalVariations: number,
+  tone: string, platform: string,
+  lengthInfo: { value: string; label: string; desc: string },
+  sizeInfo: { label: string; w: number; h: number },
+  strategy?: any, extraNotes?: string,
+): Promise<GeneratedPiece> {
+  const variationPrompt = buildCopyPrompt(mainPrompt, variationNum, totalVariations, lengthInfo, strategy, extraNotes);
+  const imagePrompt = buildImagePrompt(mainPrompt, variationNum, totalVariations, sizeInfo);
 
   const [copyResult, imgResult] = await Promise.allSettled([
-    supabase.functions.invoke("ai-generate-content", {
-      body: { prompt: variationPrompt, tone, platform, type: "copy" },
-    }),
-    supabase.functions.invoke("ai-generate-content", {
-      body: { prompt: imagePrompt, tone, platform, type: "image" },
-    }),
+    supabase.functions.invoke("ai-generate-content", { body: { prompt: variationPrompt, tone, platform, type: "copy" } }),
+    supabase.functions.invoke("ai-generate-content", { body: { prompt: imagePrompt, tone, platform, type: "image" } }),
   ]);
 
-  const copy = copyResult.status === "fulfilled" && !copyResult.value.error
-    ? copyResult.value.data?.content || ""
-    : null;
+  const copy = copyResult.status === "fulfilled" && !copyResult.value.error ? copyResult.value.data?.content || "" : null;
+  const imageUrl = imgResult.status === "fulfilled" && !imgResult.value.error ? imgResult.value.data?.imageUrl || null : null;
 
-  const imageUrl = imgResult.status === "fulfilled" && !imgResult.value.error
-    ? imgResult.value.data?.imageUrl || null
-    : null;
+  return { id: variationNum, instruction: mainPrompt, imagePrompt, copy, imageUrl, status: "done" };
+}
 
-  return {
-    id: variationNum,
-    instruction: mainPrompt,
-    imagePrompt,
-    copy,
-    imageUrl,
-    status: "done",
-  };
+async function generateVariationWithCopyBasedImage(
+  mainPrompt: string, variationNum: number, totalVariations: number,
+  tone: string, platform: string,
+  lengthInfo: { value: string; label: string; desc: string },
+  sizeInfo: { label: string; w: number; h: number },
+  strategy?: any, extraNotes?: string,
+): Promise<GeneratedPiece> {
+  const variationPrompt = buildCopyPrompt(mainPrompt, variationNum, totalVariations, lengthInfo, strategy, extraNotes);
+
+  // Step 1: generate copy
+  const { data: copyData, error: copyError } = await supabase.functions.invoke("ai-generate-content", {
+    body: { prompt: variationPrompt, tone, platform, type: "copy" },
+  });
+  const copy = !copyError ? copyData?.content || "" : null;
+
+  // Step 2: generate image based on copy
+  const imageSource = copy || mainPrompt;
+  const imagePrompt = buildImagePrompt(
+    `Crea una imagen que represente visualmente este contenido: "${imageSource}"`,
+    variationNum, totalVariations, sizeInfo,
+  );
+
+  const { data: imgData, error: imgError } = await supabase.functions.invoke("ai-generate-content", {
+    body: { prompt: imagePrompt, tone, platform, type: "image" },
+  });
+  const imageUrl = !imgError ? imgData?.imageUrl || null : null;
+
+  return { id: variationNum, instruction: mainPrompt, imagePrompt, copy, imageUrl, status: "done" };
 }
