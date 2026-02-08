@@ -24,6 +24,7 @@ import MarketingPage from "./pages/MarketingPage";
 import AIAgentConfigPage from "./pages/AIAgentConfigPage";
 import AdsPage from "./pages/AdsPage";
 import ContentPage from "./pages/ContentPage";
+import PsychoMatrixPage from "./pages/PsychoMatrixPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,7 @@ const App = () => (
               <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
               <Route path="/ads" element={<ProtectedRoute><AdsPage /></ProtectedRoute>} />
               <Route path="/contenido" element={<ProtectedRoute><ContentPage /></ProtectedRoute>} />
+              <Route path="/psycho-matrix" element={<ProtectedRoute><PsychoMatrixPage /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ClinicProvider>

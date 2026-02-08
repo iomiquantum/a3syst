@@ -1056,6 +1056,107 @@ export type Database = {
         }
         Relationships: []
       }
+      psycho_matrix_services: {
+        Row: {
+          clinic_id: string
+          core_benefit: string
+          created_at: string
+          id: string
+          name: string
+          pain_point: string
+          target_price: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          core_benefit?: string
+          created_at?: string
+          id?: string
+          name: string
+          pain_point?: string
+          target_price?: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          core_benefit?: string
+          created_at?: string
+          id?: string
+          name?: string
+          pain_point?: string
+          target_price?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "psycho_matrix_services_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      psycho_matrix_strategies: {
+        Row: {
+          advanced_tech: string | null
+          archetype: string
+          brand_voice: string
+          clinic_id: string
+          created_at: string
+          generated_prompt: string | null
+          generation: string
+          id: string
+          name: string
+          persuasion_trigger: string
+          service_id: string
+          updated_at: string
+        }
+        Insert: {
+          advanced_tech?: string | null
+          archetype: string
+          brand_voice: string
+          clinic_id: string
+          created_at?: string
+          generated_prompt?: string | null
+          generation: string
+          id?: string
+          name?: string
+          persuasion_trigger: string
+          service_id: string
+          updated_at?: string
+        }
+        Update: {
+          advanced_tech?: string | null
+          archetype?: string
+          brand_voice?: string
+          clinic_id?: string
+          created_at?: string
+          generated_prompt?: string | null
+          generation?: string
+          id?: string
+          name?: string
+          persuasion_trigger?: string
+          service_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "psycho_matrix_strategies_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "psycho_matrix_strategies_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "psycho_matrix_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales: {
         Row: {
           amount: number
