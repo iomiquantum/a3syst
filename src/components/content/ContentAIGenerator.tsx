@@ -9,7 +9,10 @@ import { toast } from "sonner";
 import type { ContentPost } from "@/hooks/useContentPosts";
 import { supabase } from "@/integrations/supabase/client";
 import AIGeneratedPiece, { type GeneratedPiece } from "./AIGeneratedPiece";
+import PromptTemplateEditor from "./PromptTemplateEditor";
 import { usePsychoStrategies } from "@/hooks/usePsychoMatrix";
+import { useActivePromptTemplate } from "@/hooks/usePromptTemplates";
+import { useClinic } from "@/hooks/useClinic";
 import {
   arquetiposDigitales, arquetiposMarca, disparadoresPersuasion,
   codigosGeneracionales, psicologiaAvanzada,
@@ -73,6 +76,9 @@ const ContentAIGenerator = ({ content }: Props) => {
   const [regeneratingCopyId, setRegeneratingCopyId] = useState<number | null>(null);
 
   const { data: strategies = [] } = usePsychoStrategies();
+  const { isSuperAdmin } = useClinic();
+  const { data: imagePromptTemplate } = useActivePromptTemplate("image");
+  const { data: copyPromptTemplate } = useActivePromptTemplate("copy");
 
   const updateCount = (n: number) => setCount(Math.max(1, Math.min(MAX_PIECES, n)));
 
@@ -127,13 +133,15 @@ const ContentAIGenerator = ({ content }: Props) => {
       : strategies.find(s => s.id === selectedStrategyId);
     const lengthInfo = getEffectiveCopyLength();
     const sizeInfo = getImageSizeInfo();
+    const imgTpl = imagePromptTemplate?.template || "";
+    const copyTpl = copyPromptTemplate?.template || "";
 
     // If imageFromCopy, generate copy first then image based on copy
     if (imageFromCopy) {
       const results: GeneratedPiece[] = [];
       for (let i = 0; i < count; i++) {
         const piece = await generateVariationWithCopyBasedImage(
-          mainPrompt, i + 1, count, tone, platform, lengthInfo, sizeInfo, selectedStrategy, extraNotes
+          mainPrompt, i + 1, count, tone, platform, lengthInfo, sizeInfo, selectedStrategy, extraNotes, imgTpl, copyTpl
         ).catch(err => {
           console.error(`Variación ${i + 1} falló:`, err);
           toast.error(`Error generando variación #${i + 1}`);
@@ -145,7 +153,7 @@ const ContentAIGenerator = ({ content }: Props) => {
     } else {
       const results = await Promise.allSettled(
         Array.from({ length: count }, (_, i) =>
-          generateVariation(mainPrompt, i + 1, count, tone, platform, lengthInfo, sizeInfo, selectedStrategy, extraNotes)
+          generateVariation(mainPrompt, i + 1, count, tone, platform, lengthInfo, sizeInfo, selectedStrategy, extraNotes, imgTpl, copyTpl)
         )
       );
       setPieces(results.map((r, i) => {
@@ -172,15 +180,16 @@ const ContentAIGenerator = ({ content }: Props) => {
       ? magicFormula
       : strategies.find(s => s.id === selectedStrategyId);
 
+    const imgTpl = imagePromptTemplate?.template || "";
     let prompt: string;
     if (customPrompt) {
-      prompt = buildImagePrompt(customPrompt, piece.id, pieces.length, sizeInfo, selectedStrategy);
+      prompt = buildImagePrompt(customPrompt, piece.id, pieces.length, sizeInfo, selectedStrategy, imgTpl);
     } else if (imageFromCopy && piece.copy) {
-      prompt = buildCopyBasedImagePrompt(piece.copy, piece.id, pieces.length, sizeInfo, selectedStrategy);
+      prompt = buildCopyBasedImagePrompt(piece.copy, piece.id, pieces.length, sizeInfo, selectedStrategy, imgTpl);
     } else {
       prompt = buildImagePrompt(
         `${piece.instruction}. Crear una imagen completamente distinta a las anteriores, con otro estilo, composición y enfoque visual.`,
-        piece.id, pieces.length, sizeInfo, selectedStrategy,
+        piece.id, pieces.length, sizeInfo, selectedStrategy, imgTpl,
       );
     }
     try {
@@ -206,8 +215,9 @@ const ContentAIGenerator = ({ content }: Props) => {
       : strategies.find(s => s.id === selectedStrategyId);
     const lengthInfo = getEffectiveCopyLength();
     try {
+      const copyTpl = copyPromptTemplate?.template || "";
       const variationPrompt = buildCopyPrompt(
-        piece.instruction, piece.id, pieces.length, lengthInfo, selectedStrategy, extraNotes,
+        piece.instruction, piece.id, pieces.length, lengthInfo, selectedStrategy, extraNotes, copyTpl,
       ) + `\n\nIMPORTANTE: Genera un copy COMPLETAMENTE NUEVO y DIFERENTE al anterior. Usa un enfoque, ángulo o estilo de escritura distinto. Sé creativo y original.`;
       const { data, error } = await supabase.functions.invoke("ai-generate-content", {
         body: { prompt: variationPrompt, tone, platform, type: "copy" },
@@ -415,6 +425,9 @@ const ContentAIGenerator = ({ content }: Props) => {
         </div>
       )}
 
+      {/* Admin-only prompt template editor */}
+      {isSuperAdmin && <PromptTemplateEditor />}
+
       <Button
         onClick={handleGenerate}
         disabled={generating || !mainPrompt.trim()}
@@ -470,35 +483,40 @@ export default ContentAIGenerator;
 
 // ── Helpers ──
 
-function buildStrategyContext(strategy: any): string {
+function buildStrategyContextForCopy(strategy: any): string {
   if (!strategy) return "";
-  const arch = strategy.archetype;
-  const voice = strategy.brand_voice;
-  const trigger = strategy.persuasion_trigger;
-  const gen = strategy.generation;
-  const advTech = strategy.advanced_tech;
-  const genPrompt = (strategy as any).generated_prompt;
-
   return `\n\nESTRATEGIA DE MARKETING (Psycho-Matrix):
-- Arquetipo: ${arch}
-- Voz de marca: ${voice}
-- Gatillo de persuasión: ${trigger}
-- Generación objetivo: ${gen}
-${advTech ? `- Técnica avanzada: ${advTech}` : ""}
-${genPrompt ? `- Prompt estratégico: ${genPrompt}` : ""}
+- Arquetipo: ${strategy.archetype}
+- Voz de marca: ${strategy.brand_voice}
+- Gatillo de persuasión: ${strategy.persuasion_trigger}
+- Generación objetivo: ${strategy.generation}
+${strategy.advanced_tech ? `- Técnica avanzada: ${strategy.advanced_tech}` : ""}
+${(strategy as any).generated_prompt ? `- Prompt estratégico: ${(strategy as any).generated_prompt}` : ""}
 Aplica esta estrategia al copy generado.`;
+}
+
+function buildStrategyContextForImage(strategy: any): string {
+  if (!strategy) return "";
+  return `\n\nDIRECCIÓN VISUAL BASADA EN ESTRATEGIA (NO escribir estos términos como texto en la imagen):
+- Estilo visual inspirado en arquetipo "${strategy.archetype}": adapta colores, iluminación y mood
+- Voz visual "${strategy.brand_voice}": refleja este tono en la estética, fotografía y composición
+- Emoción del gatillo "${strategy.persuasion_trigger}": transmite esta emoción visualmente (expresiones, colores, escenas)
+- Generación "${strategy.generation}": adapta el estilo gráfico a las preferencias visuales de esta audiencia
+${strategy.advanced_tech ? `- Técnica visual "${strategy.advanced_tech}": aplica este concepto en la dirección artística` : ""}
+IMPORTANTE: Estos elementos son SOLO para dirección artística y composición visual. NUNCA escribas nombres de arquetipos, técnicas psicológicas o gatillos como texto visible en la imagen.`;
 }
 
 function buildCopyPrompt(
   mainPrompt: string, variationNum: number, totalVariations: number,
   lengthInfo: { value: string; label: string; desc: string },
-  strategy?: any, extraNotes?: string,
+  strategy?: any, extraNotes?: string, adminTemplate?: string,
 ): string {
-  const strategyContext = buildStrategyContext(strategy);
+  const strategyContext = buildStrategyContextForCopy(strategy);
   const lengthInstruction = `\nLONGITUD DEL COPY: Genera un copy ${lengthInfo.label.toUpperCase()} (${lengthInfo.desc}). Respeta estrictamente este límite de caracteres.`;
   const extraContext = extraNotes?.trim() ? `\nNOTAS ADICIONALES DEL USUARIO: ${extraNotes}` : "";
+  const baseTemplate = adminTemplate?.trim() ? `${adminTemplate}\n\n` : "";
 
-  return `${mainPrompt}${strategyContext}${lengthInstruction}${extraContext}
+  return `${baseTemplate}${mainPrompt}${strategyContext}${lengthInstruction}${extraContext}
 
 IMPORTANTE: Esta es la variación #${variationNum} de ${totalVariations} variaciones totales. 
 Genera un copy COMPLETAMENTE DIFERENTE a las demás variaciones. Usa un enfoque, ángulo o público objetivo distinto.
@@ -512,12 +530,18 @@ Usa el enfoque correspondiente a tu número de variación.`;
 function buildImagePrompt(
   text: string, variationNum: number, totalVariations: number,
   sizeInfo?: { label: string; w: number; h: number },
-  strategy?: any,
+  strategy?: any, adminTemplate?: string,
 ): string {
-  const sizeHint = sizeInfo ? `\nFormato de imagen: ${sizeInfo.label} (${sizeInfo.w}x${sizeInfo.h}px). La imagen DEBE tener estas dimensiones exactas: ${sizeInfo.w}px de ancho por ${sizeInfo.h}px de alto. Diseña la composición para este formato.` : "";
-  const strategyHint = buildStrategyContext(strategy);
-  return `${text}.${sizeHint}${strategyHint}
-Variación visual #${variationNum} de ${totalVariations}: Crear una imagen con estilo, composición y paleta de colores COMPLETAMENTE DIFERENTE a las otras variaciones. Usar un enfoque visual único y creativo.`;
+  const sizeHint = sizeInfo ? `\nDIMENSIONES OBLIGATORIAS: ${sizeInfo.w}x${sizeInfo.h}px (${sizeInfo.label}). Diseña la composición para este formato exacto.` : "";
+  const strategyHint = buildStrategyContextForImage(strategy);
+  const baseTemplate = adminTemplate?.trim() ? `${adminTemplate}\n\n` : "";
+
+  return `${baseTemplate}${text}.
+
+REGLA CRÍTICA DE TEXTO: Solo incluir como texto visible en la imagen frases de MÁXIMO 6-8 palabras que sean ganchos vendedores o CTAs. NUNCA incluir nombres de estrategias, técnicas psicológicas, arquetipos o términos de marketing como texto.
+${sizeHint}${strategyHint}
+
+Variación visual #${variationNum} de ${totalVariations}: Crear una imagen con estilo, composición y paleta de colores COMPLETAMENTE DIFERENTE a las otras variaciones.`;
 }
 
 async function generateVariation(
@@ -526,9 +550,10 @@ async function generateVariation(
   lengthInfo: { value: string; label: string; desc: string },
   sizeInfo: { label: string; w: number; h: number },
   strategy?: any, extraNotes?: string,
+  imgTpl?: string, copyTpl?: string,
 ): Promise<GeneratedPiece> {
-  const variationPrompt = buildCopyPrompt(mainPrompt, variationNum, totalVariations, lengthInfo, strategy, extraNotes);
-  const imagePrompt = buildImagePrompt(mainPrompt, variationNum, totalVariations, sizeInfo, strategy);
+  const variationPrompt = buildCopyPrompt(mainPrompt, variationNum, totalVariations, lengthInfo, strategy, extraNotes, copyTpl);
+  const imagePrompt = buildImagePrompt(mainPrompt, variationNum, totalVariations, sizeInfo, strategy, imgTpl);
 
   const [copyResult, imgResult] = await Promise.allSettled([
     supabase.functions.invoke("ai-generate-content", { body: { prompt: variationPrompt, tone, platform, type: "copy" } }),
@@ -547,17 +572,16 @@ async function generateVariationWithCopyBasedImage(
   lengthInfo: { value: string; label: string; desc: string },
   sizeInfo: { label: string; w: number; h: number },
   strategy?: any, extraNotes?: string,
+  imgTpl?: string, copyTpl?: string,
 ): Promise<GeneratedPiece> {
-  const variationPrompt = buildCopyPrompt(mainPrompt, variationNum, totalVariations, lengthInfo, strategy, extraNotes);
+  const variationPrompt = buildCopyPrompt(mainPrompt, variationNum, totalVariations, lengthInfo, strategy, extraNotes, copyTpl);
 
-  // Step 1: generate copy
   const { data: copyData, error: copyError } = await supabase.functions.invoke("ai-generate-content", {
     body: { prompt: variationPrompt, tone, platform, type: "copy" },
   });
   const copy = !copyError ? copyData?.content || "" : null;
 
-  // Step 2: generate image based on copy — extract key elements, don't dump full text
-  const imagePrompt = buildCopyBasedImagePrompt(copy || mainPrompt, variationNum, totalVariations, sizeInfo, strategy);
+  const imagePrompt = buildCopyBasedImagePrompt(copy || mainPrompt, variationNum, totalVariations, sizeInfo, strategy, imgTpl);
 
   const { data: imgData, error: imgError } = await supabase.functions.invoke("ai-generate-content", {
     body: { prompt: imagePrompt, tone, platform, type: "image", width: sizeInfo.w, height: sizeInfo.h },
@@ -570,36 +594,38 @@ async function generateVariationWithCopyBasedImage(
 function buildCopyBasedImagePrompt(
   copyText: string, variationNum: number, totalVariations: number,
   sizeInfo?: { label: string; w: number; h: number },
-  strategy?: any,
+  strategy?: any, adminTemplate?: string,
 ): string {
   const sizeHint = sizeInfo
-    ? `\nDIMENSIONES OBLIGATORIAS: ${sizeInfo.w}x${sizeInfo.h}px (${sizeInfo.label}). Diseña la composición específicamente para este formato y aspecto.`
+    ? `\nDIMENSIONES OBLIGATORIAS: ${sizeInfo.w}x${sizeInfo.h}px (${sizeInfo.label}). Diseña la composición específicamente para este formato.`
     : "";
-  const strategyHint = buildStrategyContext(strategy);
+  const strategyHint = buildStrategyContextForImage(strategy);
+  const baseTemplate = adminTemplate?.trim() ? `${adminTemplate}\n\n` : "";
 
-  return `Eres un diseñador gráfico profesional y prompt engineer experto. A partir del siguiente copy de marketing, debes crear una imagen publicitaria profesional para redes sociales.
+  return `${baseTemplate}Eres un diseñador gráfico profesional y director de arte senior. A partir del siguiente copy de marketing, crea una imagen publicitaria profesional.
 
 COPY DE REFERENCIA:
 "${copyText}"
 
-INSTRUCCIONES DE DISEÑO:
-1. EXTRACCIÓN DE TEXTO PARA LA IMAGEN: Analiza el copy y extrae SOLAMENTE:
-   - El título principal o frase gancho (máximo 6-8 palabras)
-   - El call-to-action (CTA) principal (ej: "Reserva ahora", "50% OFF", etc.)
-   - Opcionalmente, un dato clave numérico o porcentaje si existe
-   NO incluyas el copy completo. Solo las frases más impactantes y cortas.
+REGLAS DE TEXTO EN LA IMAGEN (CRÍTICO):
+1. Analiza el copy y extrae SOLAMENTE:
+   - El título/gancho principal (máximo 6-8 palabras más impactantes)
+   - El CTA principal (ej: "Reserva ahora", "50% OFF")
+   - Un dato numérico clave si existe
+2. NUNCA incluir el copy completo, párrafos largos, ni términos de estrategia/marketing
+3. NUNCA escribir nombres de arquetipos, técnicas psicológicas o gatillos como texto
 
-2. COMPOSICIÓN TIPOGRÁFICA: El texto extraído debe estar integrado en la imagen como parte del diseño gráfico:
-   - Título principal: tipografía grande, bold, con alto contraste sobre el fondo
-   - CTA: destacado visualmente (botón, banner, o badge)
-   - Asegura legibilidad total del texto sobre la imagen
+COMPOSICIÓN TIPOGRÁFICA:
+- Título: tipografía grande, bold, alto contraste
+- CTA: destacado como botón, banner o badge
+- Legibilidad total garantizada
 
-3. DISEÑO VISUAL: Crea una imagen profesional de marketing que:
-   - Tenga una paleta de colores coherente y atractiva
-   - Use imágenes o ilustraciones relevantes al contenido
-   - Sea visualmente impactante y detenga el scroll
-   - Tenga una jerarquía visual clara (imagen > título > CTA)
+DISEÑO VISUAL:
+- Paleta coherente y atractiva
+- Imágenes/ilustraciones relevantes al contenido
+- Visualmente impactante (detener el scroll)
+- Jerarquía: imagen de fondo > título > CTA
 ${sizeHint}${strategyHint}
 
-Variación visual #${variationNum} de ${totalVariations}: Usa un estilo, composición y paleta COMPLETAMENTE DIFERENTE a las otras variaciones.`;
+Variación visual #${variationNum} de ${totalVariations}: Usa estilo, composición y paleta COMPLETAMENTE DIFERENTE.`;
 }
