@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Wand2, Loader2, Plus, Minus, Sparkles, RefreshCw } from "lucide-react";
+import { Wand2, Loader2, Plus, Minus, Sparkles, RefreshCw, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,7 +26,7 @@ interface Props {
 }
 
 const tones = ["Profesional", "Casual", "Inspirador", "Educativo", "Humorístico", "Urgente", "Emotivo"];
-const platforms = ["Instagram", "Facebook", "TikTok"];
+const platforms = ["Instagram", "Facebook", "TikTok", "WhatsApp"];
 const copyLengths = [
   { value: "short", label: "Corto", desc: "~50-100 caracteres" },
   { value: "medium", label: "Mediano", desc: "~150-250 caracteres" },
@@ -39,20 +39,116 @@ const imageSizesByPlatform: Record<string, { label: string; value: string; w: nu
     { label: "Feed cuadrado", value: "ig-feed-sq", w: 1080, h: 1080 },
     { label: "Feed vertical", value: "ig-feed-v", w: 1080, h: 1350 },
     { label: "Story / Reel", value: "ig-story", w: 1080, h: 1920 },
-    { label: "Anuncio Feed", value: "ig-ad-feed", w: 1080, h: 1080 },
-    { label: "Anuncio Story", value: "ig-ad-story", w: 1080, h: 1920 },
   ],
   Facebook: [
     { label: "Feed horizontal", value: "fb-feed", w: 1200, h: 630 },
     { label: "Feed cuadrado", value: "fb-feed-sq", w: 1080, h: 1080 },
     { label: "Story", value: "fb-story", w: 1080, h: 1920 },
-    { label: "Anuncio Feed", value: "fb-ad-feed", w: 1200, h: 628 },
-    { label: "Anuncio Carrusel", value: "fb-ad-carousel", w: 1080, h: 1080 },
   ],
   TikTok: [
     { label: "Video vertical", value: "tt-video", w: 1080, h: 1920 },
-    { label: "Anuncio In-Feed", value: "tt-ad", w: 1080, h: 1920 },
-    { label: "Anuncio cuadrado", value: "tt-ad-sq", w: 1080, h: 1080 },
+  ],
+  WhatsApp: [
+    { label: "Perfil / Catálogo", value: "wa-profile", w: 1080, h: 1080 },
+    { label: "Estado", value: "wa-status", w: 1080, h: 1920 },
+  ],
+};
+
+// Expert mode: all official 2026 sizes organized by platform + category
+const expertSizesByPlatform: Record<string, { category: string; sizes: { label: string; ratio: string; value: string; w: number; h: number }[] }[]> = {
+  Instagram: [
+    {
+      category: "Feed (Posts)",
+      sizes: [
+        { label: "Feed vertical", ratio: "4:5", value: "ig-x-feed-v", w: 1080, h: 1350 },
+        { label: "Feed cuadrado", ratio: "1:1", value: "ig-x-feed-sq", w: 1080, h: 1080 },
+        { label: "Feed landscape", ratio: "1.91:1", value: "ig-x-feed-h", w: 1200, h: 628 },
+      ],
+    },
+    {
+      category: "Stories & Reels",
+      sizes: [
+        { label: "Story / Reel", ratio: "9:16", value: "ig-x-story", w: 1080, h: 1920 },
+      ],
+    },
+    {
+      category: "Ads",
+      sizes: [
+        { label: "Anuncio Feed vertical", ratio: "4:5", value: "ig-x-ad-v", w: 1080, h: 1350 },
+        { label: "Anuncio Feed cuadrado", ratio: "1:1", value: "ig-x-ad-sq", w: 1080, h: 1080 },
+        { label: "Anuncio con enlace", ratio: "1.91:1", value: "ig-x-ad-link", w: 1200, h: 628 },
+        { label: "Anuncio Story", ratio: "9:16", value: "ig-x-ad-story", w: 1080, h: 1920 },
+      ],
+    },
+  ],
+  Facebook: [
+    {
+      category: "Feed (Posts)",
+      sizes: [
+        { label: "Feed vertical", ratio: "4:5", value: "fb-x-feed-v", w: 1080, h: 1350 },
+        { label: "Feed cuadrado", ratio: "1:1", value: "fb-x-feed-sq", w: 1080, h: 1080 },
+        { label: "Feed horizontal", ratio: "1.91:1", value: "fb-x-feed-h", w: 1200, h: 630 },
+      ],
+    },
+    {
+      category: "Stories & Reels",
+      sizes: [
+        { label: "Story / Reel", ratio: "9:16", value: "fb-x-story", w: 1080, h: 1920 },
+      ],
+    },
+    {
+      category: "Ads",
+      sizes: [
+        { label: "Anuncio Feed", ratio: "1.91:1", value: "fb-x-ad-feed", w: 1200, h: 628 },
+        { label: "Anuncio Carrusel", ratio: "1:1", value: "fb-x-ad-carousel", w: 1080, h: 1080 },
+        { label: "Anuncio Búsqueda", ratio: "1.91:1", value: "fb-x-ad-search", w: 1200, h: 628 },
+      ],
+    },
+    {
+      category: "Desktop",
+      sizes: [
+        { label: "Right Column", ratio: "1:1", value: "fb-x-rightcol", w: 1200, h: 1200 },
+        { label: "Marketplace", ratio: "1:1", value: "fb-x-market", w: 1080, h: 1080 },
+      ],
+    },
+  ],
+  TikTok: [
+    {
+      category: "In-Feed (Orgánico & Ads)",
+      sizes: [
+        { label: "Video vertical", ratio: "9:16", value: "tt-x-video", w: 1080, h: 1920 },
+        { label: "Video mínimo", ratio: "9:16", value: "tt-x-video-min", w: 720, h: 1280 },
+      ],
+    },
+    {
+      category: "Perfil",
+      sizes: [
+        { label: "Foto de perfil", ratio: "1:1", value: "tt-x-profile", w: 100, h: 100 },
+      ],
+    },
+  ],
+  WhatsApp: [
+    {
+      category: "Perfil & Catálogo",
+      sizes: [
+        { label: "Foto de perfil", ratio: "1:1", value: "wa-x-profile", w: 1080, h: 1080 },
+        { label: "Portada Business", ratio: "16:9", value: "wa-x-cover", w: 1211, h: 681 },
+        { label: "Producto catálogo", ratio: "1:1", value: "wa-x-catalog", w: 1080, h: 1080 },
+      ],
+    },
+    {
+      category: "Estados",
+      sizes: [
+        { label: "Estado", ratio: "9:16", value: "wa-x-status", w: 1080, h: 1920 },
+      ],
+    },
+    {
+      category: "Ads Click-to-WhatsApp",
+      sizes: [
+        { label: "Anuncio cuadrado", ratio: "1:1", value: "wa-x-ad-sq", w: 1080, h: 1080 },
+        { label: "Anuncio vertical", ratio: "4:5", value: "wa-x-ad-v", w: 1080, h: 1350 },
+      ],
+    },
   ],
 };
 
@@ -76,6 +172,7 @@ const ContentAIGenerator = ({ content }: Props) => {
   } | null>(null);
   const [imageFromCopy, setImageFromCopy] = useState(false);
   const [imageModel, setImageModel] = useState<"flash" | "pro">("pro");
+  const [expertMode, setExpertMode] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [pieces, setPieces] = useState<GeneratedPiece[]>([]);
   const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
@@ -112,8 +209,13 @@ const ContentAIGenerator = ({ content }: Props) => {
   // When platform changes, reset image size to first option
   const handlePlatformChange = (p: string) => {
     setPlatform(p);
-    const sizes = imageSizesByPlatform[p];
-    if (sizes?.length) setImageSize(sizes[0].value);
+    if (expertMode) {
+      const expert = expertSizesByPlatform[p];
+      if (expert?.length && expert[0].sizes.length) setImageSize(expert[0].sizes[0].value);
+    } else {
+      const sizes = imageSizesByPlatform[p];
+      if (sizes?.length) setImageSize(sizes[0].value);
+    }
   };
 
   const getEffectiveCopyLength = () => {
@@ -127,8 +229,17 @@ const ContentAIGenerator = ({ content }: Props) => {
     if (imageSize === "custom") {
       return { label: "Personalizado", value: "custom", w: customW, h: customH };
     }
-    const sizes = imageSizesByPlatform[platform] || [];
-    return sizes.find(s => s.value === imageSize) || sizes[0];
+    // Search in basic sizes first
+    const basicSizes = imageSizesByPlatform[platform] || [];
+    const basicMatch = basicSizes.find(s => s.value === imageSize);
+    if (basicMatch) return basicMatch;
+    // Search in expert sizes
+    const expertCategories = expertSizesByPlatform[platform] || [];
+    for (const cat of expertCategories) {
+      const match = cat.sizes.find(s => s.value === imageSize);
+      if (match) return match;
+    }
+    return basicSizes[0];
   };
 
   const handleGenerate = async () => {
@@ -382,18 +493,62 @@ const ContentAIGenerator = ({ content }: Props) => {
         </div>
 
         <div>
-          <Label className="text-sm font-medium">Tamaño imagen</Label>
-          <Select value={imageSize} onValueChange={setImageSize}>
-            <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {currentSizes.map(s => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.label} <span className="text-muted-foreground ml-1">({s.w}×{s.h})</span>
-                </SelectItem>
-              ))}
-              <SelectItem value="custom">📐 Personalizado</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center justify-between mb-1.5">
+            <Label className="text-sm font-medium">Tamaño imagen</Label>
+            <Button
+              type="button"
+              variant={expertMode ? "default" : "ghost"}
+              size="sm"
+              className={`h-6 px-2 text-[10px] gap-1 ${expertMode ? "gradient-primary text-primary-foreground" : ""}`}
+              onClick={() => {
+                setExpertMode(!expertMode);
+                // Reset to basic size when leaving expert mode
+                if (expertMode) {
+                  const sizes = imageSizesByPlatform[platform];
+                  if (sizes?.length) setImageSize(sizes[0].value);
+                }
+              }}
+            >
+              <Settings2 className="w-3 h-3" />
+              Modo experto
+            </Button>
+          </div>
+          {!expertMode ? (
+            <Select value={imageSize} onValueChange={setImageSize}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {currentSizes.map(s => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label} <span className="text-muted-foreground ml-1">({s.w}×{s.h})</span>
+                  </SelectItem>
+                ))}
+                <SelectItem value="custom">📐 Personalizado</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <Select value={imageSize} onValueChange={setImageSize}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent className="max-h-80">
+                {(expertSizesByPlatform[platform] || []).map(cat => (
+                  <div key={cat.category}>
+                    <div className="px-2 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider bg-muted/50 sticky top-0">
+                      {cat.category}
+                    </div>
+                    {cat.sizes.map(s => (
+                      <SelectItem key={s.value} value={s.value}>
+                        <span className="flex items-center gap-2">
+                          <span className="font-medium text-primary text-[10px] min-w-[3rem]">{s.ratio}</span>
+                          <span>{s.label}</span>
+                          <span className="text-muted-foreground text-[10px]">{s.w}×{s.h}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </div>
+                ))}
+                <SelectItem value="custom">📐 Personalizado</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {imageSize === "custom" && (
