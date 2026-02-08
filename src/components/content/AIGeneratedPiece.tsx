@@ -78,18 +78,22 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
         canvas.height = targetH;
         const ctx = canvas.getContext("2d");
         if (!ctx) { resolve(blob); return; }
-        // Draw image covering the full canvas (cover mode)
+        // Fill background with white/neutral then draw image in "contain" mode
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, targetW, targetH);
         const srcRatio = img.width / img.height;
         const dstRatio = targetW / targetH;
-        let sx = 0, sy = 0, sw = img.width, sh = img.height;
+        let dx = 0, dy = 0, dw = targetW, dh = targetH;
         if (srcRatio > dstRatio) {
-          sw = img.height * dstRatio;
-          sx = (img.width - sw) / 2;
+          // Image is wider than target: fit width, center vertically
+          dh = targetW / srcRatio;
+          dy = (targetH - dh) / 2;
         } else {
-          sh = img.width / dstRatio;
-          sy = (img.height - sh) / 2;
+          // Image is taller than target: fit height, center horizontally
+          dw = targetH * srcRatio;
+          dx = (targetW - dw) / 2;
         }
-        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH);
+        ctx.drawImage(img, 0, 0, img.width, img.height, dx, dy, dw, dh);
         canvas.toBlob((resized) => {
           resolve(resized || blob);
         }, "image/png", 1.0);
@@ -175,7 +179,7 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
           <img
             src={piece.imageUrl}
             alt={`Generada #${piece.id}`}
-            className="w-full object-cover bg-muted"
+            className="w-full object-contain bg-muted"
             style={{ aspectRatio: sizeW && sizeH ? `${sizeW}/${sizeH}` : undefined, maxHeight: 400 }}
           />
         ) : (
