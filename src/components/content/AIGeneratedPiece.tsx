@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Check, RefreshCw, Loader2, Pencil, Image as ImageIcon, RotateCcw, Eye, EyeOff, Send, Download } from "lucide-react";
+import { Check, RefreshCw, Loader2, Pencil, Image as ImageIcon, RotateCcw, Eye, EyeOff, Send, Download, Scaling } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 export interface GeneratedPiece {
@@ -30,6 +31,19 @@ interface Props {
   sizeH?: number;
   imageModel?: "flash" | "pro";
 }
+const allResizeSizes = [
+  { label: "Feed cuadrado", value: "feed-sq", w: 1080, h: 1080 },
+  { label: "Feed vertical", value: "feed-v", w: 1080, h: 1350 },
+  { label: "Story / Reel", value: "story", w: 1080, h: 1920 },
+  { label: "Feed horizontal", value: "feed-h", w: 1200, h: 630 },
+  { label: "FB Feed horizontal", value: "fb-feed-h", w: 1200, h: 628 },
+  { label: "Video vertical", value: "video-v", w: 1080, h: 1920 },
+];
+
+// Deduplicate by w×h
+const uniqueSizes = allResizeSizes.filter((s, i, arr) =>
+  arr.findIndex(x => x.w === s.w && x.h === s.h) === i
+);
 
 const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerateCopy, onApprove, regeneratingImage, regeneratingCopy, platform, sizeLabel, sizeW, sizeH, imageModel = "pro" }: Props) => {
   const [editingCopy, setEditingCopy] = useState(false);
@@ -172,6 +186,33 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
       return blob;
     }
   };
+  const handleResizeDownload = async (targetW: number, targetH: number, label: string) => {
+    if (!piece.imageUrl) return;
+    setDownloading(true);
+    try {
+      const response = await fetch(piece.imageUrl);
+      let blob = await response.blob();
+      blob = await resizeImageCover(blob, targetW, targetH);
+      const shortDesc = (piece.copy || piece.instruction || "imagen")
+        .replace(/[#*\n]/g, " ").trim().split(/\s+/).slice(0, 5).join("-")
+        .replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ\-]/g, "").substring(0, 40);
+      const plat = (platform || "social").toLowerCase();
+      const sLabel = label.replace(/\s+/g, "-").toLowerCase();
+      const fileName = `${shortDesc}_${plat}_${sLabel}_${targetW}x${targetH}.png`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("Resize download error:", e);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <div className={cn(
@@ -223,6 +264,33 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
             <Button variant="secondary" size="sm" className="gap-1.5" onClick={() => onRegenerateImage(piece.id)}>
               <RefreshCw className="w-3.5 h-3.5" /> Regenerar
             </Button>
+            {imageModel === "pro" && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="secondary" size="sm" className="gap-1.5">
+                    <Scaling className="w-3.5 h-3.5" /> Redimensionar
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2" align="center" side="bottom">
+                  <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Descargar en otro tamaño</p>
+                  <div className="space-y-0.5 max-h-48 overflow-y-auto">
+                    {uniqueSizes.map(s => (
+                      <Button
+                        key={s.value}
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-between text-xs h-8"
+                        disabled={downloading}
+                        onClick={() => handleResizeDownload(s.w, s.h, s.label)}
+                      >
+                        <span>{s.label}</span>
+                        <span className="text-muted-foreground">{s.w}×{s.h}</span>
+                      </Button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
             {imageModel === "flash" && sizeW && sizeH && sizeW !== sizeH ? (
               <>
                 <Button variant="secondary" size="sm" className="gap-1.5" onClick={() => handleDownloadImage("original")} disabled={downloading}>
