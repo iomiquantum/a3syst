@@ -119,14 +119,14 @@ const ChatView = ({ conversation, messages, sending, onSend }: Props) => {
                 </span>
               </div>
               {group.msgs.map(msg => (
-                <div key={msg.id} className={cn("flex mb-2", msg.direction === "outbound" ? "justify-end" : "justify-start")}>
+                <div key={msg.id} className={cn("flex mb-3", msg.direction === "outbound" ? "justify-end" : "justify-start")}>
                   <div className={cn(
-                    "max-w-[70%] px-3 py-2 rounded-xl text-sm",
+                    "max-w-[75%] min-w-[80px] px-3 py-2 rounded-2xl text-sm leading-relaxed shadow-sm",
                     msg.direction === "outbound"
                       ? "bg-primary text-primary-foreground rounded-br-sm"
                       : "bg-card border border-border text-foreground rounded-bl-sm"
                   )}>
-                    <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                    <p className="whitespace-pre-wrap break-words overflow-hidden">{msg.content}</p>
                     <div className={cn("flex items-center justify-end gap-1 mt-1", msg.direction === "outbound" ? "text-primary-foreground/70" : "text-muted-foreground")}>
                       <span className="text-[10px]">{formatTime(msg.created_at)}</span>
                       {msg.direction === "outbound" && (
