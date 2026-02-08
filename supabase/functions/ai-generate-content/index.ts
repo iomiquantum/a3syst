@@ -75,11 +75,18 @@ Reglas:
 
     // --- IMAGE GENERATION ---
     if (type === "image") {
+      const aspectRatio = getClosestAspectRatio(width, height);
+      const orientationHint = width && height
+        ? width > height
+          ? "horizontal/landscape"
+          : height > width
+            ? "vertical/portrait (taller than wide)"
+            : "square"
+        : "";
       const sizeInstruction = width && height
-        ? ` The image MUST be designed for exactly ${width}x${height} pixels. Compose and layout all elements for this exact aspect ratio and dimensions.`
+        ? ` CRITICAL LAYOUT REQUIREMENT: This image MUST be designed as a ${orientationHint} composition with ${aspectRatio} aspect ratio (${width}x${height}px). Distribute ALL visual elements, text, and graphics to fill the ENTIRE ${orientationHint} canvas naturally. Do NOT center everything in a square area — use the full ${orientationHint} space from edge to edge, top to bottom.`
         : "";
       const imagePrompt = `${prompt}${sizeInstruction}`;
-      const aspectRatio = getClosestAspectRatio(width, height);
 
       console.log("Image generation - requested:", width, "x", height, "-> aspectRatio:", aspectRatio);
 
