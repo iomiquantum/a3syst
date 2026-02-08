@@ -28,14 +28,23 @@ const AdminPage = () => {
   const [assignForm, setAssignForm] = useState({ user_id: "", clinic_id: "", role: "secretary" as string });
 
   const fetchData = async () => {
-    const [{ data: c }, { data: p }, { data: r }] = await Promise.all([
+    const [{ data: c }, { data: p }, { data: rolesData }] = await Promise.all([
       supabase.from("clinics").select("*").order("created_at"),
       supabase.from("profiles").select("*").order("full_name"),
-      supabase.from("user_roles").select("*, profiles(full_name, email), clinics(name)").order("created_at"),
+      supabase.from("user_roles").select("*, clinics(name)").order("created_at"),
     ]);
+
+    // Enrich roles with profile data separately
+    const profilesMap: Record<string, any> = {};
+    (p || []).forEach(pr => { profilesMap[pr.user_id] = pr; });
+    const enrichedRoles = (rolesData || []).map(r => ({
+      ...r,
+      profiles: profilesMap[r.user_id] || { full_name: "Sin nombre", email: "" },
+    }));
+
     setClinics(c || []);
     setProfiles(p || []);
-    setRoles(r || []);
+    setRoles(enrichedRoles);
     setLoading(false);
   };
 

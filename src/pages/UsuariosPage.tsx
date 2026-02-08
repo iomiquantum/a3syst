@@ -31,13 +31,30 @@ const UsuariosPage = () => {
   const [permissionsOpen, setPermissionsOpen] = useState<string | null>(null);
 
   const fetchUsers = async () => {
-    if (!clinicId) return;
-    const { data, error } = await supabase
+    if (!clinicId) { setLoading(false); return; }
+    setLoading(true);
+    const { data: roles, error } = await supabase
       .from("user_roles")
-      .select("*, profiles(full_name, email)")
+      .select("*")
       .eq("clinic_id", clinicId);
-    if (error) { toast.error(error.message); return; }
-    setUsers(data || []);
+    if (error) { toast.error(error.message); setLoading(false); return; }
+
+    // Fetch profiles separately to avoid missing relationship
+    const userIds = (roles || []).map(r => r.user_id);
+    let profilesMap: Record<string, { full_name: string; email: string }> = {};
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email")
+        .in("user_id", userIds);
+      (profiles || []).forEach(p => { profilesMap[p.user_id] = p; });
+    }
+
+    const enriched = (roles || []).map(r => ({
+      ...r,
+      profiles: profilesMap[r.user_id] || { full_name: "Sin nombre", email: "" },
+    }));
+    setUsers(enriched);
     setLoading(false);
   };
 
