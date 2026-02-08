@@ -160,8 +160,11 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
 
       {/* Image */}
       <div className="rounded-lg overflow-hidden border border-border relative group">
-        {regeneratingImage ? (
-          <div className="w-full h-[280px] bg-muted flex flex-col items-center justify-center gap-3 animate-pulse">
+      {regeneratingImage ? (
+          <div
+            className="w-full bg-muted flex flex-col items-center justify-center gap-3 animate-pulse"
+            style={{ aspectRatio: sizeW && sizeH ? `${sizeW}/${sizeH}` : '1/1', maxHeight: 400 }}
+          >
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
             <p className="text-xs text-muted-foreground font-medium">Generando imagen…</p>
             <div className="w-3/4">
@@ -169,9 +172,17 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
             </div>
           </div>
         ) : piece.imageUrl ? (
-          <img src={piece.imageUrl} alt={`Generada #${piece.id}`} className="w-full max-h-[280px] object-contain bg-muted" />
+          <img
+            src={piece.imageUrl}
+            alt={`Generada #${piece.id}`}
+            className="w-full object-cover bg-muted"
+            style={{ aspectRatio: sizeW && sizeH ? `${sizeW}/${sizeH}` : undefined, maxHeight: 400 }}
+          />
         ) : (
-          <div className="w-full h-[200px] bg-muted flex items-center justify-center">
+          <div
+            className="w-full bg-muted flex items-center justify-center"
+            style={{ aspectRatio: sizeW && sizeH ? `${sizeW}/${sizeH}` : '1/1', maxHeight: 400 }}
+          >
             <ImageIcon className="w-8 h-8 text-muted-foreground" />
           </div>
         )}
