@@ -22,24 +22,39 @@
   let captchaAnswer = null;
   let captchaQuestion = '';
 
-  // Country codes
+  // Country codes with ISO mapping for geo-detection
   const COUNTRY_CODES = [
-    { code: '+54', country: '🇦🇷 AR', name: 'Argentina' },
-    { code: '+56', country: '🇨🇱 CL', name: 'Chile' },
-    { code: '+57', country: '🇨🇴 CO', name: 'Colombia' },
-    { code: '+52', country: '🇲🇽 MX', name: 'México' },
-    { code: '+51', country: '🇵🇪 PE', name: 'Perú' },
-    { code: '+598', country: '🇺🇾 UY', name: 'Uruguay' },
-    { code: '+58', country: '🇻🇪 VE', name: 'Venezuela' },
-    { code: '+1', country: '🇺🇸 US', name: 'Estados Unidos' },
-    { code: '+34', country: '🇪🇸 ES', name: 'España' },
-    { code: '+55', country: '🇧🇷 BR', name: 'Brasil' },
-    { code: '+593', country: '🇪🇨 EC', name: 'Ecuador' },
-    { code: '+591', country: '🇧🇴 BO', name: 'Bolivia' },
-    { code: '+595', country: '🇵🇾 PY', name: 'Paraguay' },
-    { code: '+506', country: '🇨🇷 CR', name: 'Costa Rica' },
-    { code: '+507', country: '🇵🇦 PA', name: 'Panamá' },
+    { code: '+54', country: '🇦🇷 AR', name: 'Argentina', iso: 'AR' },
+    { code: '+56', country: '🇨🇱 CL', name: 'Chile', iso: 'CL' },
+    { code: '+57', country: '🇨🇴 CO', name: 'Colombia', iso: 'CO' },
+    { code: '+52', country: '🇲🇽 MX', name: 'México', iso: 'MX' },
+    { code: '+51', country: '🇵🇪 PE', name: 'Perú', iso: 'PE' },
+    { code: '+598', country: '🇺🇾 UY', name: 'Uruguay', iso: 'UY' },
+    { code: '+58', country: '🇻🇪 VE', name: 'Venezuela', iso: 'VE' },
+    { code: '+1', country: '🇺🇸 US', name: 'Estados Unidos', iso: 'US' },
+    { code: '+34', country: '🇪🇸 ES', name: 'España', iso: 'ES' },
+    { code: '+55', country: '🇧🇷 BR', name: 'Brasil', iso: 'BR' },
+    { code: '+593', country: '🇪🇨 EC', name: 'Ecuador', iso: 'EC' },
+    { code: '+591', country: '🇧🇴 BO', name: 'Bolivia', iso: 'BO' },
+    { code: '+595', country: '🇵🇾 PY', name: 'Paraguay', iso: 'PY' },
+    { code: '+506', country: '🇨🇷 CR', name: 'Costa Rica', iso: 'CR' },
+    { code: '+507', country: '🇵🇦 PA', name: 'Panamá', iso: 'PA' },
   ];
+
+  // Auto-detect country by IP
+  function autoSelectCountry() {
+    fetch('https://ipapi.co/json/', { mode: 'cors' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data && data.country_code) {
+          var sel = document.getElementById('iomi-country-code');
+          if (!sel) return;
+          var match = COUNTRY_CODES.find(function(c) { return c.iso === data.country_code; });
+          if (match) { sel.value = match.code; }
+        }
+      })
+      .catch(function() { /* silent - keep default */ });
+  }
 
   function generateCaptcha() {
     const a = Math.floor(Math.random() * 10) + 1;
@@ -185,6 +200,9 @@
 
   // Close button handler
   document.getElementById('iomi-close-btn').onclick = () => togglePanel();
+
+  // Auto-detect country code by IP
+  autoSelectCountry();
 
   function showError(msg) {
     const el = document.getElementById('iomi-error');
