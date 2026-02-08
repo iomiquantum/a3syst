@@ -673,6 +673,86 @@ export type Database = {
           },
         ]
       }
+      content_posts: {
+        Row: {
+          ai_generated: boolean | null
+          ai_prompt: string | null
+          body: string | null
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          external_ids: Json | null
+          first_comment: string | null
+          hashtags: string[] | null
+          id: string
+          link_url: string | null
+          media_type: string
+          media_urls: string[] | null
+          metrics: Json | null
+          platforms: string[] | null
+          post_type: string
+          published_at: string | null
+          scheduled_at: string | null
+          status: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_generated?: boolean | null
+          ai_prompt?: string | null
+          body?: string | null
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          external_ids?: Json | null
+          first_comment?: string | null
+          hashtags?: string[] | null
+          id?: string
+          link_url?: string | null
+          media_type?: string
+          media_urls?: string[] | null
+          metrics?: Json | null
+          platforms?: string[] | null
+          post_type?: string
+          published_at?: string | null
+          scheduled_at?: string | null
+          status?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_generated?: boolean | null
+          ai_prompt?: string | null
+          body?: string | null
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          external_ids?: Json | null
+          first_comment?: string | null
+          hashtags?: string[] | null
+          id?: string
+          link_url?: string | null
+          media_type?: string
+          media_urls?: string[] | null
+          metrics?: Json | null
+          platforms?: string[] | null
+          post_type?: string
+          published_at?: string | null
+          scheduled_at?: string | null
+          status?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_posts_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           archived: boolean

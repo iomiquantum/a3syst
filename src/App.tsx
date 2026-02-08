@@ -23,6 +23,7 @@ import CRMPage from "./pages/CRMPage";
 import MarketingPage from "./pages/MarketingPage";
 import AIAgentConfigPage from "./pages/AIAgentConfigPage";
 import AdsPage from "./pages/AdsPage";
+import ContentPage from "./pages/ContentPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="/configuracion/ajustes" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
               <Route path="/ads" element={<ProtectedRoute><AdsPage /></ProtectedRoute>} />
+              <Route path="/contenido" element={<ProtectedRoute><ContentPage /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ClinicProvider>
