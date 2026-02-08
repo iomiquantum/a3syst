@@ -65,13 +65,13 @@
     #${WIDGET_ID} .iomi-fab { position: fixed; bottom: 24px; right: 24px; width: 60px; height: 60px; border-radius: 50%; background: ${PRIMARY_COLOR}; border: none; cursor: pointer; box-shadow: 0 4px 20px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; z-index: 99999; transition: transform 0.2s; }
     #${WIDGET_ID} .iomi-fab:hover { transform: scale(1.08); }
     #${WIDGET_ID} .iomi-fab svg { width: 28px; height: 28px; fill: white; }
-    #${WIDGET_ID} .iomi-panel { position: fixed; bottom: 96px; right: 24px; width: 380px; max-height: 560px; background: #fff; border-radius: 16px; box-shadow: 0 8px 40px rgba(0,0,0,0.15); z-index: 99999; display: none; flex-direction: column; overflow: hidden; animation: iomi-slide-up 0.25s ease; }
+    #${WIDGET_ID} .iomi-panel { position: fixed; bottom: 96px; right: 24px; width: 380px; max-height: 650px; background: #fff; border-radius: 16px; box-shadow: 0 8px 40px rgba(0,0,0,0.15); z-index: 99999; display: none; flex-direction: column; overflow: hidden; animation: iomi-slide-up 0.25s ease; }
     #${WIDGET_ID} .iomi-panel.open { display: flex; }
     @keyframes iomi-slide-up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
     #${WIDGET_ID} .iomi-header { background: ${PRIMARY_COLOR}; color: white; padding: 20px; }
     #${WIDGET_ID} .iomi-header h3 { font-size: 16px; font-weight: 600; }
     #${WIDGET_ID} .iomi-header p { font-size: 12px; opacity: 0.85; margin-top: 4px; }
-    #${WIDGET_ID} .iomi-messages { flex: 1; overflow-y: auto; padding: 16px; min-height: 200px; max-height: 320px; background: #f9fafb; }
+    #${WIDGET_ID} .iomi-messages { flex: 1; overflow-y: auto; padding: 16px; min-height: 120px; max-height: 260px; background: #f9fafb; }
     #${WIDGET_ID} .iomi-msg { margin-bottom: 8px; display: flex; }
     #${WIDGET_ID} .iomi-msg.out { justify-content: flex-end; }
     #${WIDGET_ID} .iomi-msg .bubble { max-width: 75%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.4; word-break: break-word; }
