@@ -386,7 +386,7 @@ const ContentAIGenerator = ({ content }: Props) => {
       {magicMode && magicFormula && (
         <div className="text-xs text-muted-foreground p-3 rounded-lg bg-muted/50 border border-border space-y-1">
           <p><span className="font-medium text-foreground">🎲 Fórmula mágica:</span></p>
-          <p>Tono: <strong>{tone}</strong> · Tamaño: <strong>{getEffectiveCopyLength().label}</strong></p>
+          <p>Tono: <strong>{tone}</strong></p>
           <p>Arquetipo: <strong>{magicFormula.archetype}</strong> · Voz: <strong>{magicFormula.brand_voice}</strong></p>
           <p>Disparador: <strong>{magicFormula.persuasion_trigger}</strong> · Generación: <strong>{magicFormula.generation}</strong>
             {magicFormula.advanced_tech && <> · Técnica: <strong>{magicFormula.advanced_tech}</strong></>}
@@ -484,9 +484,11 @@ Usa el enfoque correspondiente a tu número de variación.`;
 function buildImagePrompt(
   text: string, variationNum: number, totalVariations: number,
   sizeInfo?: { label: string; w: number; h: number },
+  strategy?: any,
 ): string {
   const sizeHint = sizeInfo ? `\nFormato de imagen: ${sizeInfo.label} (${sizeInfo.w}x${sizeInfo.h}px). Diseña la composición para este formato.` : "";
-  return `${text}.${sizeHint}
+  const strategyHint = buildStrategyContext(strategy);
+  return `${text}.${sizeHint}${strategyHint}
 Variación visual #${variationNum} de ${totalVariations}: Crear una imagen con estilo, composición y paleta de colores COMPLETAMENTE DIFERENTE a las otras variaciones. Usar un enfoque visual único y creativo.`;
 }
 
@@ -498,7 +500,7 @@ async function generateVariation(
   strategy?: any, extraNotes?: string,
 ): Promise<GeneratedPiece> {
   const variationPrompt = buildCopyPrompt(mainPrompt, variationNum, totalVariations, lengthInfo, strategy, extraNotes);
-  const imagePrompt = buildImagePrompt(mainPrompt, variationNum, totalVariations, sizeInfo);
+  const imagePrompt = buildImagePrompt(mainPrompt, variationNum, totalVariations, sizeInfo, strategy);
 
   const [copyResult, imgResult] = await Promise.allSettled([
     supabase.functions.invoke("ai-generate-content", { body: { prompt: variationPrompt, tone, platform, type: "copy" } }),
@@ -530,7 +532,7 @@ async function generateVariationWithCopyBasedImage(
   const imageSource = copy || mainPrompt;
   const imagePrompt = buildImagePrompt(
     `Crea una imagen que represente visualmente este contenido: "${imageSource}"`,
-    variationNum, totalVariations, sizeInfo,
+    variationNum, totalVariations, sizeInfo, strategy,
   );
 
   const { data: imgData, error: imgError } = await supabase.functions.invoke("ai-generate-content", {
