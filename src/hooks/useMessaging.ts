@@ -151,7 +151,6 @@ export const useMessaging = () => {
   const updateContactStage = async (contactId: string, stage: string) => {
     const { error } = await supabase.from("contacts").update({ funnel_stage: stage }).eq("id", contactId);
     if (error) { toast.error(error.message); return; }
-    // Update local state
     setConversations(prev => prev.map(c =>
       c.contact_id === contactId ? { ...c, contact: c.contact ? { ...c.contact, funnel_stage: stage } : c.contact } : c
     ));
@@ -159,6 +158,18 @@ export const useMessaging = () => {
       setSelectedConversation({ ...selectedConversation, contact: { ...selectedConversation.contact, funnel_stage: stage } });
     }
     toast.success("Etapa actualizada");
+  };
+
+  const toggleChatbot = async (conversationId: string, active: boolean) => {
+    const { error } = await supabase.from("conversations").update({ chatbot_active: active }).eq("id", conversationId);
+    if (error) { toast.error(error.message); return; }
+    setConversations(prev => prev.map(c =>
+      c.id === conversationId ? { ...c, chatbot_active: active } : c
+    ));
+    if (selectedConversation?.id === conversationId) {
+      setSelectedConversation({ ...selectedConversation, chatbot_active: active });
+    }
+    toast.success(active ? "Chatbot automático activado" : "Chatbot automático desactivado");
   };
 
   let filteredConversations = funnelFilter === "todos"
@@ -202,6 +213,7 @@ export const useMessaging = () => {
     selectConversation,
     sendMessage,
     updateContactStage,
+    toggleChatbot,
     fetchConversations,
   };
 };

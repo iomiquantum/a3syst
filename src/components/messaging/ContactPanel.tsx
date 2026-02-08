@@ -1,14 +1,16 @@
-import { Phone, Mail, MapPin, Tag, FileText, ExternalLink, UserPlus, Calendar } from "lucide-react";
+import { Phone, Mail, MapPin, Tag, FileText, ExternalLink, UserPlus, Calendar, Bot } from "lucide-react";
 import { Conversation, FUNNEL_STAGES } from "@/hooks/useMessaging";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 
 interface Props {
   conversation: Conversation;
   onUpdateStage: (contactId: string, stage: string) => void;
+  onToggleChatbot?: (conversationId: string, active: boolean) => void;
 }
 
-const ContactPanel = ({ conversation, onUpdateStage }: Props) => {
+const ContactPanel = ({ conversation, onUpdateStage, onToggleChatbot }: Props) => {
   const contact = conversation.contact;
   if (!contact) return null;
 
@@ -108,6 +110,21 @@ const ContactPanel = ({ conversation, onUpdateStage }: Props) => {
               <p className="text-sm text-foreground">{contact.notes || <span className="text-muted-foreground italic text-xs">Añadir Notas</span>}</p>
             </div>
           </div>
+        </div>
+
+        {/* Chatbot Toggle */}
+        <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+          <div className="flex items-center gap-2">
+            <Bot className="w-4 h-4 text-primary" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Chatbot IA</p>
+              <p className="text-[11px] text-muted-foreground">Responde automáticamente</p>
+            </div>
+          </div>
+          <Switch
+            checked={conversation.chatbot_active}
+            onCheckedChange={(checked) => onToggleChatbot?.(conversation.id, checked)}
+          />
         </div>
 
         {/* Actions */}
