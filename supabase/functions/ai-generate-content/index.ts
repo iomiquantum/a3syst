@@ -11,7 +11,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { prompt, tone, platform, type } = await req.json();
+    const { prompt, tone, platform, type, width, height } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -56,7 +56,8 @@ Reglas:
 
     // --- IMAGE GENERATION ---
     if (type === "image") {
-      const imagePrompt = `Create a professional social media ${platform} post image: ${prompt}. High quality, modern design, suitable for marketing.`;
+      const sizeInstruction = width && height ? ` The image MUST be designed for exactly ${width}x${height} pixels. Compose and layout all elements for this exact aspect ratio and dimensions.` : "";
+      const imagePrompt = `${prompt}${sizeInstruction}`;
 
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",

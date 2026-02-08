@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Wand2, Loader2, Plus, Minus, Sparkles, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -62,6 +63,8 @@ const ContentAIGenerator = ({ content }: Props) => {
   const [tone, setTone] = useState("Profesional");
   const [platform, setPlatform] = useState("Instagram");
   const [imageSize, setImageSize] = useState("ig-feed-sq");
+  const [customW, setCustomW] = useState(1080);
+  const [customH, setCustomH] = useState(1080);
   const [copyLength, setCopyLength] = useState("medium");
   const [extraNotes, setExtraNotes] = useState("");
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>("none");
@@ -113,6 +116,9 @@ const ContentAIGenerator = ({ content }: Props) => {
   const getEffectiveCopyLength = () => copyLengths.find(c => c.value === copyLength) || copyLengths[1];
 
   const getImageSizeInfo = () => {
+    if (imageSize === "custom") {
+      return { label: "Personalizado", value: "custom", w: customW, h: customH };
+    }
     const sizes = imageSizesByPlatform[platform] || [];
     return sizes.find(s => s.value === imageSize) || sizes[0];
   };
@@ -377,9 +383,24 @@ const ContentAIGenerator = ({ content }: Props) => {
                   {s.label} <span className="text-muted-foreground ml-1">({s.w}×{s.h})</span>
                 </SelectItem>
               ))}
+              <SelectItem value="custom">📐 Personalizado</SelectItem>
             </SelectContent>
           </Select>
         </div>
+
+        {imageSize === "custom" && (
+          <div className="lg:col-span-2 flex items-end gap-2">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Ancho (px)</Label>
+              <Input type="number" min={200} max={4096} value={customW} onChange={e => setCustomW(Number(e.target.value))} className="w-28" />
+            </div>
+            <span className="pb-2 text-muted-foreground font-bold">×</span>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Alto (px)</Label>
+              <Input type="number" min={200} max={4096} value={customH} onChange={e => setCustomH(Number(e.target.value))} className="w-28" />
+            </div>
+          </div>
+        )}
 
         {!magicMode && (
           <div>
