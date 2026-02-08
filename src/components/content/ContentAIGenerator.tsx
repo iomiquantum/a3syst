@@ -441,18 +441,25 @@ const ContentAIGenerator = ({ content }: Props) => {
       {/* Results */}
       {allDone && (
         <div className="grid gap-4 md:grid-cols-2">
-          {pieces.map(piece => (
-            <AIGeneratedPiece
-              key={piece.id}
-              piece={piece}
-              onCopyChange={handleCopyChange}
-              onRegenerateImage={handleRegenerateImage}
-              onRegenerateCopy={handleRegenerateCopy}
-              onApprove={handleApprove}
-              regeneratingImage={regeneratingId === piece.id}
-              regeneratingCopy={regeneratingCopyId === piece.id}
-            />
-          ))}
+          {pieces.map(piece => {
+            const sizeInfo = getImageSizeInfo();
+            return (
+              <AIGeneratedPiece
+                key={piece.id}
+                piece={piece}
+                onCopyChange={handleCopyChange}
+                onRegenerateImage={handleRegenerateImage}
+                onRegenerateCopy={handleRegenerateCopy}
+                onApprove={handleApprove}
+                regeneratingImage={regeneratingId === piece.id}
+                regeneratingCopy={regeneratingCopyId === piece.id}
+                platform={platform}
+                sizeLabel={sizeInfo?.label}
+                sizeW={sizeInfo?.w}
+                sizeH={sizeInfo?.h}
+              />
+            );
+          })}
         </div>
       )}
     </div>
