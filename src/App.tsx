@@ -21,6 +21,7 @@ import MensajesPage from "./pages/MensajesPage";
 import WidgetConfigPage from "./pages/WidgetConfigPage";
 import CRMPage from "./pages/CRMPage";
 import MarketingPage from "./pages/MarketingPage";
+import AIAgentConfigPage from "./pages/AIAgentConfigPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/mensajes" element={<ProtectedRoute><MensajesPage /></ProtectedRoute>} />
               <Route path="/crm" element={<ProtectedRoute><CRMPage /></ProtectedRoute>} />
               <Route path="/marketing" element={<ProtectedRoute><MarketingPage /></ProtectedRoute>} />
+              <Route path="/configuracion/agente-ia" element={<ProtectedRoute><AIAgentConfigPage /></ProtectedRoute>} />
               <Route path="/configuracion/widget" element={<ProtectedRoute><WidgetConfigPage /></ProtectedRoute>} />
               <Route path="/configuracion/sucursales" element={<ProtectedRoute><SucursalesPage /></ProtectedRoute>} />
               <Route path="/configuracion/tratamientos" element={<ProtectedRoute><TratamientosPage /></ProtectedRoute>} />
