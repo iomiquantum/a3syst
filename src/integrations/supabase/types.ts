@@ -178,6 +178,206 @@ export type Database = {
         }
         Relationships: []
       }
+      contacts: {
+        Row: {
+          branch_id: string | null
+          clinic_id: string
+          created_at: string
+          email: string | null
+          funnel_stage: string
+          id: string
+          location: string | null
+          name: string
+          notes: string | null
+          patient_id: string | null
+          phone: string
+          source: string | null
+          tags: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          clinic_id: string
+          created_at?: string
+          email?: string | null
+          funnel_stage?: string
+          id?: string
+          location?: string | null
+          name: string
+          notes?: string | null
+          patient_id?: string | null
+          phone: string
+          source?: string | null
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          clinic_id?: string
+          created_at?: string
+          email?: string | null
+          funnel_stage?: string
+          id?: string
+          location?: string | null
+          name?: string
+          notes?: string | null
+          patient_id?: string | null
+          phone?: string
+          source?: string | null
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          archived: boolean
+          assigned_to: string | null
+          channel: string
+          chatbot_active: boolean
+          clinic_id: string
+          contact_id: string
+          created_at: string
+          id: string
+          last_message_at: string | null
+          last_message_preview: string | null
+          status: string
+          unread_count: number
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          assigned_to?: string | null
+          channel?: string
+          chatbot_active?: boolean
+          clinic_id: string
+          contact_id: string
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          status?: string
+          unread_count?: number
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          assigned_to?: string | null
+          channel?: string
+          chatbot_active?: boolean
+          clinic_id?: string
+          contact_id?: string
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          status?: string
+          unread_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "conversations_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          clinic_id: string
+          content: string
+          conversation_id: string
+          created_at: string
+          direction: string
+          id: string
+          media_url: string | null
+          message_type: string
+          sent_by: string | null
+          status: string
+          whatsapp_message_id: string | null
+        }
+        Insert: {
+          clinic_id: string
+          content?: string
+          conversation_id: string
+          created_at?: string
+          direction?: string
+          id?: string
+          media_url?: string | null
+          message_type?: string
+          sent_by?: string | null
+          status?: string
+          whatsapp_message_id?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          media_url?: string | null
+          message_type?: string
+          sent_by?: string | null
+          status?: string
+          whatsapp_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           clinic_id: string

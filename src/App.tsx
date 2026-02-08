@@ -17,6 +17,7 @@ import TratamientosPage from "./pages/TratamientosPage";
 import ProfesionalesPage from "./pages/ProfesionalesPage";
 import UsuariosPage from "./pages/UsuariosPage";
 import AdminPage from "./pages/AdminPage";
+import MensajesPage from "./pages/MensajesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,7 +37,7 @@ const App = () => (
               <Route path="/pacientes" element={<ProtectedRoute><PacientesPage /></ProtectedRoute>} />
               <Route path="/agenda" element={<ProtectedRoute><AgendaPage /></ProtectedRoute>} />
               <Route path="/ventas" element={<ProtectedRoute><VentasPage /></ProtectedRoute>} />
-              <Route path="/mensajes" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/mensajes" element={<ProtectedRoute><MensajesPage /></ProtectedRoute>} />
               <Route path="/configuracion/sucursales" element={<ProtectedRoute><SucursalesPage /></ProtectedRoute>} />
               <Route path="/configuracion/tratamientos" element={<ProtectedRoute><TratamientosPage /></ProtectedRoute>} />
               <Route path="/configuracion/profesionales" element={<ProtectedRoute><ProfesionalesPage /></ProtectedRoute>} />
