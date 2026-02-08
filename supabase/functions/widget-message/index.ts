@@ -108,6 +108,7 @@ Deno.serve(async (req) => {
           contact_id: contact.id,
           channel: "web_widget",
           status: "open",
+          chatbot_active: true,
         }).select().single();
         if (error) throw error;
         conversation = data;
