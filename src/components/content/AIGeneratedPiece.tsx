@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, RefreshCw, Loader2, Pencil, Image as ImageIcon, RotateCcw } from "lucide-react";
+import { Check, RefreshCw, Loader2, Pencil, Image as ImageIcon, RotateCcw, Eye, EyeOff, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 export interface GeneratedPiece {
   id: number;
   instruction: string;
+  imagePrompt: string;
   copy: string | null;
   imageUrl: string | null;
   status: "idle" | "generating" | "done" | "approved";
@@ -16,7 +17,7 @@ export interface GeneratedPiece {
 interface Props {
   piece: GeneratedPiece;
   onCopyChange: (id: number, copy: string) => void;
-  onRegenerateImage: (id: number) => void;
+  onRegenerateImage: (id: number, customPrompt?: string) => void;
   onRegenerateCopy: (id: number) => void;
   onApprove: (id: number) => void;
   regeneratingImage: boolean;
@@ -24,7 +25,10 @@ interface Props {
 }
 
 const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerateCopy, onApprove, regeneratingImage, regeneratingCopy }: Props) => {
-  const [editing, setEditing] = useState(false);
+  const [editingCopy, setEditingCopy] = useState(false);
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [editingPrompt, setEditingPrompt] = useState(false);
+  const [customPrompt, setCustomPrompt] = useState(piece.imagePrompt);
 
   if (piece.status === "idle" || piece.status === "generating") return null;
 
@@ -72,6 +76,68 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
         )}
       </div>
 
+      {/* Image Prompt */}
+      {piece.imageUrl && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs gap-1 text-muted-foreground"
+              onClick={() => { setShowPrompt(!showPrompt); if (!showPrompt) setCustomPrompt(piece.imagePrompt); }}
+            >
+              {showPrompt ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+              {showPrompt ? "Ocultar prompt" : "Ver prompt de imagen"}
+            </Button>
+          </div>
+          {showPrompt && (
+            <div className="space-y-2">
+              {editingPrompt && !isApproved ? (
+                <div className="space-y-2">
+                  <Textarea
+                    value={customPrompt}
+                    onChange={e => setCustomPrompt(e.target.value)}
+                    className="min-h-[80px] text-xs"
+                    placeholder="Edita el prompt para regenerar la imagen..."
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="text-xs gap-1 gradient-primary text-primary-foreground"
+                      onClick={() => {
+                        onRegenerateImage(piece.id, customPrompt);
+                        setEditingPrompt(false);
+                      }}
+                      disabled={regeneratingImage}
+                    >
+                      {regeneratingImage ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                      Regenerar con este prompt
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-xs" onClick={() => setEditingPrompt(false)}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-muted/50 rounded-lg p-2.5 text-xs text-muted-foreground italic leading-relaxed">
+                  {piece.imagePrompt}
+                  {!isApproved && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 px-1.5 text-[10px] gap-1 mt-1"
+                      onClick={() => { setEditingPrompt(true); setCustomPrompt(piece.imagePrompt); }}
+                    >
+                      <Pencil className="w-2.5 h-2.5" /> Editar prompt
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Copy */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -82,14 +148,14 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
                 {regeneratingCopy ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
                 Regenerar
               </Button>
-              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1" onClick={() => setEditing(!editing)}>
+              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1" onClick={() => setEditingCopy(!editingCopy)}>
                 <Pencil className="w-3 h-3" />
-                {editing ? "Listo" : "Editar"}
+                {editingCopy ? "Listo" : "Editar"}
               </Button>
             </div>
           )}
         </div>
-        {editing && !isApproved ? (
+        {editingCopy && !isApproved ? (
           <Textarea
             value={piece.copy || ""}
             onChange={e => onCopyChange(piece.id, e.target.value)}
