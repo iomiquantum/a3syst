@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useClinic } from "@/hooks/useClinic";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { patientSchema, getValidationError } from "@/lib/validations";
 
 const PacientesPage = () => {
   const { clinicId } = useClinic();
@@ -37,25 +38,30 @@ const PacientesPage = () => {
 
   const handleSave = async () => {
     if (!clinicId) return;
-    if (editingId) {
-      const { error } = await supabase.from("patients").update({
-        first_name: form.first_name, last_name: form.last_name, email: form.email,
-        phone: form.phone, date_of_birth: form.dob || null, document: form.document, notes: form.notes,
-      }).eq("id", editingId);
-      if (error) { toast.error(error.message); return; }
-      toast.success("Paciente actualizado");
-    } else {
-      const { error } = await supabase.from("patients").insert({
-        clinic_id: clinicId, first_name: form.first_name, last_name: form.last_name,
-        email: form.email, phone: form.phone, date_of_birth: form.dob || null,
-        document: form.document, notes: form.notes,
-      });
-      if (error) { toast.error(error.message); return; }
-      toast.success("Paciente creado");
+    try {
+      const validated = patientSchema.parse(form);
+      if (editingId) {
+        const { error } = await supabase.from("patients").update({
+          first_name: validated.first_name, last_name: validated.last_name, email: validated.email,
+          phone: validated.phone || "", date_of_birth: validated.dob || null, document: validated.document || "", notes: validated.notes || "",
+        }).eq("id", editingId);
+        if (error) { toast.error(error.message); return; }
+        toast.success("Paciente actualizado");
+      } else {
+        const { error } = await supabase.from("patients").insert({
+          clinic_id: clinicId, first_name: validated.first_name, last_name: validated.last_name,
+          email: validated.email, phone: validated.phone || "", date_of_birth: validated.dob || null,
+          document: validated.document || "", notes: validated.notes || "",
+        });
+        if (error) { toast.error(error.message); return; }
+        toast.success("Paciente creado");
+      }
+      setOpen(false); setEditingId(null);
+      setForm({ first_name: "", last_name: "", email: "", phone: "", dob: "", document: "", notes: "" });
+      fetchPatients();
+    } catch (e) {
+      toast.error(getValidationError(e));
     }
-    setOpen(false); setEditingId(null);
-    setForm({ first_name: "", last_name: "", email: "", phone: "", dob: "", document: "", notes: "" });
-    fetchPatients();
   };
 
   const handleEdit = (p: any) => {
@@ -88,16 +94,16 @@ const PacientesPage = () => {
                 <DialogHeader><DialogTitle>{editingId ? "Editar Paciente" : "Nuevo Paciente"}</DialogTitle></DialogHeader>
                 <div className="space-y-4 pt-2">
                   <div className="grid grid-cols-2 gap-4">
-                    <div><Label>Nombre *</Label><Input value={form.first_name} onChange={e => setForm({...form, first_name: e.target.value})} /></div>
-                    <div><Label>Apellido *</Label><Input value={form.last_name} onChange={e => setForm({...form, last_name: e.target.value})} /></div>
+                    <div><Label>Nombre *</Label><Input value={form.first_name} onChange={e => setForm({...form, first_name: e.target.value})} maxLength={100} /></div>
+                    <div><Label>Apellido *</Label><Input value={form.last_name} onChange={e => setForm({...form, last_name: e.target.value})} maxLength={100} /></div>
                   </div>
-                  <div><Label>Email *</Label><Input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} /></div>
+                  <div><Label>Email *</Label><Input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} maxLength={255} /></div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div><Label>Teléfono</Label><Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} /></div>
-                    <div><Label>Documento/RUT</Label><Input value={form.document} onChange={e => setForm({...form, document: e.target.value})} /></div>
+                    <div><Label>Teléfono</Label><Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} maxLength={20} /></div>
+                    <div><Label>Documento/RUT</Label><Input value={form.document} onChange={e => setForm({...form, document: e.target.value})} maxLength={50} /></div>
                   </div>
                   <div><Label>Fecha de nacimiento</Label><Input type="date" value={form.dob} onChange={e => setForm({...form, dob: e.target.value})} /></div>
-                  <div><Label>Observaciones</Label><Textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} placeholder="Alergias, condiciones especiales..." /></div>
+                  <div><Label>Observaciones</Label><Textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} placeholder="Alergias, condiciones especiales..." maxLength={5000} /></div>
                   <Button onClick={handleSave} className="w-full gradient-primary text-primary-foreground" disabled={!form.first_name || !form.last_name || !form.email}>{editingId ? "Guardar Cambios" : "Crear Paciente"}</Button>
                 </div>
               </DialogContent>

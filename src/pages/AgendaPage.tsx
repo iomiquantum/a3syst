@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Plus, Clock, X } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { useClinic } from "@/hooks/useClinic";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { appointmentSchema, getValidationError } from "@/lib/validations";
 
 const daysOfWeek = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
@@ -19,29 +23,6 @@ const timeSlots = [
 
 type AppointmentStatus = "pendiente" | "confirmado" | "completado" | "cancelado";
 
-interface Appointment {
-  id: number;
-  time: string;
-  duration: number;
-  patient: string;
-  treatment: string;
-  professional: string;
-  day: number;
-  status: AppointmentStatus;
-  paymentId?: string;
-}
-
-const initialAppointments: Appointment[] = [
-  { id: 1, time: "09:00", duration: 30, patient: "María García", treatment: "Consulta General", professional: "Dr. Juan Pérez", day: 0, status: "confirmado" },
-  { id: 2, time: "10:00", duration: 60, patient: "Carlos López", treatment: "Blanqueamiento", professional: "Dr. Juan Pérez", day: 0, status: "pendiente" },
-  { id: 3, time: "09:30", duration: 30, patient: "Ana Martínez", treatment: "Limpieza dental", professional: "Dra. Laura Gómez", day: 1, status: "confirmado" },
-  { id: 4, time: "11:00", duration: 30, patient: "Roberto Díaz", treatment: "Control anual", professional: "Dra. Laura Gómez", day: 1, status: "pendiente" },
-  { id: 5, time: "08:30", duration: 60, patient: "Lucía Fernández", treatment: "Consulta General", professional: "Dr. Martín Rodríguez", day: 2, status: "completado" },
-  { id: 6, time: "14:00", duration: 30, patient: "Pedro Sánchez", treatment: "Control anual", professional: "Dr. Juan Pérez", day: 3, status: "cancelado" },
-  { id: 7, time: "10:00", duration: 30, patient: "Carmen Ruiz", treatment: "Consulta General", professional: "Dra. Sofía Hernández", day: 4, status: "confirmado" },
-  { id: 8, time: "15:00", duration: 60, patient: "Diego Torres", treatment: "Extracción", professional: "Dr. Juan Pérez", day: 4, status: "pendiente" },
-];
-
 const statusConfig: Record<AppointmentStatus, { label: string; emoji: string; color: string }> = {
   pendiente: { label: "Pendiente", emoji: "🟡", color: "bg-warning/10 text-warning" },
   confirmado: { label: "Confirmado", emoji: "🔵", color: "bg-info/10 text-info" },
@@ -50,28 +31,67 @@ const statusConfig: Record<AppointmentStatus, { label: string; emoji: string; co
 };
 
 const AgendaPage = () => {
-  const [currentDate] = useState(new Date());
-  const [appointments, setAppointments] = useState(initialAppointments);
+  const { clinicId } = useClinic();
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [patients, setPatients] = useState<any[]>([]);
+  const [treatments, setTreatments] = useState<any[]>([]);
+  const [professionals, setProfessionals] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
-  const [detailApt, setDetailApt] = useState<Appointment | null>(null);
+  const [detailApt, setDetailApt] = useState<any | null>(null);
   const [view, setView] = useState<"semana" | "mes">("semana");
+  const [form, setForm] = useState({
+    patient_id: "", treatment_id: "", professional_id: "", branch_id: "",
+    date: "", time: "", duration: "30", notes: "",
+  });
+
+  const getWeekStart = (d: Date) => {
+    const date = new Date(d);
+    const day = date.getDay();
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+    date.setDate(diff);
+    return date;
+  };
 
   const getWeekDates = () => {
-    const startOfWeek = new Date(currentDate);
-    const day = startOfWeek.getDay();
-    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
-    startOfWeek.setDate(diff);
+    const start = getWeekStart(currentDate);
     return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(startOfWeek);
-      d.setDate(startOfWeek.getDate() + i);
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
       return d;
     });
   };
 
   const weekDates = getWeekDates();
 
-  const getAppointmentForSlot = (dayIndex: number, time: string) => {
-    return appointments.find((a) => a.day === dayIndex && a.time === time && a.status !== "cancelado");
+  const formatDate = (d: Date) => d.toISOString().split("T")[0];
+
+  const fetchData = async () => {
+    if (!clinicId) return;
+    const startDate = formatDate(weekDates[0]);
+    const endDate = formatDate(weekDates[6]);
+
+    const [{ data: a }, { data: p }, { data: t }, { data: pr }, { data: b }] = await Promise.all([
+      supabase.from("appointments").select("*, patients(first_name, last_name), treatments(name), professionals(full_name)")
+        .eq("clinic_id", clinicId).gte("date", startDate).lte("date", endDate).order("date").order("time"),
+      supabase.from("patients").select("id, first_name, last_name").eq("clinic_id", clinicId).order("first_name"),
+      supabase.from("treatments").select("id, name, duration").eq("clinic_id", clinicId),
+      supabase.from("professionals").select("id, full_name").eq("clinic_id", clinicId),
+      supabase.from("branches").select("id, name").eq("clinic_id", clinicId),
+    ]);
+    setAppointments(a || []);
+    setPatients(p || []);
+    setTreatments(t || []);
+    setProfessionals(pr || []);
+    setBranches(b || []);
+  };
+
+  useEffect(() => { fetchData(); }, [clinicId, currentDate]);
+
+  const getAppointmentForSlot = (date: Date, time: string) => {
+    const dateStr = formatDate(date);
+    return appointments.find((a) => a.date === dateStr && a.time?.substring(0, 5) === time && a.status !== "cancelado");
   };
 
   const getStatusColor = (status: AppointmentStatus) => {
@@ -84,15 +104,62 @@ const AgendaPage = () => {
     }
   };
 
-  const updateStatus = (id: number, status: AppointmentStatus) => {
-    setAppointments(appointments.map(a => a.id === id ? { ...a, status } : a));
-    setDetailApt(prev => prev ? { ...prev, status } : null);
+  const updateStatus = async (id: string, status: AppointmentStatus) => {
+    const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Estado actualizado");
+    setDetailApt((prev: any) => prev ? { ...prev, status } : null);
+    fetchData();
   };
 
-  const deleteAppointment = (id: number) => {
-    setAppointments(appointments.filter(a => a.id !== id));
+  const deleteAppointment = async (id: string) => {
+    const { error } = await supabase.from("appointments").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Cita eliminada");
     setDetailApt(null);
+    fetchData();
   };
+
+  const handleCreate = async () => {
+    if (!clinicId) return;
+    try {
+      const validated = appointmentSchema.parse({
+        ...form,
+        duration: parseInt(form.duration) || 30,
+      });
+      const { error } = await supabase.from("appointments").insert({
+        clinic_id: clinicId,
+        patient_id: validated.patient_id,
+        treatment_id: validated.treatment_id || null,
+        professional_id: validated.professional_id || null,
+        branch_id: validated.branch_id || null,
+        date: validated.date,
+        time: validated.time,
+        duration: validated.duration,
+        notes: validated.notes || "",
+      });
+      if (error) { toast.error(error.message); return; }
+      toast.success("Cita creada");
+      setCreateOpen(false);
+      setForm({ patient_id: "", treatment_id: "", professional_id: "", branch_id: "", date: "", time: "", duration: "30", notes: "" });
+      fetchData();
+    } catch (e) {
+      toast.error(getValidationError(e));
+    }
+  };
+
+  const handleTreatmentChange = (treatmentId: string) => {
+    const treatment = treatments.find(t => t.id === treatmentId);
+    setForm({ ...form, treatment_id: treatmentId, duration: treatment ? String(treatment.duration) : form.duration });
+  };
+
+  const navigateWeek = (direction: number) => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(newDate.getDate() + direction * 7);
+    setCurrentDate(newDate);
+  };
+
+  const goToToday = () => setCurrentDate(new Date());
 
   return (
     <AppLayout>
@@ -112,32 +179,42 @@ const AgendaPage = () => {
           <DialogContent>
             <DialogHeader><DialogTitle>Nueva Cita</DialogTitle></DialogHeader>
             <div className="space-y-4 pt-2">
-              <div><Label>Paciente *</Label><Input placeholder="Buscar paciente..." /></div>
               <div>
-                <Label>Tratamiento *</Label>
-                <Select><SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                  <SelectContent>
-                    {["Limpieza dental","Consulta general","Blanqueamiento","Control anual","Extracción"].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                  </SelectContent>
+                <Label>Paciente *</Label>
+                <Select value={form.patient_id} onValueChange={v => setForm({ ...form, patient_id: v })}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar paciente" /></SelectTrigger>
+                  <SelectContent>{patients.map(p => <SelectItem key={p.id} value={p.id}>{p.first_name} {p.last_name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Profesional *</Label>
-                <Select><SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                  <SelectContent>
-                    {["Dr. Juan Pérez","Dra. Laura Gómez","Dr. Martín Rodríguez","Dra. Sofía Hernández"].map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                  </SelectContent>
+                <Label>Tratamiento</Label>
+                <Select value={form.treatment_id} onValueChange={handleTreatmentChange}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                  <SelectContent>{treatments.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div><Label>Fecha *</Label><Input type="date" /></div>
-                <div><Label>Hora *</Label><Input type="time" /></div>
+                <div>
+                  <Label>Profesional</Label>
+                  <Select value={form.professional_id} onValueChange={v => setForm({ ...form, professional_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                    <SelectContent>{professionals.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Sucursal</Label>
+                  <Select value={form.branch_id} onValueChange={v => setForm({ ...form, branch_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                    <SelectContent>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div>
-                <Label>Datos del pago (ID operación)</Label>
-                <Input placeholder="ID de venta o dejar vacío para Sin cargo" />
+              <div className="grid grid-cols-3 gap-4">
+                <div><Label>Fecha *</Label><Input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} /></div>
+                <div><Label>Hora *</Label><Input type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })} /></div>
+                <div><Label>Duración (min)</Label><Input type="number" value={form.duration} onChange={e => setForm({ ...form, duration: e.target.value })} min={5} max={480} /></div>
               </div>
-              <Button className="w-full gradient-primary text-primary-foreground">Crear Cita</Button>
+              <Button onClick={handleCreate} className="w-full gradient-primary text-primary-foreground" disabled={!form.patient_id || !form.date || !form.time}>Crear Cita</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -149,10 +226,10 @@ const AgendaPage = () => {
             {detailApt && (
               <div className="space-y-4 pt-2">
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><p className="text-muted-foreground">Paciente</p><p className="font-medium text-foreground">{detailApt.patient}</p></div>
-                  <div><p className="text-muted-foreground">Tratamiento</p><p className="font-medium text-foreground">{detailApt.treatment}</p></div>
-                  <div><p className="text-muted-foreground">Profesional</p><p className="font-medium text-foreground">{detailApt.professional}</p></div>
-                  <div><p className="text-muted-foreground">Hora</p><p className="font-medium text-foreground">{detailApt.time} ({detailApt.duration}min)</p></div>
+                  <div><p className="text-muted-foreground">Paciente</p><p className="font-medium text-foreground">{detailApt.patients ? `${detailApt.patients.first_name} ${detailApt.patients.last_name}` : "-"}</p></div>
+                  <div><p className="text-muted-foreground">Tratamiento</p><p className="font-medium text-foreground">{detailApt.treatments?.name || "-"}</p></div>
+                  <div><p className="text-muted-foreground">Profesional</p><p className="font-medium text-foreground">{detailApt.professionals?.full_name || "-"}</p></div>
+                  <div><p className="text-muted-foreground">Hora</p><p className="font-medium text-foreground">{detailApt.time?.substring(0, 5)} ({detailApt.duration}min)</p></div>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-2">Estado</p>
@@ -172,7 +249,6 @@ const AgendaPage = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 pt-2">
-                  <Button variant="outline" className="flex-1">Reprogramar</Button>
                   <Button variant="destructive" size="sm" onClick={() => deleteAppointment(detailApt.id)}>
                     <X className="w-4 h-4 mr-1" /> Eliminar
                   </Button>
@@ -191,12 +267,12 @@ const AgendaPage = () => {
                   {currentDate.toLocaleDateString("es-ES", { month: "long", year: "numeric" })}
                 </CardTitle>
                 <div className="flex items-center gap-1">
-                  <button className="p-1.5 rounded-md hover:bg-muted transition-colors"><ChevronLeft className="w-4 h-4 text-muted-foreground" /></button>
-                  <button className="p-1.5 rounded-md hover:bg-muted transition-colors"><ChevronRight className="w-4 h-4 text-muted-foreground" /></button>
+                  <button onClick={() => navigateWeek(-1)} className="p-1.5 rounded-md hover:bg-muted transition-colors"><ChevronLeft className="w-4 h-4 text-muted-foreground" /></button>
+                  <button onClick={() => navigateWeek(1)} className="p-1.5 rounded-md hover:bg-muted transition-colors"><ChevronRight className="w-4 h-4 text-muted-foreground" /></button>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="text-xs">Hoy</Button>
+                <Button variant="outline" size="sm" className="text-xs" onClick={goToToday}>Hoy</Button>
                 <Button variant={view === "semana" ? "default" : "outline"} size="sm" className="text-xs" onClick={() => setView("semana")}>Semana</Button>
                 <Button variant={view === "mes" ? "default" : "outline"} size="sm" className="text-xs" onClick={() => setView("mes")}>Mes</Button>
               </div>
@@ -232,8 +308,8 @@ const AgendaPage = () => {
                       <div className="p-2 flex items-start justify-end pr-3">
                         <span className="text-xs text-muted-foreground">{time}</span>
                       </div>
-                      {Array.from({ length: 7 }, (_, dayIndex) => {
-                        const apt = getAppointmentForSlot(dayIndex, time);
+                      {weekDates.map((date, dayIndex) => {
+                        const apt = getAppointmentForSlot(date, time);
                         return (
                           <div key={dayIndex} className="p-1 border-l border-border/50">
                             {apt && (
@@ -244,7 +320,7 @@ const AgendaPage = () => {
                                   getStatusColor(apt.status)
                                 )}
                               >
-                                <p className="text-xs font-medium truncate">{apt.patient}</p>
+                                <p className="text-xs font-medium truncate">{apt.patients ? `${apt.patients.first_name} ${apt.patients.last_name}` : "-"}</p>
                                 <div className="flex items-center gap-1 mt-0.5">
                                   <Clock className="w-3 h-3" />
                                   <span className="text-[10px]">{apt.duration}min</span>

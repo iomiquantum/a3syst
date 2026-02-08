@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useClinic } from "@/hooks/useClinic";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { professionalSchema, getValidationError } from "@/lib/validations";
 
 const ProfesionalesPage = () => {
   const { clinicId } = useClinic();
@@ -35,14 +36,19 @@ const ProfesionalesPage = () => {
 
   const handleSave = async () => {
     if (!clinicId) return;
-    const { error } = await supabase.from("professionals").insert({
-      clinic_id: clinicId, full_name: form.full_name, email: form.email,
-      phone: form.phone, specialty_id: form.specialty_id || null, branch_id: form.branch_id || null,
-    });
-    if (error) { toast.error(error.message); return; }
-    toast.success("Profesional creado");
-    setOpen(false); setForm({ full_name: "", email: "", phone: "", specialty_id: "", branch_id: "" });
-    fetchData();
+    try {
+      const validated = professionalSchema.parse(form);
+      const { error } = await supabase.from("professionals").insert({
+        clinic_id: clinicId, full_name: validated.full_name, email: validated.email,
+        phone: validated.phone || "", specialty_id: validated.specialty_id || null, branch_id: validated.branch_id || null,
+      });
+      if (error) { toast.error(error.message); return; }
+      toast.success("Profesional creado");
+      setOpen(false); setForm({ full_name: "", email: "", phone: "", specialty_id: "", branch_id: "" });
+      fetchData();
+    } catch (e) {
+      toast.error(getValidationError(e));
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -65,10 +71,10 @@ const ProfesionalesPage = () => {
             <DialogContent>
               <DialogHeader><DialogTitle>Nuevo Profesional</DialogTitle></DialogHeader>
               <div className="space-y-4 pt-2">
-                <div><Label>Nombre completo *</Label><Input value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} /></div>
+                <div><Label>Nombre completo *</Label><Input value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} maxLength={100} /></div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div><Label>Email *</Label><Input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} /></div>
-                  <div><Label>Teléfono</Label><Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} /></div>
+                  <div><Label>Email *</Label><Input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} maxLength={255} /></div>
+                  <div><Label>Teléfono</Label><Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} maxLength={20} /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
