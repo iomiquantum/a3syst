@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Phone, Users, LayoutList, Columns3, Plus, BarChart3 } from "lucide-react";
+import { Phone, Users, LayoutList, Columns3, Plus, BarChart3, Search } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import ContactList from "@/components/crm/ContactList";
 import ContactDetail from "@/components/crm/ContactDetail";
@@ -8,6 +8,7 @@ import NewContactDialog from "@/components/crm/NewContactDialog";
 import CRMFilters from "@/components/crm/CRMFilters";
 import CallCenterDashboard from "@/components/crm/CallCenterDashboard";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useCRM } from "@/hooks/useCRM";
@@ -24,6 +25,14 @@ const CRMPage = () => {
   } = useCRM();
   const [newContactOpen, setNewContactOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
+  const [quickSearch, setQuickSearch] = useState("");
+
+  const filteredContacts = quickSearch.trim()
+    ? contacts.filter(c =>
+        c.name.toLowerCase().includes(quickSearch.toLowerCase()) ||
+        c.phone.toLowerCase().includes(quickSearch.toLowerCase())
+      )
+    : contacts;
 
   const handleMoveStage = (contactId: string, newStage: string) => {
     updateContact(contactId, { funnel_stage: newStage });
@@ -61,13 +70,23 @@ const CRMPage = () => {
                 <BarChart3 className="w-3.5 h-3.5" /> Métricas
               </button>
             </div>
+            {/* Quick Search */}
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nombre o teléfono..."
+                value={quickSearch}
+                onChange={e => setQuickSearch(e.target.value)}
+                className="h-8 text-xs pl-8"
+              />
+            </div>
           </div>
 
           {/* Contact Detail or List */}
           <div className="flex-1 min-h-0 overflow-hidden">
             {viewMode === "list" ? (
               <ContactList
-                contacts={contacts}
+                contacts={filteredContacts}
                 selected={selectedContact}
                 stageFilter={stageFilter}
                 searchQuery={searchQuery}
@@ -144,7 +163,7 @@ const CRMPage = () => {
               </div>
             ) : (
               <KanbanBoard
-                contacts={contacts}
+                contacts={filteredContacts}
                 selected={selectedContact}
                 onSelect={setSelectedContact}
                 onMoveStage={handleMoveStage}
