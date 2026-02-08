@@ -26,7 +26,6 @@ const ServiceConfigurator = ({ onSelectService }: Props) => {
 
   return (
     <div className="space-y-6">
-      {/* Create new service */}
       <Card className="border-primary/20 shadow-card">
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -43,24 +42,24 @@ const ServiceConfigurator = ({ onSelectService }: Props) => {
               <Input placeholder='Ej: "Sueroterapia Vitamina C"' value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>Target Price</Label>
+              <Label>Rango de Precio</Label>
               <Select value={form.target_price} onValueChange={(v) => setForm({ ...form, target_price: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Low Ticket</SelectItem>
-                  <SelectItem value="mid">Mid Ticket</SelectItem>
-                  <SelectItem value="high">High Ticket</SelectItem>
+                  <SelectItem value="low">Ticket Bajo</SelectItem>
+                  <SelectItem value="mid">Ticket Medio</SelectItem>
+                  <SelectItem value="high">Ticket Alto</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Core Benefit</Label>
-            <Input placeholder='Ej: "Immune system boost & anti-aging"' value={form.core_benefit} onChange={(e) => setForm({ ...form, core_benefit: e.target.value })} />
+            <Label>Beneficio Principal</Label>
+            <Input placeholder='Ej: "Refuerzo del sistema inmune y anti-aging"' value={form.core_benefit} onChange={(e) => setForm({ ...form, core_benefit: e.target.value })} />
           </div>
           <div className="space-y-2">
-            <Label>Pain Point</Label>
-            <Textarea placeholder='Ej: "Chronic fatigue, weak immune system"' value={form.pain_point} onChange={(e) => setForm({ ...form, pain_point: e.target.value })} className="min-h-[60px]" />
+            <Label>Punto de Dolor</Label>
+            <Textarea placeholder='Ej: "Fatiga crónica, sistema inmune debilitado"' value={form.pain_point} onChange={(e) => setForm({ ...form, pain_point: e.target.value })} className="min-h-[60px]" />
           </div>
           <Button onClick={handleCreate} disabled={!form.name.trim() || createService.isPending} className="w-full gradient-primary text-primary-foreground">
             <Sparkles className="w-4 h-4 mr-2" />
@@ -69,7 +68,6 @@ const ServiceConfigurator = ({ onSelectService }: Props) => {
         </CardContent>
       </Card>
 
-      {/* Existing services */}
       {services.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Servicios Registrados</h3>
