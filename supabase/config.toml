@@ -2,3 +2,6 @@ project_id = "ecdshvqxvjbeizdivpuz"
 
 [functions.ai-agent-reply]
 verify_jwt = false
+
+[functions.validate-channel]
+verify_jwt = false
