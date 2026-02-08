@@ -1,80 +1,86 @@
 import { useState } from "react";
-import { Key, Plus, Eye, EyeOff, Trash2, Copy, CheckCircle2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Settings2, Power, PowerOff, Trash2, CheckCircle2, Clock, AlertCircle, Loader2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CHANNELS, useChannelCredentials, type ChannelKey } from "@/hooks/useChannelCredentials";
+import ChannelSetupWizard from "./ChannelSetupWizard";
 
-interface TokenConfig {
-  id: string;
-  name: string;
-  provider: string;
-  tokenMasked: string;
-  status: "activo" | "inactivo" | "error";
-  lastUsed: string;
-}
-
-const mockTokens: TokenConfig[] = [
-  { id: "1", name: "WhatsApp Business API", provider: "Meta", tokenMasked: "EAAx...k9F2", status: "activo", lastUsed: "Hace 5 min" },
-  { id: "2", name: "Instagram Messaging", provider: "Meta", tokenMasked: "IGA...r8P1", status: "inactivo", lastUsed: "Nunca" },
-];
-
-const statusMap: Record<string, { color: string; label: string }> = {
-  activo: { color: "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]", label: "Activo" },
-  inactivo: { color: "bg-muted text-muted-foreground", label: "Inactivo" },
-  error: { color: "bg-destructive/10 text-destructive", label: "Error" },
+const statusConfig = {
+  activo: { icon: CheckCircle2, label: "Conectado", color: "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]" },
+  inactivo: { icon: PowerOff, label: "Desactivado", color: "bg-muted text-muted-foreground" },
+  pendiente: { icon: Clock, label: "Pendiente", color: "bg-warning/10 text-warning" },
+  no_configurado: { icon: AlertCircle, label: "No configurado", color: "bg-muted text-muted-foreground" },
 };
 
 const TokenAPIsTab = () => {
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { credentials, loading, saveCredentials, toggleActive, deleteCredential, getChannelStatus } = useChannelCredentials();
+  const [wizardChannel, setWizardChannel] = useState<ChannelKey | null>(null);
 
-  const handleCopy = (id: string, token: string) => {
-    navigator.clipboard.writeText(token);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">Configura los tokens de API para conectar canales de comunicación.</p>
-        </div>
-        <Button size="sm" onClick={() => setDialogOpen(true)}>
-          <Plus className="w-4 h-4 mr-1" /> Agregar token
-        </Button>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        Conecta los canales de comunicación de tu clínica. Te guiaremos paso a paso en cada integración.
+      </p>
 
-      <div className="space-y-3">
-        {mockTokens.map((t) => {
-          const st = statusMap[t.status];
+      <div className="grid gap-3">
+        {CHANNELS.map(channel => {
+          const status = getChannelStatus(channel.key);
+          const st = statusConfig[status as keyof typeof statusConfig];
+          const StatusIcon = st.icon;
+          const cred = credentials.find(c => c.channel === channel.key);
+
           return (
-            <Card key={t.id} className="shadow-card">
+            <Card key={channel.key} className="shadow-card hover:shadow-md transition-shadow">
               <CardContent className="p-4 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <Key className="w-5 h-5 text-primary" />
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 ${channel.color}`}>
+                  {channel.icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm text-foreground">{t.name}</p>
-                  <p className="text-xs text-muted-foreground">{t.provider} · Token: {t.tokenMasked}</p>
+                  <p className="font-medium text-sm text-foreground">{channel.label}</p>
+                  <p className="text-xs text-muted-foreground">{channel.provider}</p>
                 </div>
-                <Badge variant="outline" className={st.color}>{st.label}</Badge>
-                <span className="text-xs text-muted-foreground whitespace-nowrap">{t.lastUsed}</span>
+                <Badge variant="outline" className={`gap-1 ${st.color}`}>
+                  <StatusIcon className="w-3 h-3" />
+                  {st.label}
+                </Badge>
                 <div className="flex items-center gap-1">
+                  {cred && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        title={cred.is_active ? "Desactivar" : "Activar"}
+                        onClick={() => toggleActive(cred.id, !cred.is_active)}
+                      >
+                        {cred.is_active ? <Power className="w-4 h-4 text-[hsl(var(--success))]" /> : <PowerOff className="w-4 h-4" />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => deleteCredential(cred.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </>
+                  )}
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => handleCopy(t.id, t.tokenMasked)}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setWizardChannel(channel.key as ChannelKey)}
                   >
-                    {copiedId === t.id ? <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))]" /> : <Copy className="w-4 h-4" />}
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
-                    <Trash2 className="w-4 h-4" />
+                    <Settings2 className="w-4 h-4 mr-1" />
+                    {cred ? "Editar" : "Configurar"}
                   </Button>
                 </div>
               </CardContent>
@@ -83,53 +89,17 @@ const TokenAPIsTab = () => {
         })}
       </div>
 
-      <Card className="border-dashed">
-        <CardHeader>
-          <CardTitle className="text-sm">¿Cómo obtener tus tokens?</CardTitle>
-          <CardDescription className="text-xs">
-            Para conectar WhatsApp Business, necesitas un token de acceso permanente de la plataforma Meta Business. 
-            Ve a developers.facebook.com → Tu app → WhatsApp → Configuración de la API y copia el token de acceso.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Agregar token de API</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Proveedor</Label>
-              <Select>
-                <SelectTrigger><SelectValue placeholder="Seleccionar proveedor" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="meta_whatsapp">Meta - WhatsApp Business</SelectItem>
-                  <SelectItem value="meta_instagram">Meta - Instagram</SelectItem>
-                  <SelectItem value="twilio">Twilio</SelectItem>
-                  <SelectItem value="sendgrid">SendGrid</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Nombre descriptivo</Label>
-              <Input placeholder="Ej: WhatsApp producción" />
-            </div>
-            <div className="space-y-2">
-              <Label>Token / API Key</Label>
-              <Input type="password" placeholder="Pega tu token aquí" />
-            </div>
-            <div className="space-y-2">
-              <Label>Phone Number ID (WhatsApp)</Label>
-              <Input placeholder="Opcional" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={() => setDialogOpen(false)}>Guardar token</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {wizardChannel && (
+        <ChannelSetupWizard
+          channelKey={wizardChannel}
+          open={!!wizardChannel}
+          onOpenChange={(open) => { if (!open) setWizardChannel(null); }}
+          existingCredentials={
+            credentials.find(c => c.channel === wizardChannel)?.credentials
+          }
+          onSave={saveCredentials}
+        />
+      )}
     </div>
   );
 };
