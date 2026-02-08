@@ -67,6 +67,7 @@ export const useMessaging = () => {
   const [loading, setLoading] = useState(true);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [funnelFilter, setFunnelFilter] = useState("todos");
+  const [channelFilter, setChannelFilter] = useState("todos");
 
   const fetchConversations = async () => {
     if (!clinicId) return;
@@ -160,9 +161,13 @@ export const useMessaging = () => {
     toast.success("Etapa actualizada");
   };
 
-  const filteredConversations = funnelFilter === "todos"
+  let filteredConversations = funnelFilter === "todos"
     ? conversations
     : conversations.filter(c => c.contact?.funnel_stage === funnelFilter);
+
+  if (channelFilter !== "todos") {
+    filteredConversations = filteredConversations.filter(c => (c.channel || "whatsapp") === channelFilter);
+  }
 
   useEffect(() => { fetchConversations(); }, [clinicId]);
 
@@ -191,7 +196,9 @@ export const useMessaging = () => {
     loading,
     sendingMessage,
     funnelFilter,
+    channelFilter,
     setFunnelFilter,
+    setChannelFilter,
     selectConversation,
     sendMessage,
     updateContactStage,

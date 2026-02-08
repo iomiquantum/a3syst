@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Calendar, MessageSquare, Settings,
   LogOut, ChevronLeft, Bell, Search, DollarSign, UserCog,
-  Building2, Stethoscope, Briefcase, ShieldCheck,
+  Building2, Stethoscope, Briefcase, ShieldCheck, Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -29,6 +29,7 @@ const configNav = [
   { icon: Briefcase, label: "Profesionales", path: "/configuracion/profesionales" },
   { icon: UserCog, label: "Usuarios", path: "/configuracion/usuarios" },
   { icon: Settings, label: "Ajustes", path: "/configuracion/ajustes" },
+  { icon: Globe, label: "Widget Web", path: "/configuracion/widget" },
 ];
 
 const AppLayout = ({ children }: AppLayoutProps) => {

@@ -6,17 +6,20 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
+import ChannelIcon, { CHANNEL_LIST } from "@/components/messaging/ChannelIcon";
 
 interface Props {
   conversations: Conversation[];
   allConversations: Conversation[];
   selected: Conversation | null;
   funnelFilter: string;
+  channelFilter: string;
   onSelect: (c: Conversation) => void;
   onFilterChange: (stage: string) => void;
+  onChannelFilterChange: (channel: string) => void;
 }
 
-const InboxSidebar = ({ conversations, allConversations, selected, funnelFilter, onSelect, onFilterChange }: Props) => {
+const InboxSidebar = ({ conversations, allConversations, selected, funnelFilter, channelFilter, onSelect, onFilterChange, onChannelFilterChange }: Props) => {
   const [search, setSearch] = useState("");
   const [showFunnel, setShowFunnel] = useState(true);
 
@@ -28,6 +31,13 @@ const InboxSidebar = ({ conversations, allConversations, selected, funnelFilter,
     acc[s.key] = s.key === "todos" ? allConversations.length : allConversations.filter(c => c.contact?.funnel_stage === s.key).length;
     return acc;
   }, {} as Record<string, number>);
+
+  // Channel counts from all conversations
+  const channelCounts: Record<string, number> = { todos: allConversations.length };
+  allConversations.forEach(c => {
+    const ch = c.channel || "whatsapp";
+    channelCounts[ch] = (channelCounts[ch] || 0) + 1;
+  });
 
   const initials = (name: string) => {
     if (!name) return "??";
@@ -54,6 +64,38 @@ const InboxSidebar = ({ conversations, allConversations, selected, funnelFilter,
           </div>
           <ScrollArea className="flex-1">
             <div className="py-1">
+              {/* Channel filters */}
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2">Canales</p>
+              <button
+                onClick={() => onChannelFilterChange("todos")}
+                className={cn(
+                  "w-full flex items-center justify-between px-3 py-1.5 text-sm transition-colors",
+                  channelFilter === "todos" ? "bg-primary/10 text-primary font-medium" : "text-foreground hover:bg-muted/50"
+                )}
+              >
+                <span className="truncate">Todos</span>
+                <span className="text-xs text-muted-foreground">{channelCounts.todos || 0}</span>
+              </button>
+              {CHANNEL_LIST.map(ch => (
+                <button
+                  key={ch.key}
+                  onClick={() => onChannelFilterChange(ch.key)}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3 py-1.5 text-sm transition-colors",
+                    channelFilter === ch.key ? "bg-primary/10 text-primary font-medium" : "text-foreground hover:bg-muted/50"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <ChannelIcon channel={ch.key} size="sm" />
+                    <span className="truncate">{ch.label}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{channelCounts[ch.key] || 0}</span>
+                </button>
+              ))}
+
+              <div className="border-t border-border my-2" />
+
+              {/* Funnel stages */}
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2">Etapas del embudo</p>
               {FUNNEL_STAGES.map(s => (
                 <button
@@ -118,8 +160,8 @@ const InboxSidebar = ({ conversations, allConversations, selected, funnelFilter,
               >
                 <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center shrink-0 relative">
                   <span className="text-xs font-semibold text-accent">{initials(conv.contact?.name || "")}</span>
-                  <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-success flex items-center justify-center">
-                    <svg viewBox="0 0 24 24" className="w-3 h-3 text-success-foreground fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-card border border-border flex items-center justify-center">
+                    <ChannelIcon channel={conv.channel || "whatsapp"} size="sm" />
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
