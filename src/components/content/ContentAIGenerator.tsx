@@ -31,6 +31,7 @@ const copyLengths = [
   { value: "short", label: "Corto", desc: "~50-100 caracteres" },
   { value: "medium", label: "Mediano", desc: "~150-250 caracteres" },
   { value: "long", label: "Amplio", desc: "~300-500 caracteres" },
+  { value: "custom", label: "Personalizado", desc: "caracteres a medida" },
 ];
 
 const imageSizesByPlatform: Record<string, { label: string; value: string; w: number; h: number }[]> = {
@@ -66,6 +67,7 @@ const ContentAIGenerator = ({ content }: Props) => {
   const [customW, setCustomW] = useState(1080);
   const [customH, setCustomH] = useState(1080);
   const [copyLength, setCopyLength] = useState("medium");
+  const [customCopyChars, setCustomCopyChars] = useState(300);
   const [extraNotes, setExtraNotes] = useState("");
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>("none");
   const [magicMode, setMagicMode] = useState(false);
@@ -113,7 +115,12 @@ const ContentAIGenerator = ({ content }: Props) => {
     if (sizes?.length) setImageSize(sizes[0].value);
   };
 
-  const getEffectiveCopyLength = () => copyLengths.find(c => c.value === copyLength) || copyLengths[1];
+  const getEffectiveCopyLength = () => {
+    if (copyLength === "custom") {
+      return { value: "custom", label: "Personalizado", desc: `~${customCopyChars} caracteres` };
+    }
+    return copyLengths.find(c => c.value === copyLength) || copyLengths[1];
+  };
 
   const getImageSizeInfo = () => {
     if (imageSize === "custom") {
@@ -415,6 +422,15 @@ const ContentAIGenerator = ({ content }: Props) => {
             </SelectContent>
           </Select>
         </div>
+
+        {copyLength === "custom" && (
+          <div className="flex items-end gap-2">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Caracteres</Label>
+              <Input type="number" min={20} max={5000} value={customCopyChars} onChange={e => setCustomCopyChars(Number(e.target.value))} className="w-28" />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Image from copy checkbox */}
