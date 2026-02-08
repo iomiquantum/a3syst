@@ -167,10 +167,14 @@ const ContentAIGenerator = ({ content }: Props) => {
     const piece = pieces.find(p => p.id === id);
     if (!piece) return;
     setRegeneratingId(id);
-    const prompt = customPrompt || `Variación visual diferente para: ${piece.instruction}. Crear una imagen completamente distinta a las anteriores, con otro estilo, composición y enfoque visual.`;
+    const sizeInfo = getImageSizeInfo();
+    const sizeHint = sizeInfo ? ` Formato: ${sizeInfo.label} (${sizeInfo.w}x${sizeInfo.h}px). La imagen DEBE tener estas dimensiones exactas.` : "";
+    const prompt = customPrompt
+      ? `${customPrompt}${sizeHint}`
+      : `Variación visual diferente para: ${piece.instruction}. Crear una imagen completamente distinta a las anteriores, con otro estilo, composición y enfoque visual.${sizeHint}`;
     try {
       const { data, error } = await supabase.functions.invoke("ai-generate-content", {
-        body: { prompt, tone, platform, type: "image" },
+        body: { prompt, tone, platform, type: "image", width: sizeInfo?.w, height: sizeInfo?.h },
       });
       if (error) throw error;
       setPieces(prev => prev.map(p => (p.id === id ? { ...p, imageUrl: data?.imageUrl || p.imageUrl, imagePrompt: prompt } : p)));
@@ -486,7 +490,7 @@ function buildImagePrompt(
   sizeInfo?: { label: string; w: number; h: number },
   strategy?: any,
 ): string {
-  const sizeHint = sizeInfo ? `\nFormato de imagen: ${sizeInfo.label} (${sizeInfo.w}x${sizeInfo.h}px). Diseña la composición para este formato.` : "";
+  const sizeHint = sizeInfo ? `\nFormato de imagen: ${sizeInfo.label} (${sizeInfo.w}x${sizeInfo.h}px). La imagen DEBE tener estas dimensiones exactas: ${sizeInfo.w}px de ancho por ${sizeInfo.h}px de alto. Diseña la composición para este formato.` : "";
   const strategyHint = buildStrategyContext(strategy);
   return `${text}.${sizeHint}${strategyHint}
 Variación visual #${variationNum} de ${totalVariations}: Crear una imagen con estilo, composición y paleta de colores COMPLETAMENTE DIFERENTE a las otras variaciones. Usar un enfoque visual único y creativo.`;
@@ -504,7 +508,7 @@ async function generateVariation(
 
   const [copyResult, imgResult] = await Promise.allSettled([
     supabase.functions.invoke("ai-generate-content", { body: { prompt: variationPrompt, tone, platform, type: "copy" } }),
-    supabase.functions.invoke("ai-generate-content", { body: { prompt: imagePrompt, tone, platform, type: "image" } }),
+    supabase.functions.invoke("ai-generate-content", { body: { prompt: imagePrompt, tone, platform, type: "image", width: sizeInfo.w, height: sizeInfo.h } }),
   ]);
 
   const copy = copyResult.status === "fulfilled" && !copyResult.value.error ? copyResult.value.data?.content || "" : null;
@@ -536,7 +540,7 @@ async function generateVariationWithCopyBasedImage(
   );
 
   const { data: imgData, error: imgError } = await supabase.functions.invoke("ai-generate-content", {
-    body: { prompt: imagePrompt, tone, platform, type: "image" },
+    body: { prompt: imagePrompt, tone, platform, type: "image", width: sizeInfo.w, height: sizeInfo.h },
   });
   const imageUrl = !imgError ? imgData?.imageUrl || null : null;
 
