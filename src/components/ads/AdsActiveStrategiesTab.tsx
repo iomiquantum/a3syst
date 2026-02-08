@@ -1,140 +1,158 @@
 import { useState } from "react";
-import { Rocket, Search, DollarSign, Eye, Users, TrendingUp, Plus } from "lucide-react";
+import { Rocket, Search, DollarSign, Users, TrendingUp, Plus, Eye, BarChart3, Pause, Play } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import type { useAds } from "@/hooks/useAds";
 
-interface ActiveStrategy {
-  id: string;
-  name: string;
-  status: "Activa" | "Pausada" | "Finalizada";
-  platform: string;
-  dailyBudget: string;
-  creatives: number;
-  createdAt: string;
-}
+interface Props { ads: ReturnType<typeof useAds>; }
 
-const mockStrategies: ActiveStrategy[] = [
-  { id: "1", name: "IOMI | VENTAS WhatsApp | +Advantage 10 | IMG | FECHA - 30/12/2025", status: "Activa", platform: "Meta", dailyBudget: "$3.00 USD", creatives: 10, createdAt: "30/12/2025" },
-  { id: "2", name: "IOMI | VENTAS WhatsApp | +Advantage Prompt | VID | FECHA - 10/12/2025", status: "Activa", platform: "Meta", dailyBudget: "$3.00 USD", creatives: 5, createdAt: "10/12/2025" },
-  { id: "3", name: "IOMI | VENTAS WhatsApp | +Advantage 10 | IMG | FECHA - 10/12/2025", status: "Activa", platform: "Meta", dailyBudget: "$8.00 USD", creatives: 10, createdAt: "10/12/2025" },
-];
+const statusColors: Record<string, string> = {
+  active: "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] border-[hsl(var(--success))]/20",
+  paused: "bg-warning/10 text-warning border-warning/20",
+  draft: "bg-muted text-muted-foreground",
+  completed: "bg-primary/10 text-primary border-primary/20",
+  error: "bg-destructive/10 text-destructive border-destructive/20",
+};
 
-const AdsActiveStrategiesTab = () => {
+const statusLabels: Record<string, string> = {
+  active: "Activa", paused: "Pausada", draft: "Borrador", completed: "Finalizada", error: "Error",
+};
+
+const AdsActiveStrategiesTab = ({ ads }: Props) => {
   const [search, setSearch] = useState("");
 
   const filtered = search.trim()
-    ? mockStrategies.filter(s => s.name.toLowerCase().includes(search.toLowerCase()))
-    : mockStrategies;
+    ? ads.campaigns.filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
+    : ads.campaigns;
+
+  const m = ads.totalMetrics;
+  const roi = m.spend > 0 ? (m.revenue / m.spend).toFixed(1) : "0";
+
+  const togglePause = async (campaign: typeof ads.campaigns[0]) => {
+    const newStatus = campaign.status === "active" ? "paused" : "active";
+    await ads.updateCampaign(campaign.id, { status: newStatus });
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-          <Rocket className="w-5 h-5 text-primary" />
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+          <Rocket className="w-6 h-6 text-primary" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-foreground uppercase tracking-wide">Estrategias Activas</h2>
+          <h2 className="text-2xl font-bold text-foreground uppercase tracking-wide">Estrategias Activas</h2>
           <p className="text-sm text-muted-foreground">Gestiona y monitorea todas tus estrategias publicitarias en un solo lugar.</p>
         </div>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-primary/10 to-transparent">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-              <DollarSign className="w-3.5 h-3.5" /> Por cada 1 dólar invertido generas:
-            </div>
-            <p className="text-2xl font-bold text-foreground">$0 <span className="text-sm font-normal text-muted-foreground">en Ventas</span></p>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-primary/10 to-transparent">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-              <DollarSign className="w-3.5 h-3.5" /> Importe invertido
-            </div>
-            <p className="text-2xl font-bold text-foreground">$0</p>
-            <p className="text-xs text-muted-foreground">Dinero invertido en campañas</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-primary/10 to-transparent">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-              <TrendingUp className="w-3.5 h-3.5" /> Conversiones
-            </div>
-            <p className="text-2xl font-bold text-foreground">0 <span className="text-sm font-normal text-muted-foreground">Ventas</span></p>
-            <p className="text-xs text-muted-foreground">Conversiones generadas</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-primary/10 to-transparent">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-              <Users className="w-3.5 h-3.5" /> Cuentas alcanzadas
-            </div>
-            <p className="text-2xl font-bold text-foreground">0 <span className="text-sm font-normal text-muted-foreground">Personas</span></p>
-            <p className="text-xs text-muted-foreground">Alcance de tus campañas</p>
-          </CardContent>
-        </Card>
+        {[
+          { icon: DollarSign, label: "Por cada $1 invertido:", value: `$${roi}`, sub: "en Ventas", gradient: "from-green-500/10 to-green-500/5" },
+          { icon: DollarSign, label: "Importe invertido", value: `$${m.spend.toFixed(0)}`, sub: "Dinero invertido en campañas", gradient: "from-blue-500/10 to-blue-500/5" },
+          { icon: TrendingUp, label: "Conversiones", value: `${m.conversions}`, sub: "Conversiones generadas", gradient: "from-purple-500/10 to-purple-500/5" },
+          { icon: Users, label: "Cuentas alcanzadas", value: `${m.reach.toLocaleString()}`, sub: "Alcance de tus campañas", gradient: "from-orange-500/10 to-orange-500/5" },
+        ].map((kpi, i) => (
+          <Card key={i} className={cn("shadow-card bg-gradient-to-br border-border/50", kpi.gradient)}>
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 text-muted-foreground text-xs mb-2">
+                <kpi.icon className="w-4 h-4" /> {kpi.label}
+              </div>
+              <p className="text-3xl font-bold text-foreground">{kpi.value}</p>
+              <p className="text-xs text-muted-foreground mt-1">{kpi.sub}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Strategies list */}
-      <Card>
-        <CardContent className="p-5 space-y-4">
+      {/* Overlay when no metrics */}
+      {ads.campaigns.length === 0 && (
+        <Card className="shadow-card">
+          <CardContent className="p-8 text-center">
+            <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+            <h3 className="font-bold text-foreground text-lg mb-1">Tus métricas están en camino</h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              Las métricas pueden tomar un tiempo en reflejarse una vez que tus estrategias empiecen a correr. ¡Relax, es completamente normal!
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Campaigns List */}
+      <Card className="shadow-card">
+        <CardContent className="p-6 space-y-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Rocket className="w-4 h-4 text-primary" />
-              </div>
+              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center"><Rocket className="w-4 h-4 text-primary" /></div>
               <div>
-                <p className="font-semibold text-foreground">Estrategias lanzadas</p>
+                <p className="font-bold text-foreground">Estrategias lanzadas</p>
                 <p className="text-sm text-muted-foreground">Arrastra, elige o genera con IA las imágenes restantes.</p>
               </div>
             </div>
-            <Button className="gradient-primary text-primary-foreground">
-              <Plus className="w-4 h-4 mr-1.5" /> Nueva estrategia
+            <Button className="gradient-primary text-primary-foreground shadow-md" size="lg">
+              <Plus className="w-4 h-4 mr-2" /> Nueva estrategia
             </Button>
           </div>
 
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar estrategias..."
-              className="pl-10"
-            />
+            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar estrategias..." className="pl-10 h-11" />
           </div>
 
           <div className="space-y-3">
-            {filtered.map((s) => (
-              <Card key={s.id} className="shadow-sm hover:shadow-md transition-shadow">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <Rocket className="w-5 h-5 text-primary" />
+            {filtered.map((c) => (
+              <Card key={c.id} className="shadow-sm hover:shadow-md transition-all duration-200 border-border/50">
+                <CardContent className="p-5 flex items-center gap-4">
+                  <div className="w-11 h-11 rounded-xl gradient-primary flex items-center justify-center shrink-0 shadow-sm">
+                    <Rocket className="w-5 h-5 text-primary-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm text-foreground truncate">{s.name}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant={s.status === "Activa" ? "default" : "secondary"} className="text-xs">{s.status}</Badge>
-                      <Badge variant="outline" className="text-xs">{s.platform}</Badge>
+                    <p className="font-semibold text-sm text-foreground truncate">{c.name}</p>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <Badge variant="outline" className={cn("text-xs", statusColors[c.status])}>
+                        {statusLabels[c.status] || c.status}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">{c.platform === "meta" ? "Meta" : c.platform}</Badge>
                     </div>
-                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                      <span>Presupuesto Diario <span className="font-semibold text-foreground">{s.dailyBudget}</span></span>
-                      <span>Creativos <span className="font-semibold text-foreground">{s.creatives}</span></span>
-                      <span>Creada <span className="font-semibold text-foreground">{s.createdAt}</span></span>
+                    <div className="flex items-center gap-5 mt-2.5 text-xs text-muted-foreground">
+                      <div>
+                        <span className="block text-[10px] uppercase tracking-wider">Presupuesto Diario</span>
+                        <span className="font-bold text-foreground text-sm">${Number(c.daily_budget).toFixed(2)} {c.currency}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] uppercase tracking-wider">Creativos</span>
+                        <span className="font-bold text-foreground text-sm">{c.creatives_count}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] uppercase tracking-wider">Creada</span>
+                        <span className="font-bold text-foreground text-sm">{new Date(c.created_at).toLocaleDateString()}</span>
+                      </div>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm">
-                    <Eye className="w-4 h-4 mr-1" /> Ver Detalles
-                  </Button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {(c.status === "active" || c.status === "paused") && (
+                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => togglePause(c)} title={c.status === "active" ? "Pausar" : "Reanudar"}>
+                        {c.status === "active" ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm" className="shadow-sm">
+                      <Eye className="w-4 h-4 mr-1.5" /> Ver Detalles
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
 
             {filtered.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">No se encontraron estrategias.</p>
+              <div className="text-center py-12">
+                <Rocket className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">
+                  {search ? "No se encontraron estrategias." : "Aún no tienes estrategias lanzadas. ¡Crea tu primera!"}
+                </p>
+              </div>
             )}
           </div>
         </CardContent>
