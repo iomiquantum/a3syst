@@ -31,19 +31,12 @@ interface Props {
   sizeH?: number;
   imageModel?: "flash" | "pro";
 }
-const allResizeSizes = [
-  { label: "Feed cuadrado", value: "feed-sq", w: 1080, h: 1080 },
-  { label: "Feed vertical", value: "feed-v", w: 1080, h: 1350 },
-  { label: "Story / Reel", value: "story", w: 1080, h: 1920 },
-  { label: "Feed horizontal", value: "feed-h", w: 1200, h: 630 },
-  { label: "FB Feed horizontal", value: "fb-feed-h", w: 1200, h: 628 },
-  { label: "Video vertical", value: "video-v", w: 1080, h: 1920 },
+const resizeSizes = [
+  { label: "Feed cuadrado", ratio: "1:1", w: 1080, h: 1080 },
+  { label: "Feed vertical", ratio: "4:5", w: 1080, h: 1350 },
+  { label: "Story / Reel", ratio: "9:16", w: 1080, h: 1920 },
+  { label: "Feed horizontal", ratio: "1.91:1", w: 1200, h: 630 },
 ];
-
-// Deduplicate by w×h
-const uniqueSizes = allResizeSizes.filter((s, i, arr) =>
-  arr.findIndex(x => x.w === s.w && x.h === s.h) === i
-);
 
 const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerateCopy, onApprove, regeneratingImage, regeneratingCopy, platform, sizeLabel, sizeW, sizeH, imageModel = "pro" }: Props) => {
   const [editingCopy, setEditingCopy] = useState(false);
@@ -274,16 +267,19 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
                 <PopoverContent className="w-56 p-2" align="center" side="bottom">
                   <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Descargar en otro tamaño</p>
                   <div className="space-y-0.5 max-h-48 overflow-y-auto">
-                    {uniqueSizes.map(s => (
+                    {resizeSizes.map(s => (
                       <Button
-                        key={s.value}
+                        key={s.ratio}
                         variant="ghost"
                         size="sm"
                         className="w-full justify-between text-xs h-8"
                         disabled={downloading}
                         onClick={() => handleResizeDownload(s.w, s.h, s.label)}
                       >
-                        <span>{s.label}</span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="font-medium text-foreground">{s.ratio}</span>
+                          <span>{s.label}</span>
+                        </span>
                         <span className="text-muted-foreground">{s.w}×{s.h}</span>
                       </Button>
                     ))}
@@ -320,6 +316,34 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
               {downloading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
               {sizeW && sizeH ? `${sizeW}×${sizeH}` : "HD"}
             </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="secondary" size="sm" className="gap-1.5 text-xs">
+                  <Scaling className="w-3 h-3" /> Redimensionar
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-2" align="end" side="top">
+                <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Descargar en otro tamaño</p>
+                <div className="space-y-0.5 max-h-48 overflow-y-auto">
+                  {resizeSizes.map(s => (
+                    <Button
+                      key={s.ratio}
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-between text-xs h-8"
+                      disabled={downloading}
+                      onClick={() => handleResizeDownload(s.w, s.h, s.label)}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span className="font-medium text-foreground">{s.ratio}</span>
+                        <span>{s.label}</span>
+                      </span>
+                      <span className="text-muted-foreground">{s.w}×{s.h}</span>
+                    </Button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         )}
       </div>
