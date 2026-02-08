@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useClinic } from "@/hooks/useClinic";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { treatmentSchema, specialtySchema, getValidationError } from "@/lib/validations";
 
 const TratamientosPage = () => {
   const { clinicId } = useClinic();
@@ -35,23 +36,38 @@ const TratamientosPage = () => {
 
   const handleSaveTreatment = async () => {
     if (!clinicId) return;
-    const { error } = await supabase.from("treatments").insert({
-      clinic_id: clinicId, name: treatmentForm.name, duration: parseInt(treatmentForm.duration),
-      description: treatmentForm.description, price: parseFloat(treatmentForm.price) || 0,
-    });
-    if (error) { toast.error(error.message); return; }
-    toast.success("Tratamiento creado");
-    setOpenTreatment(false); setTreatmentForm({ name: "", duration: "", description: "", price: "" });
-    fetchData();
+    try {
+      const validated = treatmentSchema.parse({
+        name: treatmentForm.name,
+        duration: parseInt(treatmentForm.duration) || 0,
+        price: parseFloat(treatmentForm.price) || 0,
+        description: treatmentForm.description,
+      });
+      const { error } = await supabase.from("treatments").insert({
+        clinic_id: clinicId, name: validated.name, duration: validated.duration,
+        description: validated.description || "", price: validated.price,
+      });
+      if (error) { toast.error(error.message); return; }
+      toast.success("Tratamiento creado");
+      setOpenTreatment(false); setTreatmentForm({ name: "", duration: "", description: "", price: "" });
+      fetchData();
+    } catch (e) {
+      toast.error(getValidationError(e));
+    }
   };
 
   const handleSaveSpecialty = async () => {
     if (!clinicId) return;
-    const { error } = await supabase.from("specialties").insert({ clinic_id: clinicId, name: specialtyName });
-    if (error) { toast.error(error.message); return; }
-    toast.success("Especialidad creada");
-    setOpenSpecialty(false); setSpecialtyName("");
-    fetchData();
+    try {
+      const validated = specialtySchema.parse({ name: specialtyName });
+      const { error } = await supabase.from("specialties").insert({ clinic_id: clinicId, name: validated.name });
+      if (error) { toast.error(error.message); return; }
+      toast.success("Especialidad creada");
+      setOpenSpecialty(false); setSpecialtyName("");
+      fetchData();
+    } catch (e) {
+      toast.error(getValidationError(e));
+    }
   };
 
   const deleteTreatment = async (id: string) => {
@@ -82,12 +98,12 @@ const TratamientosPage = () => {
                 <DialogContent>
                   <DialogHeader><DialogTitle>Nuevo Tratamiento</DialogTitle></DialogHeader>
                   <div className="space-y-4 pt-2">
-                    <div><Label>Nombre *</Label><Input value={treatmentForm.name} onChange={e => setTreatmentForm({...treatmentForm, name: e.target.value})} /></div>
+                    <div><Label>Nombre *</Label><Input value={treatmentForm.name} onChange={e => setTreatmentForm({...treatmentForm, name: e.target.value})} maxLength={100} /></div>
                     <div className="grid grid-cols-2 gap-4">
-                      <div><Label>Duración (min) *</Label><Input type="number" value={treatmentForm.duration} onChange={e => setTreatmentForm({...treatmentForm, duration: e.target.value})} /></div>
-                      <div><Label>Precio</Label><Input type="number" value={treatmentForm.price} onChange={e => setTreatmentForm({...treatmentForm, price: e.target.value})} /></div>
+                      <div><Label>Duración (min) *</Label><Input type="number" value={treatmentForm.duration} onChange={e => setTreatmentForm({...treatmentForm, duration: e.target.value})} min={1} max={480} /></div>
+                      <div><Label>Precio</Label><Input type="number" value={treatmentForm.price} onChange={e => setTreatmentForm({...treatmentForm, price: e.target.value})} min={0} /></div>
                     </div>
-                    <div><Label>Descripción</Label><Textarea value={treatmentForm.description} onChange={e => setTreatmentForm({...treatmentForm, description: e.target.value})} /></div>
+                    <div><Label>Descripción</Label><Textarea value={treatmentForm.description} onChange={e => setTreatmentForm({...treatmentForm, description: e.target.value})} maxLength={1000} /></div>
                     <Button onClick={handleSaveTreatment} className="w-full gradient-primary text-primary-foreground" disabled={!treatmentForm.name || !treatmentForm.duration}>Crear</Button>
                   </div>
                 </DialogContent>
@@ -136,7 +152,7 @@ const TratamientosPage = () => {
                 <DialogContent>
                   <DialogHeader><DialogTitle>Nueva Especialidad</DialogTitle></DialogHeader>
                   <div className="space-y-4 pt-2">
-                    <div><Label>Nombre *</Label><Input value={specialtyName} onChange={e => setSpecialtyName(e.target.value)} placeholder="Ej: Dermatología" /></div>
+                    <div><Label>Nombre *</Label><Input value={specialtyName} onChange={e => setSpecialtyName(e.target.value)} placeholder="Ej: Dermatología" maxLength={100} /></div>
                     <Button onClick={handleSaveSpecialty} className="w-full gradient-primary text-primary-foreground" disabled={!specialtyName}>Crear</Button>
                   </div>
                 </DialogContent>
