@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import {
   codigosGeneracionales, psicologiaAvanzada, type MatrixOption,
 } from "@/lib/psychoMatrixData";
 import type { PsychoService } from "@/hooks/usePsychoMatrix";
-import { Beaker, Brain, Megaphone, Users, Skull, Zap, ArrowLeft } from "lucide-react";
+import { Beaker, Brain, Megaphone, Users, Skull, Zap, ArrowLeft, Sparkles, RefreshCw } from "lucide-react";
 
 export interface Seleccion {
   arquetipo: string;
@@ -101,6 +101,20 @@ const MatrixMixer = ({ service, onGenerate, onBack }: Props) => {
   const [sel, setSel] = useState<Seleccion>({
     arquetipo: "", vozMarca: "", disparador: "", generacion: "", tecAvanzada: "",
   });
+  const [magicUsed, setMagicUsed] = useState(false);
+
+  const randomPick = (opts: MatrixOption[]) => opts[Math.floor(Math.random() * opts.length)].id;
+
+  const hacerMagia = useCallback(() => {
+    setSel({
+      arquetipo: randomPick(arquetiposDigitales),
+      vozMarca: randomPick(arquetiposMarca),
+      disparador: randomPick(disparadoresPersuasion),
+      generacion: randomPick(codigosGeneracionales),
+      tecAvanzada: Math.random() > 0.4 ? randomPick(psicologiaAvanzada) : "",
+    });
+    setMagicUsed(true);
+  }, []);
 
   const listo = sel.arquetipo && sel.vozMarca && sel.disparador && sel.generacion;
 
@@ -122,6 +136,21 @@ const MatrixMixer = ({ service, onGenerate, onBack }: Props) => {
           <Badge variant="secondary">{etiquetaPrecio[service.target_price] || service.target_price}</Badge>
         </CardContent>
       </Card>
+
+      {/* Hacer Magia + Abra cadabra */}
+      <div className="flex items-center gap-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
+        <Button onClick={hacerMagia} className="gradient-primary text-primary-foreground gap-2">
+          <Sparkles className="w-4 h-4" />
+          ✨ Hacer magia
+        </Button>
+        {magicUsed && (
+          <Button variant="outline" onClick={hacerMagia} className="gap-2 border-primary/30 text-primary hover:bg-primary/10">
+            <RefreshCw className="w-4 h-4" />
+            Abra cadabra
+          </Button>
+        )}
+        <p className="text-xs text-muted-foreground ml-1">Déjanos a nosotros hacer la magia ✨</p>
+      </div>
 
       {/* 5 categorías en vertical con checkboxes */}
       <div className="grid grid-cols-1 gap-4">
