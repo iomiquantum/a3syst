@@ -319,7 +319,7 @@ const ContentAIGenerator = ({ content }: Props) => {
     }
     try {
       const { data, error } = await supabase.functions.invoke("ai-generate-content", {
-        body: { prompt, tone, platform, type: "image", width: sizeInfo?.w, height: sizeInfo?.h, imageModel },
+        body: { prompt, tone, platform, type: "image", width: sizeInfo?.w, height: sizeInfo?.h, imageModel, sizeLabel: sizeInfo?.label, expertMode },
       });
       if (error) throw error;
       setPieces(prev => prev.map(p => (p.id === id ? { ...p, imageUrl: data?.imageUrl || p.imageUrl, imagePrompt: prompt } : p)));
@@ -501,9 +501,14 @@ const ContentAIGenerator = ({ content }: Props) => {
               size="sm"
               className={`h-6 px-2 text-[10px] gap-1 ${expertMode ? "gradient-primary text-primary-foreground" : ""}`}
               onClick={() => {
-                setExpertMode(!expertMode);
-                // Reset to basic size when leaving expert mode
-                if (expertMode) {
+                const newExpert = !expertMode;
+                setExpertMode(newExpert);
+                if (newExpert) {
+                  // Expert mode forces Pro model
+                  setImageModel("pro");
+                  const expert = expertSizesByPlatform[platform];
+                  if (expert?.length && expert[0].sizes.length) setImageSize(expert[0].sizes[0].value);
+                } else {
                   const sizes = imageSizesByPlatform[platform];
                   if (sizes?.length) setImageSize(sizes[0].value);
                 }
@@ -589,34 +594,41 @@ const ContentAIGenerator = ({ content }: Props) => {
         )}
       </div>
 
-      {/* Image model selector */}
-      <div className="p-4 rounded-xl border border-border bg-card space-y-3">
-        <Label className="text-sm font-medium">Modelo de generación de imagen</Label>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => setImageModel("flash")}
-            className={`p-3 rounded-lg border text-left transition-all ${imageModel === "flash" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-semibold">⚡ Flash</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-600 border border-green-500/20">Económico</span>
-            </div>
-            <p className="text-xs text-muted-foreground">Rápido y barato. Genera imágenes cuadradas (~1024px). Al descargar puedes elegir dimensiones exactas o cuadrada.</p>
-          </button>
-          <button
-            type="button"
-            onClick={() => setImageModel("pro")}
-            className={`p-3 rounded-lg border text-left transition-all ${imageModel === "pro" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-semibold">🎨 Pro</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">Mayor costo</span>
-            </div>
-            <p className="text-xs text-muted-foreground">Mayor calidad. Genera imágenes en las proporciones nativas solicitadas. Más lento y consume más tokens.</p>
-          </button>
+      {/* Image model selector - hidden in expert mode (always Pro) */}
+      {expertMode ? (
+        <div className="p-3 rounded-xl border border-primary/20 bg-primary/5 flex items-center gap-2">
+          <span className="text-sm font-semibold">🎨 Pro</span>
+          <span className="text-xs text-muted-foreground">Modo experto usa el modelo Pro automáticamente para máxima calidad y proporciones nativas.</span>
         </div>
-      </div>
+      ) : (
+        <div className="p-4 rounded-xl border border-border bg-card space-y-3">
+          <Label className="text-sm font-medium">Modelo de generación de imagen</Label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setImageModel("flash")}
+              className={`p-3 rounded-lg border text-left transition-all ${imageModel === "flash" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm font-semibold">⚡ Flash</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-600 border border-green-500/20">Económico</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Rápido y barato. Genera imágenes cuadradas (~1024px). Al descargar puedes elegir dimensiones exactas o cuadrada.</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setImageModel("pro")}
+              className={`p-3 rounded-lg border text-left transition-all ${imageModel === "pro" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm font-semibold">🎨 Pro</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">Mayor costo</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Mayor calidad. Genera imágenes en las proporciones nativas solicitadas. Más lento y consume más tokens.</p>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Image from copy checkbox */}
       <div className="flex items-center gap-2 p-3 rounded-lg border border-border bg-muted/30">
@@ -802,7 +814,7 @@ async function generateVariation(
 
   const [copyResult, imgResult] = await Promise.allSettled([
     supabase.functions.invoke("ai-generate-content", { body: { prompt: variationPrompt, tone, platform, type: "copy" } }),
-    supabase.functions.invoke("ai-generate-content", { body: { prompt: imagePrompt, tone, platform, type: "image", width: sizeInfo.w, height: sizeInfo.h, imageModel } }),
+    supabase.functions.invoke("ai-generate-content", { body: { prompt: imagePrompt, tone, platform, type: "image", width: sizeInfo.w, height: sizeInfo.h, imageModel, sizeLabel: sizeInfo.label } }),
   ]);
 
   const copy = copyResult.status === "fulfilled" && !copyResult.value.error ? copyResult.value.data?.content || "" : null;
@@ -829,7 +841,7 @@ async function generateVariationWithCopyBasedImage(
   const imagePrompt = buildCopyBasedImagePrompt(copy || mainPrompt, variationNum, totalVariations, sizeInfo, strategy, imgTpl);
 
   const { data: imgData, error: imgError } = await supabase.functions.invoke("ai-generate-content", {
-    body: { prompt: imagePrompt, tone, platform, type: "image", width: sizeInfo.w, height: sizeInfo.h, imageModel },
+    body: { prompt: imagePrompt, tone, platform, type: "image", width: sizeInfo.w, height: sizeInfo.h, imageModel, sizeLabel: sizeInfo.label },
   });
   const imageUrl = !imgError ? imgData?.imageUrl || null : null;
 

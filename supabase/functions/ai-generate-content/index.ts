@@ -26,11 +26,114 @@ function getClosestAspectRatio(w?: number, h?: number): string | null {
   return closest.label;
 }
 
+// Expert-level platform-specific image generation instructions
+function getExpertInstructions(platform?: string, sizeLabel?: string, w?: number, h?: number, aspectRatio?: string | null, orientation?: string): string {
+  if (!platform || !w || !h) return "";
+
+  const ratio = w / h;
+  const isVertical = ratio < 0.9;
+  const isSquare = ratio >= 0.9 && ratio <= 1.1;
+  const isHorizontal = ratio > 1.1;
+  const isStoryReel = isVertical && h >= 1900;
+
+  let instructions = "";
+
+  // Universal safe-zone rules for Stories/Reels
+  if (isStoryReel) {
+    instructions += `\n\n📱 STORIES/REELS SAFE ZONE RULES (9:16 format):
+- Leave the TOP 250px completely free of important text or elements (phone status bar, app header area).
+- Leave the BOTTOM 340px completely free (like/comment/share buttons overlay here).
+- The SAFE creative area is the middle zone (~1330px tall).
+- Place your main headline, key visuals, and CTA in this safe middle zone.
+- Background imagery and ambient colors CAN extend to edges, but key content must stay in the safe zone.
+- Design for MOBILE-FIRST: large readable text, high contrast, bold visuals.`;
+  }
+
+  // Platform-specific rules
+  if (platform === "Instagram" || platform === "Facebook") {
+    if (isVertical && !isStoryReel) {
+      instructions += `\n\n📐 META FEED VERTICAL (4:5) BEST PRACTICES:
+- This is THE dominant mobile feed format. Design for thumb-stopping impact.
+- Use the full vertical space: hero visual in the top 60%, text/CTA in the bottom 40%.
+- Ensure text is large enough to read on mobile (minimum apparent 24pt).
+- High contrast colors; avoid small details that get lost on phone screens.`;
+    }
+    if (isSquare) {
+      instructions += `\n\n📐 META FEED SQUARE (1:1) BEST PRACTICES:
+- Standard format for carousels and catalog ads. Balanced, centered compositions work well.
+- Keep the design clean and focused — one hero element, one clear message.
+- Ensure brand elements are visible but not overwhelming.`;
+    }
+    if (isHorizontal) {
+      instructions += `\n\n📐 META LANDSCAPE (1.91:1) BEST PRACTICES:
+- Used for link ads, search results, and right column placements.
+- Place key visual on the LEFT and text/CTA on the RIGHT (reading flow).
+- This format competes with text-heavy feeds — make the image eye-catching and simple.
+- Avoid clutter; one strong visual + one message.`;
+    }
+  }
+
+  if (platform === "Facebook" && sizeLabel) {
+    if (sizeLabel.includes("Right Column")) {
+      instructions += `\n\n📐 FACEBOOK RIGHT COLUMN (1:1, 1200x1200):
+- Very small display area on desktop. Use LARGE text and simple graphics.
+- Maximum 1-2 words headline, prominent logo, high contrast.`;
+    }
+    if (sizeLabel.includes("Marketplace")) {
+      instructions += `\n\n📐 FACEBOOK MARKETPLACE (1:1, 1080x1080):
+- Product-focused. Clean white/neutral background preferred.
+- Show the product/service prominently with clear pricing if applicable.`;
+    }
+  }
+
+  if (platform === "TikTok") {
+    instructions += `\n\n📱 TIKTOK DESIGN RULES:
+- STRICTLY 9:16 vertical format. Never design for square or landscape — TikTok penalizes with black bars.
+- Design for total immersion: edge-to-edge visuals, no borders or frames.
+- Bold, Gen-Z aesthetic: bright colors, dynamic compositions, trending visual styles.
+- Text should be punchy, short (max 5-7 words), and placed in the center-safe zone.
+- The sweet spot for ad content is 9-15 seconds feel — design the static to feel like a frame from a dynamic video.`;
+  }
+
+  if (platform === "WhatsApp") {
+    if (sizeLabel?.includes("Portada") || sizeLabel?.includes("cover")) {
+      instructions += `\n\n📱 WHATSAPP BUSINESS COVER (16:9, 1211x681):
+- Professional business header. Show brand identity, tagline, and contact info.
+- Clean, corporate design with readable text at small sizes.`;
+    }
+    if (sizeLabel?.includes("catálogo") || sizeLabel?.includes("Catálogo") || sizeLabel?.includes("Producto")) {
+      instructions += `\n\n📱 WHATSAPP CATALOG (1:1, 1080x1080):
+- E-commerce style: clean background, product prominently displayed.
+- Include price tag area if applicable. Professional product photography style.`;
+    }
+    if (sizeLabel?.includes("Estado") || sizeLabel?.includes("Status")) {
+      instructions += `\n\n📱 WHATSAPP STATUS (9:16, 1080x1920):
+- Same safe-zone rules as Stories. Quick, impactful visual for ephemeral content.
+- Bold text, clear CTA, brand colors. Designed to capture attention in 3 seconds.`;
+    }
+    if (sizeLabel?.includes("Anuncio") || sizeLabel?.includes("Ad")) {
+      instructions += `\n\n📱 CLICK-TO-WHATSAPP ADS:
+- Uses Meta Feed formats (1:1 or 4:5). Design must include a clear "Message us" CTA.
+- Show WhatsApp green accent to signal the messaging intent.`;
+    }
+  }
+
+  // Universal quality rules
+  instructions += `\n\n🛠 TECHNICAL QUALITY REQUIREMENTS:
+- Output must be PNG-quality crisp with no compression artifacts.
+- Text in the image must be spelled correctly and perfectly legible.
+- Colors should be vibrant and optimized for mobile OLED screens (high saturation, deep blacks).
+- If the design includes text overlay, use proper typographic hierarchy (headline > subhead > body).
+- All visual elements must respect the exact ${aspectRatio} aspect ratio — no stretching, no padding, no letterboxing.`;
+
+  return instructions;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { prompt, tone, platform, type, width, height, imageModel } = await req.json();
+    const { prompt, tone, platform, type, width, height, imageModel, sizeLabel, expertMode } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -83,8 +186,12 @@ Reglas:
             ? "vertical/portrait (taller than wide)"
             : "square"
         : "";
+
+      // Build expert-level platform-specific instructions
+      const expertInstructions = getExpertInstructions(platform, sizeLabel, width, height, aspectRatio, orientationHint);
+
       const sizeInstruction = width && height
-        ? ` CRITICAL LAYOUT REQUIREMENT: This image MUST be designed as a ${orientationHint} composition with ${aspectRatio} aspect ratio (${width}x${height}px). Distribute ALL visual elements, text, and graphics to fill the ENTIRE ${orientationHint} canvas naturally. Do NOT center everything in a square area — use the full ${orientationHint} space from edge to edge, top to bottom.`
+        ? ` CRITICAL LAYOUT REQUIREMENT: This image MUST be designed as a ${orientationHint} composition with ${aspectRatio} aspect ratio (${width}x${height}px). Distribute ALL visual elements, text, and graphics to fill the ENTIRE ${orientationHint} canvas naturally. Do NOT center everything in a square area — use the full ${orientationHint} space from edge to edge, top to bottom.${expertInstructions}`
         : "";
       const imagePrompt = `${prompt}${sizeInstruction}`;
 
