@@ -555,6 +555,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_super_admin: { Args: never; Returns: boolean }
       user_has_clinic_access: {
         Args: { _clinic_id: string; _user_id: string }
         Returns: boolean
