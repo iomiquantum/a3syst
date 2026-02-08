@@ -98,6 +98,21 @@
     --sidebar-accent-foreground: 258 60% 80%;
     --sidebar-border: 230 20% 18%;
     --sidebar-ring: 258 65% 62%;
+
+    --success: 152 50% 38%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 80% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 200 70% 50%;
+    --info-foreground: 0 0% 100%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(258, 65%, 52%), hsl(200, 70%, 45%));
+    --gradient-subtle: linear-gradient(135deg, hsl(258, 30%, 16%), hsl(200, 25%, 14%));
+    --gradient-chat: linear-gradient(180deg, hsl(258, 30%, 14%), hsl(260, 25%, 12%));
+
+    --shadow-sm: 0 1px 3px hsl(0 0% 0% / 0.25);
+    --shadow-md: 0 4px 12px hsl(0 0% 0% / 0.35);
+    --shadow-lg: 0 8px 30px hsl(0 0% 0% / 0.45);
   }
 }
 
