@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, RefreshCw, Loader2, Pencil, Image as ImageIcon } from "lucide-react";
+import { Check, RefreshCw, Loader2, Pencil, Image as ImageIcon, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -17,11 +17,13 @@ interface Props {
   piece: GeneratedPiece;
   onCopyChange: (id: number, copy: string) => void;
   onRegenerateImage: (id: number) => void;
+  onRegenerateCopy: (id: number) => void;
   onApprove: (id: number) => void;
   regeneratingImage: boolean;
+  regeneratingCopy: boolean;
 }
 
-const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onApprove, regeneratingImage }: Props) => {
+const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerateCopy, onApprove, regeneratingImage, regeneratingCopy }: Props) => {
   const [editing, setEditing] = useState(false);
 
   if (piece.status === "idle" || piece.status === "generating") return null;
@@ -75,10 +77,16 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onApprove, r
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-muted-foreground">Copy</span>
           {!isApproved && (
-            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1" onClick={() => setEditing(!editing)}>
-              <Pencil className="w-3 h-3" />
-              {editing ? "Listo" : "Editar"}
-            </Button>
+            <div className="flex gap-1">
+              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1" onClick={() => onRegenerateCopy(piece.id)} disabled={regeneratingCopy}>
+                {regeneratingCopy ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+                Regenerar
+              </Button>
+              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1" onClick={() => setEditing(!editing)}>
+                <Pencil className="w-3 h-3" />
+                {editing ? "Listo" : "Editar"}
+              </Button>
+            </div>
           )}
         </div>
         {editing && !isApproved ? (

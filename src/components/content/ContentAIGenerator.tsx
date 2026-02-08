@@ -27,6 +27,7 @@ const ContentAIGenerator = ({ content }: Props) => {
   const [generating, setGenerating] = useState(false);
   const [pieces, setPieces] = useState<GeneratedPiece[]>([]);
   const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
+  const [regeneratingCopyId, setRegeneratingCopyId] = useState<number | null>(null);
 
   const updateCount = (n: number) => {
     setCount(Math.max(1, Math.min(MAX_PIECES, n)));
@@ -97,6 +98,30 @@ const ContentAIGenerator = ({ content }: Props) => {
       setRegeneratingId(null);
     }
   };
+
+  const handleRegenerateCopy = async (id: number) => {
+    const piece = pieces.find(p => p.id === id);
+    if (!piece) return;
+    setRegeneratingCopyId(id);
+
+    try {
+      const variationPrompt = `${piece.instruction}
+
+IMPORTANTE: Genera un copy COMPLETAMENTE NUEVO y DIFERENTE al anterior. Usa un enfoque, ángulo o estilo de escritura distinto. Sé creativo y original.`;
+
+      const { data, error } = await supabase.functions.invoke("ai-generate-content", {
+        body: { prompt: variationPrompt, tone, platform, type: "copy" },
+      });
+      if (error) throw error;
+      setPieces(prev => prev.map(p => (p.id === id ? { ...p, copy: data?.content || p.copy } : p)));
+    } catch (err) {
+      console.error(err);
+      toast.error("Error regenerando copy");
+    } finally {
+      setRegeneratingCopyId(null);
+    }
+  };
+
 
   const handleApprove = async (id: number) => {
     const piece = pieces.find(p => p.id === id);
@@ -206,8 +231,10 @@ const ContentAIGenerator = ({ content }: Props) => {
               piece={piece}
               onCopyChange={handleCopyChange}
               onRegenerateImage={handleRegenerateImage}
+              onRegenerateCopy={handleRegenerateCopy}
               onApprove={handleApprove}
               regeneratingImage={regeneratingId === piece.id}
+              regeneratingCopy={regeneratingCopyId === piece.id}
             />
           ))}
         </div>
