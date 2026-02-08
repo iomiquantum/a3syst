@@ -1,0 +1,101 @@
+import { useState } from "react";
+import { Plus, Trash2, Building2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useClinic } from "@/hooks/useClinic";
+
+interface AdminClinicasTabProps {
+  clinics: any[];
+  roles: any[];
+  onRefresh: () => void;
+}
+
+const AdminClinicasTab = ({ clinics, roles, onRefresh }: AdminClinicasTabProps) => {
+  const { selectClinic } = useClinic();
+  const [clinicOpen, setClinicOpen] = useState(false);
+  const [clinicForm, setClinicForm] = useState({ name: "", description: "", address: "" });
+
+  const handleCreateClinic = async () => {
+    if (!clinicForm.name.trim()) { toast.error("El nombre es requerido"); return; }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase.from("clinics").insert({
+      name: clinicForm.name.trim(),
+      description: clinicForm.description.trim(),
+      address: clinicForm.address.trim(),
+      owner_id: user.id,
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success("Clínica creada");
+    setClinicOpen(false);
+    setClinicForm({ name: "", description: "", address: "" });
+    onRefresh();
+  };
+
+  const handleDeleteClinic = async (id: string) => {
+    const { error } = await supabase.from("clinics").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Clínica eliminada");
+    onRefresh();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+          <Building2 className="w-5 h-5" /> Clínicas
+        </h2>
+        <Dialog open={clinicOpen} onOpenChange={setClinicOpen}>
+          <DialogTrigger asChild>
+            <Button className="gradient-primary text-primary-foreground hover:opacity-90">
+              <Plus className="w-4 h-4 mr-2" /> Nueva Clínica
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Nueva Clínica</DialogTitle></DialogHeader>
+            <div className="space-y-4 pt-2">
+              <div><Label>Nombre *</Label><Input value={clinicForm.name} onChange={e => setClinicForm({ ...clinicForm, name: e.target.value })} maxLength={100} placeholder="Nombre de la clínica" /></div>
+              <div><Label>Dirección</Label><Input value={clinicForm.address} onChange={e => setClinicForm({ ...clinicForm, address: e.target.value })} maxLength={300} /></div>
+              <div><Label>Descripción</Label><Textarea value={clinicForm.description} onChange={e => setClinicForm({ ...clinicForm, description: e.target.value })} maxLength={500} /></div>
+              <Button onClick={handleCreateClinic} className="w-full gradient-primary text-primary-foreground" disabled={!clinicForm.name.trim()}>Crear Clínica</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {clinics.map(c => (
+          <Card key={c.id} className="shadow-card hover:shadow-card-hover transition-shadow cursor-pointer" onClick={() => selectClinic(c.id, c.name)}>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-primary/10"><Building2 className="w-5 h-5 text-primary" /></div>
+                  <CardTitle className="text-base">{c.name}</CardTitle>
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); handleDeleteClinic(c.id); }} className="p-1.5 rounded-md hover:bg-destructive/10">
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {c.address && <p className="text-sm text-muted-foreground">{c.address}</p>}
+              {c.description && <p className="text-sm text-muted-foreground mt-1">{c.description}</p>}
+              <p className="text-xs text-muted-foreground mt-2">
+                {roles.filter(r => r.clinic_id === c.id).length} usuario(s) asignado(s)
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default AdminClinicasTab;
