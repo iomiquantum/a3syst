@@ -2,8 +2,6 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
-const SUPER_ADMIN_EMAIL = "impulsarsolutions@gmail.com";
-
 interface ClinicContextType {
   clinicId: string | null;
   clinicName: string;
@@ -32,12 +30,13 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const isSuper = user.email === SUPER_ADMIN_EMAIL;
-    setIsSuperAdmin(isSuper);
-
     const fetchClinic = async () => {
+      // Check super admin status server-side
+      const { data: superAdminResult } = await supabase.rpc('is_super_admin');
+      const isSuper = superAdminResult === true;
+      setIsSuperAdmin(isSuper);
+
       if (isSuper) {
-        // Super admin: fetch all clinics
         const { data: clinics } = await supabase
           .from("clinics")
           .select("id, name")

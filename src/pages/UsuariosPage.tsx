@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Lock, Shield, ShieldCheck } from "lucide-react";
+import { Trash2, Lock, Shield, ShieldCheck } from "lucide-react";
+import { validatePermissions } from "@/lib/permissions";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -65,10 +66,12 @@ const UsuariosPage = () => {
     if (!user) return;
     const currentPerms = user.permissions as Record<string, boolean>;
     const newPerms = { ...currentPerms, [key]: !currentPerms[key] };
+    const validated = validatePermissions(newPerms);
+    if (!validated) { toast.error("Permisos inválidos"); return; }
 
     const { error } = await supabase
       .from("user_roles")
-      .update({ permissions: newPerms })
+      .update({ permissions: validated })
       .eq("id", roleId);
 
     if (error) { toast.error(error.message); return; }
