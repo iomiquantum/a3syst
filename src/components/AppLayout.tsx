@@ -3,12 +3,13 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Calendar, MessageSquare, Settings,
   LogOut, ChevronLeft, Bell, Search, DollarSign, UserCog,
-  Building2, Stethoscope, Briefcase,
+  Building2, Stethoscope, Briefcase, ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { useClinic } from "@/hooks/useClinic";
 
@@ -35,7 +36,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const { user, signOut } = useAuth();
-  const { clinicName } = useClinic();
+  const { clinicName, isSuperAdmin, allClinics, selectClinic, clinicId } = useClinic();
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + "/");
 
@@ -66,6 +67,17 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         </div>
 
         <nav className="flex-1 py-4 px-3 space-y-6 overflow-y-auto">
+          {/* Super Admin nav */}
+          {isSuperAdmin && (
+            <div className="space-y-1">
+              {!collapsed && <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2">Super Admin</p>}
+              <button onClick={() => navigate("/admin")} className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all", isActive("/admin") ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50")}>
+                <ShieldCheck className="w-5 h-5 shrink-0" />
+                {!collapsed && <span>Panel Admin</span>}
+              </button>
+            </div>
+          )}
+
           <div className="space-y-1">
             {!collapsed && <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2">Principal</p>}
             {mainNav.map(({ icon: Icon, label, path }) => (
@@ -105,6 +117,20 @@ const AppLayout = ({ children }: AppLayoutProps) => {
             <Input placeholder="Buscar pacientes, citas..." className="pl-10 bg-background border-border h-9" />
           </div>
           <div className="flex items-center gap-4">
+            {/* Super admin clinic switcher */}
+            {isSuperAdmin && allClinics.length > 0 && (
+              <Select value={clinicId || ""} onValueChange={(v) => {
+                const clinic = allClinics.find(c => c.id === v);
+                if (clinic) selectClinic(clinic.id, clinic.name);
+              }}>
+                <SelectTrigger className="w-48 h-9">
+                  <SelectValue placeholder="Seleccionar clínica" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allClinics.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
             <button className="relative p-2 rounded-lg hover:bg-muted transition-colors">
               <Bell className="w-5 h-5 text-muted-foreground" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-destructive" />
@@ -115,7 +141,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
               </Avatar>
               <div className="hidden md:block">
                 <p className="text-sm font-medium text-foreground">{userName}</p>
-                <p className="text-xs text-muted-foreground">{clinicName}</p>
+                <p className="text-xs text-muted-foreground">{isSuperAdmin ? `⚡ ${clinicName}` : clinicName}</p>
               </div>
             </div>
           </div>
