@@ -33,20 +33,44 @@ serve(async (req) => {
       });
     }
 
-    // Dedup: check if there's already a recent outbound message (within last 5 seconds)
-    const { data: recentOutbound } = await supabase
+    // Dedup: atomically check if the latest inbound message is still the one we should reply to
+    // by using an atomic update on conversations to claim the reply slot
+    const { data: claimed, error: claimError } = await supabase
+      .from("conversations")
+      .update({ last_message_at: new Date().toISOString() })
+      .eq("id", conversation_id)
+      .eq("chatbot_active", true)
+      .select("id")
+      .single();
+
+    if (claimError || !claimed) {
+      return new Response(JSON.stringify({ skipped: true, reason: "claim failed or chatbot inactive" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Additional dedup: check if there's already an outbound message newer than the latest inbound
+    const { data: latestInbound } = await supabase
       .from("messages")
-      .select("id, created_at")
+      .select("created_at")
+      .eq("conversation_id", conversation_id)
+      .eq("direction", "inbound")
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    const { data: latestOutbound } = await supabase
+      .from("messages")
+      .select("created_at")
       .eq("conversation_id", conversation_id)
       .eq("direction", "outbound")
       .order("created_at", { ascending: false })
       .limit(1);
 
-    if (recentOutbound && recentOutbound.length > 0) {
-      const lastOutbound = new Date(recentOutbound[0].created_at).getTime();
-      const now = Date.now();
-      if (now - lastOutbound < 5000) {
-        return new Response(JSON.stringify({ skipped: true, reason: "duplicate prevention" }), {
+    if (latestInbound?.[0] && latestOutbound?.[0]) {
+      const inboundTime = new Date(latestInbound[0].created_at).getTime();
+      const outboundTime = new Date(latestOutbound[0].created_at).getTime();
+      if (outboundTime > inboundTime) {
+        return new Response(JSON.stringify({ skipped: true, reason: "already replied" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
