@@ -536,12 +536,36 @@ function buildImagePrompt(
   const strategyHint = buildStrategyContextForImage(strategy);
   const baseTemplate = adminTemplate?.trim() ? `${adminTemplate}\n\n` : "";
 
-  return `${baseTemplate}${text}.
+  return `${baseTemplate}Eres un diseñador gráfico profesional, director de arte senior y experto en neuromarketing visual. Crea una imagen publicitaria de alto impacto para redes sociales.
 
-REGLA CRÍTICA DE TEXTO: Solo incluir como texto visible en la imagen frases de MÁXIMO 6-8 palabras que sean ganchos vendedores o CTAs. NUNCA incluir nombres de estrategias, técnicas psicológicas, arquetipos o términos de marketing como texto.
+BRIEFING CREATIVO:
+"${text}"
+
+REGLAS DE TEXTO EN LA IMAGEN (CRÍTICO):
+1. Analiza el briefing y genera texto para la imagen que incluya SOLAMENTE:
+   - Un título/gancho principal de MÁXIMO 6-8 palabras que sea vendedor y persuasivo
+   - Un CTA principal claro y directo (ej: "Reserva hoy", "50% OFF", "Última oportunidad")
+   - Opcionalmente un dato numérico impactante si el briefing lo sugiere
+2. El texto DEBE estar correctamente renderizado: ortografía perfecta, palabras completas, sin cortes ni errores tipográficos
+3. NUNCA incluir párrafos largos, descripciones extensas, ni términos técnicos de marketing
+4. NUNCA escribir nombres de arquetipos, técnicas psicológicas, gatillos de persuasión o estrategias como texto visible
+
+COMPOSICIÓN TIPOGRÁFICA:
+- Título principal: tipografía grande, bold, con alto contraste sobre el fondo. Debe leerse a primera vista
+- CTA: destacado visualmente como botón, banner, badge o cinta. Debe invitar a la acción
+- Jerarquía tipográfica clara: título > CTA > dato secundario
+- Asegurar legibilidad total en cualquier dispositivo móvil
+
+DISEÑO VISUAL PROFESIONAL:
+- Paleta de colores coherente, armónica y atractiva para la industria
+- Imágenes, fotografías o ilustraciones de alta calidad relevantes al contenido
+- Composición que detenga el scroll: impactante desde el primer segundo
+- Jerarquía visual: imagen/fondo de impacto > título > CTA
+- Uso inteligente de espacio negativo para que el texto respire
+- Iluminación y mood profesional acorde al mensaje
 ${sizeHint}${strategyHint}
 
-Variación visual #${variationNum} de ${totalVariations}: Crear una imagen con estilo, composición y paleta de colores COMPLETAMENTE DIFERENTE a las otras variaciones.`;
+Variación visual #${variationNum} de ${totalVariations}: Crear una imagen con estilo, composición, paleta de colores y enfoque visual COMPLETAMENTE DIFERENTE a las otras variaciones. Cada variación debe sentirse como una pieza única de una campaña diversa.`;
 }
 
 async function generateVariation(
