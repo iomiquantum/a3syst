@@ -68,8 +68,10 @@
     #${WIDGET_ID} .iomi-panel { position: fixed; bottom: 96px; right: 24px; width: 380px; max-height: 650px; background: #fff; border-radius: 16px; box-shadow: 0 8px 40px rgba(0,0,0,0.15); z-index: 99999; display: none; flex-direction: column; overflow: hidden; animation: iomi-slide-up 0.25s ease; }
     #${WIDGET_ID} .iomi-panel.open { display: flex; }
     @keyframes iomi-slide-up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-    #${WIDGET_ID} .iomi-header { background: ${PRIMARY_COLOR}; color: white; padding: 20px; }
-    #${WIDGET_ID} .iomi-header h3 { font-size: 16px; font-weight: 600; }
+    #${WIDGET_ID} .iomi-header { background: ${PRIMARY_COLOR}; color: white; padding: 20px; position: relative; }
+    #${WIDGET_ID} .iomi-header h3 { font-size: 16px; font-weight: 600; padding-right: 28px; }
+    #${WIDGET_ID} .iomi-close-btn { position: absolute; top: 12px; right: 12px; background: none; border: none; color: white; cursor: pointer; opacity: 0.8; padding: 4px; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+    #${WIDGET_ID} .iomi-close-btn:hover { opacity: 1; background: rgba(255,255,255,0.15); }
     #${WIDGET_ID} .iomi-header p { font-size: 12px; opacity: 0.85; margin-top: 4px; }
     #${WIDGET_ID} .iomi-messages { flex: 1; overflow-y: auto; padding: 16px; min-height: 120px; max-height: 260px; background: #f9fafb; }
     #${WIDGET_ID} .iomi-msg { margin-bottom: 8px; display: flex; }
@@ -119,6 +121,9 @@
     <div class="iomi-header">
       <h3>${TITLE}</h3>
       <p>${SUBTITLE}</p>
+      <button class="iomi-close-btn" aria-label="Cerrar" id="iomi-close-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
   `;
 
@@ -177,6 +182,9 @@
   container.appendChild(panel);
   container.appendChild(fab);
   document.body.appendChild(container);
+
+  // Close button handler
+  document.getElementById('iomi-close-btn').onclick = () => togglePanel();
 
   function showError(msg) {
     const el = document.getElementById('iomi-error');
