@@ -20,6 +20,7 @@ const MensajesPage = () => {
     selectConversation,
     sendMessage,
     updateContactStage,
+    toggleChatbot,
   } = useMessaging();
 
   return (
@@ -69,6 +70,7 @@ const MensajesPage = () => {
             <ContactPanel
               conversation={selectedConversation}
               onUpdateStage={updateContactStage}
+              onToggleChatbot={toggleChatbot}
             />
           </div>
         )}
