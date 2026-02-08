@@ -24,6 +24,7 @@ const MensajesPage = () => {
     selectConversation,
     sendMessage,
     updateContactStage,
+    updateContact,
     toggleChatbot,
   } = useMessaging();
 
@@ -147,6 +148,7 @@ const MensajesPage = () => {
                   <ContactPanel
                     conversation={selectedConversation}
                     onUpdateStage={updateContactStage}
+                    onUpdateContact={updateContact}
                     onToggleChatbot={toggleChatbot}
                   />
                 </div>

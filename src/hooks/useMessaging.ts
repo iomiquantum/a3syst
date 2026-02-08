@@ -7,6 +7,7 @@ export interface Contact {
   id: string;
   name: string;
   phone: string;
+  phone2: string | null;
   email: string;
   funnel_stage: string;
   tags: string[];
@@ -172,6 +173,18 @@ export const useMessaging = () => {
     toast.success(active ? "Chatbot automático activado" : "Chatbot automático desactivado");
   };
 
+  const updateContact = async (contactId: string, updates: Partial<Contact>) => {
+    const { error } = await supabase.from("contacts").update(updates).eq("id", contactId);
+    if (error) { toast.error(error.message); return; }
+    const applyUpdate = (c: Conversation) =>
+      c.contact_id === contactId && c.contact ? { ...c, contact: { ...c.contact, ...updates } } : c;
+    setConversations(prev => prev.map(applyUpdate));
+    if (selectedConversation?.contact_id === contactId && selectedConversation.contact) {
+      setSelectedConversation({ ...selectedConversation, contact: { ...selectedConversation.contact, ...updates } });
+    }
+    toast.success("Contacto actualizado");
+  };
+
   let filteredConversations = funnelFilter === "todos"
     ? conversations
     : conversations.filter(c => c.contact?.funnel_stage === funnelFilter);
@@ -229,6 +242,7 @@ export const useMessaging = () => {
     selectConversation,
     sendMessage,
     updateContactStage,
+    updateContact,
     toggleChatbot,
     fetchConversations,
   };
