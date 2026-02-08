@@ -17,6 +17,46 @@
   let conversationId = localStorage.getItem('iomi_conv_id') || '';
   let isOpen = false;
   let polling = null;
+  let msgCount = 0; // rate limiting
+  let lastMsgTime = 0;
+  let captchaAnswer = null;
+  let captchaQuestion = '';
+
+  // Country codes
+  const COUNTRY_CODES = [
+    { code: '+54', country: '🇦🇷 AR', name: 'Argentina' },
+    { code: '+56', country: '🇨🇱 CL', name: 'Chile' },
+    { code: '+57', country: '🇨🇴 CO', name: 'Colombia' },
+    { code: '+52', country: '🇲🇽 MX', name: 'México' },
+    { code: '+51', country: '🇵🇪 PE', name: 'Perú' },
+    { code: '+598', country: '🇺🇾 UY', name: 'Uruguay' },
+    { code: '+58', country: '🇻🇪 VE', name: 'Venezuela' },
+    { code: '+1', country: '🇺🇸 US', name: 'Estados Unidos' },
+    { code: '+34', country: '🇪🇸 ES', name: 'España' },
+    { code: '+55', country: '🇧🇷 BR', name: 'Brasil' },
+    { code: '+593', country: '🇪🇨 EC', name: 'Ecuador' },
+    { code: '+591', country: '🇧🇴 BO', name: 'Bolivia' },
+    { code: '+595', country: '🇵🇾 PY', name: 'Paraguay' },
+    { code: '+506', country: '🇨🇷 CR', name: 'Costa Rica' },
+    { code: '+507', country: '🇵🇦 PA', name: 'Panamá' },
+  ];
+
+  function generateCaptcha() {
+    const a = Math.floor(Math.random() * 10) + 1;
+    const b = Math.floor(Math.random() * 10) + 1;
+    captchaAnswer = a + b;
+    captchaQuestion = '¿Cuánto es ' + a + ' + ' + b + '?';
+  }
+
+  // Rate limit: max 5 messages per 30 seconds
+  function checkRateLimit() {
+    const now = Date.now();
+    if (now - lastMsgTime > 30000) { msgCount = 0; }
+    if (msgCount >= 5) return false;
+    msgCount++;
+    lastMsgTime = now;
+    return true;
+  }
 
   // Styles
   const style = document.createElement('style');
@@ -38,11 +78,19 @@
     #${WIDGET_ID} .iomi-msg.in .bubble { background: white; border: 1px solid #e5e7eb; border-bottom-left-radius: 4px; color: #1f2937; }
     #${WIDGET_ID} .iomi-msg.out .bubble { background: ${PRIMARY_COLOR}; color: white; border-bottom-right-radius: 4px; }
     #${WIDGET_ID} .iomi-form { padding: 12px 16px; border-top: 1px solid #e5e7eb; background: white; }
-    #${WIDGET_ID} .iomi-form input, #${WIDGET_ID} .iomi-form textarea { width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 12px; font-size: 14px; outline: none; margin-bottom: 8px; resize: none; }
-    #${WIDGET_ID} .iomi-form input:focus, #${WIDGET_ID} .iomi-form textarea:focus { border-color: ${PRIMARY_COLOR}; }
+    #${WIDGET_ID} .iomi-form input, #${WIDGET_ID} .iomi-form textarea, #${WIDGET_ID} .iomi-form select { width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 12px; font-size: 14px; outline: none; margin-bottom: 8px; resize: none; background: white; color: #1f2937; }
+    #${WIDGET_ID} .iomi-form input:focus, #${WIDGET_ID} .iomi-form textarea:focus, #${WIDGET_ID} .iomi-form select:focus { border-color: ${PRIMARY_COLOR}; }
     #${WIDGET_ID} .iomi-form button { width: 100%; background: ${PRIMARY_COLOR}; color: white; border: none; border-radius: 8px; padding: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
     #${WIDGET_ID} .iomi-form button:hover { opacity: 0.9; }
     #${WIDGET_ID} .iomi-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #${WIDGET_ID} .iomi-phone-row { display: flex; gap: 6px; margin-bottom: 8px; }
+    #${WIDGET_ID} .iomi-phone-row select { width: 110px; flex-shrink: 0; margin-bottom: 0; font-size: 13px; }
+    #${WIDGET_ID} .iomi-phone-row input { flex: 1; margin-bottom: 0; }
+    #${WIDGET_ID} .iomi-captcha { background: #f3f4f6; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; font-size: 13px; color: #374151; display: flex; align-items: center; gap: 8px; }
+    #${WIDGET_ID} .iomi-captcha span { font-weight: 600; flex-shrink: 0; }
+    #${WIDGET_ID} .iomi-captcha input { flex: 1; margin-bottom: 0; width: auto; text-align: center; font-size: 16px; font-weight: 600; padding: 6px 8px; }
+    #${WIDGET_ID} .iomi-error { color: #dc2626; font-size: 12px; margin-bottom: 8px; }
+    #${WIDGET_ID} .iomi-hp { position: absolute; left: -9999px; opacity: 0; height: 0; width: 0; }
     #${WIDGET_ID} .iomi-composer { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid #e5e7eb; background: white; }
     #${WIDGET_ID} .iomi-composer input { flex: 1; border: 1px solid #d1d5db; border-radius: 20px; padding: 8px 16px; font-size: 14px; outline: none; }
     #${WIDGET_ID} .iomi-composer button { width: 40px; height: 40px; border-radius: 50%; background: ${PRIMARY_COLOR}; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -80,15 +128,32 @@
   messagesArea.innerHTML = '<div class="iomi-msg in"><div class="bubble">¡Hola! 👋 ¿En qué podemos ayudarte?</div></div>';
   panel.appendChild(messagesArea);
 
-  // Initial form (name, email, message)
+  // Generate initial captcha
+  generateCaptcha();
+
+  // Build country code options
+  const countryOptions = COUNTRY_CODES.map(c => 
+    '<option value="' + c.code + '">' + c.country + ' (' + c.code + ')</option>'
+  ).join('');
+
+  // Initial form (name, email, phone with country code, message, captcha, honeypot)
   const initForm = document.createElement('div');
   initForm.className = 'iomi-form';
   initForm.id = 'iomi-init-form';
   initForm.innerHTML = `
     <input type="text" id="iomi-name" placeholder="Tu nombre *" required />
     <input type="email" id="iomi-email" placeholder="Tu email (opcional)" />
-    <input type="tel" id="iomi-phone" placeholder="Tu teléfono (opcional)" />
+    <div class="iomi-phone-row">
+      <select id="iomi-country-code">${countryOptions}</select>
+      <input type="tel" id="iomi-phone" placeholder="Tu teléfono (opcional)" />
+    </div>
     <textarea id="iomi-message" rows="2" placeholder="Escribe tu mensaje... *"></textarea>
+    <div class="iomi-captcha">
+      <span id="iomi-captcha-q">🔒 ${captchaQuestion}</span>
+      <input type="text" id="iomi-captcha-input" placeholder="?" maxlength="3" />
+    </div>
+    <div id="iomi-error" class="iomi-error" style="display:none"></div>
+    <input type="text" id="iomi-hp-field" class="iomi-hp" tabindex="-1" autocomplete="off" />
     <button id="iomi-send-btn">Enviar mensaje</button>
   `;
   panel.appendChild(initForm);
@@ -113,6 +178,15 @@
   container.appendChild(fab);
   document.body.appendChild(container);
 
+  function showError(msg) {
+    const el = document.getElementById('iomi-error');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+  function hideError() {
+    document.getElementById('iomi-error').style.display = 'none';
+  }
+
   function togglePanel() {
     isOpen = !isOpen;
     panel.classList.toggle('open', isOpen);
@@ -122,11 +196,44 @@
 
   // Send initial message
   document.getElementById('iomi-send-btn').onclick = async () => {
+    hideError();
+
     const name = document.getElementById('iomi-name').value.trim();
     const email = document.getElementById('iomi-email').value.trim();
-    const phone = document.getElementById('iomi-phone').value.trim();
+    const countryCode = document.getElementById('iomi-country-code').value;
+    const phoneRaw = document.getElementById('iomi-phone').value.trim();
     const message = document.getElementById('iomi-message').value.trim();
-    if (!name || !message) return;
+    const captchaInput = document.getElementById('iomi-captcha-input').value.trim();
+    const honeypot = document.getElementById('iomi-hp-field').value;
+
+    // Honeypot check (bots fill hidden fields)
+    if (honeypot) {
+      showError('Error de verificación. Intenta de nuevo.');
+      return;
+    }
+
+    if (!name || !message) {
+      showError('El nombre y el mensaje son obligatorios.');
+      return;
+    }
+
+    // Captcha check
+    if (parseInt(captchaInput) !== captchaAnswer) {
+      showError('La respuesta de verificación es incorrecta.');
+      generateCaptcha();
+      document.getElementById('iomi-captcha-q').textContent = '🔒 ' + captchaQuestion;
+      document.getElementById('iomi-captcha-input').value = '';
+      return;
+    }
+
+    // Rate limit
+    if (!checkRateLimit()) {
+      showError('Demasiados mensajes. Espera un momento.');
+      return;
+    }
+
+    // Build full phone with country code
+    const phone = phoneRaw ? (countryCode + phoneRaw.replace(/^0+/, '')) : '';
 
     const btn = document.getElementById('iomi-send-btn');
     btn.disabled = true;
@@ -136,7 +243,15 @@
       const res = await fetch(API_URL + '/functions/v1/widget-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clinic_id: CLINIC_ID, name, email, phone, message }),
+        body: JSON.stringify({
+          clinic_id: CLINIC_ID,
+          name,
+          email,
+          phone,
+          message,
+          _hp: honeypot,
+          _ts: Date.now(),
+        }),
       });
       const data = await res.json();
       if (data.conversation_id) {
@@ -147,10 +262,10 @@
         composer.style.display = 'flex';
         startPolling();
       } else {
-        alert(data.error || 'Error al enviar');
+        showError(data.error || 'Error al enviar');
       }
     } catch (e) {
-      alert('Error de conexión');
+      showError('Error de conexión. Intenta de nuevo.');
     }
     btn.disabled = false;
     btn.textContent = 'Enviar mensaje';
@@ -166,6 +281,9 @@
     const input = document.getElementById('iomi-reply-input');
     const msg = input.value.trim();
     if (!msg || !conversationId) return;
+
+    if (!checkRateLimit()) return;
+
     input.value = '';
     addMessage(msg, 'out');
 
@@ -177,6 +295,7 @@
           clinic_id: CLINIC_ID,
           conversation_id: conversationId,
           message: msg,
+          _ts: Date.now(),
         }),
       });
     } catch (e) { /* silent */ }
@@ -184,8 +303,8 @@
 
   function addMessage(text, dir) {
     const div = document.createElement('div');
-    div.className = `iomi-msg ${dir}`;
-    div.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
+    div.className = 'iomi-msg ' + dir;
+    div.innerHTML = '<div class="bubble">' + escapeHtml(text) + '</div>';
     messagesArea.appendChild(div);
     messagesArea.scrollTop = messagesArea.scrollHeight;
   }
@@ -196,7 +315,6 @@
     return d.innerHTML;
   }
 
-  let lastMsgCount = 1; // welcome message
   function startPolling() {
     stopPolling();
     polling = setInterval(async () => {
@@ -209,17 +327,15 @@
         });
         const data = await res.json();
         const msgs = data.messages || [];
-        // Only render outbound (from clinic) messages we haven't seen
         const outbound = msgs.filter(m => m.direction === 'outbound');
         if (outbound.length > 0) {
-          // Check for new outbound messages
           const currentOutbound = messagesArea.querySelectorAll('.iomi-msg.in[data-server]').length;
           outbound.forEach((m, i) => {
             if (i >= currentOutbound) {
               const div = document.createElement('div');
               div.className = 'iomi-msg in';
               div.setAttribute('data-server', '1');
-              div.innerHTML = `<div class="bubble">${escapeHtml(m.content)}</div>`;
+              div.innerHTML = '<div class="bubble">' + escapeHtml(m.content) + '</div>';
               messagesArea.appendChild(div);
             }
           });
@@ -237,7 +353,6 @@
   if (conversationId) {
     initForm.style.display = 'none';
     composer.style.display = 'flex';
-    // Load existing messages
     (async () => {
       try {
         const res = await fetch(API_URL + '/functions/v1/widget-messages', {
@@ -250,9 +365,9 @@
         (data.messages || []).forEach(m => {
           const dir = m.direction === 'inbound' ? 'out' : 'in';
           const div = document.createElement('div');
-          div.className = `iomi-msg ${dir}`;
+          div.className = 'iomi-msg ' + dir;
           if (dir === 'in') div.setAttribute('data-server', '1');
-          div.innerHTML = `<div class="bubble">${escapeHtml(m.content)}</div>`;
+          div.innerHTML = '<div class="bubble">' + escapeHtml(m.content) + '</div>';
           messagesArea.appendChild(div);
         });
         messagesArea.scrollTop = messagesArea.scrollHeight;
