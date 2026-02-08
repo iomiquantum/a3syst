@@ -69,35 +69,36 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
 
   const isApproved = piece.status === "approved";
 
-  const resizeImageCover = (blob: Blob, targetW: number, targetH: number): Promise<Blob> => {
-    return new Promise((resolve) => {
-      const img = new window.Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = targetW;
-        canvas.height = targetH;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) { resolve(blob); return; }
-        // "Cover" mode: crop source to fill target entirely, no white bars
-        const srcRatio = img.width / img.height;
-        const dstRatio = targetW / targetH;
-        let sx = 0, sy = 0, sw = img.width, sh = img.height;
-        if (srcRatio > dstRatio) {
-          // Source wider: crop sides
-          sw = img.height * dstRatio;
-          sx = (img.width - sw) / 2;
-        } else {
-          // Source taller: crop top/bottom
-          sh = img.width / dstRatio;
-          sy = (img.height - sh) / 2;
-        }
-        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH);
+  const resizeImageCover = async (blob: Blob, targetW: number, targetH: number): Promise<Blob> => {
+    try {
+      const bitmap = await createImageBitmap(blob);
+      const canvas = document.createElement("canvas");
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return blob;
+
+      // "Cover" mode: crop source to fill target entirely
+      const srcRatio = bitmap.width / bitmap.height;
+      const dstRatio = targetW / targetH;
+      let sx = 0, sy = 0, sw = bitmap.width, sh = bitmap.height;
+      if (srcRatio > dstRatio) {
+        sw = bitmap.height * dstRatio;
+        sx = (bitmap.width - sw) / 2;
+      } else {
+        sh = bitmap.width / dstRatio;
+        sy = (bitmap.height - sh) / 2;
+      }
+      ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, targetW, targetH);
+      bitmap.close();
+
+      return new Promise<Blob>((resolve) => {
         canvas.toBlob((resized) => resolve(resized || blob), "image/png", 1.0);
-      };
-      img.onerror = () => resolve(blob);
-      img.crossOrigin = "anonymous";
-      img.src = URL.createObjectURL(blob);
-    });
+      });
+    } catch (e) {
+      console.error("Resize error:", e);
+      return blob;
+    }
   };
 
   const handleDownloadImage = async () => {
