@@ -1,14 +1,13 @@
 import { useState } from "react";
-import { Sparkles, Image, Video, FileText, Wand2, Loader2, Copy, Save, Download } from "lucide-react";
+import { Wand2, Loader2, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { ContentPost } from "@/hooks/useContentPosts";
 import { supabase } from "@/integrations/supabase/client";
+import AIGeneratedPiece, { type GeneratedPiece } from "./AIGeneratedPiece";
 
 interface Props {
   content: {
@@ -16,132 +15,183 @@ interface Props {
   };
 }
 
-type GenType = "copy" | "image" | "video";
-
-const genTypes = [
-  { key: "copy" as GenType, icon: FileText, label: "Copy / Texto", desc: "Genera textos para publicaciones" },
-  { key: "image" as GenType, icon: Image, label: "Imagen con IA", desc: "Genera imágenes únicas" },
-  { key: "video" as GenType, icon: Video, label: "Video con IA", desc: "Genera videos cortos (próximamente)" },
-];
-
 const tones = ["Profesional", "Casual", "Inspirador", "Educativo", "Humorístico", "Urgente", "Emotivo"];
 const platforms = ["Instagram", "Facebook", "TikTok"];
+const MAX_PIECES = 4;
 
 const ContentAIGenerator = ({ content }: Props) => {
-  const [genType, setGenType] = useState<GenType>("copy");
-  const [prompt, setPrompt] = useState("");
+  const [count, setCount] = useState(1);
+  const [instructions, setInstructions] = useState<string[]>([""]);
   const [tone, setTone] = useState("Profesional");
   const [platform, setPlatform] = useState("Instagram");
   const [generating, setGenerating] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
-  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [pieces, setPieces] = useState<GeneratedPiece[]>([]);
+  const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
+
+  const updateCount = (n: number) => {
+    const next = Math.max(1, Math.min(MAX_PIECES, n));
+    setCount(next);
+    setInstructions(prev => {
+      const copy = [...prev];
+      while (copy.length < next) copy.push("");
+      return copy.slice(0, next);
+    });
+  };
+
+  const updateInstruction = (idx: number, val: string) => {
+    setInstructions(prev => prev.map((v, i) => (i === idx ? val : v)));
+  };
 
   const handleGenerate = async () => {
-    if (!prompt.trim()) { toast.error("Escribe una descripción"); return; }
+    const valid = instructions.slice(0, count);
+    if (valid.some(v => !v.trim())) {
+      toast.error("Completa todas las instrucciones");
+      return;
+    }
+
     setGenerating(true);
-    setResult(null);
-    setGeneratedImageUrl(null);
+    setPieces(valid.map((inst, i) => ({
+      id: i + 1,
+      instruction: inst,
+      copy: null,
+      imageUrl: null,
+      status: "generating",
+    })));
+
+    // Generate all pieces in parallel
+    const results = await Promise.allSettled(
+      valid.map(async (inst, i) => {
+        // Generate copy
+        const { data: copyData, error: copyErr } = await supabase.functions.invoke("ai-generate-content", {
+          body: { prompt: inst, tone, platform, type: "copy" },
+        });
+        if (copyErr) throw copyErr;
+
+        // Generate image
+        const { data: imgData, error: imgErr } = await supabase.functions.invoke("ai-generate-content", {
+          body: { prompt: inst, tone, platform, type: "image" },
+        });
+        if (imgErr) throw imgErr;
+
+        return {
+          id: i + 1,
+          instruction: inst,
+          copy: copyData?.content || "",
+          imageUrl: imgData?.imageUrl || null,
+          status: "done" as const,
+        };
+      })
+    );
+
+    setPieces(results.map((r, i) => {
+      if (r.status === "fulfilled") return r.value;
+      console.error(`Piece ${i + 1} failed:`, r.reason);
+      toast.error(`Error generando pieza #${i + 1}`);
+      return {
+        id: i + 1,
+        instruction: valid[i],
+        copy: null,
+        imageUrl: null,
+        status: "done" as const,
+      };
+    }));
+
+    setGenerating(false);
+  };
+
+  const handleCopyChange = (id: number, copy: string) => {
+    setPieces(prev => prev.map(p => (p.id === id ? { ...p, copy } : p)));
+  };
+
+  const handleRegenerateImage = async (id: number) => {
+    const piece = pieces.find(p => p.id === id);
+    if (!piece) return;
+    setRegeneratingId(id);
 
     try {
       const { data, error } = await supabase.functions.invoke("ai-generate-content", {
-        body: { prompt, tone, platform, type: genType },
+        body: { prompt: piece.instruction, tone, platform, type: "image" },
       });
       if (error) throw error;
-      
-      if (genType === "image" && data?.imageUrl) {
-        setGeneratedImageUrl(data.imageUrl);
-        setResult(data.content || "Imagen generada exitosamente");
-      } else if (genType === "copy") {
-        setResult(data?.content || "No se pudo generar el contenido");
-      } else {
-        toast.info("La generación de videos estará disponible próximamente");
-      }
-    } catch (err: any) {
+      setPieces(prev => prev.map(p => (p.id === id ? { ...p, imageUrl: data?.imageUrl || p.imageUrl } : p)));
+    } catch (err) {
       console.error(err);
-      if (err?.message?.includes("429")) {
-        toast.error("Límite de solicitudes excedido, intenta en unos segundos");
-      } else if (err?.message?.includes("402")) {
-        toast.error("Créditos de IA insuficientes");
-      } else {
-        toast.error("Error generando contenido");
-      }
+      toast.error("Error regenerando imagen");
     } finally {
-      setGenerating(false);
+      setRegeneratingId(null);
     }
   };
 
-  const saveAsDraft = async () => {
-    if (!result && !generatedImageUrl) return;
+  const handleApprove = async (id: number) => {
+    const piece = pieces.find(p => p.id === id);
+    if (!piece || !piece.copy || !piece.imageUrl) return;
+
     await content.createPost({
-      body: genType === "copy" ? result || "" : prompt,
-      title: prompt.slice(0, 60),
+      body: piece.copy,
+      title: piece.instruction.slice(0, 60),
       status: "draft",
       ai_generated: true,
-      ai_prompt: prompt,
+      ai_prompt: piece.instruction,
       platforms: [platform.toLowerCase()],
-      media_urls: generatedImageUrl ? [generatedImageUrl] : [],
-      media_type: genType === "image" ? "image" : genType === "video" ? "video" : "image",
+      media_urls: [piece.imageUrl],
+      media_type: "image",
     });
+
+    setPieces(prev => prev.map(p => (p.id === id ? { ...p, status: "approved" } : p)));
   };
+
+  const allDone = pieces.length > 0 && pieces.every(p => p.status === "done" || p.status === "approved");
+  const anyGenerating = generating;
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold text-foreground">Generar contenido con IA</h2>
-        <p className="text-sm text-muted-foreground">Usa inteligencia artificial para crear textos, imágenes y videos</p>
+        <p className="text-sm text-muted-foreground">Genera múltiples publicaciones (copy + imagen) de una vez. Máximo {MAX_PIECES}.</p>
       </div>
 
-      {/* Type selector */}
-      <div className="grid grid-cols-3 gap-3">
-        {genTypes.map(({ key, icon: Icon, label, desc }) => (
-          <button
-            key={key}
-            onClick={() => { setGenType(key); setResult(null); setGeneratedImageUrl(null); }}
-            className={cn(
-              "p-4 rounded-xl border text-left transition-all",
-              genType === key ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-card hover:border-primary/30",
-              key === "video" && "opacity-60"
-            )}
-          >
-            <Icon className={cn("w-6 h-6 mb-2", genType === key ? "text-primary" : "text-muted-foreground")} />
-            <p className="text-sm font-semibold text-foreground">{label}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
-          </button>
+      {/* Count selector */}
+      <div className="flex items-center gap-4">
+        <Label className="text-sm font-medium whitespace-nowrap">¿Cuántas publicaciones generar?</Label>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateCount(count - 1)} disabled={count <= 1}>
+            <Minus className="w-4 h-4" />
+          </Button>
+          <span className="text-lg font-bold w-8 text-center">{count}</span>
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateCount(count + 1)} disabled={count >= MAX_PIECES}>
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Instructions */}
+      <div className="space-y-3">
+        {Array.from({ length: count }).map((_, i) => (
+          <div key={i} className="space-y-1">
+            <Label className="text-sm font-medium">
+              Instrucción #{i + 1}
+            </Label>
+            <Textarea
+              placeholder={`Ej: Publicación sobre blanqueamiento dental con 20% de descuento, estilo moderno...`}
+              className="min-h-[80px]"
+              value={instructions[i] || ""}
+              onChange={e => updateInstruction(i, e.target.value)}
+            />
+          </div>
         ))}
       </div>
 
-      {/* Form */}
+      {/* Tone & Platform */}
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-4 md:col-span-2">
-          <div>
-            <Label className="text-sm font-medium">Describe lo que necesitas</Label>
-            <Textarea
-              placeholder={
-                genType === "copy"
-                  ? "Ej: Publicación promocionando limpieza dental con 20% descuento..."
-                  : genType === "image"
-                  ? "Ej: Imagen profesional de una clínica dental moderna, colores azul y blanco, estilo minimalista..."
-                  : "Ej: Video corto mostrando un blanqueamiento dental..."
-              }
-              className="mt-1.5 min-h-[120px]"
-              value={prompt}
-              onChange={e => setPrompt(e.target.value)}
-            />
-          </div>
+        <div>
+          <Label className="text-sm font-medium">Tono</Label>
+          <Select value={tone} onValueChange={setTone}>
+            <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {tones.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
-
-        {genType === "copy" && (
-          <div>
-            <Label className="text-sm font-medium">Tono</Label>
-            <Select value={tone} onValueChange={setTone}>
-              <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {tones.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
         <div>
           <Label className="text-sm font-medium">Plataforma destino</Label>
           <Select value={platform} onValueChange={setPlatform}>
@@ -153,56 +203,42 @@ const ContentAIGenerator = ({ content }: Props) => {
         </div>
       </div>
 
-      <Button onClick={handleGenerate} disabled={generating || !prompt.trim() || genType === "video"} className="gradient-primary text-primary-foreground gap-2">
-        {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-        {generating ? "Generando..." : genType === "image" ? "Generar imagen" : genType === "video" ? "Próximamente" : "Generar contenido"}
+      <Button
+        onClick={handleGenerate}
+        disabled={anyGenerating}
+        className="gradient-primary text-primary-foreground gap-2"
+      >
+        {anyGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+        {anyGenerating ? "Generando..." : `Generar ${count} publicación${count > 1 ? "es" : ""}`}
       </Button>
 
-      {/* Text result */}
-      {result && genType === "copy" && (
-        <div className="border border-border rounded-xl p-5 bg-card space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm font-semibold text-foreground">Resultado generado</span>
+      {/* Generating skeleton */}
+      {anyGenerating && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {Array.from({ length: count }).map((_, i) => (
+            <div key={i} className="border border-border rounded-xl p-4 bg-card animate-pulse space-y-3">
+              <div className="h-4 bg-muted rounded w-1/3" />
+              <div className="h-[200px] bg-muted rounded" />
+              <div className="h-3 bg-muted rounded w-full" />
+              <div className="h-3 bg-muted rounded w-2/3" />
             </div>
-            <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">✨ IA</Badge>
-          </div>
-          <div className="bg-muted/50 rounded-lg p-4 text-sm text-foreground whitespace-pre-wrap leading-relaxed">{result}</div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { navigator.clipboard.writeText(result); toast.success("Copiado"); }}>
-              <Copy className="w-3.5 h-3.5" /> Copiar
-            </Button>
-            <Button size="sm" className="gap-1.5 gradient-primary text-primary-foreground" onClick={saveAsDraft}>
-              <Save className="w-3.5 h-3.5" /> Guardar como borrador
-            </Button>
-          </div>
+          ))}
         </div>
       )}
 
-      {/* Image result */}
-      {generatedImageUrl && genType === "image" && (
-        <div className="border border-border rounded-xl p-5 bg-card space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Image className="w-4 h-4 text-primary" />
-              <span className="text-sm font-semibold text-foreground">Imagen generada</span>
-            </div>
-            <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">✨ IA</Badge>
-          </div>
-          <div className="rounded-lg overflow-hidden border border-border">
-            <img src={generatedImageUrl} alt="Generated" className="w-full max-h-[400px] object-contain bg-muted" />
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5" asChild>
-              <a href={generatedImageUrl} download target="_blank" rel="noopener noreferrer">
-                <Download className="w-3.5 h-3.5" /> Descargar
-              </a>
-            </Button>
-            <Button size="sm" className="gap-1.5 gradient-primary text-primary-foreground" onClick={saveAsDraft}>
-              <Save className="w-3.5 h-3.5" /> Guardar como borrador
-            </Button>
-          </div>
+      {/* Results */}
+      {allDone && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {pieces.map(piece => (
+            <AIGeneratedPiece
+              key={piece.id}
+              piece={piece}
+              onCopyChange={handleCopyChange}
+              onRegenerateImage={handleRegenerateImage}
+              onApprove={handleApprove}
+              regeneratingImage={regeneratingId === piece.id}
+            />
+          ))}
         </div>
       )}
     </div>
