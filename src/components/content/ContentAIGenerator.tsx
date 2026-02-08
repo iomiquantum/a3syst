@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Wand2, Loader2, Plus, Minus, Sparkles, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +9,10 @@ import type { ContentPost } from "@/hooks/useContentPosts";
 import { supabase } from "@/integrations/supabase/client";
 import AIGeneratedPiece, { type GeneratedPiece } from "./AIGeneratedPiece";
 import { usePsychoStrategies } from "@/hooks/usePsychoMatrix";
+import {
+  arquetiposDigitales, arquetiposMarca, disparadoresPersuasion,
+  codigosGeneracionales, psicologiaAvanzada,
+} from "@/lib/psychoMatrixData";
 
 interface Props {
   content: {
@@ -34,6 +38,9 @@ const ContentAIGenerator = ({ content }: Props) => {
   const [extraNotes, setExtraNotes] = useState("");
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>("none");
   const [magicMode, setMagicMode] = useState(false);
+  const [magicFormula, setMagicFormula] = useState<{
+    archetype: string; brand_voice: string; persuasion_trigger: string; generation: string; advanced_tech: string;
+  } | null>(null);
   const [generating, setGenerating] = useState(false);
   const [pieces, setPieces] = useState<GeneratedPiece[]>([]);
   const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
@@ -45,13 +52,19 @@ const ContentAIGenerator = ({ content }: Props) => {
     setCount(Math.max(1, Math.min(MAX_PIECES, n)));
   };
 
+  const randomPick = <T extends { label: string }>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)].label;
+
   const hacerMagia = () => {
     setTone(tones[Math.floor(Math.random() * tones.length)]);
     setCopyLength(copyLengths[Math.floor(Math.random() * copyLengths.length)].value);
-    if (strategies.length > 0) {
-      const rand = strategies[Math.floor(Math.random() * strategies.length)];
-      setSelectedStrategyId(rand.id);
-    }
+    setMagicFormula({
+      archetype: randomPick(arquetiposDigitales),
+      brand_voice: randomPick(arquetiposMarca),
+      persuasion_trigger: randomPick(disparadoresPersuasion),
+      generation: randomPick(codigosGeneracionales),
+      advanced_tech: Math.random() > 0.4 ? randomPick(psicologiaAvanzada) : "",
+    });
+    setSelectedStrategyId("none");
     setMagicMode(true);
   };
 
@@ -73,7 +86,9 @@ const ContentAIGenerator = ({ content }: Props) => {
       status: "generating",
     })));
 
-    const selectedStrategy = strategies.find(s => s.id === selectedStrategyId);
+    const selectedStrategy = magicMode && magicFormula
+      ? magicFormula
+      : strategies.find(s => s.id === selectedStrategyId);
     const lengthInfo = getEffectiveCopyLength();
 
     const results = await Promise.allSettled(
@@ -282,12 +297,13 @@ const ContentAIGenerator = ({ content }: Props) => {
       </div>
 
       {/* Magic mode summary */}
-      {magicMode && (
+      {magicMode && magicFormula && (
         <div className="text-xs text-muted-foreground p-3 rounded-lg bg-muted/50 border border-border space-y-1">
-          <p><span className="font-medium text-foreground">🎲 Modo magia activado:</span> Tono: <strong>{tone}</strong> · Tamaño: <strong>{getEffectiveCopyLength().label}</strong>
-            {selectedStrategyId !== "none" && strategies.find(s => s.id === selectedStrategyId) && (
-              <> · Estrategia: <strong>{strategies.find(s => s.id === selectedStrategyId)?.name}</strong></>
-            )}
+          <p><span className="font-medium text-foreground">🎲 Fórmula mágica:</span></p>
+          <p>Tono: <strong>{tone}</strong> · Tamaño: <strong>{getEffectiveCopyLength().label}</strong></p>
+          <p>Arquetipo: <strong>{magicFormula.archetype}</strong> · Voz: <strong>{magicFormula.brand_voice}</strong></p>
+          <p>Disparador: <strong>{magicFormula.persuasion_trigger}</strong> · Generación: <strong>{magicFormula.generation}</strong>
+            {magicFormula.advanced_tech && <> · Técnica: <strong>{magicFormula.advanced_tech}</strong></>}
           </p>
         </div>
       )}
@@ -351,13 +367,20 @@ async function generateVariation(
 ): Promise<GeneratedPiece> {
   let strategyContext = "";
   if (strategy) {
-    strategyContext = `\n\nESTRATEGIA DE MARKETING:
-- Arquetipo: ${strategy.archetype}
-- Voz de marca: ${strategy.brand_voice}
-- Gatillo de persuasión: ${strategy.persuasion_trigger}
-- Generación objetivo: ${strategy.generation}
-${strategy.advanced_tech ? `- Técnica avanzada: ${strategy.advanced_tech}` : ""}
-${strategy.generated_prompt ? `- Prompt estratégico: ${strategy.generated_prompt}` : ""}
+    const arch = strategy.archetype;
+    const voice = strategy.brand_voice;
+    const trigger = strategy.persuasion_trigger;
+    const gen = strategy.generation;
+    const advTech = strategy.advanced_tech;
+    const genPrompt = (strategy as any).generated_prompt;
+
+    strategyContext = `\n\nESTRATEGIA DE MARKETING (Psycho-Matrix):
+- Arquetipo: ${arch}
+- Voz de marca: ${voice}
+- Gatillo de persuasión: ${trigger}
+- Generación objetivo: ${gen}
+${advTech ? `- Técnica avanzada: ${advTech}` : ""}
+${genPrompt ? `- Prompt estratégico: ${genPrompt}` : ""}
 Aplica esta estrategia al copy generado.`;
   }
 
