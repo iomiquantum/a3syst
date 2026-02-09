@@ -193,9 +193,22 @@ Reglas:
       const expertInstructions = getExpertInstructions(platform, sizeLabel, width, height, aspectRatio, orientationHint);
 
       const sizeInstruction = width && height
-        ? ` CRITICAL LAYOUT REQUIREMENT: This image MUST be designed as a ${orientationHint} composition with ${aspectRatio} aspect ratio (${width}x${height}px). Distribute ALL visual elements, text, and graphics to fill the ENTIRE ${orientationHint} canvas naturally. Do NOT center everything in a square area — use the full ${orientationHint} space from edge to edge, top to bottom.${expertInstructions}`
+        ? ` CRITICAL LAYOUT REQUIREMENT: This image MUST be designed as a ${orientationHint} composition with ${aspectRatio} aspect ratio. Distribute ALL visual elements, text, and graphics to fill the ENTIRE ${orientationHint} canvas naturally. Do NOT center everything in a square area — use the full ${orientationHint} space from edge to edge, top to bottom.${expertInstructions}`
         : "";
-      const imagePrompt = `${prompt}${sizeInstruction}`;
+      const antiMeasurementsRule = `
+
+ABSOLUTE PROHIBITION — READ THIS CAREFULLY:
+You MUST NOT, under ANY circumstances, render, print, display, or include ANY of the following on the generated image:
+- Pixel measurements (e.g., "250px", "340px", "1080x1920")
+- Dimension labels or numbers
+- Margin indicators or safe zone markers
+- Ruler marks, guides, or grid lines
+- Technical annotations of any kind
+- The letters "px" next to any number
+- Any text that describes image dimensions or spacing
+The final image must be 100% CLEAN — as if it were a real advertisement ready to publish. NO technical overlays. NO measurement text. ZERO exceptions. If you add any measurement text, the image is INVALID.`;
+
+      const imagePrompt = `${prompt}${sizeInstruction}${antiMeasurementsRule}`;
 
       console.log("Image generation - model:", imageModel || "pro", "- requested:", width, "x", height, "-> aspectRatio:", aspectRatio);
 
