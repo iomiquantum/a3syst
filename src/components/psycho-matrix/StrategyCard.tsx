@@ -43,7 +43,8 @@ const StrategyCard = ({ service, selection, onBack }: Props) => {
     marca?.label || selection.vozMarca,
     disp?.label || selection.disparador,
     gen?.label || selection.generacion,
-    avz?.label
+    avz?.label,
+    selection.customNotes || undefined
   );
 
   const handleCopiar = () => {

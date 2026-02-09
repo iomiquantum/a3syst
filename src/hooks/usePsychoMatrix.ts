@@ -119,3 +119,48 @@ export function useSaveStrategy() {
     },
   });
 }
+
+export function useUpdateStrategy() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<PsychoStrategy> }) => {
+      const { data, error } = await supabase
+        .from("psycho_matrix_strategies" as any)
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as unknown as PsychoStrategy;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["psycho-strategies"] });
+      toast({ title: "Estrategia actualizada" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error al actualizar", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
+export function useDeleteStrategy() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("psycho_matrix_strategies" as any)
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["psycho-strategies"] });
+      toast({ title: "Estrategia eliminada" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error al eliminar", description: error.message, variant: "destructive" });
+    },
+  });
+}
