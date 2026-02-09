@@ -399,6 +399,19 @@ const ContentAIGenerator = ({ content }: Props) => {
     setPieces(prev => prev.map(p => (p.id === id ? { ...p, status: "approved" } : p)));
   };
 
+  const handleDuplicate = (id: number) => {
+    const piece = pieces.find(p => p.id === id);
+    if (!piece) return;
+    const newId = Math.max(...pieces.map(p => p.id)) + 1;
+    const duplicate: GeneratedPiece = {
+      ...piece,
+      id: newId,
+      status: "done",
+    };
+    setPieces(prev => [...prev, duplicate]);
+    toast.success(`Variación #${newId} creada — edítala y guárdala como nuevo borrador`);
+  };
+
   const allDone = pieces.length > 0 && pieces.every(p => p.status === "done" || p.status === "approved");
   const currentSizes = imageSizesByPlatform[platform] || [];
 
@@ -767,6 +780,7 @@ const ContentAIGenerator = ({ content }: Props) => {
                 onRegenerateImage={handleRegenerateImage}
                 onRegenerateCopy={handleRegenerateCopy}
                 onApprove={handleApprove}
+                onDuplicate={handleDuplicate}
                 onResize={handleResize}
                 regeneratingImage={regeneratingIds.has(piece.id)}
                 regeneratingCopy={regeneratingCopyIds.has(piece.id)}
