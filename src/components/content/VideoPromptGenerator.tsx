@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { Video, Loader2, Plus, Minus, Sparkles, RefreshCw, Mic, MicOff, Copy, Check, Wand2, Save, Upload, Settings2, Eye, EyeOff } from "lucide-react";
+import { Video, Loader2, Plus, Minus, Sparkles, RefreshCw, Mic, MicOff, Copy, Check, Wand2, Save, Upload, Settings2, Eye, EyeOff, Zap, Edit3 } from "lucide-react";
 import type { ContentPost } from "@/hooks/useContentPosts";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,6 +31,48 @@ const videoPlatforms = [
   { value: "General", label: "General / Otro", ratio: "variable", duration: "variable" },
 ];
 
+// Expert mode: all video formats with exact resolutions
+interface VideoFormat {
+  label: string;
+  platform: string;
+  ratio: string;
+  width: number;
+  height: number;
+  desc: string;
+}
+
+const expertVideoFormats: VideoFormat[] = [
+  // Instagram
+  { label: "IG Reels / Stories", platform: "Instagram", ratio: "9:16", width: 1080, height: 1920, desc: "Vertical full-screen" },
+  { label: "IG Feed (cuadrado)", platform: "Instagram", ratio: "1:1", width: 1080, height: 1080, desc: "Post cuadrado" },
+  { label: "IG Feed (vertical)", platform: "Instagram", ratio: "4:5", width: 1080, height: 1350, desc: "Post vertical feed" },
+  { label: "IG Feed (landscape)", platform: "Instagram", ratio: "1.91:1", width: 1080, height: 566, desc: "Post horizontal" },
+  // TikTok
+  { label: "TikTok estándar", platform: "TikTok", ratio: "9:16", width: 1080, height: 1920, desc: "Vertical full-screen" },
+  { label: "TikTok HD", platform: "TikTok", ratio: "9:16", width: 2160, height: 3840, desc: "4K vertical" },
+  // YouTube
+  { label: "YouTube Shorts", platform: "YouTube", ratio: "9:16", width: 1080, height: 1920, desc: "Vertical short" },
+  { label: "YouTube 1080p", platform: "YouTube", ratio: "16:9", width: 1920, height: 1080, desc: "Full HD landscape" },
+  { label: "YouTube 4K", platform: "YouTube", ratio: "16:9", width: 3840, height: 2160, desc: "Ultra HD landscape" },
+  { label: "YouTube 1440p", platform: "YouTube", ratio: "16:9", width: 2560, height: 1440, desc: "QHD landscape" },
+  // Facebook
+  { label: "FB Reels / Stories", platform: "Facebook", ratio: "9:16", width: 1080, height: 1920, desc: "Vertical full-screen" },
+  { label: "FB Feed (cuadrado)", platform: "Facebook", ratio: "1:1", width: 1080, height: 1080, desc: "Post cuadrado" },
+  { label: "FB Feed (landscape)", platform: "Facebook", ratio: "16:9", width: 1280, height: 720, desc: "Post horizontal" },
+  { label: "FB In-stream ad", platform: "Facebook", ratio: "16:9", width: 1920, height: 1080, desc: "Anuncio in-stream" },
+  // WhatsApp
+  { label: "WhatsApp Status", platform: "WhatsApp", ratio: "9:16", width: 1080, height: 1920, desc: "Estado vertical" },
+  // X / Twitter
+  { label: "X / Twitter", platform: "X", ratio: "16:9", width: 1920, height: 1080, desc: "Landscape estándar" },
+  { label: "X / Twitter (cuadrado)", platform: "X", ratio: "1:1", width: 1080, height: 1080, desc: "Post cuadrado" },
+  // LinkedIn
+  { label: "LinkedIn video", platform: "LinkedIn", ratio: "1:1", width: 1080, height: 1080, desc: "Cuadrado profesional" },
+  { label: "LinkedIn landscape", platform: "LinkedIn", ratio: "16:9", width: 1920, height: 1080, desc: "Landscape profesional" },
+  // Pinterest
+  { label: "Pinterest Idea Pin", platform: "Pinterest", ratio: "9:16", width: 1080, height: 1920, desc: "Pin vertical" },
+  { label: "Pinterest estándar", platform: "Pinterest", ratio: "2:3", width: 1000, height: 1500, desc: "Pin video" },
+];
+
 const videoDurations = [
   { value: "5", label: "5 segundos", desc: "Ultra corto — impacto rápido" },
   { value: "15", label: "15 segundos", desc: "Story / Ad corto" },
@@ -53,6 +95,7 @@ const videoTools = [
   { value: "sora", label: "OpenAI Sora 2", promptStyle: "detailed" },
   { value: "runway", label: "Runway Gen-4", promptStyle: "timeline" },
   { value: "kling", label: "Kling AI 2.6", promptStyle: "structured" },
+  { value: "grok", label: "Grok (xAI Aurora)", promptStyle: "detailed" },
   { value: "pika", label: "Pika Labs", promptStyle: "concise" },
   { value: "generic", label: "Genérico (cualquier herramienta)", promptStyle: "detailed" },
 ];
@@ -209,6 +252,14 @@ const VideoPromptGenerator = ({ content }: Props) => {
   const [uploadingIds, setUploadingIds] = useState<Set<number>>(new Set());
   const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
+  // Expert mode state
+  const [expertMode, setExpertMode] = useState(false);
+  const [selectedFormat, setSelectedFormat] = useState<VideoFormat | null>(null);
+  const [customWidth, setCustomWidth] = useState(1080);
+  const [customHeight, setCustomHeight] = useState(1920);
+  const [customRatio, setCustomRatio] = useState("9:16");
+  const [useCustomFormat, setUseCustomFormat] = useState(false);
+
   const { data: strategies = [] } = usePsychoStrategies();
   const { data: services = [] } = usePsychoServices();
   const { isSuperAdmin } = useClinic();
@@ -263,6 +314,23 @@ const VideoPromptGenerator = ({ content }: Props) => {
   const platformInfo = videoPlatforms.find(p => p.value === videoPlatform) || videoPlatforms[0];
   const styleInfo = videoStyles.find(s => s.value === videoStyle);
   const toolInfo = videoTools.find(t => t.value === videoTool) || videoTools[videoTools.length - 1];
+
+  // Get effective resolution for prompt injection
+  const getEffectiveResolution = () => {
+    if (expertMode) {
+      if (useCustomFormat) return { width: customWidth, height: customHeight, ratio: customRatio };
+      if (selectedFormat) return { width: selectedFormat.width, height: selectedFormat.height, ratio: selectedFormat.ratio };
+    }
+    // Default resolutions based on platform ratio
+    const ratioDefaults: Record<string, { width: number; height: number }> = {
+      "9:16": { width: 1080, height: 1920 },
+      "16:9": { width: 1920, height: 1080 },
+      "1:1": { width: 1080, height: 1080 },
+      "4:5": { width: 1080, height: 1350 },
+    };
+    const def = ratioDefaults[platformInfo.ratio] || { width: 1080, height: 1920 };
+    return { ...def, ratio: platformInfo.ratio };
+  };
 
   const buildVideoPrompt = (variationNum: number, totalVariations: number): string => {
     const strategy = magicMode && magicFormula
@@ -320,10 +388,13 @@ ${strategy.advanced_tech ? `- Técnica psicológica avanzada: ${strategy.advance
 ${serviceBlock}${strategyBlock}${extraBlock}
 
 ─── ESPECIFICACIONES TÉCNICAS ───
-- Plataforma destino: ${videoPlatform} (aspect ratio: ${platformInfo.ratio})
+- Plataforma destino: ${videoPlatform} (aspect ratio: ${(() => { const r = getEffectiveResolution(); return r.ratio; })()})
+- Resolución de salida: ${(() => { const r = getEffectiveResolution(); return `${r.width}x${r.height}px`; })()}
+- IMPORTANTE: El video DEBE generarse en resolución ${(() => { const r = getEffectiveResolution(); return `${r.width}x${r.height}`; })()} con aspect ratio ${(() => { const r = getEffectiveResolution(); return r.ratio; })()}. Especifica esto explícitamente al inicio del prompt.
 - Duración total: ${getEffectiveDuration()}
 - Estilo visual: ${styleInfo?.label} — ${styleInfo?.desc}
 - Tono comunicacional: ${tone}
+- FPS recomendado: ${(() => { const r = getEffectiveResolution(); return r.width >= 1920 ? "30-60 fps" : "24-30 fps"; })()}
 ${platformOptimization}
 ${toolOptimization}
 
@@ -449,6 +520,16 @@ VARIACIÓN #${variationNum} de ${totalVariations}: ${variationAngles[angleIdx]}
 - Pika funciona mejor con scenes simples y movimientos predecibles
 - Ideal para: loops, cinemagraphs, animaciones sutiles
 - Especifica el tipo de movimiento: "zoom lento", "pan suave", "objeto flotando"`,
+      "grok": `\nOPTIMIZACIÓN PARA GROK (xAI AURORA):
+- Grok genera imágenes y animaciones de alta calidad via Aurora — ideal para motion graphics, ilustraciones animadas y secuencias estilizadas
+- Usa descripciones detalladas del ESTILO ARTÍSTICO: "ilustración digital hiperrealista", "estilo anime cinematográfico", "3D render Pixar-quality"
+- Para ANIMACIONES: describe frame by frame la transición y movimiento deseado
+- Especifica la paleta de colores exacta y el mood board de referencia
+- Grok responde bien a referencias culturales y de estilo: "estética cyberpunk", "paleta Wes Anderson", "look Studio Ghibli"
+- Para secuencias: genera keyframes individuales y describe la interpolación entre ellos
+- Incluye instrucciones de iluminación volumétrica y atmosférica para profundidad visual
+- Soporta texto en imagen: especifica tipografía, posición y animación del texto
+- IMPORTANTE: Grok es excelente para crear storyboards animados y concept art en movimiento`,
     };
     return map[tool] || `\nOPTIMIZACIÓN GENÉRICA:\n- Incluye todos los detalles posibles: sujeto, cámara, iluminación, color, movimiento\n- Usa lenguaje cinematográfico universal\n- Estructura clara con timing`;
   };
@@ -791,16 +872,27 @@ REGLAS:
 
         <div>
           <Label className="text-sm font-medium">Plataforma</Label>
-          <Select value={videoPlatform} onValueChange={setVideoPlatform}>
-            <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {videoPlatforms.map(p => (
-                <SelectItem key={p.value} value={p.value}>
-                  {p.label} <span className="text-muted-foreground ml-1">({p.ratio})</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2 mt-1.5">
+            <Select value={videoPlatform} onValueChange={setVideoPlatform}>
+              <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {videoPlatforms.map(p => (
+                  <SelectItem key={p.value} value={p.value}>
+                    {p.label} <span className="text-muted-foreground ml-1">({p.ratio})</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant={expertMode ? "default" : "outline"}
+              size="icon"
+              className={cn("h-10 w-10 shrink-0", expertMode && "gradient-primary text-primary-foreground")}
+              onClick={() => setExpertMode(!expertMode)}
+              title="Modo experto: formatos exactos"
+            >
+              <Zap className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
 
         <div>
@@ -831,6 +923,103 @@ REGLAS:
           </div>
         )}
       </div>
+
+      {/* Expert mode panel */}
+      {expertMode && (
+        <div className="space-y-4 p-4 rounded-xl border border-primary/20 bg-primary/5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-primary" />
+              <span className="text-sm font-semibold text-foreground">Modo Experto — Formatos de Video</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Personalizar</span>
+              <Switch checked={useCustomFormat} onCheckedChange={setUseCustomFormat} />
+            </div>
+          </div>
+
+          {useCustomFormat ? (
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Ancho (px)</Label>
+                <input
+                  type="number"
+                  min={360}
+                  max={7680}
+                  value={customWidth}
+                  onChange={e => setCustomWidth(Number(e.target.value))}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Alto (px)</Label>
+                <input
+                  type="number"
+                  min={360}
+                  max={7680}
+                  value={customHeight}
+                  onChange={e => setCustomHeight(Number(e.target.value))}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Aspect Ratio</Label>
+                <Select value={customRatio} onValueChange={setCustomRatio}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {["9:16", "16:9", "1:1", "4:5", "4:3", "3:4", "2:3", "3:2", "1.91:1", "21:9"].map(r => (
+                      <SelectItem key={r} value={r}>{r}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-3 text-xs text-muted-foreground">
+                Resolución final: <strong>{customWidth}×{customHeight}px</strong> ({customRatio})
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {/* Group by platform */}
+              {Array.from(new Set(expertVideoFormats.map(f => f.platform))).map(platform => (
+                <div key={platform}>
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{platform}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5">
+                    {expertVideoFormats.filter(f => f.platform === platform).map(f => (
+                      <button
+                        key={f.label}
+                        type="button"
+                        onClick={() => setSelectedFormat(f)}
+                        className={cn(
+                          "p-2 rounded-lg border text-left transition-all text-xs",
+                          selectedFormat?.label === f.label
+                            ? "border-primary bg-primary/10 ring-1 ring-primary"
+                            : "border-border hover:border-primary/40"
+                        )}
+                      >
+                        <p className="font-medium text-foreground">{f.label}</p>
+                        <p className="text-[10px] text-muted-foreground">{f.width}×{f.height} · {f.ratio}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Resolution summary */}
+          {(() => {
+            const res = getEffectiveResolution();
+            return (
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border border-border">
+                <span className="text-xs font-semibold text-foreground">📐 Resolución seleccionada:</span>
+                <span className="text-xs text-primary font-bold">{res.width}×{res.height}px</span>
+                <span className="text-xs text-muted-foreground">({res.ratio})</span>
+                <span className="text-xs text-muted-foreground ml-auto">Se inyectará en el super-prompt</span>
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Video style + tool */}
       <div className="grid gap-4 md:grid-cols-2">
@@ -926,7 +1115,7 @@ REGLAS:
                   <Video className="w-4 h-4 text-primary" />
                   <span className="text-sm font-semibold text-foreground">Super-prompt #{p.id}</span>
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                    {platformInfo.label} · {getEffectiveDuration()} · {styleInfo?.label} · {toolInfo.label}
+                    {platformInfo.label} · {getEffectiveResolution().width}×{getEffectiveResolution().height} · {getEffectiveDuration()} · {styleInfo?.label} · {toolInfo.label}
                   </span>
                   {p.savedPostId && (
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 border border-green-500/20">
