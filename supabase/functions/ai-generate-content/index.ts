@@ -41,12 +41,13 @@ function getExpertInstructions(platform?: string, sizeLabel?: string, w?: number
   // Universal safe-zone rules for Stories/Reels
   if (isStoryReel) {
     instructions += `\n\n📱 STORIES/REELS SAFE ZONE RULES (9:16 format):
-- Leave the TOP 250px completely free of important text or elements (phone status bar, app header area).
-- Leave the BOTTOM 340px completely free (like/comment/share buttons overlay here).
-- The SAFE creative area is the middle zone (~1330px tall).
+- Leave the TOP area (approximately 13% of the image height) completely free of important text or elements (phone status bar, app header area).
+- Leave the BOTTOM area (approximately 18% of the image height) completely free (like/comment/share buttons overlay here).
+- The SAFE creative area is the middle zone.
 - Place your main headline, key visuals, and CTA in this safe middle zone.
 - Background imagery and ambient colors CAN extend to edges, but key content must stay in the safe zone.
-- Design for MOBILE-FIRST: large readable text, high contrast, bold visuals.`;
+- Design for MOBILE-FIRST: large readable text, high contrast, bold visuals.
+- CRITICAL: Do NOT render any pixel measurements, dimension labels, margin indicators, ruler marks, or technical annotations on the image. The image must be completely clean and production-ready with NO visible safe zone markers or pixel values like "250px" or "340px".`;
   }
 
   // Platform-specific rules
@@ -124,7 +125,8 @@ function getExpertInstructions(platform?: string, sizeLabel?: string, w?: number
 - Text in the image must be spelled correctly and perfectly legible.
 - Colors should be vibrant and optimized for mobile OLED screens (high saturation, deep blacks).
 - If the design includes text overlay, use proper typographic hierarchy (headline > subhead > body).
-- All visual elements must respect the exact ${aspectRatio} aspect ratio — no stretching, no padding, no letterboxing.`;
+- All visual elements must respect the exact ${aspectRatio} aspect ratio — no stretching, no padding, no letterboxing.
+- ABSOLUTELY DO NOT render any pixel measurements, dimension numbers, margin indicators, safe zone labels, ruler marks, or ANY technical annotations on the image. The output must be a clean, production-ready creative with ZERO visible technical metadata.`;
 
   return instructions;
 }
