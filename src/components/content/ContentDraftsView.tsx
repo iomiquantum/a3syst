@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Edit, Trash2, Clock, Pencil, RefreshCw, Loader2, Image as ImageIcon, Check, X } from "lucide-react";
+import { Edit, Trash2, Clock, Pencil, RefreshCw, Loader2, Check, X, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ interface Props {
     drafts: ContentPost[];
     deletePost: (id: string) => Promise<boolean>;
     updatePost: (id: string, data: Partial<ContentPost>) => Promise<boolean>;
+    createPost: (data: Partial<ContentPost>) => Promise<any>;
   };
 }
 
@@ -36,6 +37,22 @@ const ContentDraftsView = ({ content }: Props) => {
       toast.success("Copy actualizado");
       setEditingId(null);
     }
+  };
+
+  const duplicateDraft = async (draft: ContentPost) => {
+    const result = await content.createPost({
+      title: draft.title ? `${draft.title} (copia)` : "Copia",
+      body: draft.body,
+      media_urls: draft.media_urls,
+      media_type: draft.media_type,
+      post_type: draft.post_type,
+      platforms: draft.platforms,
+      hashtags: draft.hashtags,
+      ai_generated: draft.ai_generated,
+      ai_prompt: draft.ai_prompt,
+      status: "draft",
+    });
+    if (result) toast.success("Borrador duplicado — edítalo como quieras");
   };
 
   const regenerateImage = async (id: string, prompt: string) => {
@@ -181,6 +198,9 @@ const ContentDraftsView = ({ content }: Props) => {
                       <Pencil className="w-3.5 h-3.5" /> Editar copy
                     </Button>
                   )}
+                  <Button variant="outline" size="sm" className="flex-1 text-xs gap-1.5" onClick={() => duplicateDraft(draft)}>
+                    <Copy className="w-3.5 h-3.5" /> Reutilizar
+                  </Button>
                   <Button variant="outline" size="sm" className="flex-1 text-xs gap-1.5">
                     <Clock className="w-3.5 h-3.5" /> Programar
                   </Button>
