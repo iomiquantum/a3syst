@@ -875,13 +875,24 @@ ${brandStyle.style_description ? `- ESTILO VISUAL: ${brandStyle.style_descriptio
 - Mantén coherencia visual con la identidad de marca de la clínica. Los colores, tipografías y composición deben reflejar este estilo.`;
 }
 
+function buildBrandStyleContextForCopy(brandStyle: any): string {
+  if (!brandStyle) return "";
+  const paletteStr = brandStyle.palette?.length
+    ? brandStyle.palette.map((c: any) => `${c.name}`).join(", ")
+    : "";
+  return `\n\nESTILO DE MARCA (OBLIGATORIO - adaptar el tono y estilo del copy):
+${paletteStr ? `- IDENTIDAD VISUAL DE MARCA: Los colores de la marca son ${paletteStr}. Refleja esta identidad en el tono y las referencias del copy.` : ""}
+${brandStyle.style_description ? `- PERSONALIDAD DE MARCA: ${brandStyle.style_description}. Adapta el lenguaje, tono y estilo de escritura para ser coherente con esta identidad.` : ""}
+- El copy debe sentirse como parte de la misma marca que las imágenes. Mantén coherencia en el tono, vocabulario y energía.`;
+}
+
 function buildCopyPrompt(
   mainPrompt: string, variationNum: number, totalVariations: number,
   lengthInfo: { value: string; label: string; desc: string },
   strategy?: any, extraNotes?: string, adminTemplate?: string, brandStyle?: any,
 ): string {
   const strategyContext = buildStrategyContextForCopy(strategy);
-  const brandContext = brandStyle ? `\n\nESTILO DE MARCA: ${brandStyle.style_description || "Sigue el estilo visual de la marca."}` : "";
+  const brandContext = buildBrandStyleContextForCopy(brandStyle);
   const lengthInstruction = `\nLONGITUD DEL COPY: Genera un copy ${lengthInfo.label.toUpperCase()} (${lengthInfo.desc}). Respeta estrictamente este límite de caracteres.`;
   const extraContext = extraNotes?.trim() ? `\nNOTAS ADICIONALES DEL USUARIO: ${extraNotes}` : "";
   const baseTemplate = adminTemplate?.trim() ? `${adminTemplate}\n\n` : "";
