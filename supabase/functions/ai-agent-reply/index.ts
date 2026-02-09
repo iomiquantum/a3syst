@@ -174,7 +174,7 @@ IMPORTANTE:
       last_message_preview: reply.substring(0, 100),
     }).eq("id", conversation_id);
 
-    // Log usage
+    // Log usage to ai_agent_usage
     await supabase.from("ai_agent_usage").insert({
       clinic_id,
       conversation_id,
@@ -182,6 +182,19 @@ IMPORTANTE:
       tokens_output: tokensOutput,
       model: modelUsed,
       triggered_by: triggered_by || "manual",
+    });
+
+    // Also log to ai_token_usage for unified cost tracking
+    const costUsd = estimateTokenCost(modelUsed, tokensInput, tokensOutput);
+    await supabase.from("ai_token_usage").insert({
+      clinic_id,
+      user_id: null,
+      generator_type: "agent",
+      model: modelUsed,
+      tokens_input: tokensInput,
+      tokens_output: tokensOutput,
+      cost_usd: costUsd,
+      action_label: `Respuesta automática agente`,
     });
 
     return new Response(JSON.stringify({ reply, message: savedMsg }), {
@@ -195,3 +208,16 @@ IMPORTANTE:
     });
   }
 });
+
+function estimateTokenCost(model: string, tokensInput: number, tokensOutput: number): number {
+  const MODEL_PRICING: Record<string, { input: number; output: number }> = {
+    "gemini-3-flash-preview": { input: 0.15, output: 0.60 },
+    "gemini-2.5-flash": { input: 0.15, output: 0.60 },
+    "gemini-2.5-pro": { input: 1.25, output: 10.0 },
+    "gemini-3-pro-preview": { input: 1.25, output: 10.0 },
+  };
+  const modelKey = model.split("/").pop() || model;
+  const pricing = MODEL_PRICING[modelKey];
+  if (!pricing) return (tokensInput * 0.15 + tokensOutput * 0.60) / 1_000_000;
+  return (tokensInput * pricing.input + tokensOutput * pricing.output) / 1_000_000;
+}

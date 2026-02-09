@@ -135,9 +135,52 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { prompt, tone, platform, type, width, height, imageModel, sizeLabel, expertMode, referenceImageUrl, referenceImageUrls } = await req.json();
+    const { prompt, tone, platform, type, width, height, imageModel, sizeLabel, expertMode, referenceImageUrl, referenceImageUrls, clinic_id: providedClinicId, action_label } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Extract user from auth header
+    let userId: string | null = null;
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader) {
+      const token = authHeader.replace("Bearer ", "");
+      try {
+        const { data: claimsData } = await supabaseAdmin.auth.getUser(token);
+        userId = claimsData?.user?.id || null;
+      } catch { /* ignore */ }
+    }
+
+    // Resolve clinic_id: use provided or look up from user's roles
+    let clinic_id = providedClinicId || null;
+    if (!clinic_id && userId) {
+      const { data: roleData } = await supabaseAdmin
+        .from("user_roles")
+        .select("clinic_id")
+        .eq("user_id", userId)
+        .limit(1)
+        .single();
+      clinic_id = roleData?.clinic_id || null;
+    }
+
+    // Helper to log token usage
+    const logTokenUsage = async (generatorType: string, model: string, tokensInput: number, tokensOutput: number, label: string) => {
+      if (!clinic_id) return;
+      const costUsd = estimateTokenCost(model, tokensInput, tokensOutput, generatorType);
+      await supabaseAdmin.from("ai_token_usage").insert({
+        clinic_id,
+        user_id: userId,
+        generator_type: generatorType,
+        model,
+        tokens_input: tokensInput,
+        tokens_output: tokensOutput,
+        cost_usd: costUsd,
+        action_label: label || action_label || "",
+      });
+    };
 
     // --- COPY GENERATION ---
     if (type === "copy") {
@@ -175,7 +218,12 @@ Reglas:
 
       const data = await response.json();
       const content = data.choices?.[0]?.message?.content || "";
-      return new Response(JSON.stringify({ content }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const usage = data.usage || {};
+
+      // Log token usage
+      await logTokenUsage("copy", data.model || "google/gemini-3-flash-preview", usage.prompt_tokens || 0, usage.completion_tokens || 0, action_label || "Generación de copy");
+
+      return new Response(JSON.stringify({ content, usage }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // --- IMAGE GENERATION ---
@@ -189,7 +237,6 @@ Reglas:
             : "square"
         : "";
 
-      // Build expert-level platform-specific instructions
       const expertInstructions = getExpertInstructions(platform, sizeLabel, width, height, aspectRatio, orientationHint);
 
       const sizeInstruction = width && height
@@ -212,16 +259,13 @@ The final image must be 100% CLEAN — as if it were a real advertisement ready 
 
       console.log("Image generation - model:", imageModel || "pro", "- requested:", width, "x", height, "-> aspectRatio:", aspectRatio);
 
-      // Build messages: if we have reference images, send them as visual context
       const userContent: any[] = [];
       const brandRefImages: string[] = referenceImageUrls || [];
       
       if (referenceImageUrl) {
-        // Single reference (resize mode)
         userContent.push({ type: "image_url", image_url: { url: referenceImageUrl } });
         userContent.push({ type: "text", text: `INSTRUCCIÓN CRÍTICA: La imagen adjunta es la imagen ORIGINAL. Debes generar una imagen IDÉNTICA en contenido, textos, colores, composición, estilo y diseño. La ÚNICA diferencia debe ser el formato/aspecto adaptado a ${aspectRatio || "las nuevas dimensiones"}. NO cambies NADA del diseño original.\n\n${imagePrompt}` });
       } else if (brandRefImages.length > 0) {
-        // Brand style reference images
         for (const refUrl of brandRefImages.slice(0, 4)) {
           userContent.push({ type: "image_url", image_url: { url: refUrl } });
         }
@@ -230,6 +274,8 @@ The final image must be 100% CLEAN — as if it were a real advertisement ready 
         userContent.push({ type: "text", text: imagePrompt });
       }
 
+      const modelId = imageModel === "flash" ? "google/gemini-2.5-flash-image" : "google/gemini-3-pro-image-preview";
+
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -237,7 +283,7 @@ The final image must be 100% CLEAN — as if it were a real advertisement ready 
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: imageModel === "flash" ? "google/gemini-2.5-flash-image" : "google/gemini-3-pro-image-preview",
+          model: modelId,
           messages: [{ role: "user", content: userContent }],
           modalities: ["image", "text"],
           ...(aspectRatio ? { aspect_ratio: aspectRatio, image_generation_config: { aspectRatio } } : {}),
@@ -254,17 +300,16 @@ The final image must be 100% CLEAN — as if it were a real advertisement ready 
       const data = await response.json();
       const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
       const textContent = data.choices?.[0]?.message?.content || "";
+      const usage = data.usage || {};
+
+      // Log token usage for image generation
+      await logTokenUsage("image", data.model || modelId, usage.prompt_tokens || 0, usage.completion_tokens || 0, action_label || `Imagen ${platform || ""} ${sizeLabel || ""}`);
 
       if (!imageData) {
-        return new Response(JSON.stringify({ content: textContent || "No se pudo generar la imagen", imageUrl: null }), {
+        return new Response(JSON.stringify({ content: textContent || "No se pudo generar la imagen", imageUrl: null, usage }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-
-      // Upload base64 image to storage
-      const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-      const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
       const base64Content = imageData.replace(/^data:image\/\w+;base64,/, "");
       const imageBytes = Uint8Array.from(atob(base64Content), (c) => c.charCodeAt(0));
@@ -276,14 +321,14 @@ The final image must be 100% CLEAN — as if it were a real advertisement ready 
 
       if (uploadError) {
         console.error("Upload error:", uploadError);
-        return new Response(JSON.stringify({ content: textContent, imageUrl: imageData }), {
+        return new Response(JSON.stringify({ content: textContent, imageUrl: imageData, usage }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
       const { data: urlData } = supabaseAdmin.storage.from("content-media").getPublicUrl(fileName);
 
-      return new Response(JSON.stringify({ content: textContent, imageUrl: urlData.publicUrl }), {
+      return new Response(JSON.stringify({ content: textContent, imageUrl: urlData.publicUrl, usage }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -298,3 +343,24 @@ The final image must be 100% CLEAN — as if it were a real advertisement ready 
     });
   }
 });
+
+// Cost estimation (mirrors frontend logic)
+function estimateTokenCost(model: string, tokensInput: number, tokensOutput: number, generatorType: string): number {
+  const MODEL_PRICING: Record<string, { input: number; output: number }> = {
+    "gemini-2.5-pro": { input: 1.25, output: 10.0 },
+    "gemini-2.5-flash": { input: 0.15, output: 0.60 },
+    "gemini-2.5-flash-lite": { input: 0.075, output: 0.30 },
+    "gemini-3-pro-preview": { input: 1.25, output: 10.0 },
+    "gemini-3-flash-preview": { input: 0.15, output: 0.60 },
+    "gemini-3-pro-image-preview": { input: 1.25, output: 10.0 },
+    "gemini-2.5-flash-image": { input: 0.15, output: 0.60 },
+    "gpt-5": { input: 2.50, output: 10.0 },
+    "gpt-5-mini": { input: 0.40, output: 1.60 },
+    "gpt-5-nano": { input: 0.10, output: 0.40 },
+  };
+  if (generatorType === "image") return 0.04;
+  const modelKey = model.split("/").pop() || model;
+  const pricing = MODEL_PRICING[modelKey];
+  if (!pricing) return (tokensInput * 0.15 + tokensOutput * 0.60) / 1_000_000;
+  return (tokensInput * pricing.input + tokensOutput * pricing.output) / 1_000_000;
+}
