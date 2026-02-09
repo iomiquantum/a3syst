@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Check, RefreshCw, Loader2, Pencil, Image as ImageIcon, RotateCcw, Eye, EyeOff, Send, Download, Scaling } from "lucide-react";
+import { Check, RefreshCw, Loader2, Pencil, Image as ImageIcon, RotateCcw, Eye, EyeOff, Send, Download, Scaling, ZoomIn } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 export interface GeneratedPiece {
@@ -48,6 +49,7 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
   const [imgProgress, setImgProgress] = useState(0);
   const [copyProgress, setCopyProgress] = useState(0);
   const [downloading, setDownloading] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   // Simulate progress while regenerating/resizing image
   useEffect(() => {
@@ -187,8 +189,9 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
           <img
             src={piece.imageUrl}
             alt={`Generada #${piece.id}`}
-            className="w-full object-cover bg-muted"
+            className="w-full object-cover bg-muted cursor-zoom-in"
             style={{ aspectRatio: sizeW && sizeH ? `${sizeW}/${sizeH}` : undefined, maxHeight: 500 }}
+            onClick={() => setLightboxOpen(true)}
           />
         ) : (
           <div
@@ -387,6 +390,18 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
           Aprobar y guardar como borrador
         </Button>
       )}
+      {/* Lightbox */}
+      <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] p-2 bg-black/95 border-none flex items-center justify-center">
+          {piece.imageUrl && (
+            <img
+              src={piece.imageUrl}
+              alt={`Generada #${piece.id}`}
+              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
