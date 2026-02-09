@@ -338,6 +338,44 @@ export type Database = {
           },
         ]
       }
+      ai_token_usage: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          generator_type: string
+          id: string
+          model: string
+          tokens_input: number
+          tokens_output: number
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          generator_type?: string
+          id?: string
+          model?: string
+          tokens_input?: number
+          tokens_output?: number
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          generator_type?: string
+          id?: string
+          model?: string
+          tokens_input?: number
+          tokens_output?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_token_usage_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           branch_id: string | null

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Palette, CalendarDays, List, FileText, Sparkles, BarChart3, Loader2, Video } from "lucide-react";
+import { Palette, CalendarDays, List, FileText, Sparkles, BarChart3, Loader2, Video, Image, PenTool, Coins } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import ContentCalendarView from "@/components/content/ContentCalendarView";
 import ContentListView from "@/components/content/ContentListView";
@@ -7,20 +7,24 @@ import ContentDraftsView from "@/components/content/ContentDraftsView";
 import ContentAIGenerator from "@/components/content/ContentAIGenerator";
 import ContentAnalyticsView from "@/components/content/ContentAnalyticsView";
 import VideoPromptGenerator from "@/components/content/VideoPromptGenerator";
+import CopyAIGenerator from "@/components/content/CopyAIGenerator";
+import TokenUsageDashboard from "@/components/content/TokenUsageDashboard";
 import CreatePostDialog from "@/components/content/CreatePostDialog";
 import { useContentPosts } from "@/hooks/useContentPosts";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-type ContentSection = "calendar" | "list" | "drafts" | "ai" | "video" | "analytics";
+type ContentSection = "calendar" | "list" | "drafts" | "analytics" | "images-copy" | "copies" | "video-copy" | "tokens";
 
 const sideNav = [
   { key: "calendar" as ContentSection, icon: CalendarDays, label: "Planificador", group: "Contenido" },
   { key: "list" as ContentSection, icon: List, label: "Publicaciones", group: "Contenido" },
   { key: "drafts" as ContentSection, icon: FileText, label: "Borradores", group: "Contenido" },
   { key: "analytics" as ContentSection, icon: BarChart3, label: "Analíticas", group: "Contenido" },
-  { key: "ai" as ContentSection, icon: Sparkles, label: "Generar con IA", group: "Herramientas IA" },
-  { key: "video" as ContentSection, icon: Video, label: "Video IA", group: "Herramientas IA" },
+  { key: "images-copy" as ContentSection, icon: Image, label: "Imágenes + Copy", group: "Herramientas IA" },
+  { key: "copies" as ContentSection, icon: PenTool, label: "Copies con IA", group: "Herramientas IA" },
+  { key: "video-copy" as ContentSection, icon: Video, label: "Video + Copy", group: "Herramientas IA" },
+  { key: "tokens" as ContentSection, icon: Coins, label: "Consumo de Tokens", group: "Herramientas IA" },
 ];
 
 const ContentPage = () => {
@@ -108,8 +112,10 @@ const ContentPage = () => {
           {section === "list" && <ContentListView content={content} />}
           {section === "drafts" && <ContentDraftsView content={content} />}
           {section === "analytics" && <ContentAnalyticsView content={content} />}
-          {section === "ai" && <ContentAIGenerator content={content} />}
-          {section === "video" && <VideoPromptGenerator content={content} />}
+          {section === "images-copy" && <ContentAIGenerator content={content} />}
+          {section === "copies" && <CopyAIGenerator content={content} />}
+          {section === "video-copy" && <VideoPromptGenerator content={content} />}
+          {section === "tokens" && <TokenUsageDashboard />}
         </div>
       </div>
 
