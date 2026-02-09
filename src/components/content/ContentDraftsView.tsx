@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Edit, Trash2, Clock, Pencil, RefreshCw, Loader2, Check, X, Copy } from "lucide-react";
+import { useState, useRef } from "react";
+import { Edit, Trash2, Clock, Pencil, RefreshCw, Loader2, Check, X, Copy, Video, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,9 @@ const ContentDraftsView = ({ content }: Props) => {
   const [regeneratingImageId, setRegeneratingImageId] = useState<string | null>(null);
   const [imagePrompt, setImagePrompt] = useState("");
   const [showPromptId, setShowPromptId] = useState<string | null>(null);
+  const [uploadingVideoId, setUploadingVideoId] = useState<string | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const [videoUploadTargetId, setVideoUploadTargetId] = useState<string | null>(null);
 
   const startEditing = (draft: ContentPost) => {
     setEditingId(draft.id);
@@ -74,6 +77,29 @@ const ContentDraftsView = ({ content }: Props) => {
       setRegeneratingImageId(null);
     }
   };
+  const handleUploadVideoToDraft = async (draftId: string, file: File) => {
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("El video no puede superar los 100MB");
+      return;
+    }
+    setUploadingVideoId(draftId);
+    try {
+      const ext = file.name.split(".").pop() || "mp4";
+      const fileName = `videos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("content-media")
+        .upload(fileName, file, { contentType: file.type });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("content-media").getPublicUrl(fileName);
+      await content.updatePost(draftId, { media_urls: [urlData.publicUrl] });
+      toast.success("Video subido correctamente");
+    } catch (err) {
+      console.error(err);
+      toast.error("Error subiendo video");
+    } finally {
+      setUploadingVideoId(null);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -96,13 +122,20 @@ const ContentDraftsView = ({ content }: Props) => {
             const isEditing = editingId === draft.id;
             const isRegenerating = regeneratingImageId === draft.id;
             const showingPrompt = showPromptId === draft.id;
-            const hasImage = draft.media_urls && draft.media_urls.length > 0;
+            const isVideo = draft.media_type === "video";
+            const hasMedia = draft.media_urls && draft.media_urls.length > 0 && draft.media_urls[0];
+            const isUploadingVideo = uploadingVideoId === draft.id;
 
             return (
               <div key={draft.id} className="bg-card border border-border rounded-xl p-4 space-y-3 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="bg-[hsl(var(--warning)/0.1)] text-[hsl(var(--warning))] border-[hsl(var(--warning)/0.2)] text-xs">Borrador</Badge>
+                    {isVideo && (
+                      <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20 gap-1">
+                        <Video className="w-3 h-3" /> Video
+                      </Badge>
+                    )}
                     {draft.ai_generated && (
                       <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">✨ IA</Badge>
                     )}
@@ -110,8 +143,34 @@ const ContentDraftsView = ({ content }: Props) => {
                   <span className="text-[10px] text-muted-foreground">{format(new Date(draft.created_at), "dd MMM", { locale: es })}</span>
                 </div>
 
-                {/* Image */}
-                {hasImage && (
+                {/* Media: image or video */}
+                {isVideo && hasMedia && (
+                  <div className="rounded-lg overflow-hidden border border-border">
+                    <video src={draft.media_urls[0]} controls className="w-full max-h-[240px] bg-muted" />
+                  </div>
+                )}
+                {isVideo && !hasMedia && (
+                  <div className="rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 p-6 flex flex-col items-center justify-center gap-2">
+                    <Upload className="w-8 h-8 text-primary/50" />
+                    <p className="text-xs text-muted-foreground text-center">
+                      Genera el video con el prompt y súbelo aquí
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-xs mt-1"
+                      disabled={isUploadingVideo}
+                      onClick={() => {
+                        setVideoUploadTargetId(draft.id);
+                        videoInputRef.current?.click();
+                      }}
+                    >
+                      {isUploadingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                      Subir video
+                    </Button>
+                  </div>
+                )}
+                {!isVideo && hasMedia && (
                   <div className="rounded-lg overflow-hidden border border-border relative group">
                     <img src={draft.media_urls[0]} alt="Draft" className="w-full max-h-[240px] object-contain bg-muted" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -192,10 +251,25 @@ const ContentDraftsView = ({ content }: Props) => {
                   </div>
                 )}
 
-                <div className="flex gap-2 pt-1">
+                <div className="flex gap-2 pt-1 flex-wrap">
                   {!isEditing && (
                     <Button variant="outline" size="sm" className="flex-1 text-xs gap-1.5" onClick={() => startEditing(draft)}>
-                      <Pencil className="w-3.5 h-3.5" /> Editar copy
+                      <Pencil className="w-3.5 h-3.5" /> Editar {isVideo ? "prompt" : "copy"}
+                    </Button>
+                  )}
+                  {isVideo && hasMedia && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-xs gap-1.5"
+                      disabled={isUploadingVideo}
+                      onClick={() => {
+                        setVideoUploadTargetId(draft.id);
+                        videoInputRef.current?.click();
+                      }}
+                    >
+                      {isUploadingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                      Cambiar video
                     </Button>
                   )}
                   <Button variant="outline" size="sm" className="flex-1 text-xs gap-1.5" onClick={() => duplicateDraft(draft)}>
@@ -213,6 +287,19 @@ const ContentDraftsView = ({ content }: Props) => {
           })}
         </div>
       )}
+
+      {/* Hidden video file input */}
+      <input
+        ref={videoInputRef}
+        type="file"
+        accept="video/*"
+        className="hidden"
+        onChange={e => {
+          const file = e.target.files?.[0];
+          if (file && videoUploadTargetId) handleUploadVideoToDraft(videoUploadTargetId, file);
+          e.target.value = "";
+        }}
+      />
     </div>
   );
 };

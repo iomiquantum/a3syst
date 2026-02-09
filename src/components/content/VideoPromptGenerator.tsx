@@ -1,5 +1,6 @@
-import { useState, useCallback } from "react";
-import { Video, Loader2, Plus, Minus, Sparkles, RefreshCw, Mic, MicOff, Copy, Check, Wand2 } from "lucide-react";
+import { useState, useCallback, useRef } from "react";
+import { Video, Loader2, Plus, Minus, Sparkles, RefreshCw, Mic, MicOff, Copy, Check, Wand2, Save, Upload } from "lucide-react";
+import type { ContentPost } from "@/hooks/useContentPosts";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -57,9 +58,17 @@ interface GeneratedVideoPrompt {
   id: number;
   prompt: string;
   status: "generating" | "done";
+  savedPostId?: string;
 }
 
-const VideoPromptGenerator = () => {
+interface Props {
+  content: {
+    createPost: (data: Partial<ContentPost>) => Promise<any>;
+    updatePost: (id: string, data: Partial<ContentPost>) => Promise<boolean>;
+  };
+}
+
+const VideoPromptGenerator = ({ content }: Props) => {
   const [mainPrompt, setMainPrompt] = useState("");
   const [tone, setTone] = useState("Profesional");
   const [videoPlatform, setVideoPlatform] = useState("Instagram Reels");
@@ -77,6 +86,9 @@ const VideoPromptGenerator = () => {
   const [generating, setGenerating] = useState(false);
   const [prompts, setPrompts] = useState<GeneratedVideoPrompt[]>([]);
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [savingIds, setSavingIds] = useState<Set<number>>(new Set());
+  const [uploadingIds, setUploadingIds] = useState<Set<number>>(new Set());
+  const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
   const { data: strategies = [] } = usePsychoStrategies();
   const { isSuperAdmin } = useClinic();
@@ -234,6 +246,59 @@ REGLAS:
       console.error(err);
       toast.error("Error regenerando prompt");
       setPrompts(prev => prev.map(p => p.id === id ? { ...p, status: "done" as const } : p));
+    }
+  };
+
+  const handleSaveAsDraft = async (id: number) => {
+    const prompt = prompts.find(p => p.id === id);
+    if (!prompt) return;
+    setSavingIds(prev => new Set(prev).add(id));
+    try {
+      const platformLower = videoPlatform.toLowerCase().replace(/\s+/g, "-");
+      const result = await content.createPost({
+        title: mainPrompt.slice(0, 60) || "Video IA",
+        body: prompt.prompt,
+        status: "draft",
+        ai_generated: true,
+        ai_prompt: mainPrompt,
+        platforms: [platformLower],
+        media_type: "video",
+        media_urls: [],
+      });
+      if (result) {
+        setPrompts(prev => prev.map(p => p.id === id ? { ...p, savedPostId: result.id } : p));
+        toast.success("Borrador de video guardado — sube el video cuando lo generes");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error guardando borrador");
+    } finally {
+      setSavingIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+    }
+  };
+
+  const handleUploadVideo = async (promptId: number, postId: string, file: File) => {
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("El video no puede superar los 100MB");
+      return;
+    }
+    setUploadingIds(prev => new Set(prev).add(promptId));
+    try {
+      const ext = file.name.split(".").pop() || "mp4";
+      const fileName = `videos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("content-media")
+        .upload(fileName, file, { contentType: file.type });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("content-media").getPublicUrl(fileName);
+      await content.updatePost(postId, { media_urls: [urlData.publicUrl] });
+      toast.success("Video subido y vinculado al borrador");
+    } catch (err) {
+      console.error(err);
+      toast.error("Error subiendo video");
+    } finally {
+      setUploadingIds(prev => { const n = new Set(prev); n.delete(promptId); return n; });
     }
   };
 
@@ -546,6 +611,11 @@ REGLAS:
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                     {platformInfo.label} · {getEffectiveDuration()} · {styleInfo?.label}
                   </span>
+                  {p.savedPostId && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 border border-green-500/20">
+                      ✓ Guardado
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -567,6 +637,40 @@ REGLAS:
                     {copiedId === p.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                     {copiedId === p.id ? "¡Copiado!" : "Copiar prompt"}
                   </Button>
+                  {!p.savedPostId ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-xs"
+                      onClick={() => handleSaveAsDraft(p.id)}
+                      disabled={savingIds.has(p.id)}
+                    >
+                      {savingIds.has(p.id) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                      Guardar borrador
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-xs"
+                      onClick={() => fileInputRefs.current[p.id]?.click()}
+                      disabled={uploadingIds.has(p.id)}
+                    >
+                      {uploadingIds.has(p.id) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                      Subir video
+                    </Button>
+                  )}
+                  <input
+                    ref={el => { fileInputRefs.current[p.id] = el; }}
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file && p.savedPostId) handleUploadVideo(p.id, p.savedPostId, file);
+                      e.target.value = "";
+                    }}
+                  />
                 </div>
               </div>
               <div className="p-4">

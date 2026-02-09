@@ -109,7 +109,7 @@ const ContentPage = () => {
           {section === "drafts" && <ContentDraftsView content={content} />}
           {section === "analytics" && <ContentAnalyticsView content={content} />}
           {section === "ai" && <ContentAIGenerator content={content} />}
-          {section === "video" && <VideoPromptGenerator />}
+          {section === "video" && <VideoPromptGenerator content={content} />}
         </div>
       </div>
 
