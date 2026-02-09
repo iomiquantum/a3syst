@@ -178,6 +178,7 @@ const ContentAIGenerator = ({ content }: Props) => {
   const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
   const [regeneratingCopyId, setRegeneratingCopyId] = useState<number | null>(null);
   const [resizingId, setResizingId] = useState<number | null>(null);
+  const [pieceDimensions, setPieceDimensions] = useState<Record<number, { w: number; h: number; label: string }>>({});
 
   const { data: strategies = [] } = usePsychoStrategies();
   const { isSuperAdmin } = useClinic();
@@ -358,19 +359,20 @@ const ContentAIGenerator = ({ content }: Props) => {
     }
   };
 
-  const handleResize = async (id: number, targetW: number, targetH: number, label: string) => {
+   const handleResize = async (id: number, targetW: number, targetH: number, label: string) => {
     const piece = pieces.find(p => p.id === id);
     if (!piece) return;
     setResizingId(id);
     try {
-      // Use the same prompt but with the new dimensions
       const prompt = piece.imagePrompt + `\n\nIMPORTANTE: Regenera EXACTAMENTE la misma imagen con el mismo contenido visual, textos, colores, composición y estilo. NO cambies NADA del diseño. Solo adáptala al nuevo formato y dimensiones.`;
       const { data, error } = await supabase.functions.invoke("ai-generate-content", {
-        body: { prompt, tone, platform, type: "image", width: targetW, height: targetH, imageModel: "pro", sizeLabel: label, expertMode: true },
+        body: { prompt, tone, platform, type: "image", width: targetW, height: targetH, imageModel: "pro", sizeLabel: label, expertMode: true, referenceImageUrl: piece.imageUrl },
       });
       if (error) throw error;
       if (data?.imageUrl) {
         setPieces(prev => prev.map(p => (p.id === id ? { ...p, imageUrl: data.imageUrl } : p)));
+        // Update per-piece dimensions so download button reflects new size
+        setPieceDimensions(prev => ({ ...prev, [id]: { w: targetW, h: targetH, label } }));
         toast.success(`Imagen redimensionada a ${targetW}×${targetH}`);
       }
     } catch (err) {
@@ -756,6 +758,7 @@ const ContentAIGenerator = ({ content }: Props) => {
         <div className="grid gap-4 md:grid-cols-2">
           {pieces.map(piece => {
             const sizeInfo = getImageSizeInfo();
+            const overrideDims = pieceDimensions[piece.id];
             return (
               <AIGeneratedPiece
                 key={piece.id}
@@ -769,9 +772,9 @@ const ContentAIGenerator = ({ content }: Props) => {
                 regeneratingCopy={regeneratingCopyId === piece.id}
                 resizing={resizingId === piece.id}
                 platform={platform}
-                sizeLabel={sizeInfo?.label}
-                sizeW={sizeInfo?.w}
-                sizeH={sizeInfo?.h}
+                sizeLabel={overrideDims?.label ?? sizeInfo?.label}
+                sizeW={overrideDims?.w ?? sizeInfo?.w}
+                sizeH={overrideDims?.h ?? sizeInfo?.h}
                 imageModel={imageModel}
               />
             );
