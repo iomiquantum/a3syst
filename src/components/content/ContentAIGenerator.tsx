@@ -177,6 +177,7 @@ const ContentAIGenerator = ({ content }: Props) => {
   const [pieces, setPieces] = useState<GeneratedPiece[]>([]);
   const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
   const [regeneratingCopyId, setRegeneratingCopyId] = useState<number | null>(null);
+  const [resizingId, setResizingId] = useState<number | null>(null);
 
   const { data: strategies = [] } = usePsychoStrategies();
   const { isSuperAdmin } = useClinic();
@@ -354,6 +355,29 @@ const ContentAIGenerator = ({ content }: Props) => {
       toast.error("Error regenerando copy");
     } finally {
       setRegeneratingCopyId(null);
+    }
+  };
+
+  const handleResize = async (id: number, targetW: number, targetH: number, label: string) => {
+    const piece = pieces.find(p => p.id === id);
+    if (!piece) return;
+    setResizingId(id);
+    try {
+      // Use the same prompt but with the new dimensions
+      const prompt = piece.imagePrompt + `\n\nIMPORTANTE: Regenera EXACTAMENTE la misma imagen con el mismo contenido visual, textos, colores, composición y estilo. NO cambies NADA del diseño. Solo adáptala al nuevo formato y dimensiones.`;
+      const { data, error } = await supabase.functions.invoke("ai-generate-content", {
+        body: { prompt, tone, platform, type: "image", width: targetW, height: targetH, imageModel: "pro", sizeLabel: label, expertMode: true },
+      });
+      if (error) throw error;
+      if (data?.imageUrl) {
+        setPieces(prev => prev.map(p => (p.id === id ? { ...p, imageUrl: data.imageUrl } : p)));
+        toast.success(`Imagen redimensionada a ${targetW}×${targetH}`);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error redimensionando imagen");
+    } finally {
+      setResizingId(null);
     }
   };
 
@@ -696,8 +720,10 @@ const ContentAIGenerator = ({ content }: Props) => {
                 onRegenerateImage={handleRegenerateImage}
                 onRegenerateCopy={handleRegenerateCopy}
                 onApprove={handleApprove}
+                onResize={handleResize}
                 regeneratingImage={regeneratingId === piece.id}
                 regeneratingCopy={regeneratingCopyId === piece.id}
+                resizing={resizingId === piece.id}
                 platform={platform}
                 sizeLabel={sizeInfo?.label}
                 sizeW={sizeInfo?.w}

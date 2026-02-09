@@ -23,6 +23,7 @@ interface Props {
   onRegenerateImage: (id: number, customPrompt?: string) => void;
   onRegenerateCopy: (id: number) => void;
   onApprove: (id: number) => void;
+  onResize?: (id: number, targetW: number, targetH: number, label: string) => void;
   regeneratingImage: boolean;
   regeneratingCopy: boolean;
   platform?: string;
@@ -30,6 +31,7 @@ interface Props {
   sizeW?: number;
   sizeH?: number;
   imageModel?: "flash" | "pro";
+  resizing?: boolean;
 }
 const resizeSizes = [
   { label: "Feed cuadrado", ratio: "1:1", w: 1080, h: 1080 },
@@ -38,7 +40,7 @@ const resizeSizes = [
   { label: "Feed horizontal", ratio: "1.91:1", w: 1200, h: 630 },
 ];
 
-const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerateCopy, onApprove, regeneratingImage, regeneratingCopy, platform, sizeLabel, sizeW, sizeH, imageModel = "pro" }: Props) => {
+const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerateCopy, onApprove, onResize, regeneratingImage, regeneratingCopy, platform, sizeLabel, sizeW, sizeH, imageModel = "pro", resizing = false }: Props) => {
   const [editingCopy, setEditingCopy] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState(false);
@@ -47,9 +49,9 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
   const [copyProgress, setCopyProgress] = useState(0);
   const [downloading, setDownloading] = useState(false);
 
-  // Simulate progress while regenerating image
+  // Simulate progress while regenerating/resizing image
   useEffect(() => {
-    if (!regeneratingImage) { setImgProgress(0); return; }
+    if (!regeneratingImage && !resizing) { setImgProgress(0); return; }
     setImgProgress(5);
     const interval = setInterval(() => {
       setImgProgress(prev => {
@@ -58,7 +60,7 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
       });
     }, 400);
     return () => clearInterval(interval);
-  }, [regeneratingImage]);
+  }, [regeneratingImage, resizing]);
 
   // Simulate progress while regenerating copy
   useEffect(() => {
@@ -109,7 +111,7 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
     }
   };
 
-  const handleDownloadImage = async (mode: "original" | "resized" | "contain" = "resized") => {
+  const handleDownloadImage = async () => {
     if (!piece.imageUrl) return;
     setDownloading(true);
     try {
@@ -117,12 +119,9 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
       let blob = await response.blob();
 
       let dimsLabel = "HD";
-      if (mode === "resized" && sizeW && sizeH) {
+      if (sizeW && sizeH) {
         blob = await resizeImageCover(blob, sizeW, sizeH);
         dimsLabel = `${sizeW}x${sizeH}`;
-      } else if (mode === "contain" && sizeW && sizeH) {
-        blob = await resizeImageContain(blob, sizeW, sizeH);
-        dimsLabel = `${sizeW}x${sizeH}-contain`;
       } else {
         dimsLabel = "original";
       }
@@ -149,63 +148,8 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
     }
   };
 
-  const resizeImageContain = async (blob: Blob, targetW: number, targetH: number): Promise<Blob> => {
-    try {
-      const bitmap = await createImageBitmap(blob);
-      const canvas = document.createElement("canvas");
-      canvas.width = targetW;
-      canvas.height = targetH;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return blob;
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, targetW, targetH);
-      const srcRatio = bitmap.width / bitmap.height;
-      const dstRatio = targetW / targetH;
-      let dx = 0, dy = 0, dw = targetW, dh = targetH;
-      if (srcRatio > dstRatio) {
-        dh = targetW / srcRatio;
-        dy = (targetH - dh) / 2;
-      } else {
-        dw = targetH * srcRatio;
-        dx = (targetW - dw) / 2;
-      }
-      ctx.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height, dx, dy, dw, dh);
-      bitmap.close();
-      return new Promise<Blob>((resolve) => {
-        canvas.toBlob((resized) => resolve(resized || blob), "image/png", 1.0);
-      });
-    } catch (e) {
-      console.error("Contain resize error:", e);
-      return blob;
-    }
-  };
-  const handleResizeDownload = async (targetW: number, targetH: number, label: string) => {
-    if (!piece.imageUrl) return;
-    setDownloading(true);
-    try {
-      const response = await fetch(piece.imageUrl);
-      let blob = await response.blob();
-      blob = await resizeImageCover(blob, targetW, targetH);
-      const shortDesc = (piece.copy || piece.instruction || "imagen")
-        .replace(/[#*\n]/g, " ").trim().split(/\s+/).slice(0, 5).join("-")
-        .replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ\-]/g, "").substring(0, 40);
-      const plat = (platform || "social").toLowerCase();
-      const sLabel = label.replace(/\s+/g, "-").toLowerCase();
-      const fileName = `${shortDesc}_${plat}_${sLabel}_${targetW}x${targetH}.png`;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error("Resize download error:", e);
-    } finally {
-      setDownloading(false);
-    }
-  };
+
+
 
   return (
     <div className={cn(
@@ -226,13 +170,15 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
 
       {/* Image */}
       <div className="rounded-lg overflow-hidden border border-border relative group">
-      {regeneratingImage ? (
+      {regeneratingImage || resizing ? (
           <div
             className="w-full bg-muted flex flex-col items-center justify-center gap-3 animate-pulse"
             style={{ aspectRatio: sizeW && sizeH ? `${sizeW}/${sizeH}` : '1/1', maxHeight: 400 }}
           >
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <p className="text-xs text-muted-foreground font-medium">Generando imagen…</p>
+            <p className="text-xs text-muted-foreground font-medium">
+              {resizing ? "Redimensionando con IA…" : "Generando imagen…"}
+            </p>
             <div className="w-3/4">
               <Progress value={imgProgress} className="h-1.5" />
             </div>
@@ -252,12 +198,12 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
             <ImageIcon className="w-8 h-8 text-muted-foreground" />
           </div>
         )}
-        {!isApproved && piece.imageUrl && !regeneratingImage && (
+        {!isApproved && piece.imageUrl && !regeneratingImage && !resizing && (
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 flex-wrap px-4">
             <Button variant="secondary" size="sm" className="gap-1.5" onClick={() => onRegenerateImage(piece.id)}>
               <RefreshCw className="w-3.5 h-3.5" /> Regenerar
             </Button>
-            {imageModel === "pro" && (
+            {onResize && (
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="secondary" size="sm" className="gap-1.5">
@@ -265,7 +211,7 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-56 p-2" align="center" side="bottom">
-                  <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Descargar en otro tamaño</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Regenerar en otro tamaño</p>
                   <div className="space-y-0.5 max-h-48 overflow-y-auto">
                     {resizeSizes.map(s => (
                       <Button
@@ -273,8 +219,7 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
                         variant="ghost"
                         size="sm"
                         className="w-full justify-between text-xs h-8"
-                        disabled={downloading}
-                        onClick={() => handleResizeDownload(s.w, s.h, s.label)}
+                        onClick={() => onResize(piece.id, s.w, s.h, s.label)}
                       >
                         <span className="flex items-center gap-1.5">
                           <span className="font-medium text-foreground">{s.ratio}</span>
@@ -287,63 +232,47 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
                 </PopoverContent>
               </Popover>
             )}
-            {imageModel === "flash" && sizeW && sizeH && sizeW !== sizeH ? (
-              <>
-                <Button variant="secondary" size="sm" className="gap-1.5" onClick={() => handleDownloadImage("original")} disabled={downloading}>
-                  {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                  Original
-                </Button>
-                <Button variant="secondary" size="sm" className="gap-1.5" onClick={() => handleDownloadImage("resized")} disabled={downloading}>
-                  {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                  {sizeW}×{sizeH} (recorte)
-                </Button>
-                <Button variant="secondary" size="sm" className="gap-1.5" onClick={() => handleDownloadImage("contain")} disabled={downloading}>
-                  {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                  {sizeW}×{sizeH} (fondo)
-                </Button>
-              </>
-            ) : (
-              <Button variant="secondary" size="sm" className="gap-1.5" onClick={() => handleDownloadImage("resized")} disabled={downloading}>
-                {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                {sizeW && sizeH ? `Descargar ${sizeW}×${sizeH}` : "Descargar HD"}
-              </Button>
-            )}
+            <Button variant="secondary" size="sm" className="gap-1.5" onClick={() => handleDownloadImage()} disabled={downloading}>
+              {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+              {sizeW && sizeH ? `Descargar ${sizeW}×${sizeH}` : "Descargar HD"}
+            </Button>
           </div>
         )}
-        {isApproved && piece.imageUrl && !regeneratingImage && (
+        {isApproved && piece.imageUrl && !regeneratingImage && !resizing && (
           <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-            <Button variant="secondary" size="sm" className="gap-1.5 text-xs" onClick={() => handleDownloadImage("resized")} disabled={downloading}>
+            <Button variant="secondary" size="sm" className="gap-1.5 text-xs" onClick={() => handleDownloadImage()} disabled={downloading}>
               {downloading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
               {sizeW && sizeH ? `${sizeW}×${sizeH}` : "HD"}
             </Button>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="secondary" size="sm" className="gap-1.5 text-xs">
-                  <Scaling className="w-3 h-3" /> Redimensionar
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-56 p-2" align="end" side="top">
-                <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Descargar en otro tamaño</p>
-                <div className="space-y-0.5 max-h-48 overflow-y-auto">
-                  {resizeSizes.map(s => (
-                    <Button
-                      key={s.ratio}
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-between text-xs h-8"
-                      disabled={downloading}
-                      onClick={() => handleResizeDownload(s.w, s.h, s.label)}
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <span className="font-medium text-foreground">{s.ratio}</span>
-                        <span>{s.label}</span>
-                      </span>
-                      <span className="text-muted-foreground">{s.w}×{s.h}</span>
-                    </Button>
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
+            {onResize && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="secondary" size="sm" className="gap-1.5 text-xs">
+                    <Scaling className="w-3 h-3" /> Redimensionar
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2" align="end" side="top">
+                  <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Regenerar en otro tamaño</p>
+                  <div className="space-y-0.5 max-h-48 overflow-y-auto">
+                    {resizeSizes.map(s => (
+                      <Button
+                        key={s.ratio}
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-between text-xs h-8"
+                        onClick={() => onResize(piece.id, s.w, s.h, s.label)}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <span className="font-medium text-foreground">{s.ratio}</span>
+                          <span>{s.label}</span>
+                        </span>
+                        <span className="text-muted-foreground">{s.w}×{s.h}</span>
+                      </Button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
           </div>
         )}
       </div>
