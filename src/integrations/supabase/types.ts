@@ -659,6 +659,7 @@ export type Database = {
           description: string | null
           id: string
           logo_url: string | null
+          monthly_token_budget_usd: number | null
           name: string
           owner_id: string
           updated_at: string
@@ -669,6 +670,7 @@ export type Database = {
           description?: string | null
           id?: string
           logo_url?: string | null
+          monthly_token_budget_usd?: number | null
           name: string
           owner_id: string
           updated_at?: string
@@ -679,6 +681,7 @@ export type Database = {
           description?: string | null
           id?: string
           logo_url?: string | null
+          monthly_token_budget_usd?: number | null
           name?: string
           owner_id?: string
           updated_at?: string
@@ -1474,6 +1477,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "user_roles_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_token_limits: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          monthly_budget_usd: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          monthly_budget_usd?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          monthly_budget_usd?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_token_limits_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"

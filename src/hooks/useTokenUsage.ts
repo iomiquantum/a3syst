@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { useClinic } from "@/hooks/useClinic";
 
 export interface TokenRecord {
@@ -92,6 +93,67 @@ export const useTokenUsage = () => {
       cost_usd: costUsd,
       action_label: actionLabel,
     } as any);
+
+    // Check budget limits after logging
+    await checkBudgetAlerts(user?.id || null, costUsd);
+  }, [clinicId]);
+
+  const checkBudgetAlerts = useCallback(async (userId: string | null, lastCost: number) => {
+    if (!clinicId) return;
+
+    // Get current month's total for clinic
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+    const monthStartStr = monthStart.toISOString();
+
+    const { data: monthRecords } = await supabase
+      .from("ai_token_usage")
+      .select("cost_usd, user_id")
+      .eq("clinic_id", clinicId)
+      .gte("created_at", monthStartStr);
+
+    const totalClinicCost = (monthRecords || []).reduce((sum, r) => sum + (Number(r.cost_usd) || 0), 0);
+
+    // Check clinic budget
+    const { data: clinic } = await supabase
+      .from("clinics")
+      .select("monthly_token_budget_usd")
+      .eq("id", clinicId)
+      .single();
+
+    const clinicBudget = (clinic as any)?.monthly_token_budget_usd;
+    if (clinicBudget !== null && clinicBudget !== undefined && clinicBudget > 0) {
+      const pct = (totalClinicCost / clinicBudget) * 100;
+      if (pct >= 100) {
+        toast.error(`⚠️ La clínica ha superado el presupuesto mensual de IA ($${clinicBudget.toFixed(2)}). Consumo actual: $${totalClinicCost.toFixed(2)}`);
+      } else if (pct >= 80) {
+        toast.warning(`⚠️ La clínica ha consumido el ${pct.toFixed(0)}% del presupuesto mensual de IA ($${totalClinicCost.toFixed(2)} / $${clinicBudget.toFixed(2)})`);
+      }
+    }
+
+    // Check user budget
+    if (userId) {
+      const { data: userLimit } = await supabase
+        .from("user_token_limits")
+        .select("monthly_budget_usd")
+        .eq("user_id", userId)
+        .eq("clinic_id", clinicId)
+        .maybeSingle();
+
+      const userBudget = (userLimit as any)?.monthly_budget_usd;
+      if (userBudget !== null && userBudget !== undefined && userBudget > 0) {
+        const userTotal = (monthRecords || [])
+          .filter(r => r.user_id === userId)
+          .reduce((sum, r) => sum + (Number(r.cost_usd) || 0), 0);
+        const pct = (userTotal / userBudget) * 100;
+        if (pct >= 100) {
+          toast.error(`⚠️ Has superado tu límite mensual de IA ($${userBudget.toFixed(2)}). Consumo: $${userTotal.toFixed(2)}`);
+        } else if (pct >= 80) {
+          toast.warning(`⚠️ Has consumido el ${pct.toFixed(0)}% de tu límite mensual de IA ($${userTotal.toFixed(2)} / $${userBudget.toFixed(2)})`);
+        }
+      }
+    }
   }, [clinicId]);
 
   const now = new Date();
