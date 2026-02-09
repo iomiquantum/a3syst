@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Wand2, Loader2, Plus, Minus, Sparkles, RefreshCw, Settings2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Wand2, Loader2, Plus, Minus, Sparkles, RefreshCw, Settings2, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -7,11 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import type { ContentPost } from "@/hooks/useContentPosts";
 import { supabase } from "@/integrations/supabase/client";
 import AIGeneratedPiece, { type GeneratedPiece } from "./AIGeneratedPiece";
 import PromptTemplateEditor from "./PromptTemplateEditor";
 import { usePsychoStrategies } from "@/hooks/usePsychoMatrix";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
+import BrandStyleManager from "./BrandStyleManager";
+import type { BrandStyle } from "@/hooks/useBrandStyles";
 import { useActivePromptTemplate } from "@/hooks/usePromptTemplates";
 import { useClinic } from "@/hooks/useClinic";
 import {
@@ -180,11 +184,17 @@ const ContentAIGenerator = ({ content }: Props) => {
   const [regeneratingCopyIds, setRegeneratingCopyIds] = useState<Set<number>>(new Set());
   const [resizingIds, setResizingIds] = useState<Set<number>>(new Set());
   const [pieceDimensions, setPieceDimensions] = useState<Record<number, { w: number; h: number; label: string }>>({});
+  const [selectedBrandStyle, setSelectedBrandStyle] = useState<BrandStyle | null>(null);
 
   const { data: strategies = [] } = usePsychoStrategies();
   const { isSuperAdmin } = useClinic();
   const { data: imagePromptTemplate } = useActivePromptTemplate("image");
   const { data: copyPromptTemplate } = useActivePromptTemplate("copy");
+
+  const handleVoiceResult = useCallback((transcript: string) => {
+    setMainPrompt(prev => prev ? `${prev} ${transcript}` : transcript);
+  }, []);
+  const { isListening, isSupported: voiceSupported, toggleListening } = useVoiceInput({ onResult: handleVoiceResult });
 
   const maxPieces = isSuperAdmin ? MAX_PIECES_ADMIN : MAX_PIECES_DEFAULT;
   const updateCount = (n: number) => setCount(Math.max(1, Math.min(maxPieces, n)));
@@ -270,7 +280,7 @@ const ContentAIGenerator = ({ content }: Props) => {
       const results: GeneratedPiece[] = [];
       for (let i = 0; i < count; i++) {
         const piece = await generateVariationWithCopyBasedImage(
-          mainPrompt, i + 1, count, tone, platform, lengthInfo, sizeInfo, selectedStrategy, extraNotes, imgTpl, copyTpl, imageModel
+          mainPrompt, i + 1, count, tone, platform, lengthInfo, sizeInfo, selectedStrategy, extraNotes, imgTpl, copyTpl, imageModel, selectedBrandStyle
         ).catch(err => {
           console.error(`Variación ${i + 1} falló:`, err);
           toast.error(`Error generando variación #${i + 1}`);
@@ -282,7 +292,7 @@ const ContentAIGenerator = ({ content }: Props) => {
     } else {
       const results = await Promise.allSettled(
         Array.from({ length: count }, (_, i) =>
-          generateVariation(mainPrompt, i + 1, count, tone, platform, lengthInfo, sizeInfo, selectedStrategy, extraNotes, imgTpl, copyTpl, imageModel)
+          generateVariation(mainPrompt, i + 1, count, tone, platform, lengthInfo, sizeInfo, selectedStrategy, extraNotes, imgTpl, copyTpl, imageModel, selectedBrandStyle)
         )
       );
       setPieces(results.map((r, i) => {
@@ -312,13 +322,13 @@ const ContentAIGenerator = ({ content }: Props) => {
     const imgTpl = imagePromptTemplate?.template || "";
     let prompt: string;
     if (customPrompt) {
-      prompt = buildImagePrompt(customPrompt, piece.id, pieces.length, sizeInfo, selectedStrategy, imgTpl);
+      prompt = buildImagePrompt(customPrompt, piece.id, pieces.length, sizeInfo, selectedStrategy, imgTpl, selectedBrandStyle);
     } else if (imageFromCopy && piece.copy) {
-      prompt = buildCopyBasedImagePrompt(piece.copy, piece.id, pieces.length, sizeInfo, selectedStrategy, imgTpl);
+      prompt = buildCopyBasedImagePrompt(piece.copy, piece.id, pieces.length, sizeInfo, selectedStrategy, imgTpl, selectedBrandStyle);
     } else {
       prompt = buildImagePrompt(
         `${piece.instruction}. Crear una imagen completamente distinta a las anteriores, con otro estilo, composición y enfoque visual.`,
-        piece.id, pieces.length, sizeInfo, selectedStrategy, imgTpl,
+        piece.id, pieces.length, sizeInfo, selectedStrategy, imgTpl, selectedBrandStyle,
       );
     }
     try {
@@ -346,7 +356,7 @@ const ContentAIGenerator = ({ content }: Props) => {
     try {
       const copyTpl = copyPromptTemplate?.template || "";
       const variationPrompt = buildCopyPrompt(
-        piece.instruction, piece.id, pieces.length, lengthInfo, selectedStrategy, extraNotes, copyTpl,
+        piece.instruction, piece.id, pieces.length, lengthInfo, selectedStrategy, extraNotes, copyTpl, selectedBrandStyle,
       ) + `\n\nIMPORTANTE: Genera un copy COMPLETAMENTE NUEVO y DIFERENTE al anterior. Usa un enfoque, ángulo o estilo de escritura distinto. Sé creativo y original.`;
       const { data, error } = await supabase.functions.invoke("ai-generate-content", {
         body: { prompt: variationPrompt, tone, platform, type: "copy" },
@@ -420,9 +430,9 @@ const ContentAIGenerator = ({ content }: Props) => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-foreground">Generar campaña con IA</h2>
+        <h2 className="text-xl font-bold text-foreground">Generar contenido con IA</h2>
         <p className="text-sm text-muted-foreground">
-          Describe tu campaña y elige cuántas variaciones quieres. La IA generará copies e imágenes diferentes,
+          Describe lo que quieres crear y elige cuántas variaciones quieres. La IA generará copies e imágenes diferentes,
           cada uno enfocado a un ángulo o público distinto.
         </p>
       </div>
@@ -430,13 +440,39 @@ const ContentAIGenerator = ({ content }: Props) => {
       {/* Main prompt */}
       <div className="space-y-1.5">
         <Label className="text-sm font-medium">¿Qué quieres promocionar?</Label>
-        <Textarea
-          placeholder="Ej: Campaña por el Día de la Madre, promocionar paquetes de blanqueamiento dental y limpieza con 30% de descuento, dirigido a mujeres de 25-50 años..."
-          className="min-h-[120px]"
-          value={mainPrompt}
-          onChange={e => setMainPrompt(e.target.value)}
-        />
+        <div className="relative">
+          <Textarea
+            placeholder="Ej: Campaña por el Día de la Madre, promocionar paquetes de blanqueamiento dental y limpieza con 30% de descuento, dirigido a mujeres de 25-50 años..."
+            className="min-h-[120px] pr-12"
+            value={mainPrompt}
+            onChange={e => setMainPrompt(e.target.value)}
+          />
+          {voiceSupported && (
+            <Button
+              type="button"
+              variant={isListening ? "default" : "ghost"}
+              size="icon"
+              className={cn(
+                "absolute top-2 right-2 h-8 w-8 rounded-full transition-all",
+                isListening && "bg-destructive hover:bg-destructive/90 text-destructive-foreground animate-pulse"
+              )}
+              onClick={toggleListening}
+              title={isListening ? "Detener grabación" : "Dictar con voz"}
+            >
+              {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </Button>
+          )}
+        </div>
+        {isListening && (
+          <p className="text-xs text-destructive font-medium animate-pulse">🎙️ Escuchando… habla y tu texto aparecerá aquí</p>
+        )}
       </div>
+
+      {/* Brand Style Manager */}
+      <BrandStyleManager
+        selectedStyleId={selectedBrandStyle?.id || null}
+        onSelectStyle={setSelectedBrandStyle}
+      />
 
       {/* ✨ Hacer Magia checkbox + Abra cadabra */}
       <div className="space-y-3">
@@ -828,17 +864,29 @@ ${strategy.advanced_tech ? `- Técnica visual "${strategy.advanced_tech}": aplic
 IMPORTANTE: Estos elementos son SOLO para dirección artística y composición visual. NUNCA escribas nombres de arquetipos, técnicas psicológicas o gatillos como texto visible en la imagen.`;
 }
 
+function buildBrandStyleContext(brandStyle: any): string {
+  if (!brandStyle) return "";
+  const paletteStr = brandStyle.palette?.length
+    ? brandStyle.palette.map((c: any) => `${c.hex} (${c.name})`).join(", ")
+    : "";
+  return `\n\nESTILO DE MARCA (OBLIGATORIO - seguir fielmente):
+${paletteStr ? `- PALETA DE COLORES: Usa EXCLUSIVAMENTE estos colores: ${paletteStr}` : ""}
+${brandStyle.style_description ? `- ESTILO VISUAL: ${brandStyle.style_description}` : ""}
+- Mantén coherencia visual con la identidad de marca de la clínica. Los colores, tipografías y composición deben reflejar este estilo.`;
+}
+
 function buildCopyPrompt(
   mainPrompt: string, variationNum: number, totalVariations: number,
   lengthInfo: { value: string; label: string; desc: string },
-  strategy?: any, extraNotes?: string, adminTemplate?: string,
+  strategy?: any, extraNotes?: string, adminTemplate?: string, brandStyle?: any,
 ): string {
   const strategyContext = buildStrategyContextForCopy(strategy);
+  const brandContext = brandStyle ? `\n\nESTILO DE MARCA: ${brandStyle.style_description || "Sigue el estilo visual de la marca."}` : "";
   const lengthInstruction = `\nLONGITUD DEL COPY: Genera un copy ${lengthInfo.label.toUpperCase()} (${lengthInfo.desc}). Respeta estrictamente este límite de caracteres.`;
   const extraContext = extraNotes?.trim() ? `\nNOTAS ADICIONALES DEL USUARIO: ${extraNotes}` : "";
   const baseTemplate = adminTemplate?.trim() ? `${adminTemplate}\n\n` : "";
 
-  return `${baseTemplate}${mainPrompt}${strategyContext}${lengthInstruction}${extraContext}
+  return `${baseTemplate}${mainPrompt}${strategyContext}${brandContext}${lengthInstruction}${extraContext}
 
 IMPORTANTE: Esta es la variación #${variationNum} de ${totalVariations} variaciones totales. 
 Genera un copy COMPLETAMENTE DIFERENTE a las demás variaciones. Usa un enfoque, ángulo o público objetivo distinto.
@@ -852,10 +900,11 @@ Usa el enfoque correspondiente a tu número de variación.`;
 function buildImagePrompt(
   text: string, variationNum: number, totalVariations: number,
   sizeInfo?: { label: string; w: number; h: number },
-  strategy?: any, adminTemplate?: string,
+  strategy?: any, adminTemplate?: string, brandStyle?: any,
 ): string {
   const sizeHint = sizeInfo ? `\nDIMENSIONES OBLIGATORIAS: ${sizeInfo.w}x${sizeInfo.h}px (${sizeInfo.label}). Diseña la composición para este formato exacto.` : "";
   const strategyHint = buildStrategyContextForImage(strategy);
+  const brandHint = buildBrandStyleContext(brandStyle);
   const baseTemplate = adminTemplate?.trim() ? `${adminTemplate}\n\n` : "";
 
   return `${baseTemplate}Eres un diseñador gráfico profesional, director de arte senior y experto en neuromarketing visual. Crea una imagen publicitaria de alto impacto para redes sociales.
@@ -885,7 +934,7 @@ DISEÑO VISUAL PROFESIONAL:
 - Jerarquía visual: imagen/fondo de impacto > título > CTA
 - Uso inteligente de espacio negativo para que el texto respire
 - Iluminación y mood profesional acorde al mensaje
-${sizeHint}${strategyHint}
+${sizeHint}${strategyHint}${brandHint}
 
 Variación visual #${variationNum} de ${totalVariations}: Crear una imagen con estilo, composición, paleta de colores y enfoque visual COMPLETAMENTE DIFERENTE a las otras variaciones. Cada variación debe sentirse como una pieza única de una campaña diversa.`;
 }
@@ -896,10 +945,10 @@ async function generateVariation(
   lengthInfo: { value: string; label: string; desc: string },
   sizeInfo: { label: string; w: number; h: number },
   strategy?: any, extraNotes?: string,
-  imgTpl?: string, copyTpl?: string, imageModel?: string,
+  imgTpl?: string, copyTpl?: string, imageModel?: string, brandStyle?: any,
 ): Promise<GeneratedPiece> {
-  const variationPrompt = buildCopyPrompt(mainPrompt, variationNum, totalVariations, lengthInfo, strategy, extraNotes, copyTpl);
-  const imagePrompt = buildImagePrompt(mainPrompt, variationNum, totalVariations, sizeInfo, strategy, imgTpl);
+  const variationPrompt = buildCopyPrompt(mainPrompt, variationNum, totalVariations, lengthInfo, strategy, extraNotes, copyTpl, brandStyle);
+  const imagePrompt = buildImagePrompt(mainPrompt, variationNum, totalVariations, sizeInfo, strategy, imgTpl, brandStyle);
 
   const [copyResult, imgResult] = await Promise.allSettled([
     supabase.functions.invoke("ai-generate-content", { body: { prompt: variationPrompt, tone, platform, type: "copy" } }),
@@ -918,16 +967,16 @@ async function generateVariationWithCopyBasedImage(
   lengthInfo: { value: string; label: string; desc: string },
   sizeInfo: { label: string; w: number; h: number },
   strategy?: any, extraNotes?: string,
-  imgTpl?: string, copyTpl?: string, imageModel?: string,
+  imgTpl?: string, copyTpl?: string, imageModel?: string, brandStyle?: any,
 ): Promise<GeneratedPiece> {
-  const variationPrompt = buildCopyPrompt(mainPrompt, variationNum, totalVariations, lengthInfo, strategy, extraNotes, copyTpl);
+  const variationPrompt = buildCopyPrompt(mainPrompt, variationNum, totalVariations, lengthInfo, strategy, extraNotes, copyTpl, brandStyle);
 
   const { data: copyData, error: copyError } = await supabase.functions.invoke("ai-generate-content", {
     body: { prompt: variationPrompt, tone, platform, type: "copy" },
   });
   const copy = !copyError ? copyData?.content || "" : null;
 
-  const imagePrompt = buildCopyBasedImagePrompt(copy || mainPrompt, variationNum, totalVariations, sizeInfo, strategy, imgTpl);
+  const imagePrompt = buildCopyBasedImagePrompt(copy || mainPrompt, variationNum, totalVariations, sizeInfo, strategy, imgTpl, brandStyle);
 
   const { data: imgData, error: imgError } = await supabase.functions.invoke("ai-generate-content", {
     body: { prompt: imagePrompt, tone, platform, type: "image", width: sizeInfo.w, height: sizeInfo.h, imageModel, sizeLabel: sizeInfo.label },
@@ -940,12 +989,13 @@ async function generateVariationWithCopyBasedImage(
 function buildCopyBasedImagePrompt(
   copyText: string, variationNum: number, totalVariations: number,
   sizeInfo?: { label: string; w: number; h: number },
-  strategy?: any, adminTemplate?: string,
+  strategy?: any, adminTemplate?: string, brandStyle?: any,
 ): string {
   const sizeHint = sizeInfo
     ? `\nDIMENSIONES OBLIGATORIAS: ${sizeInfo.w}x${sizeInfo.h}px (${sizeInfo.label}). Diseña la composición específicamente para este formato.`
     : "";
   const strategyHint = buildStrategyContextForImage(strategy);
+  const brandHint = buildBrandStyleContext(brandStyle);
   const baseTemplate = adminTemplate?.trim() ? `${adminTemplate}\n\n` : "";
 
   return `${baseTemplate}Eres un diseñador gráfico profesional y director de arte senior. A partir del siguiente copy de marketing, crea una imagen publicitaria profesional.
@@ -971,7 +1021,7 @@ DISEÑO VISUAL:
 - Imágenes/ilustraciones relevantes al contenido
 - Visualmente impactante (detener el scroll)
 - Jerarquía: imagen de fondo > título > CTA
-${sizeHint}${strategyHint}
+${sizeHint}${strategyHint}${brandHint}
 
 Variación visual #${variationNum} de ${totalVariations}: Usa estilo, composición y paleta COMPLETAMENTE DIFERENTE.`;
 }
