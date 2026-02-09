@@ -254,20 +254,47 @@ REGLAS:
     if (!prompt) return;
     setSavingIds(prev => new Set(prev).add(id));
     try {
+      // Generate a social media copy for the video post
+      let generatedCopy = "";
+      try {
+        const copyPrompt = `Genera un copy profesional para publicar un video en redes sociales.
+
+CONTEXTO DEL VIDEO: "${mainPrompt}"
+PLATAFORMA: ${videoPlatform}
+TONO: ${tone}
+
+REGLAS:
+- Escribe SOLO el copy listo para publicar (sin explicaciones)
+- Incluye emojis relevantes
+- Incluye hashtags al final
+- Máximo 2200 caracteres
+- Incluye un call-to-action sutil
+- El copy debe complementar el video, NO describir lo que se ve`;
+
+        const { data: copyData, error: copyError } = await supabase.functions.invoke("ai-generate-content", {
+          body: { prompt: copyPrompt, tone, platform: videoPlatform, type: "copy" },
+        });
+        if (!copyError && copyData?.content) {
+          generatedCopy = copyData.content;
+        }
+      } catch (copyErr) {
+        console.error("Error generating copy for video draft:", copyErr);
+      }
+
       const platformLower = videoPlatform.toLowerCase().replace(/\s+/g, "-");
       const result = await content.createPost({
         title: mainPrompt.slice(0, 60) || "Video IA",
-        body: prompt.prompt,
+        body: generatedCopy || `📹 Video: ${mainPrompt}`,
         status: "draft",
         ai_generated: true,
-        ai_prompt: mainPrompt,
+        ai_prompt: prompt.prompt,
         platforms: [platformLower],
         media_type: "video",
         media_urls: [],
       });
       if (result) {
         setPrompts(prev => prev.map(p => p.id === id ? { ...p, savedPostId: result.id } : p));
-        toast.success("Borrador de video guardado — sube el video cuando lo generes");
+        toast.success("Borrador guardado con copy y prompt de video");
       }
     } catch (err) {
       console.error(err);
