@@ -152,7 +152,8 @@ const expertSizesByPlatform: Record<string, { category: string; sizes: { label: 
   ],
 };
 
-const MAX_PIECES = 4;
+const MAX_PIECES_DEFAULT = 4;
+const MAX_PIECES_ADMIN = 10;
 
 const ContentAIGenerator = ({ content }: Props) => {
   const [count, setCount] = useState(2);
@@ -185,7 +186,8 @@ const ContentAIGenerator = ({ content }: Props) => {
   const { data: imagePromptTemplate } = useActivePromptTemplate("image");
   const { data: copyPromptTemplate } = useActivePromptTemplate("copy");
 
-  const updateCount = (n: number) => setCount(Math.max(1, Math.min(MAX_PIECES, n)));
+  const maxPieces = isSuperAdmin ? MAX_PIECES_ADMIN : MAX_PIECES_DEFAULT;
+  const updateCount = (n: number) => setCount(Math.max(1, Math.min(maxPieces, n)));
 
   const randomPick = <T extends { label: string }>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)].label;
 
@@ -547,7 +549,7 @@ const ContentAIGenerator = ({ content }: Props) => {
               <Minus className="w-4 h-4" />
             </Button>
             <span className="text-xl font-bold w-8 text-center">{count}</span>
-            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => updateCount(count + 1)} disabled={count >= MAX_PIECES}>
+            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => updateCount(count + 1)} disabled={count >= maxPieces}>
               <Plus className="w-4 h-4" />
             </Button>
           </div>
