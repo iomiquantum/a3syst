@@ -135,7 +135,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { prompt, tone, platform, type, width, height, imageModel, sizeLabel, expertMode } = await req.json();
+    const { prompt, tone, platform, type, width, height, imageModel, sizeLabel, expertMode, referenceImageUrl } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -212,6 +212,15 @@ The final image must be 100% CLEAN — as if it were a real advertisement ready 
 
       console.log("Image generation - model:", imageModel || "pro", "- requested:", width, "x", height, "-> aspectRatio:", aspectRatio);
 
+      // Build messages: if we have a reference image, send it as visual context
+      const userContent: any[] = [];
+      if (referenceImageUrl) {
+        userContent.push({ type: "image_url", image_url: { url: referenceImageUrl } });
+        userContent.push({ type: "text", text: `INSTRUCCIÓN CRÍTICA: La imagen adjunta es la imagen ORIGINAL. Debes generar una imagen IDÉNTICA en contenido, textos, colores, composición, estilo y diseño. La ÚNICA diferencia debe ser el formato/aspecto adaptado a ${aspectRatio || "las nuevas dimensiones"}. NO cambies NADA del diseño original.\n\n${imagePrompt}` });
+      } else {
+        userContent.push({ type: "text", text: imagePrompt });
+      }
+
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -220,7 +229,7 @@ The final image must be 100% CLEAN — as if it were a real advertisement ready 
         },
         body: JSON.stringify({
           model: imageModel === "flash" ? "google/gemini-2.5-flash-image" : "google/gemini-3-pro-image-preview",
-          messages: [{ role: "user", content: imagePrompt }],
+          messages: [{ role: "user", content: userContent }],
           modalities: ["image", "text"],
           ...(aspectRatio ? { aspect_ratio: aspectRatio, image_generation_config: { aspectRatio } } : {}),
         }),
