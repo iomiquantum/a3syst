@@ -564,6 +564,47 @@ export type Database = {
           },
         ]
       }
+      clinic_brand_styles: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          name: string
+          palette: Json
+          reference_images: string[]
+          style_description: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          name?: string
+          palette?: Json
+          reference_images?: string[]
+          style_description?: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          palette?: Json
+          reference_images?: string[]
+          style_description?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_brand_styles_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinics: {
         Row: {
           address: string | null
