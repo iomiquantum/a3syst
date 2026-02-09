@@ -10,6 +10,8 @@ export interface PsychoService {
   core_benefit: string;
   pain_point: string;
   target_price: string;
+  price: number;
+  observations: string;
   created_at: string;
 }
 
@@ -68,7 +70,7 @@ export function useCreateService() {
   const { clinicId } = useClinic();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: async (svc: { name: string; core_benefit: string; pain_point: string; target_price: string }) => {
+    mutationFn: async (svc: { name: string; core_benefit: string; pain_point: string; target_price: string; price?: number; observations?: string }) => {
       if (!clinicId) throw new Error("No hay clínica seleccionada");
       const { data, error } = await supabase
         .from("psycho_matrix_services" as any)

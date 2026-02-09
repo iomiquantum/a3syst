@@ -44,7 +44,8 @@ const StrategyCard = ({ service, selection, onBack }: Props) => {
     disp?.label || selection.disparador,
     gen?.label || selection.generacion,
     avz?.label,
-    selection.customNotes || undefined
+    selection.customNotes || undefined,
+    (selection as any).canalPNL || undefined
   );
 
   const handleCopiar = () => {

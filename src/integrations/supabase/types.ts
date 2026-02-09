@@ -1145,7 +1145,9 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          observations: string | null
           pain_point: string
+          price: number | null
           target_price: string
           updated_at: string
         }
@@ -1155,7 +1157,9 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          observations?: string | null
           pain_point?: string
+          price?: number | null
           target_price?: string
           updated_at?: string
         }
@@ -1165,7 +1169,9 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          observations?: string | null
           pain_point?: string
+          price?: number | null
           target_price?: string
           updated_at?: string
         }
