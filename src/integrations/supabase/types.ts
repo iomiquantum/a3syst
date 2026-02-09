@@ -1053,6 +1053,261 @@ export type Database = {
           },
         ]
       }
+      planning_columns: {
+        Row: {
+          clinic_id: string
+          color: string
+          created_at: string
+          id: string
+          name: string
+          position: number
+          project_id: string
+        }
+        Insert: {
+          clinic_id: string
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          project_id: string
+        }
+        Update: {
+          clinic_id?: string
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planning_columns_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_columns_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "planning_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planning_projects: {
+        Row: {
+          clinic_id: string
+          color: string
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          color?: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          color?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planning_projects_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planning_screenshots: {
+        Row: {
+          capture_type: string
+          captured_at: string
+          clinic_id: string
+          id: string
+          image_url: string
+          time_entry_id: string
+          user_id: string
+        }
+        Insert: {
+          capture_type?: string
+          captured_at?: string
+          clinic_id: string
+          id?: string
+          image_url: string
+          time_entry_id: string
+          user_id: string
+        }
+        Update: {
+          capture_type?: string
+          captured_at?: string
+          clinic_id?: string
+          id?: string
+          image_url?: string
+          time_entry_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planning_screenshots_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_screenshots_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "planning_time_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planning_tasks: {
+        Row: {
+          assigned_to: string | null
+          clinic_id: string
+          column_id: string
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string | null
+          id: string
+          position: number
+          priority: string
+          project_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          clinic_id: string
+          column_id: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          position?: number
+          priority?: string
+          project_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          clinic_id?: string
+          column_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          position?: number
+          priority?: string
+          project_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planning_tasks_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_tasks_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "planning_columns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "planning_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planning_time_entries: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          duration_seconds: number | null
+          ended_at: string | null
+          id: string
+          notes: string | null
+          started_at: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          notes?: string | null
+          started_at?: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          notes?: string | null
+          started_at?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planning_time_entries_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_time_entries_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "planning_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professionals: {
         Row: {
           active: boolean
