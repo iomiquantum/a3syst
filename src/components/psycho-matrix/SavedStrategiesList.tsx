@@ -5,13 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { usePsychoStrategies, useUpdateStrategy, useDeleteStrategy, type PsychoStrategy } from "@/hooks/usePsychoMatrix";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { usePsychoStrategies, useUpdateStrategy, useDeleteStrategy, useDuplicateStrategy, type PsychoStrategy } from "@/hooks/usePsychoMatrix";
 import {
   arquetiposDigitales, arquetiposMarca, disparadoresPersuasion,
-  codigosGeneracionales, psicologiaAvanzada,
+  codigosGeneracionales, psicologiaAvanzada, canalsPNL,
 } from "@/lib/psychoMatrixData";
-import { Copy, Sparkles, Pencil, Trash2 } from "lucide-react";
+import { Copy, Sparkles, Pencil, Trash2, CopyPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const buscar = (lista: { id: string; label: string }[], id: string) => lista.find((i) => i.id === id)?.label || id;
@@ -20,10 +22,18 @@ const SavedStrategiesList = () => {
   const { data: estrategias = [], isLoading } = usePsychoStrategies();
   const updateStrategy = useUpdateStrategy();
   const deleteStrategy = useDeleteStrategy();
+  const duplicateStrategy = useDuplicateStrategy();
   const { toast } = useToast();
   const [editingStrategy, setEditingStrategy] = useState<PsychoStrategy | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editPrompt, setEditPrompt] = useState("");
+  const [editFields, setEditFields] = useState({
+    name: "",
+    archetype: "",
+    brand_voice: "",
+    persuasion_trigger: "",
+    generation: "",
+    advanced_tech: "",
+    generated_prompt: "",
+  });
 
   const copiarPrompt = (prompt: string | null) => {
     if (!prompt) return;
@@ -33,17 +43,36 @@ const SavedStrategiesList = () => {
 
   const openEdit = (s: PsychoStrategy) => {
     setEditingStrategy(s);
-    setEditName(s.name);
-    setEditPrompt(s.generated_prompt || "");
+    setEditFields({
+      name: s.name,
+      archetype: s.archetype,
+      brand_voice: s.brand_voice,
+      persuasion_trigger: s.persuasion_trigger,
+      generation: s.generation,
+      advanced_tech: s.advanced_tech || "",
+      generated_prompt: s.generated_prompt || "",
+    });
   };
 
   const handleSaveEdit = async () => {
     if (!editingStrategy) return;
     await updateStrategy.mutateAsync({
       id: editingStrategy.id,
-      updates: { name: editName, generated_prompt: editPrompt },
+      updates: {
+        name: editFields.name,
+        archetype: editFields.archetype,
+        brand_voice: editFields.brand_voice,
+        persuasion_trigger: editFields.persuasion_trigger,
+        generation: editFields.generation,
+        advanced_tech: editFields.advanced_tech || null,
+        generated_prompt: editFields.generated_prompt,
+      },
     });
     setEditingStrategy(null);
+  };
+
+  const handleDuplicate = async (s: PsychoStrategy) => {
+    await duplicateStrategy.mutateAsync(s);
   };
 
   const handleDelete = async (id: string) => {
@@ -80,6 +109,9 @@ const SavedStrategiesList = () => {
                   <Button variant="ghost" size="icon" onClick={() => openEdit(s)} title="Editar estrategia">
                     <Pencil className="w-4 h-4" />
                   </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleDuplicate(s)} title="Duplicar estrategia" disabled={duplicateStrategy.isPending}>
+                    <CopyPlus className="w-4 h-4" />
+                  </Button>
                   <Button variant="ghost" size="icon" onClick={() => copiarPrompt(s.generated_prompt)} title="Copiar prompt">
                     <Copy className="w-4 h-4" />
                   </Button>
@@ -95,49 +127,93 @@ const SavedStrategiesList = () => {
 
       {/* Edit dialog */}
       <Dialog open={!!editingStrategy} onOpenChange={(open) => { if (!open) setEditingStrategy(null); }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="max-w-lg max-h-[90vh] p-0">
+          <DialogHeader className="px-6 pt-6 pb-2">
             <DialogTitle className="flex items-center gap-2">
               <Pencil className="w-5 h-5 text-primary" />
               Editar estrategia
             </DialogTitle>
           </DialogHeader>
           {editingStrategy && (
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <Label className="text-sm">Nombre</Label>
-                <Input value={editName} onChange={e => setEditName(e.target.value)} />
-              </div>
+            <ScrollArea className="px-6 pb-6 max-h-[calc(90vh-80px)]">
+              <div className="space-y-4 pr-2">
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Nombre</Label>
+                  <Input value={editFields.name} onChange={e => setEditFields({ ...editFields, name: e.target.value })} />
+                </div>
 
-              <div className="flex flex-wrap gap-1.5">
-                <Badge variant="secondary" className="text-[10px]">{buscar(arquetiposDigitales, editingStrategy.archetype)}</Badge>
-                <Badge variant="secondary" className="text-[10px]">{buscar(arquetiposMarca, editingStrategy.brand_voice)}</Badge>
-                <Badge variant="secondary" className="text-[10px]">{buscar(disparadoresPersuasion, editingStrategy.persuasion_trigger)}</Badge>
-                <Badge variant="secondary" className="text-[10px]">{buscar(codigosGeneracionales, editingStrategy.generation)}</Badge>
-                {editingStrategy.advanced_tech && <Badge variant="outline" className="text-[10px]">{buscar(psicologiaAvanzada, editingStrategy.advanced_tech)}</Badge>}
-              </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Arquetipo Objetivo</Label>
+                    <Select value={editFields.archetype} onValueChange={v => setEditFields({ ...editFields, archetype: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {arquetiposDigitales.map(o => <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Voz de Marca</Label>
+                    <Select value={editFields.brand_voice} onValueChange={v => setEditFields({ ...editFields, brand_voice: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {arquetiposMarca.map(o => <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Disparador</Label>
+                    <Select value={editFields.persuasion_trigger} onValueChange={v => setEditFields({ ...editFields, persuasion_trigger: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {disparadoresPersuasion.map(o => <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Generación</Label>
+                    <Select value={editFields.generation} onValueChange={v => setEditFields({ ...editFields, generation: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {codigosGeneracionales.map(o => <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-sm">Prompt de la estrategia (editable)</Label>
-                <Textarea
-                  value={editPrompt}
-                  onChange={e => setEditPrompt(e.target.value)}
-                  className="min-h-[200px] text-xs font-mono"
-                  placeholder="El prompt generado para esta estrategia..."
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  Este prompt se usa al generar contenido con esta estrategia en el generador de contenido.
-                </p>
-              </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Técnica Avanzada (opcional)</Label>
+                  <Select value={editFields.advanced_tech || "none"} onValueChange={v => setEditFields({ ...editFields, advanced_tech: v === "none" ? "" : v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin técnica avanzada</SelectItem>
+                      {psicologiaAvanzada.map(o => <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <Button
-                onClick={handleSaveEdit}
-                disabled={updateStrategy.isPending}
-                className="w-full gradient-primary text-primary-foreground gap-2"
-              >
-                Guardar cambios
-              </Button>
-            </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Prompt de la estrategia</Label>
+                  <Textarea
+                    value={editFields.generated_prompt}
+                    onChange={e => setEditFields({ ...editFields, generated_prompt: e.target.value })}
+                    className="min-h-[180px] text-xs font-mono"
+                    placeholder="El prompt generado para esta estrategia..."
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Este prompt se usa al generar contenido con esta estrategia en el generador de contenido.
+                  </p>
+                </div>
+
+                <Button
+                  onClick={handleSaveEdit}
+                  disabled={updateStrategy.isPending}
+                  className="w-full gradient-primary text-primary-foreground gap-2"
+                >
+                  Guardar cambios
+                </Button>
+              </div>
+            </ScrollArea>
           )}
         </DialogContent>
       </Dialog>

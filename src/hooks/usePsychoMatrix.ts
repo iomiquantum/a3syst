@@ -91,6 +91,29 @@ export function useCreateService() {
   });
 }
 
+export function useDuplicateStrategy() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async (original: PsychoStrategy) => {
+      const { id, created_at, updated_at, ...rest } = original as any;
+      const { data, error } = await supabase
+        .from("psycho_matrix_strategies" as any)
+        .insert({ ...rest, name: `${original.name} (copia)` })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as unknown as PsychoStrategy;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["psycho-strategies"] });
+      toast({ title: "Estrategia duplicada" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error al duplicar", description: error.message, variant: "destructive" });
+    },
+  });
+}
 export function useSaveStrategy() {
   const qc = useQueryClient();
   const { clinicId } = useClinic();
