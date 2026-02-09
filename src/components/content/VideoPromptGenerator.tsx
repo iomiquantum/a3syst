@@ -17,7 +17,7 @@ import { useClinic } from "@/hooks/useClinic";
 import { useActivePromptTemplate, usePromptTemplates, useSavePromptTemplate } from "@/hooks/usePromptTemplates";
 import {
   arquetiposDigitales, arquetiposMarca, disparadoresPersuasion,
-  codigosGeneracionales, psicologiaAvanzada,
+  codigosGeneracionales, psicologiaAvanzada, canalsPNL,
 } from "@/lib/psychoMatrixData";
 
 const tones = ["Profesional", "Casual", "Inspirador", "Educativo", "Humorístico", "Urgente", "Emotivo"];
@@ -243,7 +243,7 @@ const VideoPromptGenerator = ({ content }: Props) => {
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>("none");
   const [magicMode, setMagicMode] = useState(false);
   const [magicFormula, setMagicFormula] = useState<{
-    archetype: string; brand_voice: string; persuasion_trigger: string; generation: string; advanced_tech: string;
+    archetype: string; brand_voice: string; persuasion_trigger: string; generation: string; advanced_tech: string; canal_pnl: string;
   } | null>(null);
   const [generating, setGenerating] = useState(false);
   const [prompts, setPrompts] = useState<GeneratedVideoPrompt[]>([]);
@@ -282,12 +282,14 @@ const VideoPromptGenerator = ({ content }: Props) => {
 
   const hacerMagia = () => {
     setTone(tones[Math.floor(Math.random() * tones.length)]);
+    const randomVAK = canalsPNL[Math.floor(Math.random() * canalsPNL.length)];
     setMagicFormula({
       archetype: randomPick(arquetiposDigitales),
       brand_voice: randomPick(arquetiposMarca),
       persuasion_trigger: randomPick(disparadoresPersuasion),
       generation: randomPick(codigosGeneracionales),
       advanced_tech: Math.random() > 0.4 ? randomPick(psicologiaAvanzada) : "",
+      canal_pnl: randomVAK.label,
     });
     setSelectedStrategyId("none");
     setSelectedServiceId("none");
@@ -355,12 +357,29 @@ const VideoPromptGenerator = ({ content }: Props) => {
     // Strategy block
     let strategyBlock = "";
     if (strategy) {
+      // PNL block for video
+      let pnlVideoBlock = "";
+      if ((strategy as any).canal_pnl) {
+        const vakOption = canalsPNL.find(c => c.label === (strategy as any).canal_pnl || c.id === (strategy as any).canal_pnl);
+        if (vakOption) {
+          const channelVideoMap: Record<string, string> = {
+            "visual": "Prioriza tomas visualmente impactantes: colores vibrantes, slow-motion, antes/después, composiciones simétricas, luz dramática",
+            "auditivo": "Enfatiza el diseño sonoro: narración voice-over emotiva, música con buildup, SFX en momentos clave, subtítulos siempre visibles, diálogo directo",
+            "kinestésico": "Transmite sensaciones físicas: close-ups de texturas, tacto, expresiones faciales emotivas, contacto humano, movimientos de cámara orgánicos tipo handheld",
+          };
+          const videoHints = vakOption.channels.map(ch => channelVideoMap[ch] || "").filter(Boolean).join(". ");
+          pnlVideoBlock = `\n- Canal sensorial PNL (${vakOption.label}): ${videoHints}
+  - Patrones lingüísticos para voice-over/textos: ${vakOption.languagePatterns}
+  - El video debe evocar el sistema representacional ${vakOption.channels.join(" + ")} del espectador en CADA escena`;
+        }
+      }
+
       strategyBlock = `\n\nESTRATEGIA PSYCHO-MATRIX APLICADA:
 - Arquetipo digital: ${strategy.archetype} → Define el mood visual, paleta emocional, tipo de personajes/escenarios y ritmo narrativo
 - Voz de marca: ${strategy.brand_voice} → Determina el estilo de edición, tipografía en pantalla, música y tono general
 - Gatillo de persuasión: ${strategy.persuasion_trigger} → La emoción central que cada escena debe evocar en el espectador
 - Generación objetivo: ${strategy.generation} → Adapta la estética, referencias culturales, códigos visuales y lenguaje
-${strategy.advanced_tech ? `- Técnica psicológica avanzada: ${strategy.advanced_tech} → Aplica este principio en la estructura narrativa y cierre del video` : ""}`;
+${strategy.advanced_tech ? `- Técnica psicológica avanzada: ${strategy.advanced_tech} → Aplica este principio en la estructura narrativa y cierre del video` : ""}${pnlVideoBlock}`;
     }
 
     const extraBlock = extraNotes?.trim() ? `\n\nINSTRUCCIONES ADICIONALES DEL USUARIO: ${extraNotes}` : "";
@@ -595,10 +614,23 @@ VARIACIÓN #${variationNum} de ${totalVariations}: ${variationAngles[angleIdx]}
       let generatedCopy = "";
       try {
         const service = services.find(s => s.id === selectedServiceId);
+        const strategy = magicMode && magicFormula
+          ? magicFormula
+          : strategies.find(s => s.id === selectedStrategyId);
+        
+        let pnlCopyHint = "";
+        if (strategy && (strategy as any).canal_pnl) {
+          const vakOpt = canalsPNL.find(c => c.label === (strategy as any).canal_pnl || c.id === (strategy as any).canal_pnl);
+          if (vakOpt) {
+            pnlCopyHint = `\nCANAL SENSORIAL PNL: Escribe usando predicados del canal ${vakOpt.channels.join(" + ")}. Patrones: ${vakOpt.languagePatterns}`;
+          }
+        }
+
         const copyPrompt = `Genera un copy profesional para publicar un video en redes sociales.
 
 CONTEXTO DEL VIDEO: "${mainPrompt}"
 ${service ? `PRODUCTO/SERVICIO: "${service.name}" — ${service.core_benefit}` : ""}
+${strategy ? `ESTRATEGIA: Arquetipo ${strategy.archetype}, Voz ${strategy.brand_voice}, Gatillo ${strategy.persuasion_trigger}, Generación ${strategy.generation}` : ""}${pnlCopyHint}
 PLATAFORMA: ${videoPlatform}
 TONO: ${tone}
 
@@ -748,6 +780,7 @@ REGLAS:
               { label: "Gatillo", value: magicFormula.persuasion_trigger },
               { label: "Generación", value: magicFormula.generation },
               ...(magicFormula.advanced_tech ? [{ label: "Psico Avanzada", value: magicFormula.advanced_tech }] : []),
+              ...(magicFormula.canal_pnl ? [{ label: "Canal PNL", value: magicFormula.canal_pnl }] : []),
             ].map(item => (
               <div key={item.label} className="space-y-0.5">
                 <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{item.label}</p>

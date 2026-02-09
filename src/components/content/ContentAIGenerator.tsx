@@ -20,7 +20,7 @@ import { useActivePromptTemplate } from "@/hooks/usePromptTemplates";
 import { useClinic } from "@/hooks/useClinic";
 import {
   arquetiposDigitales, arquetiposMarca, disparadoresPersuasion,
-  codigosGeneracionales, psicologiaAvanzada,
+  codigosGeneracionales, psicologiaAvanzada, canalsPNL,
 } from "@/lib/psychoMatrixData";
 
 interface Props {
@@ -174,7 +174,7 @@ const ContentAIGenerator = ({ content }: Props) => {
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>("none");
   const [magicMode, setMagicMode] = useState(false);
   const [magicFormula, setMagicFormula] = useState<{
-    archetype: string; brand_voice: string; persuasion_trigger: string; generation: string; advanced_tech: string;
+    archetype: string; brand_voice: string; persuasion_trigger: string; generation: string; advanced_tech: string; canal_pnl: string;
   } | null>(null);
   const [imageFromCopy, setImageFromCopy] = useState(false);
   const [imageModel, setImageModel] = useState<"flash" | "pro">("pro");
@@ -204,13 +204,14 @@ const ContentAIGenerator = ({ content }: Props) => {
 
   const hacerMagia = () => {
     setTone(tones[Math.floor(Math.random() * tones.length)]);
-    // copyLength is no longer randomized - user controls it independently
+    const randomVAK = canalsPNL[Math.floor(Math.random() * canalsPNL.length)];
     setMagicFormula({
       archetype: randomPick(arquetiposDigitales),
       brand_voice: randomPick(arquetiposMarca),
       persuasion_trigger: randomPick(disparadoresPersuasion),
       generation: randomPick(codigosGeneracionales),
       advanced_tech: Math.random() > 0.4 ? randomPick(psicologiaAvanzada) : "",
+      canal_pnl: randomVAK.label,
     });
     setSelectedStrategyId("none");
   };
@@ -503,6 +504,7 @@ const ContentAIGenerator = ({ content }: Props) => {
               { label: "Gatillo", value: magicFormula.persuasion_trigger },
               { label: "Generación", value: magicFormula.generation },
               ...(magicFormula.advanced_tech ? [{ label: "Psico Avanzada", value: magicFormula.advanced_tech }] : []),
+              ...(magicFormula.canal_pnl ? [{ label: "Canal PNL", value: magicFormula.canal_pnl }] : []),
             ].map(item => (
               <div key={item.label} className="space-y-0.5">
                 <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{item.label}</p>
@@ -864,26 +866,55 @@ export default ContentAIGenerator;
 
 // ── Helpers ──
 
+function buildPNLContext(strategy: any): string {
+  if (!strategy?.canal_pnl) return "";
+  // Find VAK option by label (magic mode uses labels)
+  const vakOption = canalsPNL.find(c => c.label === strategy.canal_pnl || c.id === strategy.canal_pnl);
+  if (!vakOption) return "";
+  return `\n\nPROGRAMACIÓN NEUROLINGÜÍSTICA (PNL) - CANAL SENSORIAL:
+- Canal: ${vakOption.label}
+- Canales activos: ${vakOption.channels.join(" + ")}
+- Descripción: ${vakOption.description}
+- PATRONES LINGÜÍSTICOS OBLIGATORIOS: Usa predominantemente estos predicados y verbos sensoriales: ${vakOption.languagePatterns}
+- Ejemplo de aplicación: ${vakOption.example}
+- IMPORTANTE: Todo el copy debe estar escrito usando el sistema representacional ${vakOption.channels.join(" + ")} para conectar subconscientemente con el prospecto.`;
+}
+
 function buildStrategyContextForCopy(strategy: any): string {
   if (!strategy) return "";
+  const pnlBlock = buildPNLContext(strategy);
   return `\n\nESTRATEGIA DE MARKETING (Psycho-Matrix):
 - Arquetipo: ${strategy.archetype}
 - Voz de marca: ${strategy.brand_voice}
 - Gatillo de persuasión: ${strategy.persuasion_trigger}
 - Generación objetivo: ${strategy.generation}
 ${strategy.advanced_tech ? `- Técnica avanzada: ${strategy.advanced_tech}` : ""}
-${(strategy as any).generated_prompt ? `- Prompt estratégico: ${(strategy as any).generated_prompt}` : ""}
+${(strategy as any).generated_prompt ? `- Prompt estratégico: ${(strategy as any).generated_prompt}` : ""}${pnlBlock}
 Aplica esta estrategia al copy generado.`;
 }
 
 function buildStrategyContextForImage(strategy: any): string {
   if (!strategy) return "";
+  // PNL for images: adapt visual language to sensory channel
+  let pnlVisual = "";
+  if (strategy.canal_pnl) {
+    const vakOption = canalsPNL.find(c => c.label === strategy.canal_pnl || c.id === strategy.canal_pnl);
+    if (vakOption) {
+      const channelVisualMap: Record<string, string> = {
+        "visual": "Prioriza colores vibrantes, alto contraste, composiciones llamativas, antes/después impactantes",
+        "auditivo": "Incluye elementos que evoquen sonido: ondas, bocadillos de texto como diálogo, iconos de audio, subtítulos",
+        "kinestésico": "Transmite sensaciones táctiles: texturas, close-ups de piel, expresiones emotivas, contacto humano, calidez",
+      };
+      const visualHints = vakOption.channels.map(ch => channelVisualMap[ch] || "").filter(Boolean).join(". ");
+      pnlVisual = `\n- Canal sensorial PNL (${vakOption.label}): ${visualHints}. La imagen debe evocar el sistema representacional ${vakOption.channels.join(" + ")} del prospecto.`;
+    }
+  }
   return `\n\nDIRECCIÓN VISUAL BASADA EN ESTRATEGIA (NO escribir estos términos como texto en la imagen):
 - Estilo visual inspirado en arquetipo "${strategy.archetype}": adapta colores, iluminación y mood
 - Voz visual "${strategy.brand_voice}": refleja este tono en la estética, fotografía y composición
 - Emoción del gatillo "${strategy.persuasion_trigger}": transmite esta emoción visualmente (expresiones, colores, escenas)
 - Generación "${strategy.generation}": adapta el estilo gráfico a las preferencias visuales de esta audiencia
-${strategy.advanced_tech ? `- Técnica visual "${strategy.advanced_tech}": aplica este concepto en la dirección artística` : ""}
+${strategy.advanced_tech ? `- Técnica visual "${strategy.advanced_tech}": aplica este concepto en la dirección artística` : ""}${pnlVisual}
 IMPORTANTE: Estos elementos son SOLO para dirección artística y composición visual. NUNCA escribas nombres de arquetipos, técnicas psicológicas o gatillos como texto visible en la imagen.`;
 }
 

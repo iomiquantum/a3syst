@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
   arquetiposDigitales, arquetiposMarca, disparadoresPersuasion,
-  codigosGeneracionales, psicologiaAvanzada, construirPrompt,
+  codigosGeneracionales, psicologiaAvanzada, canalsPNL, construirPrompt,
 } from "@/lib/psychoMatrixData";
 import type { PsychoService } from "@/hooks/usePsychoMatrix";
 import { useSaveStrategy } from "@/hooks/usePsychoMatrix";
@@ -36,6 +36,7 @@ const StrategyCard = ({ service, selection, onBack }: Props) => {
   const disp = buscarOpcion(disparadoresPersuasion, selection.disparador);
   const gen = buscarOpcion(codigosGeneracionales, selection.generacion);
   const avz = selection.tecAvanzada && selection.tecAvanzada !== "none" ? buscarOpcion(psicologiaAvanzada, selection.tecAvanzada) : null;
+  const vakOption = selection.canalPNL ? canalsPNL.find(c => c.id === selection.canalPNL) : null;
 
   const prompt = construirPrompt(
     service,
@@ -45,7 +46,7 @@ const StrategyCard = ({ service, selection, onBack }: Props) => {
     gen?.label || selection.generacion,
     avz?.label,
     selection.customNotes || undefined,
-    (selection as any).canalPNL || undefined
+    selection.canalPNL || undefined
   );
 
   const handleCopiar = () => {
@@ -74,6 +75,7 @@ const StrategyCard = ({ service, selection, onBack }: Props) => {
     { etiqueta: "Disparador de Persuasión", valor: disp },
     { etiqueta: "Generación", valor: gen },
     ...(avz ? [{ etiqueta: "Técnica Avanzada", valor: avz }] : []),
+    ...(vakOption ? [{ etiqueta: "Canal Sensorial PNL", valor: { label: vakOption.label, description: vakOption.description } }] : []),
   ];
 
   return (
