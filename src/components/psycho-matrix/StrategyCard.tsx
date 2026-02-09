@@ -11,9 +11,10 @@ import {
 import type { PsychoService } from "@/hooks/usePsychoMatrix";
 import { useSaveStrategy } from "@/hooks/usePsychoMatrix";
 import type { Seleccion } from "@/components/psycho-matrix/MatrixMixer";
-import { Copy, Save, ArrowLeft, Sparkles, CheckCircle2 } from "lucide-react";
+import { Copy, Save, ArrowLeft, Sparkles, CheckCircle2, Pencil, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Props {
   service: PsychoService;
@@ -30,6 +31,7 @@ const StrategyCard = ({ service, selection, onBack }: Props) => {
   const guardarEstrategia = useSaveStrategy();
   const [nombreEstrategia, setNombreEstrategia] = useState(`Estrategia ${service.name}`);
   const [copiado, setCopiado] = useState(false);
+  const [savedStrategy, setSavedStrategy] = useState<{ id: string; name: string } | null>(null);
 
   const arq = buscarOpcion(arquetiposDigitales, selection.arquetipo);
   const marca = buscarOpcion(arquetiposMarca, selection.vozMarca);
@@ -57,7 +59,7 @@ const StrategyCard = ({ service, selection, onBack }: Props) => {
   };
 
   const handleGuardar = async () => {
-    await guardarEstrategia.mutateAsync({
+    const result = await guardarEstrategia.mutateAsync({
       service_id: service.id,
       name: nombreEstrategia,
       archetype: selection.arquetipo,
@@ -67,6 +69,7 @@ const StrategyCard = ({ service, selection, onBack }: Props) => {
       advanced_tech: selection.tecAvanzada !== "none" ? selection.tecAvanzada : undefined,
       generated_prompt: prompt,
     });
+    setSavedStrategy({ id: result.id, name: nombreEstrategia });
   };
 
   const elementos = [
@@ -136,6 +139,27 @@ const StrategyCard = ({ service, selection, onBack }: Props) => {
           </div>
         </CardContent>
       </Card>
+      {/* Success dialog */}
+      <Dialog open={!!savedStrategy} onOpenChange={(open) => { if (!open) setSavedStrategy(null); }}>
+        <DialogContent className="max-w-sm text-center">
+          <DialogHeader>
+            <DialogTitle className="flex flex-col items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <CheckCircle2 className="w-6 h-6 text-primary" />
+              </div>
+              ¡Estrategia guardada!
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">"{savedStrategy?.name}"</span> se guardó en Mis Estrategias.
+          </p>
+          <div className="flex flex-col gap-2 mt-2">
+            <Button variant="outline" className="gap-2" onClick={() => { setSavedStrategy(null); onBack(); }}>
+              <RotateCcw className="w-4 h-4" /> Crear otra estrategia
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
