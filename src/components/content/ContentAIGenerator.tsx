@@ -422,47 +422,91 @@ const ContentAIGenerator = ({ content }: Props) => {
       </div>
 
       {/* ✨ Hacer Magia checkbox + Abra cadabra */}
-      <div className="flex items-center gap-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="magic-mode"
-            checked={magicMode}
-            onCheckedChange={(checked) => handleMagicToggle(checked === true)}
-          />
-          <label htmlFor="magic-mode" className="flex items-center gap-1.5 text-sm font-medium cursor-pointer text-foreground">
-            <Sparkles className="w-4 h-4 text-primary" />
-            ✨ Hacer magia
-          </label>
+      <div className="space-y-3">
+        <div className="flex items-center gap-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="magic-mode"
+              checked={magicMode}
+              onCheckedChange={(checked) => handleMagicToggle(checked === true)}
+            />
+            <label htmlFor="magic-mode" className="flex items-center gap-1.5 text-sm font-medium cursor-pointer text-foreground">
+              <Sparkles className="w-4 h-4 text-primary" />
+              ✨ Hacer magia
+            </label>
+          </div>
+          {magicMode && (
+            <Button variant="outline" onClick={hacerMagia} className="gap-2 border-primary/30 text-primary hover:bg-primary/10">
+              <RefreshCw className="w-4 h-4" />
+              Abra cadabra
+            </Button>
+          )}
+          <p className="text-xs text-muted-foreground ml-1">Genera una estrategia aleatoria del Psycho-Matrix ✨</p>
         </div>
-        {magicMode && (
-          <Button variant="outline" onClick={hacerMagia} className="gap-2 border-primary/30 text-primary hover:bg-primary/10">
-            <RefreshCw className="w-4 h-4" />
-            Abra cadabra
-          </Button>
+
+        {/* Show magic formula */}
+        {magicMode && magicFormula && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 p-3 rounded-lg bg-muted/50 border border-border">
+            {[
+              { label: "Arquetipo", value: magicFormula.archetype },
+              { label: "Voz", value: magicFormula.brand_voice },
+              { label: "Gatillo", value: magicFormula.persuasion_trigger },
+              { label: "Generación", value: magicFormula.generation },
+              ...(magicFormula.advanced_tech ? [{ label: "Psico Avanzada", value: magicFormula.advanced_tech }] : []),
+            ].map(item => (
+              <div key={item.label} className="space-y-0.5">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{item.label}</p>
+                <p className="text-xs font-medium text-foreground">{item.value}</p>
+              </div>
+            ))}
+          </div>
         )}
-        <p className="text-xs text-muted-foreground ml-1">Genera una estrategia aleatoria del Psycho-Matrix ✨</p>
       </div>
 
       {/* Strategy selector (only when NOT magic) */}
       {!magicMode && (
-        <div className="space-y-1.5">
-          <Label className="text-sm font-medium">Estrategia Psycho-Matrix (opcional)</Label>
-          <Select value={selectedStrategyId} onValueChange={setSelectedStrategyId}>
-            <SelectTrigger className="mt-1.5">
-              <SelectValue placeholder="Sin estrategia" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Sin estrategia</SelectItem>
-              {strategies.map(s => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name} — {s.archetype} / {s.brand_voice}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {strategies.length === 0 && (
-            <p className="text-xs text-muted-foreground">No tienes estrategias creadas. Crea una en Psycho-Matrix AI.</p>
-          )}
+        <div className="space-y-2">
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Estrategia Psycho-Matrix (opcional)</Label>
+            <Select value={selectedStrategyId} onValueChange={setSelectedStrategyId}>
+              <SelectTrigger className="mt-1.5">
+                <SelectValue placeholder="Sin estrategia" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin estrategia</SelectItem>
+                {strategies.map(s => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name} — {s.archetype} / {s.brand_voice}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {strategies.length === 0 && (
+              <p className="text-xs text-muted-foreground">No tienes estrategias creadas. Crea una en Psycho-Matrix AI.</p>
+            )}
+          </div>
+
+          {/* Show selected strategy formula */}
+          {selectedStrategyId !== "none" && (() => {
+            const strat = strategies.find(s => s.id === selectedStrategyId);
+            if (!strat) return null;
+            return (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 p-3 rounded-lg bg-muted/50 border border-border">
+                {[
+                  { label: "Arquetipo", value: strat.archetype },
+                  { label: "Voz", value: strat.brand_voice },
+                  { label: "Gatillo", value: strat.persuasion_trigger },
+                  { label: "Generación", value: strat.generation },
+                  ...(strat.advanced_tech ? [{ label: "Psico Avanzada", value: strat.advanced_tech }] : []),
+                ].map(item => (
+                  <div key={item.label} className="space-y-0.5">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{item.label}</p>
+                    <p className="text-xs font-medium text-foreground">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       )}
 
