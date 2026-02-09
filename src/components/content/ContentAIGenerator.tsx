@@ -433,10 +433,9 @@ const ContentAIGenerator = ({ content }: Props) => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-foreground">Generar contenido con IA</h2>
+        <h2 className="text-xl font-bold text-foreground">Imágenes + Copy con IA</h2>
         <p className="text-sm text-muted-foreground">
-          Describe lo que quieres crear y elige cuántas variaciones quieres. La IA generará copies e imágenes diferentes,
-          cada uno enfocado a un ángulo o público distinto.
+          Genera imágenes publicitarias con copies optimizados. Cada variación usa un ángulo creativo diferente.
         </p>
       </div>
 
