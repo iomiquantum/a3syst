@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, RefreshCw, Loader2, Pencil, Image as ImageIcon, RotateCcw, Eye, EyeOff, Send, Download, Scaling, ZoomIn } from "lucide-react";
+import { Check, RefreshCw, Loader2, Pencil, Image as ImageIcon, RotateCcw, Eye, EyeOff, Send, Download, Scaling, ZoomIn, Copy } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ interface Props {
   onRegenerateImage: (id: number, customPrompt?: string) => void;
   onRegenerateCopy: (id: number) => void;
   onApprove: (id: number) => void;
+  onDuplicate?: (id: number) => void;
   onResize?: (id: number, targetW: number, targetH: number, label: string) => void;
   regeneratingImage: boolean;
   regeneratingCopy: boolean;
@@ -41,7 +42,7 @@ const resizeSizes = [
   { label: "Feed horizontal", ratio: "1.91:1", w: 1200, h: 630 },
 ];
 
-const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerateCopy, onApprove, onResize, regeneratingImage, regeneratingCopy, platform, sizeLabel, sizeW, sizeH, imageModel = "pro", resizing = false }: Props) => {
+const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerateCopy, onApprove, onDuplicate, onResize, regeneratingImage, regeneratingCopy, platform, sizeLabel, sizeW, sizeH, imageModel = "pro", resizing = false }: Props) => {
   const [editingCopy, setEditingCopy] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState(false);
@@ -388,6 +389,18 @@ const AIGeneratedPiece = ({ piece, onCopyChange, onRegenerateImage, onRegenerate
         >
           <Check className="w-4 h-4" />
           Aprobar y guardar como borrador
+        </Button>
+      )}
+
+      {/* Duplicate / Reuse button (shown after approval) */}
+      {isApproved && onDuplicate && (
+        <Button
+          variant="outline"
+          onClick={() => onDuplicate(piece.id)}
+          className="w-full gap-2 border-primary/30 text-primary hover:bg-primary/5"
+        >
+          <Copy className="w-4 h-4" />
+          Reutilizar como nueva variación
         </Button>
       )}
       {/* Lightbox */}
