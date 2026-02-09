@@ -4,14 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import {
   arquetiposDigitales, arquetiposMarca, disparadoresPersuasion,
-  codigosGeneracionales, psicologiaAvanzada, type MatrixOption,
+  codigosGeneracionales, psicologiaAvanzada, canalsPNL,
+  type MatrixOption, type VAKOption,
 } from "@/lib/psychoMatrixData";
 import type { PsychoService } from "@/hooks/usePsychoMatrix";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
-import { Beaker, Brain, Megaphone, Users, Skull, Zap, ArrowLeft, Sparkles, RefreshCw, Mic, MicOff, PenLine } from "lucide-react";
+import { Beaker, Brain, Megaphone, Users, Skull, Zap, ArrowLeft, Sparkles, RefreshCw, Mic, MicOff, PenLine, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface Seleccion {
@@ -20,6 +20,7 @@ export interface Seleccion {
   disparador: string;
   generacion: string;
   tecAvanzada: string;
+  canalPNL: string;
   customNotes: string;
 }
 
@@ -71,11 +72,12 @@ function CheckboxCategory({ label, icon: Icon, options, value, onChange, opciona
             <div
               key={opt.id}
               onClick={() => handleToggle(opt.id)}
-              className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+              className={cn(
+                "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all",
                 isSelected
                   ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                   : "border-border/40 hover:border-primary/30 hover:bg-muted/30"
-              }`}
+              )}
             >
               <Checkbox
                 checked={isSelected}
@@ -83,7 +85,7 @@ function CheckboxCategory({ label, icon: Icon, options, value, onChange, opciona
                 className="mt-0.5 shrink-0"
               />
               <div className="min-w-0 flex-1">
-                <p className={`text-sm font-medium ${isSelected ? "text-primary" : "text-foreground"}`}>
+                <p className={cn("text-sm font-medium", isSelected ? "text-primary" : "text-foreground")}>
                   {opt.label}
                 </p>
                 <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
@@ -101,9 +103,77 @@ function CheckboxCategory({ label, icon: Icon, options, value, onChange, opciona
   );
 }
 
+function VAKSelector({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const handleToggle = (optionId: string) => {
+    onChange(value === optionId ? "" : optionId);
+  };
+
+  return (
+    <Card className="border-border/50">
+      <CardHeader className="pb-3 pt-4 px-5">
+        <CardTitle className="text-base flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <Eye className="w-4 h-4 text-primary" />
+          </div>
+          Canal Sensorial PNL (VAK)
+          <Badge variant="outline" className="text-[10px] ml-auto">Opcional</Badge>
+        </CardTitle>
+        <p className="text-xs text-muted-foreground leading-relaxed mt-1">
+          🧠 Programación Neurolingüística: ¿Cómo procesa la información tu paciente ideal? Las personas son Visuales, Auditivas o Kinestésicas. 
+          Elige el canal dominante o una combinación para maximizar el impacto de tu mensaje.
+        </p>
+      </CardHeader>
+      <CardContent className="px-5 pb-4 space-y-2">
+        {canalsPNL.map((opt) => {
+          const isSelected = value === opt.id;
+          return (
+            <div
+              key={opt.id}
+              onClick={() => handleToggle(opt.id)}
+              className={cn(
+                "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                isSelected
+                  ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                  : "border-border/40 hover:border-primary/30 hover:bg-muted/30"
+              )}
+            >
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => handleToggle(opt.id)}
+                className="mt-0.5 shrink-0"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className={cn("text-sm font-medium", isSelected ? "text-primary" : "text-foreground")}>
+                    {opt.label}
+                  </p>
+                  {opt.channels.length > 1 && (
+                    <Badge variant="secondary" className="text-[9px]">
+                      {opt.channels.length === 3 ? "Triple" : "Combo"}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
+                  {opt.description}
+                </p>
+                <p className="text-[10px] text-muted-foreground/80 mt-1">
+                  <strong>Patrones lingüísticos:</strong> {opt.languagePatterns}
+                </p>
+                <p className="text-xs italic text-muted-foreground/70 mt-1">
+                  Ejemplo: {opt.example}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
+
 const MatrixMixer = ({ service, onGenerate, onBack }: Props) => {
   const [sel, setSel] = useState<Seleccion>({
-    arquetipo: "", vozMarca: "", disparador: "", generacion: "", tecAvanzada: "", customNotes: "",
+    arquetipo: "", vozMarca: "", disparador: "", generacion: "", tecAvanzada: "", canalPNL: "", customNotes: "",
   });
   const [magicUsed, setMagicUsed] = useState(false);
 
@@ -122,18 +192,18 @@ const MatrixMixer = ({ service, onGenerate, onBack }: Props) => {
       disparador: randomPick(disparadoresPersuasion),
       generacion: randomPick(codigosGeneracionales),
       tecAvanzada: Math.random() > 0.4 ? randomPick(psicologiaAvanzada) : "",
+      canalPNL: canalsPNL[Math.floor(Math.random() * canalsPNL.length)].id,
     }));
     setMagicUsed(true);
   }, []);
 
-  // Allow generation if either categories are filled OR custom notes exist
   const hasCategories = sel.arquetipo && sel.vozMarca && sel.disparador && sel.generacion;
   const hasCustom = sel.customNotes.trim().length > 0;
   const listo = hasCategories || hasCustom;
 
   return (
     <div className="space-y-6">
-      {/* Encabezado del servicio */}
+      {/* Service header */}
       <Card className="gradient-subtle border-primary/20">
         <CardContent className="p-4 flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
@@ -145,12 +215,20 @@ const MatrixMixer = ({ service, onGenerate, onBack }: Props) => {
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-foreground truncate">{service.name}</p>
             <p className="text-xs text-muted-foreground">{service.core_benefit} · {service.pain_point}</p>
+            {service.observations && (
+              <p className="text-[10px] text-muted-foreground/70 mt-0.5 truncate">📝 {service.observations}</p>
+            )}
           </div>
-          <Badge variant="secondary">{etiquetaPrecio[service.target_price] || service.target_price}</Badge>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <Badge variant="secondary">{etiquetaPrecio[service.target_price] || service.target_price}</Badge>
+            {service.price > 0 && (
+              <span className="text-xs font-semibold text-primary">${service.price}</span>
+            )}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Custom strategy notes with voice */}
+      {/* Custom strategy notes */}
       <Card className="border-primary/20 bg-primary/5">
         <CardHeader className="pb-3 pt-4 px-5">
           <CardTitle className="text-base flex items-center gap-2">
@@ -193,7 +271,7 @@ const MatrixMixer = ({ service, onGenerate, onBack }: Props) => {
         </CardContent>
       </Card>
 
-      {/* Hacer Magia + Abra cadabra */}
+      {/* Magic buttons */}
       <div className="flex items-center gap-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
         <Button onClick={hacerMagia} className="gradient-primary text-primary-foreground gap-2">
           <Sparkles className="w-4 h-4" />
@@ -208,16 +286,20 @@ const MatrixMixer = ({ service, onGenerate, onBack }: Props) => {
         <p className="text-xs text-muted-foreground ml-1">Déjanos a nosotros hacer la magia ✨</p>
       </div>
 
-      {/* 5 categorías en vertical con checkboxes */}
+      {/* Categories */}
       <div className="grid grid-cols-1 gap-4">
         <CheckboxCategory label="Arquetipo Objetivo" icon={Users} options={arquetiposDigitales} value={sel.arquetipo} onChange={(v) => setSel({ ...sel, arquetipo: v })} categoryKey="arquetipo" />
         <CheckboxCategory label="Voz de Marca" icon={Megaphone} options={arquetiposMarca} value={sel.vozMarca} onChange={(v) => setSel({ ...sel, vozMarca: v })} categoryKey="vozMarca" />
         <CheckboxCategory label="Disparador de Persuasión" icon={Brain} options={disparadoresPersuasion} value={sel.disparador} onChange={(v) => setSel({ ...sel, disparador: v })} categoryKey="disparador" />
         <CheckboxCategory label="Generación" icon={Users} options={codigosGeneracionales} value={sel.generacion} onChange={(v) => setSel({ ...sel, generacion: v })} categoryKey="generacion" />
+        
+        {/* PNL VAK Section */}
+        <VAKSelector value={sel.canalPNL} onChange={(v) => setSel({ ...sel, canalPNL: v })} />
+        
         <CheckboxCategory label="Técnica Avanzada" icon={Skull} options={psicologiaAvanzada} value={sel.tecAvanzada} onChange={(v) => setSel({ ...sel, tecAvanzada: v })} opcional categoryKey="tecAvanzada" />
       </div>
 
-      {/* Botón generar */}
+      {/* Generate button */}
       <Button onClick={() => onGenerate(sel)} disabled={!listo} className="w-full h-12 gradient-primary text-primary-foreground text-base font-semibold" size="lg">
         <Zap className="w-5 h-5 mr-2" />
         Generar Perfil de Estrategia
