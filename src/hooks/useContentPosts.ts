@@ -32,9 +32,9 @@ export const useContentPosts = () => {
   const [posts, setPosts] = useState<ContentPost[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchPosts = useCallback(async () => {
+  const fetchPosts = useCallback(async (silent = false) => {
     if (!clinicId) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     const { data, error } = await supabase
       .from("content_posts")
       .select("*")
@@ -45,7 +45,7 @@ export const useContentPosts = () => {
       console.error(error);
     }
     setPosts((data || []) as unknown as ContentPost[]);
-    setLoading(false);
+    if (!silent) setLoading(false);
   }, [clinicId]);
 
   useEffect(() => { fetchPosts(); }, [fetchPosts]);
@@ -59,7 +59,7 @@ export const useContentPosts = () => {
       .single();
     if (error) { toast.error(error.message); return null; }
     toast.success(data.status === "scheduled" ? "Publicación programada" : "Borrador guardado");
-    await fetchPosts();
+    await fetchPosts(true);
     return created;
   };
 
@@ -69,7 +69,7 @@ export const useContentPosts = () => {
       .update(data as any)
       .eq("id", id);
     if (error) { toast.error(error.message); return false; }
-    await fetchPosts();
+    await fetchPosts(true);
     return true;
   };
 
@@ -80,7 +80,7 @@ export const useContentPosts = () => {
       .eq("id", id);
     if (error) { toast.error(error.message); return false; }
     toast.success("Publicación eliminada");
-    await fetchPosts();
+    await fetchPosts(true);
     return true;
   };
 

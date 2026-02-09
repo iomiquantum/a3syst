@@ -175,9 +175,9 @@ const ContentAIGenerator = ({ content }: Props) => {
   const [expertMode, setExpertMode] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [pieces, setPieces] = useState<GeneratedPiece[]>([]);
-  const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
-  const [regeneratingCopyId, setRegeneratingCopyId] = useState<number | null>(null);
-  const [resizingId, setResizingId] = useState<number | null>(null);
+  const [regeneratingIds, setRegeneratingIds] = useState<Set<number>>(new Set());
+  const [regeneratingCopyIds, setRegeneratingCopyIds] = useState<Set<number>>(new Set());
+  const [resizingIds, setResizingIds] = useState<Set<number>>(new Set());
   const [pieceDimensions, setPieceDimensions] = useState<Record<number, { w: number; h: number; label: string }>>({});
 
   const { data: strategies = [] } = usePsychoStrategies();
@@ -301,7 +301,7 @@ const ContentAIGenerator = ({ content }: Props) => {
   const handleRegenerateImage = async (id: number, customPrompt?: string) => {
     const piece = pieces.find(p => p.id === id);
     if (!piece) return;
-    setRegeneratingId(id);
+    setRegeneratingIds(prev => new Set(prev).add(id));
     const sizeInfo = getImageSizeInfo();
     const selectedStrategy = magicMode && magicFormula
       ? magicFormula
@@ -329,14 +329,14 @@ const ContentAIGenerator = ({ content }: Props) => {
       console.error(err);
       toast.error("Error regenerando imagen");
     } finally {
-      setRegeneratingId(null);
+      setRegeneratingIds(prev => { const next = new Set(prev); next.delete(id); return next; });
     }
   };
 
   const handleRegenerateCopy = async (id: number) => {
     const piece = pieces.find(p => p.id === id);
     if (!piece) return;
-    setRegeneratingCopyId(id);
+    setRegeneratingCopyIds(prev => new Set(prev).add(id));
     const selectedStrategy = magicMode && magicFormula
       ? magicFormula
       : strategies.find(s => s.id === selectedStrategyId);
@@ -355,14 +355,14 @@ const ContentAIGenerator = ({ content }: Props) => {
       console.error(err);
       toast.error("Error regenerando copy");
     } finally {
-      setRegeneratingCopyId(null);
+      setRegeneratingCopyIds(prev => { const next = new Set(prev); next.delete(id); return next; });
     }
   };
 
    const handleResize = async (id: number, targetW: number, targetH: number, label: string) => {
     const piece = pieces.find(p => p.id === id);
     if (!piece) return;
-    setResizingId(id);
+    setResizingIds(prev => new Set(prev).add(id));
     try {
       const prompt = piece.imagePrompt + `\n\nIMPORTANTE: Regenera EXACTAMENTE la misma imagen con el mismo contenido visual, textos, colores, composición y estilo. NO cambies NADA del diseño. Solo adáptala al nuevo formato y dimensiones.`;
       const { data, error } = await supabase.functions.invoke("ai-generate-content", {
@@ -379,7 +379,7 @@ const ContentAIGenerator = ({ content }: Props) => {
       console.error(err);
       toast.error("Error redimensionando imagen");
     } finally {
-      setResizingId(null);
+      setResizingIds(prev => { const next = new Set(prev); next.delete(id); return next; });
     }
   };
 
@@ -768,9 +768,9 @@ const ContentAIGenerator = ({ content }: Props) => {
                 onRegenerateCopy={handleRegenerateCopy}
                 onApprove={handleApprove}
                 onResize={handleResize}
-                regeneratingImage={regeneratingId === piece.id}
-                regeneratingCopy={regeneratingCopyId === piece.id}
-                resizing={resizingId === piece.id}
+                regeneratingImage={regeneratingIds.has(piece.id)}
+                regeneratingCopy={regeneratingCopyIds.has(piece.id)}
+                resizing={resizingIds.has(piece.id)}
                 platform={platform}
                 sizeLabel={overrideDims?.label ?? sizeInfo?.label}
                 sizeW={overrideDims?.w ?? sizeInfo?.w}
