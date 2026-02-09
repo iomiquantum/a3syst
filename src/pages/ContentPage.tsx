@@ -1,17 +1,18 @@
 import { useState } from "react";
-import { Palette, CalendarDays, List, FileText, Sparkles, BarChart3, Loader2 } from "lucide-react";
+import { Palette, CalendarDays, List, FileText, Sparkles, BarChart3, Loader2, Video } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import ContentCalendarView from "@/components/content/ContentCalendarView";
 import ContentListView from "@/components/content/ContentListView";
 import ContentDraftsView from "@/components/content/ContentDraftsView";
 import ContentAIGenerator from "@/components/content/ContentAIGenerator";
 import ContentAnalyticsView from "@/components/content/ContentAnalyticsView";
+import VideoPromptGenerator from "@/components/content/VideoPromptGenerator";
 import CreatePostDialog from "@/components/content/CreatePostDialog";
 import { useContentPosts } from "@/hooks/useContentPosts";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-type ContentSection = "calendar" | "list" | "drafts" | "ai" | "analytics";
+type ContentSection = "calendar" | "list" | "drafts" | "ai" | "video" | "analytics";
 
 const sideNav = [
   { key: "calendar" as ContentSection, icon: CalendarDays, label: "Planificador", group: "Contenido" },
@@ -19,6 +20,7 @@ const sideNav = [
   { key: "drafts" as ContentSection, icon: FileText, label: "Borradores", group: "Contenido" },
   { key: "analytics" as ContentSection, icon: BarChart3, label: "Analíticas", group: "Contenido" },
   { key: "ai" as ContentSection, icon: Sparkles, label: "Generar con IA", group: "Herramientas IA" },
+  { key: "video" as ContentSection, icon: Video, label: "Video IA", group: "Herramientas IA" },
 ];
 
 const ContentPage = () => {
@@ -107,6 +109,7 @@ const ContentPage = () => {
           {section === "drafts" && <ContentDraftsView content={content} />}
           {section === "analytics" && <ContentAnalyticsView content={content} />}
           {section === "ai" && <ContentAIGenerator content={content} />}
+          {section === "video" && <VideoPromptGenerator />}
         </div>
       </div>
 
