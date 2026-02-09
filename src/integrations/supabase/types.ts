@@ -340,31 +340,40 @@ export type Database = {
       }
       ai_token_usage: {
         Row: {
+          action_label: string
           clinic_id: string
+          cost_usd: number
           created_at: string
           generator_type: string
           id: string
           model: string
           tokens_input: number
           tokens_output: number
+          user_id: string | null
         }
         Insert: {
+          action_label?: string
           clinic_id: string
+          cost_usd?: number
           created_at?: string
           generator_type?: string
           id?: string
           model?: string
           tokens_input?: number
           tokens_output?: number
+          user_id?: string | null
         }
         Update: {
+          action_label?: string
           clinic_id?: string
+          cost_usd?: number
           created_at?: string
           generator_type?: string
           id?: string
           model?: string
           tokens_input?: number
           tokens_output?: number
+          user_id?: string | null
         }
         Relationships: [
           {
