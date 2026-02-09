@@ -3,12 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   arquetiposDigitales, arquetiposMarca, disparadoresPersuasion,
   codigosGeneracionales, psicologiaAvanzada, type MatrixOption,
 } from "@/lib/psychoMatrixData";
 import type { PsychoService } from "@/hooks/usePsychoMatrix";
-import { Beaker, Brain, Megaphone, Users, Skull, Zap, ArrowLeft, Sparkles, RefreshCw } from "lucide-react";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
+import { Beaker, Brain, Megaphone, Users, Skull, Zap, ArrowLeft, Sparkles, RefreshCw, Mic, MicOff, PenLine } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export interface Seleccion {
   arquetipo: string;
@@ -16,6 +20,7 @@ export interface Seleccion {
   disparador: string;
   generacion: string;
   tecAvanzada: string;
+  customNotes: string;
 }
 
 interface Props {
@@ -39,7 +44,6 @@ function CheckboxCategory({ label, icon: Icon, options, value, onChange, opciona
 }) {
   const handleToggle = (optionId: string) => {
     if (value === optionId) {
-      // Deselect if clicking same option (only for optional categories)
       if (opcional) onChange("");
     } else {
       onChange(optionId);
@@ -99,24 +103,33 @@ function CheckboxCategory({ label, icon: Icon, options, value, onChange, opciona
 
 const MatrixMixer = ({ service, onGenerate, onBack }: Props) => {
   const [sel, setSel] = useState<Seleccion>({
-    arquetipo: "", vozMarca: "", disparador: "", generacion: "", tecAvanzada: "",
+    arquetipo: "", vozMarca: "", disparador: "", generacion: "", tecAvanzada: "", customNotes: "",
   });
   const [magicUsed, setMagicUsed] = useState(false);
+
+  const handleVoiceResult = useCallback((transcript: string) => {
+    setSel(prev => ({ ...prev, customNotes: prev.customNotes ? `${prev.customNotes} ${transcript}` : transcript }));
+  }, []);
+  const { isListening, isSupported: voiceSupported, toggleListening } = useVoiceInput({ onResult: handleVoiceResult });
 
   const randomPick = (opts: MatrixOption[]) => opts[Math.floor(Math.random() * opts.length)].id;
 
   const hacerMagia = useCallback(() => {
-    setSel({
+    setSel(prev => ({
+      ...prev,
       arquetipo: randomPick(arquetiposDigitales),
       vozMarca: randomPick(arquetiposMarca),
       disparador: randomPick(disparadoresPersuasion),
       generacion: randomPick(codigosGeneracionales),
       tecAvanzada: Math.random() > 0.4 ? randomPick(psicologiaAvanzada) : "",
-    });
+    }));
     setMagicUsed(true);
   }, []);
 
-  const listo = sel.arquetipo && sel.vozMarca && sel.disparador && sel.generacion;
+  // Allow generation if either categories are filled OR custom notes exist
+  const hasCategories = sel.arquetipo && sel.vozMarca && sel.disparador && sel.generacion;
+  const hasCustom = sel.customNotes.trim().length > 0;
+  const listo = hasCategories || hasCustom;
 
   return (
     <div className="space-y-6">
@@ -134,6 +147,49 @@ const MatrixMixer = ({ service, onGenerate, onBack }: Props) => {
             <p className="text-xs text-muted-foreground">{service.core_benefit} · {service.pain_point}</p>
           </div>
           <Badge variant="secondary">{etiquetaPrecio[service.target_price] || service.target_price}</Badge>
+        </CardContent>
+      </Card>
+
+      {/* Custom strategy notes with voice */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader className="pb-3 pt-4 px-5">
+          <CardTitle className="text-base flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <PenLine className="w-4 h-4 text-primary" />
+            </div>
+            Personalización libre
+          </CardTitle>
+          <p className="text-xs text-muted-foreground leading-relaxed mt-1">
+            ✍️ Escribe o dicta con tu voz tu propia estrategia personalizada. Puedes usar esto en lugar de las opciones de abajo, o como complemento adicional.
+          </p>
+        </CardHeader>
+        <CardContent className="px-5 pb-4">
+          <div className="relative">
+            <Textarea
+              placeholder="Ej: Quiero una estrategia enfocada en mamás jóvenes que buscan tratamientos de ortodoncia invisible, con un tono aspiracional y urgencia por promoción de temporada..."
+              className="min-h-[100px] pr-12"
+              value={sel.customNotes}
+              onChange={e => setSel({ ...sel, customNotes: e.target.value })}
+            />
+            {voiceSupported && (
+              <Button
+                type="button"
+                variant={isListening ? "default" : "ghost"}
+                size="icon"
+                className={cn(
+                  "absolute top-2 right-2 h-8 w-8 rounded-full transition-all",
+                  isListening && "bg-destructive hover:bg-destructive/90 text-destructive-foreground animate-pulse"
+                )}
+                onClick={toggleListening}
+                title={isListening ? "Detener grabación" : "Dictar con voz"}
+              >
+                {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </Button>
+            )}
+          </div>
+          {isListening && (
+            <p className="text-xs text-destructive font-medium animate-pulse mt-1.5">🎙️ Escuchando… habla y tu texto aparecerá aquí</p>
+          )}
         </CardContent>
       </Card>
 

@@ -61,11 +61,20 @@ export function construirPrompt(
   vozMarca: string,
   disparador: string,
   generacion: string,
-  tecAvanzada?: string
+  tecAvanzada?: string,
+  customNotes?: string
 ): string {
-  const base = `Actúa como un copywriter de clase mundial usando el arquetipo de marca "${vozMarca}". Vende "${servicio.name}" a una audiencia ${generacion} que se comporta como "${arquetipo}". Usa la técnica de persuasión "${disparador}" para convencerlos. El beneficio principal es: "${servicio.core_benefit}".`;
+  // If only custom notes (no categories selected), use them as the full prompt
+  if (customNotes && !arquetipo && !vozMarca && !disparador && !generacion) {
+    return `Estrategia personalizada para "${servicio.name}" (beneficio: "${servicio.core_benefit}"):\n\n${customNotes}`;
+  }
+
+  let base = `Actúa como un copywriter de clase mundial usando el arquetipo de marca "${vozMarca}". Vende "${servicio.name}" a una audiencia ${generacion} que se comporta como "${arquetipo}". Usa la técnica de persuasión "${disparador}" para convencerlos. El beneficio principal es: "${servicio.core_benefit}".`;
   if (tecAvanzada) {
-    return `${base} Aplica la técnica psicológica avanzada "${tecAvanzada}" en el cierre.`;
+    base += ` Aplica la técnica psicológica avanzada "${tecAvanzada}" en el cierre.`;
+  }
+  if (customNotes) {
+    base += `\n\nINSTRUCCIONES PERSONALIZADAS ADICIONALES: ${customNotes}`;
   }
   return base;
 }
