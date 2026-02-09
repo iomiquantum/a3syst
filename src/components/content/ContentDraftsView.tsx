@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { Edit, Trash2, Clock, Pencil, RefreshCw, Loader2, Check, X, Copy, Video, Upload } from "lucide-react";
+import { useState, useRef, useMemo } from "react";
+import { Edit, Trash2, Clock, Pencil, RefreshCw, Loader2, Check, X, Copy, Video, Upload, Image, FileText, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,7 @@ const ContentDraftsView = ({ content }: Props) => {
   const [imagePrompt, setImagePrompt] = useState("");
   const [showPromptId, setShowPromptId] = useState<string | null>(null);
   const [uploadingVideoId, setUploadingVideoId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"all" | "image" | "video" | "copy">("all");
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const [videoUploadTargetId, setVideoUploadTargetId] = useState<string | null>(null);
 
@@ -101,24 +102,58 @@ const ContentDraftsView = ({ content }: Props) => {
     }
   };
 
+  const filteredDrafts = useMemo(() => {
+    if (filter === "all") return content.drafts;
+    return content.drafts.filter(d => {
+      if (filter === "video") return d.media_type === "video";
+      if (filter === "image") return d.media_type === "image" && d.media_urls && d.media_urls.length > 0 && d.media_urls[0];
+      if (filter === "copy") return d.media_type !== "video" && (!d.media_urls || d.media_urls.length === 0 || !d.media_urls[0]);
+      return true;
+    });
+  }, [content.drafts, filter]);
+
+  const filterButtons = [
+    { key: "all" as const, label: "Todos", icon: LayoutGrid, count: content.drafts.length },
+    { key: "image" as const, label: "Imágenes", icon: Image, count: content.drafts.filter(d => d.media_type === "image" && d.media_urls?.length && d.media_urls[0]).length },
+    { key: "video" as const, label: "Videos", icon: Video, count: content.drafts.filter(d => d.media_type === "video").length },
+    { key: "copy" as const, label: "Copys", icon: FileText, count: content.drafts.filter(d => d.media_type !== "video" && (!d.media_urls?.length || !d.media_urls[0])).length },
+  ];
+
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-xl font-bold text-foreground">Borradores</h2>
-        <p className="text-sm text-muted-foreground">Publicaciones guardadas como borrador — edita el copy o regenera imágenes</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-foreground">Borradores</h2>
+          <p className="text-sm text-muted-foreground">Publicaciones guardadas como borrador — edita el copy o regenera imágenes</p>
+        </div>
+        <div className="flex gap-1.5 bg-muted/50 p-1 rounded-lg border border-border/50">
+          {filterButtons.map(({ key, label, icon: Icon, count }) => (
+            <Button
+              key={key}
+              variant={filter === key ? "default" : "ghost"}
+              size="sm"
+              className={`gap-1.5 text-xs h-8 ${filter === key ? "gradient-primary text-primary-foreground" : ""}`}
+              onClick={() => setFilter(key)}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+              <Badge variant={filter === key ? "secondary" : "outline"} className="text-[10px] px-1.5 py-0 h-4 ml-0.5">{count}</Badge>
+            </Button>
+          ))}
+        </div>
       </div>
 
-      {content.drafts.length === 0 ? (
+      {filteredDrafts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
             <Edit className="w-8 h-8 text-muted-foreground" />
           </div>
-          <p className="text-foreground font-medium">No tienes borradores</p>
-          <p className="text-sm text-muted-foreground mt-1">Los borradores aparecerán aquí cuando guardes publicaciones sin programar</p>
+          <p className="text-foreground font-medium">{filter === "all" ? "No tienes borradores" : `No hay ${filter === "image" ? "imágenes" : filter === "video" ? "videos" : "copys"}`}</p>
+          <p className="text-sm text-muted-foreground mt-1">{filter === "all" ? "Los borradores aparecerán aquí cuando guardes publicaciones sin programar" : "Prueba con otro filtro"}</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {content.drafts.map(draft => {
+          {filteredDrafts.map(draft => {
             const isEditing = editingId === draft.id;
             const isRegenerating = regeneratingImageId === draft.id;
             const showingPrompt = showPromptId === draft.id;
