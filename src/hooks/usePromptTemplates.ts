@@ -3,10 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
 import { useToast } from "@/hooks/use-toast";
 
+export type PromptTemplateType = "image" | "copy" | "video";
+
 export interface PromptTemplate {
   id: string;
   clinic_id: string;
-  type: "image" | "copy";
+  type: PromptTemplateType;
   name: string;
   template: string;
   is_active: boolean;
@@ -32,7 +34,7 @@ export function usePromptTemplates() {
   });
 }
 
-export function useActivePromptTemplate(type: "image" | "copy") {
+export function useActivePromptTemplate(type: PromptTemplateType) {
   const { clinicId } = useClinic();
   return useQuery({
     queryKey: ["prompt-template-active", clinicId, type],
@@ -59,7 +61,7 @@ export function useSavePromptTemplate() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (tpl: { id?: string; type: "image" | "copy"; name: string; template: string; is_active: boolean }) => {
+    mutationFn: async (tpl: { id?: string; type: PromptTemplateType; name: string; template: string; is_active: boolean }) => {
       if (!clinicId) throw new Error("No clinic");
       if (tpl.id) {
         const { data, error } = await supabase

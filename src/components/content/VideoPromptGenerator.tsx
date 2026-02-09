@@ -1,17 +1,20 @@
 import { useState, useCallback, useRef } from "react";
-import { Video, Loader2, Plus, Minus, Sparkles, RefreshCw, Mic, MicOff, Copy, Check, Wand2, Save, Upload } from "lucide-react";
+import { Video, Loader2, Plus, Minus, Sparkles, RefreshCw, Mic, MicOff, Copy, Check, Wand2, Save, Upload, Settings2, Eye, EyeOff } from "lucide-react";
 import type { ContentPost } from "@/hooks/useContentPosts";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { usePsychoStrategies } from "@/hooks/usePsychoMatrix";
+import { usePsychoStrategies, usePsychoServices } from "@/hooks/usePsychoMatrix";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { useClinic } from "@/hooks/useClinic";
+import { useActivePromptTemplate, usePromptTemplates, useSavePromptTemplate } from "@/hooks/usePromptTemplates";
 import {
   arquetiposDigitales, arquetiposMarca, disparadoresPersuasion,
   codigosGeneracionales, psicologiaAvanzada,
@@ -46,13 +49,39 @@ const videoStyles = [
 ];
 
 const videoTools = [
-  { value: "veo3", label: "Google Veo 3" },
-  { value: "sora", label: "OpenAI Sora" },
-  { value: "runway", label: "Runway Gen-3" },
-  { value: "kling", label: "Kling AI" },
-  { value: "pika", label: "Pika Labs" },
-  { value: "generic", label: "Genérico (cualquier herramienta)" },
+  { value: "veo3", label: "Google Veo 3", promptStyle: "concise" },
+  { value: "sora", label: "OpenAI Sora 2", promptStyle: "detailed" },
+  { value: "runway", label: "Runway Gen-4", promptStyle: "timeline" },
+  { value: "kling", label: "Kling AI 2.6", promptStyle: "structured" },
+  { value: "pika", label: "Pika Labs", promptStyle: "concise" },
+  { value: "generic", label: "Genérico (cualquier herramienta)", promptStyle: "detailed" },
 ];
+
+const defaultVideoTemplate = `Eres un director de video publicitario y experto en IA generativa de video de clase mundial.
+
+ESTRUCTURA DEL SUPER-PROMPT:
+Tu prompt debe ser cinematográfico, ultra-detallado y optimizado para la herramienta de IA seleccionada.
+
+REGLAS UNIVERSALES:
+- Cada escena debe incluir: sujeto, acción, cámara, iluminación, ambiente, color, transición
+- Usa lenguaje cinematográfico técnico (dolly, tracking, rack focus, etc.)
+- Incluye timing exacto para cada segmento del video
+- El prompt debe estar LISTO PARA COPIAR Y PEGAR directamente
+- Escribe en ESPAÑOL con terminología técnica en inglés cuando sea necesario
+- NO incluyas meta-comentarios, explicaciones ni instrucciones — SOLO el prompt de video
+- Prioriza coherencia visual: paleta de colores consistente, continuidad de iluminación
+
+OPTIMIZACIÓN POR HERRAMIENTA:
+- Veo 3/3.1: Prompts concisos (3-5 oraciones por escena). Especifica camera movement. Enfócate en mood/estilo sobre detalles granulares.
+- Sora 2: Prompts narrativos largos (5-8 oraciones). Incluye lógica causal y secuencias multi-paso. Excelente para interacciones entre personajes.
+- Runway Gen-4: Prompts tipo timeline con beat markers. Instrucciones codificadas en tiempo. Especifica fps y motion style.
+- Kling 2.6: Estructura de datos tipo JSON-like. Instrucciones precisas de rendering. Incluye reference images si aplica.
+
+ESTRATEGIA PSICOLÓGICA (cuando se proporciona):
+- Usa la estrategia para definir: paleta emocional, ritmo de edición, tipo de música, ángulos de cámara
+- El arquetipo define el MOOD VISUAL general
+- El gatillo de persuasión define la EMOCIÓN que cada escena debe evocar
+- La generación objetivo define la ESTÉTICA y referencias culturales`;
 
 interface GeneratedVideoPrompt {
   id: number;
@@ -68,6 +97,95 @@ interface Props {
   };
 }
 
+// ─── Admin-only Video Prompt Template Editor ───
+const VideoPromptTemplateEditor = () => {
+  const { data: templates = [], isLoading } = usePromptTemplates();
+  const saveTemplate = useSavePromptTemplate();
+  const [open, setOpen] = useState(false);
+
+  const videoTemplate = templates.find(t => t.type === "video");
+  const [videoText, setVideoText] = useState("");
+  const [videoActive, setVideoActive] = useState(true);
+
+  // Sync from DB
+  useState(() => {
+    setVideoText(videoTemplate?.template || defaultVideoTemplate);
+    setVideoActive(videoTemplate?.is_active ?? true);
+  });
+
+  // Update when templates load
+  if (!isLoading && videoTemplate && videoText === "" ) {
+    setVideoText(videoTemplate.template);
+    setVideoActive(videoTemplate.is_active);
+  }
+  if (!isLoading && !videoTemplate && videoText === "") {
+    setVideoText(defaultVideoTemplate);
+  }
+
+  const handleSave = async () => {
+    await saveTemplate.mutateAsync({
+      id: videoTemplate?.id,
+      type: "video",
+      name: "Plantilla de video",
+      template: videoText,
+      is_active: videoActive,
+    });
+  };
+
+  if (isLoading) return null;
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger asChild>
+        <Button variant="outline" className="w-full justify-between border-primary/20 bg-primary/5 hover:bg-primary/10 text-foreground">
+          <div className="flex items-center gap-2">
+            <Settings2 className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium">🎬 Composición de Prompts de Video (Admin)</span>
+          </div>
+          {open ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-3 space-y-4 p-4 rounded-xl border border-border bg-card">
+        <p className="text-xs text-muted-foreground">
+          Configura la estructura base del super-prompt para generación de video. Este template define las reglas, estructura y optimización
+          que se aplican a todos los prompts de video generados para esta clínica.
+        </p>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-semibold text-foreground">🎬 Prompt base para Video</Label>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Activo</span>
+              <Switch checked={videoActive} onCheckedChange={setVideoActive} />
+            </div>
+          </div>
+          <Textarea
+            value={videoText}
+            onChange={e => setVideoText(e.target.value)}
+            className="min-h-[250px] text-xs font-mono"
+            placeholder="Escribe el prompt base para generación de video..."
+          />
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={saveTemplate.isPending}
+            className="gap-2"
+          >
+            {saveTemplate.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+            Guardar plantilla de video
+          </Button>
+        </div>
+
+        <div className="text-[10px] text-muted-foreground p-2 rounded bg-muted/50">
+          <strong>Variables automáticas:</strong> La estrategia Psycho-Matrix, servicio/producto, tono, plataforma, duración, estilo visual y herramienta
+          se inyectan automáticamente al final del template base.
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};
+
+// ─── Main Component ───
 const VideoPromptGenerator = ({ content }: Props) => {
   const [mainPrompt, setMainPrompt] = useState("");
   const [tone, setTone] = useState("Profesional");
@@ -78,6 +196,7 @@ const VideoPromptGenerator = ({ content }: Props) => {
   const [videoTool, setVideoTool] = useState("generic");
   const [count, setCount] = useState(2);
   const [extraNotes, setExtraNotes] = useState("");
+  const [selectedServiceId, setSelectedServiceId] = useState<string>("none");
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>("none");
   const [magicMode, setMagicMode] = useState(false);
   const [magicFormula, setMagicFormula] = useState<{
@@ -91,7 +210,14 @@ const VideoPromptGenerator = ({ content }: Props) => {
   const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
   const { data: strategies = [] } = usePsychoStrategies();
+  const { data: services = [] } = usePsychoServices();
   const { isSuperAdmin } = useClinic();
+  const { data: videoPromptTemplate } = useActivePromptTemplate("video");
+
+  // Filter strategies by selected service
+  const filteredStrategies = selectedServiceId !== "none"
+    ? strategies.filter(s => s.service_id === selectedServiceId)
+    : strategies;
 
   const handleVoiceResult = useCallback((transcript: string) => {
     setMainPrompt(prev => prev ? `${prev} ${transcript}` : transcript);
@@ -113,6 +239,7 @@ const VideoPromptGenerator = ({ content }: Props) => {
       advanced_tech: Math.random() > 0.4 ? randomPick(psicologiaAvanzada) : "",
     });
     setSelectedStrategyId("none");
+    setSelectedServiceId("none");
   };
 
   const handleMagicToggle = (checked: boolean) => {
@@ -121,79 +248,209 @@ const VideoPromptGenerator = ({ content }: Props) => {
     else setMagicFormula(null);
   };
 
+  // When service changes, reset strategy if it doesn't belong to the new service
+  const handleServiceChange = (svcId: string) => {
+    setSelectedServiceId(svcId);
+    if (svcId !== "none" && selectedStrategyId !== "none") {
+      const strat = strategies.find(s => s.id === selectedStrategyId);
+      if (strat && strat.service_id !== svcId) {
+        setSelectedStrategyId("none");
+      }
+    }
+  };
+
   const getEffectiveDuration = () => duration === "custom" ? `${customDuration} segundos` : `${duration} segundos`;
   const platformInfo = videoPlatforms.find(p => p.value === videoPlatform) || videoPlatforms[0];
   const styleInfo = videoStyles.find(s => s.value === videoStyle);
+  const toolInfo = videoTools.find(t => t.value === videoTool) || videoTools[videoTools.length - 1];
 
   const buildVideoPrompt = (variationNum: number, totalVariations: number): string => {
     const strategy = magicMode && magicFormula
       ? magicFormula
       : strategies.find(s => s.id === selectedStrategyId);
 
-    const toolInfo = videoTools.find(t => t.value === videoTool);
-    const toolSpecific = videoTool !== "generic"
-      ? `\n\nOPTIMIZADO PARA: ${toolInfo?.label}. Usa la terminología y estructura de prompts que mejor funciona con esta herramienta.`
-      : "";
+    const service = services.find(s => s.id === selectedServiceId);
 
+    // Base template from admin config or default
+    const baseTemplate = videoPromptTemplate?.template || defaultVideoTemplate;
+
+    // Service/product block
+    let serviceBlock = "";
+    if (service) {
+      serviceBlock = `\n\nPRODUCTO/SERVICIO A PROMOCIONAR:
+- Nombre: "${service.name}"
+- Beneficio principal: "${service.core_benefit}"
+- Dolor que resuelve: "${service.pain_point}"
+- Rango de precio: ${service.target_price}`;
+    }
+
+    // Strategy block
     let strategyBlock = "";
     if (strategy) {
       strategyBlock = `\n\nESTRATEGIA PSYCHO-MATRIX APLICADA:
-- Arquetipo: ${strategy.archetype} → Define el mood visual, la paleta emocional y el tipo de personajes/escenarios
-- Voz de marca: ${strategy.brand_voice} → Determina el ritmo de edición, la música y el estilo narrativo
-- Gatillo de persuasión: ${strategy.persuasion_trigger} → La emoción central que cada escena debe evocar
-- Generación objetivo: ${strategy.generation} → Adapta la estética, referencias culturales y códigos visuales
-${strategy.advanced_tech ? `- Técnica avanzada: ${strategy.advanced_tech} → Aplica este principio psicológico en la secuencia visual` : ""}`;
+- Arquetipo digital: ${strategy.archetype} → Define el mood visual, paleta emocional, tipo de personajes/escenarios y ritmo narrativo
+- Voz de marca: ${strategy.brand_voice} → Determina el estilo de edición, tipografía en pantalla, música y tono general
+- Gatillo de persuasión: ${strategy.persuasion_trigger} → La emoción central que cada escena debe evocar en el espectador
+- Generación objetivo: ${strategy.generation} → Adapta la estética, referencias culturales, códigos visuales y lenguaje
+${strategy.advanced_tech ? `- Técnica psicológica avanzada: ${strategy.advanced_tech} → Aplica este principio en la estructura narrativa y cierre del video` : ""}`;
     }
 
-    const extraBlock = extraNotes?.trim() ? `\n\nINSTRUCCIONES ADICIONALES: ${extraNotes}` : "";
+    const extraBlock = extraNotes?.trim() ? `\n\nINSTRUCCIONES ADICIONALES DEL USUARIO: ${extraNotes}` : "";
+
+    // Platform-specific optimization instructions
+    const platformOptimization = getPlatformOptimization(videoPlatform, getEffectiveDuration());
+
+    // Tool-specific prompt structure
+    const toolOptimization = getToolOptimization(videoTool, toolInfo.label);
 
     const variationAngles = [
-      "ENFOQUE EMOCIONAL: Prioriza conexión sentimental, caras expresivas, música emotiva, ritmo pausado en momentos clave",
-      "ENFOQUE DE IMPACTO: Cortes rápidos, datos impactantes, urgencia visual, CTA agresivo, ritmo acelerado",
-      "ENFOQUE NARRATIVO: Cuenta una mini-historia con inicio, nudo y desenlace en el tiempo disponible",
-      "ENFOQUE ESTÉTICO: Prioriza la belleza visual, composiciones artísticas, colores vibrantes, slow motion",
-      "ENFOQUE TESTIMONIAL: Simula un antes/después o una experiencia de cliente, perspectiva en primera persona",
+      "ENFOQUE EMOCIONAL: Prioriza conexión sentimental, caras expresivas, música emotiva, ritmo pausado en momentos clave, close-ups de reacciones genuinas",
+      "ENFOQUE DE IMPACTO: Cortes rápidos tipo montage, datos impactantes como text overlay, urgencia visual con flash frames, CTA agresivo, ritmo acelerado con beat drops",
+      "ENFOQUE NARRATIVO: Mini-historia con arco dramático completo (inicio-nudo-desenlace). Usa continuidad de personaje, motivación clara y resolución emocional",
+      "ENFOQUE ESTÉTICO: Prioriza belleza visual extrema: composiciones artísticas con regla de tercios, paleta cromática sofisticada, slow motion en 120fps, flares y bokeh",
+      "ENFOQUE TESTIMONIAL: Perspectiva en primera persona o POV. Simula experiencia real: antes/después, reacción genuina, autenticidad sin filtros, formato vlog/UGC",
+      "ENFOQUE TRENDING: Formato viral actual, hooks de pattern interrupt, text-on-screen dinámico, transiciones trending (zoom through, morph cut), música trending",
     ];
     const angleIdx = (variationNum - 1) % variationAngles.length;
 
-    return `Genera un prompt DETALLADO y PROFESIONAL para crear un video publicitario con IA generativa.
+    return `${baseTemplate}
 
-BRIEFING CREATIVO:
+─── BRIEFING CREATIVO ───
 "${mainPrompt}"
+${serviceBlock}${strategyBlock}${extraBlock}
 
-ESPECIFICACIONES TÉCNICAS:
-- Plataforma: ${videoPlatform} (${platformInfo.ratio})
-- Duración: ${getEffectiveDuration()}
+─── ESPECIFICACIONES TÉCNICAS ───
+- Plataforma destino: ${videoPlatform} (aspect ratio: ${platformInfo.ratio})
+- Duración total: ${getEffectiveDuration()}
 - Estilo visual: ${styleInfo?.label} — ${styleInfo?.desc}
-- Tono: ${tone}
-${strategyBlock}${extraBlock}${toolSpecific}
+- Tono comunicacional: ${tone}
+${platformOptimization}
+${toolOptimization}
 
-ESTRUCTURA DEL PROMPT DE VIDEO QUE DEBES GENERAR:
+─── ESTRUCTURA REQUERIDA DEL PROMPT ───
 
-1. **ESCENA INICIAL (Hook — primeros 2-3 segundos):** Describe con detalle visual extremo la primera toma que debe capturar atención inmediatamente. Incluye: ángulo de cámara, iluminación, sujeto/objeto principal, movimiento de cámara, colores dominantes.
+1. **HOOK (0:00–0:03):** Toma de apertura ultra-impactante. Describe con precisión cinematográfica:
+   - Sujeto/objeto principal, posición en cuadro, escala
+   - Tipo de plano (extreme close-up, wide, POV, etc.)
+   - Movimiento de cámara exacto (velocidad + dirección)
+   - Iluminación (fuente, temperatura, contraste, shadows)
+   - Color grading dominante (LUT reference si es posible)
+   - Elemento de pattern interrupt que detenga el scroll
 
-2. **SECUENCIA PRINCIPAL:** Describe cada escena o toma importante con transiciones específicas entre ellas. Para cada escena incluye:
-   - Descripción visual detallada (qué se ve)
-   - Movimiento de cámara (pan, tilt, zoom, tracking, drone, steadicam)
-   - Iluminación y atmósfera
-   - Transición a la siguiente escena (corte, fade, morph, zoom through, etc.)
+2. **DESARROLLO (timing exacto por escena):** Cada escena debe incluir:
+   - Shot description cinematográfica (qué se ve, composición, profundidad)
+   - Camera movement (dolly in/out, pan L-R, tilt, crane, orbital, steadicam, handheld)
+   - Lighting setup (key light, fill, rim, practicals, motivated vs stylized)
+   - Color palette y mood (warm/cool, saturated/desaturated, specific hex si es posible)
+   - Motion design (velocidad del sujeto, blur, slow-mo, speed ramp)
+   - Transición a la siguiente escena (cut, match cut, whip pan, morph, zoom through, dissolve)
+   - Audio cue (música, SFX, silencio, cambio de intensidad)
 
-3. **CIERRE / CTA (últimos 2-3 segundos):** Toma final con el mensaje de cierre o llamada a la acción visual.
+3. **CLIMAX / CTA (últimos 2-3 segundos):**
+   - Toma de cierre con máximo impacto emocional
+   - Text overlay con CTA (tipografía, animación de entrada, posición)
+   - Stinger musical o sound design de cierre
+   - Logo/branding reveal (si aplica)
 
-4. **DIRECCIÓN DE ARTE:** Paleta de colores específica (hex si es posible), referencias de mood, textura visual (grain, clean, warm, cold).
+4. **DIRECCIÓN DE ARTE GLOBAL:**
+   - Paleta de colores específica (hex codes)
+   - Referencias de mood board (ej: "estética Wes Anderson", "look médico premium")
+   - Textura visual (film grain amount, clean digital, anamorphic)
+   - Consistencia de iluminación entre escenas
 
-5. **AUDIO / MÚSICA:** Tipo de música o sonido recomendado (género, BPM, mood), momentos de silencio o énfasis sonoro.
+5. **DISEÑO SONORO:**
+   - Género musical, BPM aproximado, mood
+   - Sound effects clave con timing
+   - Momentos de silencio estratégico
+   - Voice-over (si aplica): tono, cadencia, idioma
 
-6. **TEXTO EN PANTALLA (si aplica):** Textos overlay con timing exacto (ej: "a los 3s aparece: 'Transforma tu sonrisa'").
+6. **TEXT ON SCREEN (si aplica):**
+   - Textos exactos con timing (ej: "0:02 → 'Transforma tu sonrisa'")
+   - Estilo tipográfico (sans-serif bold, serif elegant, handwritten, etc.)
+   - Animación de entrada/salida (fade, slide, typewriter, glitch)
 
 VARIACIÓN #${variationNum} de ${totalVariations}: ${variationAngles[angleIdx]}
 
-REGLAS:
-- El prompt debe estar LISTO PARA COPIAR Y PEGAR en ${toolInfo?.label || "una herramienta de generación de video con IA"}
-- Escribe el prompt en ESPAÑOL
-- Sé extremadamente descriptivo y visual — cada detalle importa para la IA generativa
-- NO incluyas explicaciones ni meta-comentarios, SOLO el prompt de video listo para usar
-- Incluye indicaciones de timing (ej: "0:00-0:03", "0:03-0:08")`;
+⚠️ REGLAS FINALES:
+- El prompt debe estar LISTO PARA COPIAR Y PEGAR en ${toolInfo.label}
+- Escribe el prompt final en ESPAÑOL con términos técnicos cinematográficos en inglés
+- Sé EXTREMADAMENTE descriptivo — cada detalle visual importa para la IA generativa
+- NO incluyas explicaciones, meta-comentarios ni headers — SOLO el super-prompt de video listo para usar
+- Incluye SIEMPRE indicaciones de timing exacto (ej: "0:00-0:03", "0:03-0:08")`;
+  };
+
+  // Platform-specific optimization
+  const getPlatformOptimization = (platform: string, dur: string): string => {
+    const map: Record<string, string> = {
+      "Instagram Reels": `\nOPTIMIZACIÓN INSTAGRAM REELS:
+- Formato vertical 9:16, safe zone: evitar texto en los 250px superiores e inferiores (UI de IG)
+- Hook en los primeros 1.5 segundos es CRÍTICO para retención
+- Usar trending audio patterns: build-up → drop → payoff
+- Text overlay centrado, máx 3-4 palabras por pantalla, duración mín 2s por texto
+- Loops: el final debe conectar visualmente con el inicio para fomentar replay`,
+      "TikTok": `\nOPTIMIZACIÓN TIKTOK:
+- Formato vertical 9:16, safe zone: 150px arriba, 400px abajo (botones de TikTok)
+- Pattern interrupt en el segundo 0 — la primera frame define si el usuario se queda
+- Formato UGC/auténtico performa mejor que producción pulida
+- Usar green screen, split screen o POV cuando sea posible
+- Text hooks tipo "POV:", "Wait for it…", "No one talks about this" adaptan engagement`,
+      "YouTube Shorts": `\nOPTIMIZACIÓN YOUTUBE SHORTS:
+- Formato vertical 9:16, safe zone similar a Reels
+- YouTube favorece valor educativo o informativo — incluir datos/facts
+- Thumbnail-first: la primera frame debe funcionar como thumbnail
+- CTA: "Suscríbete" o "Mira el video completo" al final`,
+      "Facebook Reels": `\nOPTIMIZACIÓN FACEBOOK REELS:
+- Formato vertical 9:16, audiencia tiende a ser mayor (35-55)
+- Menos trending-driven, más storytelling y valor práctico
+- Usar subtítulos siempre (alto % de visualización sin sonido)
+- Hooks informativos funcionan mejor que hooks de shock`,
+      "YouTube": `\nOPTIMIZACIÓN YOUTUBE LANDSCAPE:
+- Formato horizontal 16:9, resolución mínima 1080p
+- Intro de 5s máximo antes de entrar al contenido
+- Usar B-roll cinematográfico para mantener interés visual
+- Thumbnail bait: crear un momento visualmente impactante para usar como thumbnail`,
+    };
+    return map[platform] || "";
+  };
+
+  // Tool-specific prompt structure advice
+  const getToolOptimization = (tool: string, toolLabel: string): string => {
+    const map: Record<string, string> = {
+      "veo3": `\nOPTIMIZACIÓN PARA ${toolLabel.toUpperCase()}:
+- Mantén cada escena en 3-5 oraciones concisas y descriptivas
+- Especifica SIEMPRE el camera movement (dolly, pan, orbit, crane)
+- Enfócate en MOOD y ESTILO sobre detalles granulares — Veo interpreta mejor la atmósfera
+- Usa verbos de acción presentes ("la cámara se mueve", "la luz cambia")
+- Evita instrucciones contradictorias — Veo las procesa literalmente
+- Incluye audio/diálogo cues directamente en el prompt (Veo 3 soporta generación de audio nativo)`,
+      "sora": `\nOPTIMIZACIÓN PARA ${toolLabel.toUpperCase()}:
+- Prompts narrativos LARGOS (5-8 oraciones por escena) funcionan mejor
+- Incluye LÓGICA CAUSAL: "cuando X sucede, entonces Y cambia" — Sora modela física y causa-efecto
+- Excelente para interacciones multi-personaje y secuencias complejas
+- Describe el mundo/entorno con detalle — Sora simula el espacio 3D
+- Usa cadenas causales: "el viento mueve las cortinas → la luz parpadea → la sombra se desplaza"
+- Especifica materiales y texturas ("seda suave", "metal pulido", "piel bronceada")`,
+      "runway": `\nOPTIMIZACIÓN PARA ${toolLabel.toUpperCase()}:
+- Estructura tipo TIMELINE con beat markers temporales
+- Instrucciones codificadas en tiempo: "[0:00-0:03] escena A → [0:03-0:06] escena B"
+- Especifica fps y motion style (slow motion, normal speed, speed ramp)
+- Runway responde mejor a instrucciones de estilo visual: "estilo Film Noir", "look Blade Runner"
+- Usa image-to-video cuando sea posible: genera keyframes primero
+- Incluye motion intensity: "sutil movimiento", "movimiento enérgico", "estático"`,
+      "kling": `\nOPTIMIZACIÓN PARA ${toolLabel.toUpperCase()}:
+- Estructura DETALLADA con instrucciones precisas de rendering
+- Kling excele en movimientos de cámara complejos y tomas aéreas
+- Especifica profundidad de campo (f-stop), lens type (35mm, 85mm, anamorphic)
+- Incluye referencias de iluminación específicas (golden hour, blue hour, neon)
+- Los prompts negativos ayudan: "sin distorsión, sin artefactos, sin flickering"`,
+      "pika": `\nOPTIMIZACIÓN PARA ${toolLabel.toUpperCase()}:
+- Prompts concisos y directos, 2-3 oraciones por escena
+- Enfócate en UN movimiento claro por generación
+- Pika funciona mejor con scenes simples y movimientos predecibles
+- Ideal para: loops, cinemagraphs, animaciones sutiles
+- Especifica el tipo de movimiento: "zoom lento", "pan suave", "objeto flotando"`,
+    };
+    return map[tool] || `\nOPTIMIZACIÓN GENÉRICA:\n- Incluye todos los detalles posibles: sujeto, cámara, iluminación, color, movimiento\n- Usa lenguaje cinematográfico universal\n- Estructura clara con timing`;
   };
 
   const handleGenerate = async () => {
@@ -238,7 +495,7 @@ REGLAS:
     const prompt = buildVideoPrompt(id, prompts.length);
     try {
       const { data, error } = await supabase.functions.invoke("ai-generate-content", {
-        body: { prompt: prompt + "\n\nIMPORTANTE: Genera un prompt COMPLETAMENTE NUEVO y DIFERENTE al anterior.", tone, platform: videoPlatform, type: "copy" },
+        body: { prompt: prompt + "\n\nIMPORTANTE: Genera un super-prompt COMPLETAMENTE NUEVO y DIFERENTE al anterior. Nuevo enfoque visual, nueva narrativa, nueva estructura.", tone, platform: videoPlatform, type: "copy" },
       });
       if (error) throw error;
       setPrompts(prev => prev.map(p => p.id === id ? { ...p, prompt: data?.content || p.prompt, status: "done" as const } : p));
@@ -254,12 +511,13 @@ REGLAS:
     if (!prompt) return;
     setSavingIds(prev => new Set(prev).add(id));
     try {
-      // Generate a social media copy for the video post
       let generatedCopy = "";
       try {
+        const service = services.find(s => s.id === selectedServiceId);
         const copyPrompt = `Genera un copy profesional para publicar un video en redes sociales.
 
 CONTEXTO DEL VIDEO: "${mainPrompt}"
+${service ? `PRODUCTO/SERVICIO: "${service.name}" — ${service.core_benefit}` : ""}
 PLATAFORMA: ${videoPlatform}
 TONO: ${tone}
 
@@ -336,13 +594,16 @@ REGLAS:
       <div>
         <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
           <Video className="w-5 h-5 text-primary" />
-          Generador de Prompts de Video
+          Generador de Super-Prompts de Video
         </h2>
         <p className="text-sm text-muted-foreground">
-          Genera prompts profesionales optimizados para herramientas de video con IA (Veo 3, Sora, Runway, etc.).
-          Copia el prompt y pégalo directamente en tu herramienta favorita.
+          Genera super-prompts cinematográficos optimizados para cada herramienta de video con IA.
+          Cada prompt incluye timing, cámara, iluminación, color grading y diseño sonoro.
         </p>
       </div>
+
+      {/* Admin-only prompt composition */}
+      {isSuperAdmin && <VideoPromptTemplateEditor />}
 
       {/* Main prompt */}
       <div className="space-y-1.5">
@@ -416,9 +677,31 @@ REGLAS:
         )}
       </div>
 
-      {/* Strategy selector */}
+      {/* Service + Strategy selectors */}
       {!magicMode && (
-        <div className="space-y-2">
+        <div className="space-y-4">
+          {/* Service/Product selector */}
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Producto / Servicio (opcional)</Label>
+            <Select value={selectedServiceId} onValueChange={handleServiceChange}>
+              <SelectTrigger className="mt-1.5">
+                <SelectValue placeholder="Sin servicio seleccionado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin servicio</SelectItem>
+                {services.map(s => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name} — {s.core_benefit}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {services.length === 0 && (
+              <p className="text-xs text-muted-foreground">No tienes servicios creados. Crea uno en Psycho-Matrix AI → Constructor.</p>
+            )}
+          </div>
+
+          {/* Strategy selector */}
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">Estrategia Psycho-Matrix (opcional)</Label>
             <Select value={selectedStrategyId} onValueChange={setSelectedStrategyId}>
@@ -427,15 +710,22 @@ REGLAS:
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Sin estrategia</SelectItem>
-                {strategies.map(s => (
+                {filteredStrategies.map(s => (
                   <SelectItem key={s.id} value={s.id}>
                     {s.name} — {s.archetype} / {s.brand_voice}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {filteredStrategies.length === 0 && selectedServiceId !== "none" && (
+              <p className="text-xs text-muted-foreground">No hay estrategias para este servicio. Crea una en Psycho-Matrix AI.</p>
+            )}
+            {strategies.length === 0 && (
+              <p className="text-xs text-muted-foreground">No tienes estrategias creadas. Crea una en Psycho-Matrix AI.</p>
+            )}
           </div>
 
+          {/* Show selected strategy details */}
           {selectedStrategyId !== "none" && (() => {
             const strat = strategies.find(s => s.id === selectedStrategyId);
             if (!strat) return null;
@@ -567,7 +857,7 @@ REGLAS:
         </div>
 
         <div className="space-y-2">
-          <Label className="text-sm font-medium">Optimizar prompt para</Label>
+          <Label className="text-sm font-medium">Optimizar super-prompt para</Label>
           <div className="grid grid-cols-2 gap-2">
             {videoTools.map(t => (
               <button
@@ -607,7 +897,7 @@ REGLAS:
         className="gradient-primary text-primary-foreground gap-2"
       >
         {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : magicMode ? <Sparkles className="w-4 h-4" /> : <Video className="w-4 h-4" />}
-        {generating ? "Generando prompts de video..." : magicMode ? `✨ Hacer magia (${count} prompts)` : `Generar ${count} prompt${count > 1 ? "s" : ""} de video`}
+        {generating ? "Generando super-prompts..." : magicMode ? `✨ Hacer magia (${count} super-prompts)` : `Generar ${count} super-prompt${count > 1 ? "s" : ""} de video`}
       </Button>
 
       {/* Generating skeleton */}
@@ -634,9 +924,9 @@ REGLAS:
               <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
                 <div className="flex items-center gap-2">
                   <Video className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">Prompt de video #{p.id}</span>
+                  <span className="text-sm font-semibold text-foreground">Super-prompt #{p.id}</span>
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                    {platformInfo.label} · {getEffectiveDuration()} · {styleInfo?.label}
+                    {platformInfo.label} · {getEffectiveDuration()} · {styleInfo?.label} · {toolInfo.label}
                   </span>
                   {p.savedPostId && (
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 border border-green-500/20">
