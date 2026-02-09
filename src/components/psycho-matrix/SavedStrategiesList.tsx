@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,22 +8,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { usePsychoStrategies, useUpdateStrategy, useDeleteStrategy, useDuplicateStrategy, type PsychoStrategy } from "@/hooks/usePsychoMatrix";
+import { usePsychoStrategies, usePsychoServices, useUpdateStrategy, useDeleteStrategy, useDuplicateStrategy, type PsychoStrategy } from "@/hooks/usePsychoMatrix";
 import {
   arquetiposDigitales, arquetiposMarca, disparadoresPersuasion,
-  codigosGeneracionales, psicologiaAvanzada, canalsPNL,
+  codigosGeneracionales, psicologiaAvanzada, canalsPNL, construirPrompt,
 } from "@/lib/psychoMatrixData";
-import { Copy, Sparkles, Pencil, Trash2, CopyPlus } from "lucide-react";
+import { Copy, Sparkles, Pencil, Trash2, CopyPlus, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const buscar = (lista: { id: string; label: string }[], id: string) => lista.find((i) => i.id === id)?.label || id;
 
 const SavedStrategiesList = () => {
   const { data: estrategias = [], isLoading } = usePsychoStrategies();
+  const { data: servicios = [] } = usePsychoServices();
   const updateStrategy = useUpdateStrategy();
   const deleteStrategy = useDeleteStrategy();
   const duplicateStrategy = useDuplicateStrategy();
   const { toast } = useToast();
+
+  const serviciosMap = useMemo(() => {
+    const map: Record<string, { name: string; core_benefit: string; price: number; observations: string }> = {};
+    servicios.forEach(s => { map[s.id] = { name: s.name, core_benefit: s.core_benefit, price: s.price, observations: s.observations }; });
+    return map;
+  }, [servicios]);
   const [editingStrategy, setEditingStrategy] = useState<PsychoStrategy | null>(null);
   const [editFields, setEditFields] = useState({
     name: "",
@@ -193,7 +200,33 @@ const SavedStrategiesList = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-sm">Prompt de la estrategia</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm">Prompt de la estrategia</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 h-7 text-xs border-primary/30 text-primary hover:bg-primary/10"
+                      onClick={() => {
+                        const svc = serviciosMap[editingStrategy.service_id];
+                        if (!svc) {
+                          toast({ title: "Servicio no encontrado", description: "No se pudo regenerar el prompt.", variant: "destructive" });
+                          return;
+                        }
+                        const arqLabel = buscar(arquetiposDigitales, editFields.archetype);
+                        const marcaLabel = buscar(arquetiposMarca, editFields.brand_voice);
+                        const dispLabel = buscar(disparadoresPersuasion, editFields.persuasion_trigger);
+                        const genLabel = buscar(codigosGeneracionales, editFields.generation);
+                        const avzLabel = editFields.advanced_tech ? buscar(psicologiaAvanzada, editFields.advanced_tech) : undefined;
+                        const newPrompt = construirPrompt(svc, arqLabel, marcaLabel, dispLabel, genLabel, avzLabel);
+                        setEditFields(prev => ({ ...prev, generated_prompt: newPrompt }));
+                        toast({ title: "Prompt regenerado" });
+                      }}
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Regenerar
+                    </Button>
+                  </div>
                   <Textarea
                     value={editFields.generated_prompt}
                     onChange={e => setEditFields({ ...editFields, generated_prompt: e.target.value })}
