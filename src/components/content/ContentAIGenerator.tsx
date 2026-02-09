@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Wand2, Loader2, Plus, Minus, Sparkles, RefreshCw, Settings2, Mic, MicOff } from "lucide-react";
+import { Wand2, Loader2, Plus, Minus, Sparkles, RefreshCw, Settings2, Mic, MicOff, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -161,6 +161,7 @@ const MAX_PIECES_ADMIN = 10;
 
 const ContentAIGenerator = ({ content }: Props) => {
   const [count, setCount] = useState(2);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [mainPrompt, setMainPrompt] = useState("");
   const [tone, setTone] = useState("Profesional");
   const [platform, setPlatform] = useState("Instagram");
@@ -331,9 +332,10 @@ const ContentAIGenerator = ({ content }: Props) => {
         piece.id, pieces.length, sizeInfo, selectedStrategy, imgTpl, selectedBrandStyle,
       );
     }
+    const referenceImages = selectedBrandStyle?.reference_images || [];
     try {
       const { data, error } = await supabase.functions.invoke("ai-generate-content", {
-        body: { prompt, tone, platform, type: "image", width: sizeInfo?.w, height: sizeInfo?.h, imageModel, sizeLabel: sizeInfo?.label, expertMode },
+        body: { prompt, tone, platform, type: "image", width: sizeInfo?.w, height: sizeInfo?.h, imageModel, sizeLabel: sizeInfo?.label, expertMode, referenceImageUrls: referenceImages.length > 0 ? referenceImages : undefined },
       });
       if (error) throw error;
       setPieces(prev => prev.map(p => (p.id === id ? { ...p, imageUrl: data?.imageUrl || p.imageUrl, imagePrompt: prompt } : p)));
@@ -356,7 +358,7 @@ const ContentAIGenerator = ({ content }: Props) => {
     try {
       const copyTpl = copyPromptTemplate?.template || "";
       const variationPrompt = buildCopyPrompt(
-        piece.instruction, piece.id, pieces.length, lengthInfo, selectedStrategy, extraNotes, copyTpl, selectedBrandStyle,
+        piece.instruction, piece.id, pieces.length, lengthInfo, selectedStrategy, extraNotes, copyTpl,
       ) + `\n\nIMPORTANTE: Genera un copy COMPLETAMENTE NUEVO y DIFERENTE al anterior. Usa un enfoque, ángulo o estilo de escritura distinto. Sé creativo y original.`;
       const { data, error } = await supabase.functions.invoke("ai-generate-content", {
         body: { prompt: variationPrompt, tone, platform, type: "copy" },
@@ -468,11 +470,6 @@ const ContentAIGenerator = ({ content }: Props) => {
         )}
       </div>
 
-      {/* Brand Style Manager */}
-      <BrandStyleManager
-        selectedStyleId={selectedBrandStyle?.id || null}
-        onSelectStyle={setSelectedBrandStyle}
-      />
 
       {/* ✨ Hacer Magia checkbox + Abra cadabra */}
       <div className="space-y-3">
@@ -778,6 +775,32 @@ const ContentAIGenerator = ({ content }: Props) => {
         </div>
       )}
 
+      {/* Advanced options: brand style */}
+      <div className="border border-border rounded-xl overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setAdvancedOpen(prev => !prev)}
+          className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
+        >
+          <span className="flex items-center gap-2">
+            <Settings2 className="w-4 h-4 text-muted-foreground" />
+            Opciones avanzadas
+            {selectedBrandStyle && (
+              <span className="text-xs text-primary font-normal">• {selectedBrandStyle.name}</span>
+            )}
+          </span>
+          <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", advancedOpen && "rotate-180")} />
+        </button>
+        {advancedOpen && (
+          <div className="px-4 pb-4 border-t border-border pt-4">
+            <BrandStyleManager
+              selectedStyleId={selectedBrandStyle?.id || null}
+              onSelectStyle={setSelectedBrandStyle}
+            />
+          </div>
+        )}
+      </div>
+
       {/* Admin-only prompt template editor */}
       {isSuperAdmin && <PromptTemplateEditor />}
 
@@ -875,29 +898,17 @@ ${brandStyle.style_description ? `- ESTILO VISUAL: ${brandStyle.style_descriptio
 - Mantén coherencia visual con la identidad de marca de la clínica. Los colores, tipografías y composición deben reflejar este estilo.`;
 }
 
-function buildBrandStyleContextForCopy(brandStyle: any): string {
-  if (!brandStyle) return "";
-  const paletteStr = brandStyle.palette?.length
-    ? brandStyle.palette.map((c: any) => `${c.name}`).join(", ")
-    : "";
-  return `\n\nESTILO DE MARCA (OBLIGATORIO - adaptar el tono y estilo del copy):
-${paletteStr ? `- IDENTIDAD VISUAL DE MARCA: Los colores de la marca son ${paletteStr}. Refleja esta identidad en el tono y las referencias del copy.` : ""}
-${brandStyle.style_description ? `- PERSONALIDAD DE MARCA: ${brandStyle.style_description}. Adapta el lenguaje, tono y estilo de escritura para ser coherente con esta identidad.` : ""}
-- El copy debe sentirse como parte de la misma marca que las imágenes. Mantén coherencia en el tono, vocabulario y energía.`;
-}
-
 function buildCopyPrompt(
   mainPrompt: string, variationNum: number, totalVariations: number,
   lengthInfo: { value: string; label: string; desc: string },
-  strategy?: any, extraNotes?: string, adminTemplate?: string, brandStyle?: any,
+  strategy?: any, extraNotes?: string, adminTemplate?: string,
 ): string {
   const strategyContext = buildStrategyContextForCopy(strategy);
-  const brandContext = buildBrandStyleContextForCopy(brandStyle);
   const lengthInstruction = `\nLONGITUD DEL COPY: Genera un copy ${lengthInfo.label.toUpperCase()} (${lengthInfo.desc}). Respeta estrictamente este límite de caracteres.`;
   const extraContext = extraNotes?.trim() ? `\nNOTAS ADICIONALES DEL USUARIO: ${extraNotes}` : "";
   const baseTemplate = adminTemplate?.trim() ? `${adminTemplate}\n\n` : "";
 
-  return `${baseTemplate}${mainPrompt}${strategyContext}${brandContext}${lengthInstruction}${extraContext}
+  return `${baseTemplate}${mainPrompt}${strategyContext}${lengthInstruction}${extraContext}
 
 IMPORTANTE: Esta es la variación #${variationNum} de ${totalVariations} variaciones totales. 
 Genera un copy COMPLETAMENTE DIFERENTE a las demás variaciones. Usa un enfoque, ángulo o público objetivo distinto.
@@ -958,12 +969,13 @@ async function generateVariation(
   strategy?: any, extraNotes?: string,
   imgTpl?: string, copyTpl?: string, imageModel?: string, brandStyle?: any,
 ): Promise<GeneratedPiece> {
-  const variationPrompt = buildCopyPrompt(mainPrompt, variationNum, totalVariations, lengthInfo, strategy, extraNotes, copyTpl, brandStyle);
+  const variationPrompt = buildCopyPrompt(mainPrompt, variationNum, totalVariations, lengthInfo, strategy, extraNotes, copyTpl);
   const imagePrompt = buildImagePrompt(mainPrompt, variationNum, totalVariations, sizeInfo, strategy, imgTpl, brandStyle);
+  const referenceImages = brandStyle?.reference_images || [];
 
   const [copyResult, imgResult] = await Promise.allSettled([
     supabase.functions.invoke("ai-generate-content", { body: { prompt: variationPrompt, tone, platform, type: "copy" } }),
-    supabase.functions.invoke("ai-generate-content", { body: { prompt: imagePrompt, tone, platform, type: "image", width: sizeInfo.w, height: sizeInfo.h, imageModel, sizeLabel: sizeInfo.label } }),
+    supabase.functions.invoke("ai-generate-content", { body: { prompt: imagePrompt, tone, platform, type: "image", width: sizeInfo.w, height: sizeInfo.h, imageModel, sizeLabel: sizeInfo.label, referenceImageUrls: referenceImages.length > 0 ? referenceImages : undefined } }),
   ]);
 
   const copy = copyResult.status === "fulfilled" && !copyResult.value.error ? copyResult.value.data?.content || "" : null;
@@ -980,7 +992,7 @@ async function generateVariationWithCopyBasedImage(
   strategy?: any, extraNotes?: string,
   imgTpl?: string, copyTpl?: string, imageModel?: string, brandStyle?: any,
 ): Promise<GeneratedPiece> {
-  const variationPrompt = buildCopyPrompt(mainPrompt, variationNum, totalVariations, lengthInfo, strategy, extraNotes, copyTpl, brandStyle);
+  const variationPrompt = buildCopyPrompt(mainPrompt, variationNum, totalVariations, lengthInfo, strategy, extraNotes, copyTpl);
 
   const { data: copyData, error: copyError } = await supabase.functions.invoke("ai-generate-content", {
     body: { prompt: variationPrompt, tone, platform, type: "copy" },
@@ -988,9 +1000,10 @@ async function generateVariationWithCopyBasedImage(
   const copy = !copyError ? copyData?.content || "" : null;
 
   const imagePrompt = buildCopyBasedImagePrompt(copy || mainPrompt, variationNum, totalVariations, sizeInfo, strategy, imgTpl, brandStyle);
+  const referenceImages = brandStyle?.reference_images || [];
 
   const { data: imgData, error: imgError } = await supabase.functions.invoke("ai-generate-content", {
-    body: { prompt: imagePrompt, tone, platform, type: "image", width: sizeInfo.w, height: sizeInfo.h, imageModel, sizeLabel: sizeInfo.label },
+    body: { prompt: imagePrompt, tone, platform, type: "image", width: sizeInfo.w, height: sizeInfo.h, imageModel, sizeLabel: sizeInfo.label, referenceImageUrls: referenceImages.length > 0 ? referenceImages : undefined },
   });
   const imageUrl = !imgError ? imgData?.imageUrl || null : null;
 

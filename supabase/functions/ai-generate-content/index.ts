@@ -135,7 +135,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { prompt, tone, platform, type, width, height, imageModel, sizeLabel, expertMode, referenceImageUrl } = await req.json();
+    const { prompt, tone, platform, type, width, height, imageModel, sizeLabel, expertMode, referenceImageUrl, referenceImageUrls } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -212,11 +212,20 @@ The final image must be 100% CLEAN — as if it were a real advertisement ready 
 
       console.log("Image generation - model:", imageModel || "pro", "- requested:", width, "x", height, "-> aspectRatio:", aspectRatio);
 
-      // Build messages: if we have a reference image, send it as visual context
+      // Build messages: if we have reference images, send them as visual context
       const userContent: any[] = [];
+      const brandRefImages: string[] = referenceImageUrls || [];
+      
       if (referenceImageUrl) {
+        // Single reference (resize mode)
         userContent.push({ type: "image_url", image_url: { url: referenceImageUrl } });
         userContent.push({ type: "text", text: `INSTRUCCIÓN CRÍTICA: La imagen adjunta es la imagen ORIGINAL. Debes generar una imagen IDÉNTICA en contenido, textos, colores, composición, estilo y diseño. La ÚNICA diferencia debe ser el formato/aspecto adaptado a ${aspectRatio || "las nuevas dimensiones"}. NO cambies NADA del diseño original.\n\n${imagePrompt}` });
+      } else if (brandRefImages.length > 0) {
+        // Brand style reference images
+        for (const refUrl of brandRefImages.slice(0, 4)) {
+          userContent.push({ type: "image_url", image_url: { url: refUrl } });
+        }
+        userContent.push({ type: "text", text: `IMÁGENES DE REFERENCIA DE MARCA: Las ${brandRefImages.length} imágenes anteriores son referencias visuales de la identidad de marca. Analiza su estilo, colores, tipografía y composición. Genera una NUEVA imagen que sea coherente con esta identidad visual pero MEJORADA y adaptada al siguiente briefing:\n\n${imagePrompt}` });
       } else {
         userContent.push({ type: "text", text: imagePrompt });
       }
