@@ -128,9 +128,9 @@ const VentasPage = () => {
                 <DialogHeader><DialogTitle>Nueva Venta</DialogTitle></DialogHeader>
                 <div className="space-y-4 pt-2">
                   <div>
-                    <Label>Paciente *</Label>
+                    <Label>Cliente *</Label>
                     <Select value={form.patient_id} onValueChange={v => setForm({ ...form, patient_id: v })}>
-                      <SelectTrigger><SelectValue placeholder="Seleccionar paciente" /></SelectTrigger>
+                       <SelectTrigger><SelectValue placeholder="Seleccionar cliente" /></SelectTrigger>
                       <SelectContent>{patients.map(p => <SelectItem key={p.id} value={p.id}>{p.first_name} {p.last_name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
@@ -153,9 +153,9 @@ const VentasPage = () => {
                     </div>
                   </div>
                   <div>
-                    <Label>Tratamiento</Label>
+                    <Label>Servicio</Label>
                     <Select value={form.treatment_id} onValueChange={handleTreatmentChange}>
-                      <SelectTrigger><SelectValue placeholder="Seleccionar tratamiento" /></SelectTrigger>
+                       <SelectTrigger><SelectValue placeholder="Seleccionar servicio" /></SelectTrigger>
                       <SelectContent>{treatments.map(t => <SelectItem key={t.id} value={t.id}>{t.name} - ${Number(t.price).toLocaleString()}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
@@ -236,7 +236,7 @@ const VentasPage = () => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
-                    {["Fecha", "Paciente", "Tratamiento", "Monto", "Descuento", "Total", "Estado", "Acciones"].map(h => (
+                    {["Fecha", "Cliente", "Servicio", "Monto", "Descuento", "Total", "Estado", "Acciones"].map(h => (
                       <th key={h} className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">{h}</th>
                     ))}
                   </tr>
@@ -258,11 +258,11 @@ const VentasPage = () => {
                             <DialogHeader><DialogTitle>Detalle de Venta</DialogTitle></DialogHeader>
                             <div className="space-y-3 pt-2 text-sm">
                               <div className="grid grid-cols-2 gap-3">
-                                <div><p className="text-muted-foreground">Paciente</p><p className="font-medium text-foreground">{s.patients ? `${s.patients.first_name} ${s.patients.last_name}` : "-"}</p></div>
+                                <div><p className="text-muted-foreground">Cliente</p><p className="font-medium text-foreground">{s.patients ? `${s.patients.first_name} ${s.patients.last_name}` : "-"}</p></div>
                                 <div><p className="text-muted-foreground">Fecha</p><p className="font-medium text-foreground">{new Date(s.created_at).toLocaleDateString("es-ES")}</p></div>
                                 <div><p className="text-muted-foreground">Sucursal</p><p className="font-medium text-foreground">{s.branches?.name || "-"}</p></div>
                                 <div><p className="text-muted-foreground">Origen</p><p className="font-medium text-foreground">{s.origin || "-"}</p></div>
-                                <div><p className="text-muted-foreground">Tratamiento</p><p className="font-medium text-foreground">{s.treatments?.name || "-"}</p></div>
+                                <div><p className="text-muted-foreground">Servicio</p><p className="font-medium text-foreground">{s.treatments?.name || "-"}</p></div>
                                 <div><p className="text-muted-foreground">Medio de pago</p><p className="font-medium text-foreground">{s.payment_methods?.name || "-"}</p></div>
                                 <div><p className="text-muted-foreground">Monto</p><p className="font-medium text-foreground">${Number(s.amount).toLocaleString()}</p></div>
                                 <div><p className="text-muted-foreground">Descuento</p><p className="font-medium text-foreground">{Number(s.discount)}%</p></div>

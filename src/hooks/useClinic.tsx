@@ -16,7 +16,7 @@ const ClinicContext = createContext<ClinicContextType | undefined>(undefined);
 export const ClinicProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [clinicId, setClinicId] = useState<string | null>(null);
-  const [clinicName, setClinicName] = useState("Mi Clínica");
+  const [clinicName, setClinicName] = useState("Mi Negocio");
   const [loading, setLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [allClinics, setAllClinics] = useState<{ id: string; name: string }[]>([]);
@@ -75,7 +75,7 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
 
       if (roleData) {
         setClinicId(roleData.clinic_id);
-        setClinicName((roleData as any).clinics?.name ?? "Mi Clínica");
+        setClinicName((roleData as any).clinics?.name ?? "Mi Negocio");
       }
       setLoading(false);
     };

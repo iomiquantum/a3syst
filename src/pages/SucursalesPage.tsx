@@ -68,7 +68,7 @@ const SucursalesPage = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Sucursales</h1>
-            <p className="text-muted-foreground">Gestiona las sucursales de tu clínica</p>
+            <p className="text-muted-foreground">Gestiona las sucursales de tu negocio</p>
           </div>
           <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setEditingId(null); setForm({ name: "", address: "", phone: "", description: "" }); } }}>
             <DialogTrigger asChild>

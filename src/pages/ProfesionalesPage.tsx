@@ -63,13 +63,13 @@ const ProfesionalesPage = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Profesionales</h1>
-            <p className="text-muted-foreground">Gestiona los profesionales de tu clínica</p>
+            <h1 className="text-2xl font-bold text-foreground">Equipo</h1>
+            <p className="text-muted-foreground">Gestiona los miembros de tu equipo</p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button className="gradient-primary text-primary-foreground hover:opacity-90"><Plus className="w-4 h-4 mr-2" /> Nuevo Profesional</Button></DialogTrigger>
+            <DialogTrigger asChild><Button className="gradient-primary text-primary-foreground hover:opacity-90"><Plus className="w-4 h-4 mr-2" /> Nuevo Miembro</Button></DialogTrigger>
             <DialogContent>
-              <DialogHeader><DialogTitle>Nuevo Profesional</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>Nuevo Miembro del Equipo</DialogTitle></DialogHeader>
               <div className="space-y-4 pt-2">
                 <div><Label>Nombre completo *</Label><Input value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} maxLength={100} /></div>
                 <div className="grid grid-cols-2 gap-4">
@@ -78,7 +78,7 @@ const ProfesionalesPage = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Especialidad</Label>
+                    <Label>Categoría</Label>
                     <Select value={form.specialty_id} onValueChange={v => setForm({...form, specialty_id: v})}>
                       <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                       <SelectContent>{specialties.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
@@ -101,12 +101,12 @@ const ProfesionalesPage = () => {
         <Card className="shadow-card">
           <CardContent className="p-0">
             {professionals.length === 0 ? (
-              <p className="p-8 text-center text-muted-foreground">No hay profesionales creados aún. Primero crea sucursales y especialidades.</p>
+              <p className="p-8 text-center text-muted-foreground">No hay miembros del equipo aún. Primero crea sucursales y categorías.</p>
             ) : (
               <table className="w-full">
                 <thead><tr className="border-b border-border">
-                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Profesional</th>
-                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Especialidad</th>
+                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Miembro</th>
+                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Categoría</th>
                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Sucursal</th>
                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Contacto</th>
                   <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Acciones</th>

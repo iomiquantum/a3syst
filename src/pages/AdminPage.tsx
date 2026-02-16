@@ -52,8 +52,8 @@ const AdminPage = () => {
     <AppLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Panel Super Admin</h1>
-          <p className="text-muted-foreground">Gestiona clínicas, usuarios y roles</p>
+         <h1 className="text-2xl font-bold text-foreground">Panel Super Admin</h1>
+          <p className="text-muted-foreground">Gestiona negocios, usuarios y roles</p>
         </div>
 
         {loading ? (
@@ -61,8 +61,8 @@ const AdminPage = () => {
         ) : (
           <Tabs defaultValue="clinicas" className="w-full">
             <TabsList>
-              <TabsTrigger value="clinicas" className="flex items-center gap-2">
-                <Building2 className="w-4 h-4" /> Clínicas
+               <TabsTrigger value="clinicas" className="flex items-center gap-2">
+                 <Building2 className="w-4 h-4" /> Negocios
               </TabsTrigger>
               <TabsTrigger value="usuarios" className="flex items-center gap-2">
                 <Users className="w-4 h-4" /> Usuarios

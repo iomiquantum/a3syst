@@ -9,7 +9,7 @@ interface Props {
   profileName?: string;
 }
 
-const PostPreview = ({ platform, body, mediaUrls, hashtags, profileName = "Mi Clínica" }: Props) => {
+const PostPreview = ({ platform, body, mediaUrls, hashtags, profileName = "Mi Negocio" }: Props) => {
   const fullText = [body, hashtags.length > 0 ? "\n\n" + hashtags.join(" ") : ""].join("");
 
   if (platform === "instagram") {

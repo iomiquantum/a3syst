@@ -191,7 +191,7 @@ const VideoPromptTemplateEditor = () => {
       <CollapsibleContent className="mt-3 space-y-4 p-4 rounded-xl border border-border bg-card">
         <p className="text-xs text-muted-foreground">
           Configura la estructura base del super-prompt para generación de video. Este template define las reglas, estructura y optimización
-          que se aplican a todos los prompts de video generados para esta clínica.
+          que se aplican a todos los prompts de video generados para este negocio.
         </p>
 
         <div className="space-y-2">

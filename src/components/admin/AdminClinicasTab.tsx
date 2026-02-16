@@ -6,9 +6,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useClinic } from "@/hooks/useClinic";
+import BusinessTypeSelector, { BUSINESS_CATEGORIES } from "./BusinessTypeSelector";
 
 interface AdminClinicasTabProps {
   clinics: any[];
@@ -19,10 +21,11 @@ interface AdminClinicasTabProps {
 const AdminClinicasTab = ({ clinics, roles, onRefresh }: AdminClinicasTabProps) => {
   const { selectClinic } = useClinic();
   const [clinicOpen, setClinicOpen] = useState(false);
-  const [clinicForm, setClinicForm] = useState({ name: "", description: "", address: "" });
+  const [clinicForm, setClinicForm] = useState({ name: "", description: "", address: "", business_type: "" });
 
   const handleCreateClinic = async () => {
     if (!clinicForm.name.trim()) { toast.error("El nombre es requerido"); return; }
+    if (!clinicForm.business_type) { toast.error("Selecciona un tipo de negocio"); return; }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -31,40 +34,47 @@ const AdminClinicasTab = ({ clinics, roles, onRefresh }: AdminClinicasTabProps) 
       description: clinicForm.description.trim(),
       address: clinicForm.address.trim(),
       owner_id: user.id,
+      business_type: clinicForm.business_type,
     });
     if (error) { toast.error(error.message); return; }
-    toast.success("Clínica creada");
+    toast.success("Negocio creado");
     setClinicOpen(false);
-    setClinicForm({ name: "", description: "", address: "" });
+    setClinicForm({ name: "", description: "", address: "", business_type: "" });
     onRefresh();
   };
 
   const handleDeleteClinic = async (id: string) => {
     const { error } = await supabase.from("clinics").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
-    toast.success("Clínica eliminada");
+    toast.success("Negocio eliminado");
     onRefresh();
+  };
+
+  const getCategoryLabel = (type: string) => {
+    const cat = BUSINESS_CATEGORIES.find(c => c.value === type);
+    return cat ? `${cat.icon} ${cat.label}` : type;
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-          <Building2 className="w-5 h-5" /> Clínicas
+          <Building2 className="w-5 h-5" /> Negocios
         </h2>
         <Dialog open={clinicOpen} onOpenChange={setClinicOpen}>
           <DialogTrigger asChild>
             <Button className="gradient-primary text-primary-foreground hover:opacity-90">
-              <Plus className="w-4 h-4 mr-2" /> Nueva Clínica
+              <Plus className="w-4 h-4 mr-2" /> Nuevo Negocio
             </Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Nueva Clínica</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Nuevo Negocio</DialogTitle></DialogHeader>
             <div className="space-y-4 pt-2">
-              <div><Label>Nombre *</Label><Input value={clinicForm.name} onChange={e => setClinicForm({ ...clinicForm, name: e.target.value })} maxLength={100} placeholder="Nombre de la clínica" /></div>
+              <div><Label>Nombre *</Label><Input value={clinicForm.name} onChange={e => setClinicForm({ ...clinicForm, name: e.target.value })} maxLength={100} placeholder="Nombre del negocio" /></div>
+              <BusinessTypeSelector value={clinicForm.business_type} onChange={v => setClinicForm({ ...clinicForm, business_type: v })} />
               <div><Label>Dirección</Label><Input value={clinicForm.address} onChange={e => setClinicForm({ ...clinicForm, address: e.target.value })} maxLength={300} /></div>
               <div><Label>Descripción</Label><Textarea value={clinicForm.description} onChange={e => setClinicForm({ ...clinicForm, description: e.target.value })} maxLength={500} /></div>
-              <Button onClick={handleCreateClinic} className="w-full gradient-primary text-primary-foreground" disabled={!clinicForm.name.trim()}>Crear Clínica</Button>
+              <Button onClick={handleCreateClinic} className="w-full gradient-primary text-primary-foreground" disabled={!clinicForm.name.trim() || !clinicForm.business_type}>Crear Negocio</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -85,6 +95,9 @@ const AdminClinicasTab = ({ clinics, roles, onRefresh }: AdminClinicasTabProps) 
               </div>
             </CardHeader>
             <CardContent>
+              {c.business_type && c.business_type !== "general" && (
+                <Badge variant="secondary" className="mb-2 text-xs">{getCategoryLabel(c.business_type)}</Badge>
+              )}
               {c.address && <p className="text-sm text-muted-foreground">{c.address}</p>}
               {c.description && <p className="text-sm text-muted-foreground mt-1">{c.description}</p>}
               <p className="text-xs text-muted-foreground mt-2">

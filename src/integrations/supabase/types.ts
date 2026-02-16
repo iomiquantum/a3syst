@@ -655,6 +655,8 @@ export type Database = {
       clinics: {
         Row: {
           address: string | null
+          business_category: string
+          business_type: string
           created_at: string
           description: string | null
           id: string
@@ -666,6 +668,8 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          business_category?: string
+          business_type?: string
           created_at?: string
           description?: string | null
           id?: string
@@ -677,6 +681,8 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          business_category?: string
+          business_type?: string
           created_at?: string
           description?: string | null
           id?: string
