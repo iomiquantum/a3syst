@@ -914,6 +914,212 @@ export type Database = {
           },
         ]
       }
+      meeting_bots: {
+        Row: {
+          bot_id: string | null
+          clinic_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          join_url: string | null
+          meeting_id: string
+          recording_url: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          bot_id?: string | null
+          clinic_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          join_url?: string | null
+          meeting_id: string
+          recording_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          bot_id?: string | null
+          clinic_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          join_url?: string | null
+          meeting_id?: string
+          recording_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_bots_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_bots_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_summaries: {
+        Row: {
+          action_items: Json
+          clinic_id: string
+          created_at: string
+          decisions: Json
+          executive_summary: string | null
+          id: string
+          key_topics: Json
+          meeting_id: string
+          sentiment: string | null
+          updated_at: string
+        }
+        Insert: {
+          action_items?: Json
+          clinic_id: string
+          created_at?: string
+          decisions?: Json
+          executive_summary?: string | null
+          id?: string
+          key_topics?: Json
+          meeting_id: string
+          sentiment?: string | null
+          updated_at?: string
+        }
+        Update: {
+          action_items?: Json
+          clinic_id?: string
+          created_at?: string
+          decisions?: Json
+          executive_summary?: string | null
+          id?: string
+          key_topics?: Json
+          meeting_id?: string
+          sentiment?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_summaries_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_summaries_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: true
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_transcripts: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          language: string | null
+          meeting_id: string
+          raw_transcript: Json
+          speakers: Json
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          language?: string | null
+          meeting_id: string
+          raw_transcript?: Json
+          speakers?: Json
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          language?: string | null
+          meeting_id?: string
+          raw_transcript?: Json
+          speakers?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_transcripts_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_transcripts_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: true
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meetings: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          created_by: string
+          duration_seconds: number | null
+          ended_at: string | null
+          id: string
+          meeting_url: string | null
+          platform: string
+          started_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          created_by: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          meeting_url?: string | null
+          platform?: string
+          started_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          meeting_url?: string | null
+          platform?: string
+          started_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           clinic_id: string
