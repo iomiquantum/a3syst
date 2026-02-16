@@ -13,35 +13,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { useClinic } from "@/hooks/useClinic";
+import { useBusinessLabels } from "@/hooks/useBusinessLabels";
 import SidebarTooltip from "@/components/SidebarTooltip";
 import { useTheme } from "@/hooks/useTheme";
 
 interface AppLayoutProps { children: ReactNode; }
-
-const mainNav = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: Users, label: "Clientes", path: "/pacientes" },
-  { icon: Calendar, label: "Agenda", path: "/agenda" },
-  { icon: DollarSign, label: "Ventas", path: "/ventas" },
-  { icon: MessageSquare, label: "Mensajes", path: "/mensajes" },
-  { icon: PhoneCall, label: "Call Center", path: "/crm" },
-  { icon: Megaphone, label: "Marketing", path: "/marketing" },
-  { icon: Zap, label: "ADS", path: "/ads" },
-  { icon: Palette, label: "Contenido", path: "/contenido" },
-  { icon: Brain, label: "Psycho-Matrix", path: "/psycho-matrix" },
-  { icon: ClipboardList, label: "Planificación", path: "/planificacion" },
-  { icon: Video, label: "Reuniones", path: "/reuniones" },
-];
-
-const configNav = [
-  { icon: Building2, label: "Sucursales", path: "/configuracion/sucursales" },
-  { icon: Stethoscope, label: "Servicios", path: "/configuracion/tratamientos" },
-  { icon: Briefcase, label: "Equipo", path: "/configuracion/profesionales" },
-  { icon: UserCog, label: "Usuarios", path: "/configuracion/usuarios" },
-  { icon: Settings, label: "Ajustes", path: "/configuracion/ajustes" },
-  { icon: Globe, label: "Widget Web", path: "/configuracion/widget" },
-  { icon: Bot, label: "Agente IA", path: "/configuracion/agente-ia" },
-];
 
 const AppLayout = ({ children }: AppLayoutProps) => {
   const navigate = useNavigate();
@@ -49,7 +25,33 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const { user, signOut } = useAuth();
   const { clinicName, isSuperAdmin, allClinics, selectClinic, clinicId } = useClinic();
+  const { labels } = useBusinessLabels();
   const { theme, toggleTheme } = useTheme();
+
+  const mainNav = [
+    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+    { icon: Users, label: labels.patients, path: "/pacientes" },
+    { icon: Calendar, label: "Agenda", path: "/agenda" },
+    { icon: DollarSign, label: labels.sales, path: "/ventas" },
+    { icon: MessageSquare, label: "Mensajes", path: "/mensajes" },
+    { icon: PhoneCall, label: "Call Center", path: "/crm" },
+    { icon: Megaphone, label: "Marketing", path: "/marketing" },
+    { icon: Zap, label: "ADS", path: "/ads" },
+    { icon: Palette, label: "Contenido", path: "/contenido" },
+    { icon: Brain, label: "Psycho-Matrix", path: "/psycho-matrix" },
+    { icon: ClipboardList, label: "Planificación", path: "/planificacion" },
+    { icon: Video, label: "Reuniones", path: "/reuniones" },
+  ];
+
+  const configNav = [
+    { icon: Building2, label: labels.branches, path: "/configuracion/sucursales" },
+    { icon: Stethoscope, label: labels.treatments, path: "/configuracion/tratamientos" },
+    { icon: Briefcase, label: labels.professionals, path: "/configuracion/profesionales" },
+    { icon: UserCog, label: "Usuarios", path: "/configuracion/usuarios" },
+    { icon: Settings, label: "Ajustes", path: "/configuracion/ajustes" },
+    { icon: Globe, label: "Widget Web", path: "/configuracion/widget" },
+    { icon: Bot, label: "Agente IA", path: "/configuracion/agente-ia" },
+  ];
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + "/");
 
@@ -142,10 +144,9 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-10">
           <div className="relative w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Buscar clientes, citas..." className="pl-10 bg-background border-border h-9" />
+            <Input placeholder={`Buscar ${labels.patients.toLowerCase()}, ${labels.appointments.toLowerCase()}...`} className="pl-10 bg-background border-border h-9" />
           </div>
           <div className="flex items-center gap-4">
-            {/* Super admin clinic switcher */}
             {isSuperAdmin && allClinics.length > 0 && (
               <Select value={clinicId || ""} onValueChange={(v) => {
                 const clinic = allClinics.find(c => c.id === v);

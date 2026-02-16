@@ -8,12 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useClinic } from "@/hooks/useClinic";
+import { useBusinessLabels } from "@/hooks/useBusinessLabels";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { branchSchema, getValidationError } from "@/lib/validations";
 
 const SucursalesPage = () => {
   const { clinicId } = useClinic();
+  const { labels } = useBusinessLabels();
   const [branches, setBranches] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -36,11 +38,11 @@ const SucursalesPage = () => {
       if (editingId) {
         const { error } = await supabase.from("branches").update({ name: validated.name, address: validated.address, phone: validated.phone || "", description: validated.description || "" }).eq("id", editingId);
         if (error) { toast.error(error.message); return; }
-        toast.success("Sucursal actualizada");
+        toast.success(`${labels.branches_singular} actualizada`);
       } else {
         const { error } = await supabase.from("branches").insert({ clinic_id: clinicId, name: validated.name, address: validated.address, phone: validated.phone || "", description: validated.description || "" });
         if (error) { toast.error(error.message); return; }
-        toast.success("Sucursal creada");
+        toast.success(`${labels.branches_singular} creada`);
       }
       setOpen(false); setEditingId(null); setForm({ name: "", address: "", phone: "", description: "" });
       fetchBranches();
@@ -58,7 +60,7 @@ const SucursalesPage = () => {
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from("branches").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
-    toast.success("Sucursal eliminada");
+    toast.success(`${labels.branches_singular} eliminada`);
     fetchBranches();
   };
 
@@ -67,21 +69,21 @@ const SucursalesPage = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Sucursales</h1>
-            <p className="text-muted-foreground">Gestiona las sucursales de tu negocio</p>
+            <h1 className="text-2xl font-bold text-foreground">{labels.branches}</h1>
+            <p className="text-muted-foreground">Gestiona las {labels.branches.toLowerCase()} de tu negocio</p>
           </div>
           <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setEditingId(null); setForm({ name: "", address: "", phone: "", description: "" }); } }}>
             <DialogTrigger asChild>
-              <Button className="gradient-primary text-primary-foreground hover:opacity-90"><Plus className="w-4 h-4 mr-2" /> Nueva Sucursal</Button>
+              <Button className="gradient-primary text-primary-foreground hover:opacity-90"><Plus className="w-4 h-4 mr-2" /> Nueva {labels.branches_singular}</Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader><DialogTitle>{editingId ? "Editar Sucursal" : "Nueva Sucursal"}</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{editingId ? `Editar ${labels.branches_singular}` : `Nueva ${labels.branches_singular}`}</DialogTitle></DialogHeader>
               <div className="space-y-4 pt-2">
-                <div><Label>Nombre *</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Nombre de la sucursal" maxLength={100} /></div>
+                <div><Label>Nombre *</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder={`Nombre de la ${labels.branches_singular.toLowerCase()}`} maxLength={100} /></div>
                 <div><Label>Dirección *</Label><Input value={form.address} onChange={e => setForm({...form, address: e.target.value})} placeholder="Dirección completa" maxLength={300} /></div>
                 <div><Label>Teléfono</Label><Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} maxLength={20} /></div>
                 <div><Label>Descripción</Label><Textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} maxLength={1000} /></div>
-                <Button onClick={handleSave} className="w-full gradient-primary text-primary-foreground" disabled={!form.name || !form.address}>{editingId ? "Guardar Cambios" : "Crear Sucursal"}</Button>
+                <Button onClick={handleSave} className="w-full gradient-primary text-primary-foreground" disabled={!form.name || !form.address}>{editingId ? "Guardar Cambios" : `Crear ${labels.branches_singular}`}</Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -90,7 +92,7 @@ const SucursalesPage = () => {
         {loading ? (
           <p className="text-muted-foreground">Cargando...</p>
         ) : branches.length === 0 ? (
-          <Card className="shadow-card"><CardContent className="p-8 text-center"><p className="text-muted-foreground">No hay sucursales creadas aún. Crea tu primera sucursal.</p></CardContent></Card>
+          <Card className="shadow-card"><CardContent className="p-8 text-center"><p className="text-muted-foreground">No hay {labels.branches.toLowerCase()} creadas aún. Crea tu primera {labels.branches_singular.toLowerCase()}.</p></CardContent></Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {branches.map(branch => (

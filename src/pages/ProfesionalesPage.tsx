@@ -8,12 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useClinic } from "@/hooks/useClinic";
+import { useBusinessLabels } from "@/hooks/useBusinessLabels";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { professionalSchema, getValidationError } from "@/lib/validations";
 
 const ProfesionalesPage = () => {
   const { clinicId } = useClinic();
+  const { labels } = useBusinessLabels();
   const [professionals, setProfessionals] = useState<any[]>([]);
   const [specialties, setSpecialties] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
@@ -43,7 +45,7 @@ const ProfesionalesPage = () => {
         phone: validated.phone || "", specialty_id: validated.specialty_id || null, branch_id: validated.branch_id || null,
       });
       if (error) { toast.error(error.message); return; }
-      toast.success("Profesional creado");
+      toast.success(`${labels.professionals_singular} creado`);
       setOpen(false); setForm({ full_name: "", email: "", phone: "", specialty_id: "", branch_id: "" });
       fetchData();
     } catch (e) {
@@ -53,7 +55,7 @@ const ProfesionalesPage = () => {
 
   const handleDelete = async (id: string) => {
     await supabase.from("professionals").delete().eq("id", id);
-    toast.success("Profesional eliminado"); fetchData();
+    toast.success(`${labels.professionals_singular} eliminado`); fetchData();
   };
 
   const initials = (name: string) => name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
@@ -63,13 +65,13 @@ const ProfesionalesPage = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Equipo</h1>
-            <p className="text-muted-foreground">Gestiona los miembros de tu equipo</p>
+            <h1 className="text-2xl font-bold text-foreground">{labels.professionals}</h1>
+            <p className="text-muted-foreground">Gestiona los miembros de tu {labels.professionals.toLowerCase()}</p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button className="gradient-primary text-primary-foreground hover:opacity-90"><Plus className="w-4 h-4 mr-2" /> Nuevo Miembro</Button></DialogTrigger>
+            <DialogTrigger asChild><Button className="gradient-primary text-primary-foreground hover:opacity-90"><Plus className="w-4 h-4 mr-2" /> Nuevo {labels.professionals_singular}</Button></DialogTrigger>
             <DialogContent>
-              <DialogHeader><DialogTitle>Nuevo Miembro del Equipo</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>Nuevo {labels.professionals_singular}</DialogTitle></DialogHeader>
               <div className="space-y-4 pt-2">
                 <div><Label>Nombre completo *</Label><Input value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} maxLength={100} /></div>
                 <div className="grid grid-cols-2 gap-4">
@@ -78,14 +80,14 @@ const ProfesionalesPage = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Categoría</Label>
+                    <Label>{labels.specialties}</Label>
                     <Select value={form.specialty_id} onValueChange={v => setForm({...form, specialty_id: v})}>
                       <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                       <SelectContent>{specialties.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label>Sucursal</Label>
+                    <Label>{labels.branches_singular}</Label>
                     <Select value={form.branch_id} onValueChange={v => setForm({...form, branch_id: v})}>
                       <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                       <SelectContent>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
@@ -101,13 +103,13 @@ const ProfesionalesPage = () => {
         <Card className="shadow-card">
           <CardContent className="p-0">
             {professionals.length === 0 ? (
-              <p className="p-8 text-center text-muted-foreground">No hay miembros del equipo aún. Primero crea sucursales y categorías.</p>
+              <p className="p-8 text-center text-muted-foreground">No hay miembros del {labels.professionals.toLowerCase()} aún. Primero crea {labels.branches.toLowerCase()} y {labels.specialties.toLowerCase()}.</p>
             ) : (
               <table className="w-full">
                 <thead><tr className="border-b border-border">
-                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Miembro</th>
-                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Categoría</th>
-                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Sucursal</th>
+                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">{labels.professionals_singular}</th>
+                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">{labels.specialties}</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">{labels.branches_singular}</th>
                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Contacto</th>
                   <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Acciones</th>
                 </tr></thead>

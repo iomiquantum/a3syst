@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Building2 } from "lucide-react";
+import { Plus, Trash2, Building2, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useClinic } from "@/hooks/useClinic";
+import { useBusinessLabels } from "@/hooks/useBusinessLabels";
 import BusinessTypeSelector, { BUSINESS_CATEGORIES } from "./BusinessTypeSelector";
 
 interface AdminClinicasTabProps {
@@ -20,8 +21,10 @@ interface AdminClinicasTabProps {
 
 const AdminClinicasTab = ({ clinics, roles, onRefresh }: AdminClinicasTabProps) => {
   const { selectClinic } = useClinic();
+  const { refresh: refreshLabels } = useBusinessLabels();
   const [clinicOpen, setClinicOpen] = useState(false);
   const [clinicForm, setClinicForm] = useState({ name: "", description: "", address: "", business_type: "" });
+  const [personalizing, setPersonalizing] = useState<string | null>(null);
 
   const handleCreateClinic = async () => {
     if (!clinicForm.name.trim()) { toast.error("El nombre es requerido"); return; }
@@ -48,6 +51,50 @@ const AdminClinicasTab = ({ clinics, roles, onRefresh }: AdminClinicasTabProps) 
     if (error) { toast.error(error.message); return; }
     toast.success("Negocio eliminado");
     onRefresh();
+  };
+
+  const handlePersonalize = async (clinic: any) => {
+    setPersonalizing(clinic.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("personalize-business", {
+        body: { business_type: clinic.business_type || "general", business_name: clinic.name },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      // Upsert labels
+      const { error: upsertError } = await supabase
+        .from("business_labels")
+        .upsert({
+          clinic_id: clinic.id,
+          labels: data.labels,
+          initial_services: data.initial_services || [],
+          ai_generated: true,
+        }, { onConflict: "clinic_id" });
+
+      if (upsertError) throw upsertError;
+
+      // Create initial services if any
+      if (data.initial_services?.length > 0) {
+        const services = data.initial_services.map((s: any) => ({
+          clinic_id: clinic.id,
+          name: s.name,
+          duration: s.duration || 30,
+          price: s.price || 0,
+          description: s.description || "",
+        }));
+        await supabase.from("treatments").insert(services);
+      }
+
+      refreshLabels();
+      toast.success("¡Negocio personalizado con IA! Labels y servicios iniciales creados.");
+    } catch (e: any) {
+      console.error("Personalize error:", e);
+      toast.error(e.message || "Error al personalizar con IA");
+    } finally {
+      setPersonalizing(null);
+    }
   };
 
   const getCategoryLabel = (type: string) => {
@@ -103,6 +150,19 @@ const AdminClinicasTab = ({ clinics, roles, onRefresh }: AdminClinicasTabProps) 
               <p className="text-xs text-muted-foreground mt-2">
                 {roles.filter(r => r.clinic_id === c.id).length} usuario(s) asignado(s)
               </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3 w-full"
+                disabled={personalizing === c.id}
+                onClick={(e) => { e.stopPropagation(); handlePersonalize(c); }}
+              >
+                {personalizing === c.id ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Personalizando...</>
+                ) : (
+                  <><Sparkles className="w-4 h-4 mr-2" /> Personalizar con IA</>
+                )}
+              </Button>
             </CardContent>
           </Card>
         ))}

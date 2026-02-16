@@ -516,6 +516,44 @@ export type Database = {
           },
         ]
       }
+      business_labels: {
+        Row: {
+          ai_generated: boolean
+          clinic_id: string
+          created_at: string
+          id: string
+          initial_services: Json
+          labels: Json
+          updated_at: string
+        }
+        Insert: {
+          ai_generated?: boolean
+          clinic_id: string
+          created_at?: string
+          id?: string
+          initial_services?: Json
+          labels?: Json
+          updated_at?: string
+        }
+        Update: {
+          ai_generated?: boolean
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          initial_services?: Json
+          labels?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_labels_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       call_logs: {
         Row: {
           call_type: string
