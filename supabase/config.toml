@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.publish-scheduled-posts]
 verify_jwt = false
+
+[functions.summarize-meeting]
+verify_jwt = false
