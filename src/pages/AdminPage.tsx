@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, DollarSign } from "lucide-react";
+import { Building2, Users, DollarSign, Key } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
 import AdminClinicasTab from "@/components/admin/AdminClinicasTab";
 import AdminUsuariosTab from "@/components/admin/AdminUsuariosTab";
 import AdminTokenBudgets from "@/components/admin/AdminTokenBudgets";
+import AdminAPIKeysTab from "@/components/admin/AdminAPIKeysTab";
 
 const AdminPage = () => {
   const { isSuperAdmin } = useClinic();
@@ -69,6 +70,9 @@ const AdminPage = () => {
               <TabsTrigger value="presupuestos" className="flex items-center gap-2">
                 <DollarSign className="w-4 h-4" /> Presupuestos IA
               </TabsTrigger>
+              <TabsTrigger value="apikeys" className="flex items-center gap-2">
+                <Key className="w-4 h-4" /> API Keys
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="clinicas" className="mt-6">
               <AdminClinicasTab clinics={clinics} roles={roles} onRefresh={fetchData} />
@@ -78,6 +82,9 @@ const AdminPage = () => {
             </TabsContent>
             <TabsContent value="presupuestos" className="mt-6">
               <AdminTokenBudgets clinics={clinics} profiles={profiles} roles={roles} onRefresh={fetchData} />
+            </TabsContent>
+            <TabsContent value="apikeys" className="mt-6">
+              <AdminAPIKeysTab clinics={clinics} onRefresh={fetchData} />
             </TabsContent>
           </Tabs>
         )}

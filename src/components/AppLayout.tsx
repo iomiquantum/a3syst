@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Calendar, MessageSquare, Settings,
   LogOut, ChevronLeft, Bell, Search, DollarSign, UserCog,
   Building2, Stethoscope, Briefcase, ShieldCheck, Globe, PhoneCall, Megaphone, Bot,
-  Sun, Moon, Zap, Palette, Brain, ClipboardList,
+  Sun, Moon, Zap, Palette, Brain, ClipboardList, Video,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -30,6 +30,7 @@ const mainNav = [
   { icon: Palette, label: "Contenido", path: "/contenido" },
   { icon: Brain, label: "Psycho-Matrix", path: "/psycho-matrix" },
   { icon: ClipboardList, label: "Planificación", path: "/planificacion" },
+  { icon: Video, label: "Reuniones", path: "/reuniones" },
 ];
 
 const configNav = [
