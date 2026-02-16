@@ -20,7 +20,7 @@ interface AppLayoutProps { children: ReactNode; }
 
 const mainNav = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: Users, label: "Pacientes", path: "/pacientes" },
+  { icon: Users, label: "Clientes", path: "/pacientes" },
   { icon: Calendar, label: "Agenda", path: "/agenda" },
   { icon: DollarSign, label: "Ventas", path: "/ventas" },
   { icon: MessageSquare, label: "Mensajes", path: "/mensajes" },
@@ -35,8 +35,8 @@ const mainNav = [
 
 const configNav = [
   { icon: Building2, label: "Sucursales", path: "/configuracion/sucursales" },
-  { icon: Stethoscope, label: "Tratamientos", path: "/configuracion/tratamientos" },
-  { icon: Briefcase, label: "Profesionales", path: "/configuracion/profesionales" },
+  { icon: Stethoscope, label: "Servicios", path: "/configuracion/tratamientos" },
+  { icon: Briefcase, label: "Equipo", path: "/configuracion/profesionales" },
   { icon: UserCog, label: "Usuarios", path: "/configuracion/usuarios" },
   { icon: Settings, label: "Ajustes", path: "/configuracion/ajustes" },
   { icon: Globe, label: "Widget Web", path: "/configuracion/widget" },
@@ -73,7 +73,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
             {!collapsed && (
               <div className="min-w-0">
                 <span className="text-lg font-bold text-foreground tracking-tight leading-none">IOMI</span>
-                <span className="text-[9px] block text-muted-foreground tracking-[0.2em] leading-none">CLÍNICAS</span>
+                <span className="text-[9px] block text-muted-foreground tracking-[0.2em] leading-none">SYS</span>
               </div>
             )}
           </div>
@@ -142,7 +142,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-10">
           <div className="relative w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Buscar pacientes, citas..." className="pl-10 bg-background border-border h-9" />
+            <Input placeholder="Buscar clientes, citas..." className="pl-10 bg-background border-border h-9" />
           </div>
           <div className="flex items-center gap-4">
             {/* Super admin clinic switcher */}
@@ -152,7 +152,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
                 if (clinic) selectClinic(clinic.id, clinic.name);
               }}>
                 <SelectTrigger className="w-48 h-9">
-                  <SelectValue placeholder="Seleccionar clínica" />
+                  <SelectValue placeholder="Seleccionar negocio" />
                 </SelectTrigger>
                 <SelectContent>
                   {allClinics.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}

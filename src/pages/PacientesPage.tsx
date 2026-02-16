@@ -46,7 +46,7 @@ const PacientesPage = () => {
           phone: validated.phone || "", date_of_birth: validated.dob || null, document: validated.document || "", notes: validated.notes || "",
         }).eq("id", editingId);
         if (error) { toast.error(error.message); return; }
-        toast.success("Paciente actualizado");
+        toast.success("Cliente actualizado");
       } else {
         const { error } = await supabase.from("patients").insert({
           clinic_id: clinicId, first_name: validated.first_name, last_name: validated.last_name,
@@ -54,7 +54,7 @@ const PacientesPage = () => {
           document: validated.document || "", notes: validated.notes || "",
         });
         if (error) { toast.error(error.message); return; }
-        toast.success("Paciente creado");
+        toast.success("Cliente creado");
       }
       setOpen(false); setEditingId(null);
       setForm({ first_name: "", last_name: "", email: "", phone: "", dob: "", document: "", notes: "" });
@@ -72,7 +72,7 @@ const PacientesPage = () => {
 
   const handleDelete = async (id: string) => {
     await supabase.from("patients").delete().eq("id", id);
-    toast.success("Paciente eliminado"); fetchPatients();
+    toast.success("Cliente eliminado"); fetchPatients();
   };
 
   const initials = (p: any) => `${(p.first_name || "")[0] || ""}${(p.last_name || "")[0] || ""}`.toUpperCase();
@@ -82,16 +82,16 @@ const PacientesPage = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Pacientes</h1>
-            <p className="text-muted-foreground">Gestiona tu lista de pacientes</p>
+            <h1 className="text-2xl font-bold text-foreground">Clientes</h1>
+            <p className="text-muted-foreground">Gestiona tu lista de clientes</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm"><Upload className="w-4 h-4 mr-2" /> Importar CSV</Button>
             <Button variant="outline" size="sm"><Download className="w-4 h-4 mr-2" /> Descargar Plantilla</Button>
             <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setEditingId(null); setForm({ first_name: "", last_name: "", email: "", phone: "", dob: "", document: "", notes: "" }); } }}>
-              <DialogTrigger asChild><Button className="gradient-primary text-primary-foreground hover:opacity-90"><Plus className="w-4 h-4 mr-2" /> Nuevo Paciente</Button></DialogTrigger>
+              <DialogTrigger asChild><Button className="gradient-primary text-primary-foreground hover:opacity-90"><Plus className="w-4 h-4 mr-2" /> Nuevo Cliente</Button></DialogTrigger>
               <DialogContent>
-                <DialogHeader><DialogTitle>{editingId ? "Editar Paciente" : "Nuevo Paciente"}</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>{editingId ? "Editar Cliente" : "Nuevo Cliente"}</DialogTitle></DialogHeader>
                 <div className="space-y-4 pt-2">
                   <div className="grid grid-cols-2 gap-4">
                     <div><Label>Nombre *</Label><Input value={form.first_name} onChange={e => setForm({...form, first_name: e.target.value})} maxLength={100} /></div>
@@ -104,7 +104,7 @@ const PacientesPage = () => {
                   </div>
                   <div><Label>Fecha de nacimiento</Label><Input type="date" value={form.dob} onChange={e => setForm({...form, dob: e.target.value})} /></div>
                   <div><Label>Observaciones</Label><Textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} placeholder="Alergias, condiciones especiales..." maxLength={5000} /></div>
-                  <Button onClick={handleSave} className="w-full gradient-primary text-primary-foreground" disabled={!form.first_name || !form.last_name || !form.email}>{editingId ? "Guardar Cambios" : "Crear Paciente"}</Button>
+                  <Button onClick={handleSave} className="w-full gradient-primary text-primary-foreground" disabled={!form.first_name || !form.last_name || !form.email}>{editingId ? "Guardar Cambios" : "Crear Cliente"}</Button>
                 </div>
               </DialogContent>
             </Dialog>
@@ -122,12 +122,12 @@ const PacientesPage = () => {
             {loading ? (
               <p className="p-8 text-center text-muted-foreground">Cargando...</p>
             ) : filtered.length === 0 ? (
-              <p className="p-8 text-center text-muted-foreground">{search ? "Sin resultados" : "No hay pacientes creados aún."}</p>
+              <p className="p-8 text-center text-muted-foreground">{search ? "Sin resultados" : "No hay clientes creados aún."}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead><tr className="border-b border-border">
-                    <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Paciente</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Cliente</th>
                     <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Documento</th>
                     <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Contacto</th>
                     <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Estado</th>

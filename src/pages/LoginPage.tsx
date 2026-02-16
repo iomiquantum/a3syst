@@ -44,8 +44,8 @@ const LoginPage = () => {
               <span className="text-primary-foreground font-bold text-sm">IO</span>
             </div>
             <div>
-              <span className="text-xl font-bold text-foreground tracking-tight">IOMI</span>
-              <span className="text-xs block text-muted-foreground -mt-1 tracking-widest">CLÍNICAS</span>
+            <span className="text-xl font-bold text-foreground tracking-tight">IOMI</span>
+              <span className="text-xs block text-muted-foreground -mt-1 tracking-widest">SYS</span>
             </div>
           </div>
         </div>
@@ -99,7 +99,7 @@ const LoginPage = () => {
             <div className="flex gap-2">{[...Array(6)].map((_, i) => <div key={i} className="h-8 rounded-md bg-muted flex-1" />)}</div>
             <div className="flex gap-2">{[...Array(4)].map((_, i) => <div key={i} className="h-8 rounded-md bg-muted flex-1" />)}</div>
             <div className="space-y-3 pt-4">
-              <div><div className="bg-muted rounded-xl rounded-bl-sm p-3 max-w-[80%]"><p className="text-sm text-foreground">Hola, ¿te gustaría confirmar tu cita para mañana?</p></div><span className="text-xs text-muted-foreground mt-1 block">10:28</span></div>
+              <div><div className="bg-muted rounded-xl rounded-bl-sm p-3 max-w-[80%]"><p className="text-sm text-foreground">Hola, ¿te gustaría confirmar tu reunión para mañana?</p></div><span className="text-xs text-muted-foreground mt-1 block">10:28</span></div>
               <div className="flex justify-end"><div><div className="gradient-primary rounded-xl rounded-br-sm p-3"><p className="text-sm text-primary-foreground">Sí, 10:30 está perfecto.</p></div><span className="text-xs text-muted-foreground mt-1 block text-right">10:30 ✓✓</span></div></div>
               <div><div className="bg-muted rounded-xl rounded-bl-sm p-3 max-w-[80%]"><p className="text-sm text-foreground">Listo. Envié el recordatorio por WhatsApp 📅</p></div><span className="text-xs text-muted-foreground mt-1 block">10:31</span></div>
             </div>

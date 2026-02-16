@@ -39,15 +39,15 @@ const RegisterPage = () => {
               <span className="text-primary-foreground font-bold text-sm">IO</span>
             </div>
             <div>
-              <span className="text-xl font-bold text-foreground tracking-tight">IOMI</span>
-              <span className="text-xs block text-muted-foreground -mt-1 tracking-widest">CLÍNICAS</span>
+            <span className="text-xl font-bold text-foreground tracking-tight">IOMI</span>
+              <span className="text-xs block text-muted-foreground -mt-1 tracking-widest">SYS</span>
             </div>
           </div>
         </div>
 
         <div className="max-w-md w-full">
           <h1 className="text-3xl font-bold text-foreground mb-2">Crea tu cuenta</h1>
-          <p className="text-muted-foreground mb-8">Empieza a gestionar tu clínica hoy</p>
+          <p className="text-muted-foreground mb-8">Empieza a gestionar tu negocio hoy</p>
 
           <form onSubmit={handleRegister} className="space-y-5">
             <div>
@@ -83,10 +83,10 @@ const RegisterPage = () => {
           <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-6">
             <span className="text-primary-foreground font-bold text-xl">IO</span>
           </div>
-          <h2 className="text-2xl font-bold text-foreground mb-3">IOMI Clínicas</h2>
-          <p className="text-muted-foreground mb-8">Sistema integral de gestión para clínicas modernas</p>
+          <h2 className="text-2xl font-bold text-foreground mb-3">IOMI SYS</h2>
+          <p className="text-muted-foreground mb-8">Sistema integral de gestión para negocios modernos</p>
           <div className="space-y-3 text-left">
-            {["📅 Agenda y turnos inteligentes", "👥 Gestión de pacientes", "💰 Control de ventas", "📊 Reportes en tiempo real", "💬 Mensajería automatizada"].map(f => (
+            {["📅 Agenda y turnos inteligentes", "👥 Gestión de clientes", "💰 Control de ventas", "📊 Reportes en tiempo real", "💬 Mensajería automatizada"].map(f => (
               <p key={f} className="text-sm text-foreground">{f}</p>
             ))}
           </div>

@@ -84,19 +84,19 @@ const TratamientosPage = () => {
     <AppLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Tratamientos y Especialidades</h1>
-          <p className="text-muted-foreground">Configura los servicios de tu clínica</p>
+          <h1 className="text-2xl font-bold text-foreground">Servicios y Categorías</h1>
+          <p className="text-muted-foreground">Configura los servicios de tu negocio</p>
         </div>
 
         <Tabs defaultValue="tratamientos">
-          <TabsList><TabsTrigger value="tratamientos">Tratamientos</TabsTrigger><TabsTrigger value="especialidades">Especialidades</TabsTrigger></TabsList>
+          <TabsList><TabsTrigger value="tratamientos">Servicios</TabsTrigger><TabsTrigger value="especialidades">Categorías</TabsTrigger></TabsList>
 
           <TabsContent value="tratamientos" className="space-y-4 mt-4">
             <div className="flex justify-end">
               <Dialog open={openTreatment} onOpenChange={setOpenTreatment}>
-                <DialogTrigger asChild><Button className="gradient-primary text-primary-foreground hover:opacity-90"><Plus className="w-4 h-4 mr-2" /> Nuevo Tratamiento</Button></DialogTrigger>
+                <DialogTrigger asChild><Button className="gradient-primary text-primary-foreground hover:opacity-90"><Plus className="w-4 h-4 mr-2" /> Nuevo Servicio</Button></DialogTrigger>
                 <DialogContent>
-                  <DialogHeader><DialogTitle>Nuevo Tratamiento</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>Nuevo Servicio</DialogTitle></DialogHeader>
                   <div className="space-y-4 pt-2">
                     <div><Label>Nombre *</Label><Input value={treatmentForm.name} onChange={e => setTreatmentForm({...treatmentForm, name: e.target.value})} maxLength={100} /></div>
                     <div className="grid grid-cols-2 gap-4">
@@ -113,11 +113,11 @@ const TratamientosPage = () => {
             <Card className="shadow-card">
               <CardContent className="p-0">
                 {treatments.length === 0 ? (
-                  <p className="p-8 text-center text-muted-foreground">No hay tratamientos creados aún.</p>
+                  <p className="p-8 text-center text-muted-foreground">No hay servicios creados aún.</p>
                 ) : (
                   <table className="w-full">
                     <thead><tr className="border-b border-border">
-                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Tratamiento</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Servicio</th>
                       <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Duración</th>
                       <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Precio</th>
                       <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Descripción</th>
@@ -148,11 +148,11 @@ const TratamientosPage = () => {
           <TabsContent value="especialidades" className="space-y-4 mt-4">
             <div className="flex justify-end">
               <Dialog open={openSpecialty} onOpenChange={setOpenSpecialty}>
-                <DialogTrigger asChild><Button className="gradient-primary text-primary-foreground hover:opacity-90"><Plus className="w-4 h-4 mr-2" /> Nueva Especialidad</Button></DialogTrigger>
+                <DialogTrigger asChild><Button className="gradient-primary text-primary-foreground hover:opacity-90"><Plus className="w-4 h-4 mr-2" /> Nueva Categoría</Button></DialogTrigger>
                 <DialogContent>
-                  <DialogHeader><DialogTitle>Nueva Especialidad</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>Nueva Categoría</DialogTitle></DialogHeader>
                   <div className="space-y-4 pt-2">
-                    <div><Label>Nombre *</Label><Input value={specialtyName} onChange={e => setSpecialtyName(e.target.value)} placeholder="Ej: Dermatología" maxLength={100} /></div>
+                    <div><Label>Nombre *</Label><Input value={specialtyName} onChange={e => setSpecialtyName(e.target.value)} placeholder="Ej: Marketing Digital" maxLength={100} /></div>
                     <Button onClick={handleSaveSpecialty} className="w-full gradient-primary text-primary-foreground" disabled={!specialtyName}>Crear</Button>
                   </div>
                 </DialogContent>
@@ -160,7 +160,7 @@ const TratamientosPage = () => {
             </div>
 
             {specialties.length === 0 ? (
-              <Card className="shadow-card"><CardContent className="p-8 text-center"><p className="text-muted-foreground">No hay especialidades creadas aún.</p></CardContent></Card>
+              <Card className="shadow-card"><CardContent className="p-8 text-center"><p className="text-muted-foreground">No hay categorías creadas aún.</p></CardContent></Card>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {specialties.map(s => (

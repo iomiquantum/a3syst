@@ -37,7 +37,7 @@ const Dashboard = () => {
   }, [clinicId]);
 
   const stats = [
-    { label: "Pacientes Totales", value: counts.patients.toLocaleString(), icon: Users, color: "text-primary", bg: "bg-primary/10" },
+    { label: "Clientes Totales", value: counts.patients.toLocaleString(), icon: Users, color: "text-primary", bg: "bg-primary/10" },
     { label: "Citas Hoy", value: counts.todayAppts.toString(), icon: Calendar, color: "text-info", bg: "bg-info/10" },
     { label: "Ingresos Totales", value: `$${counts.totalSales.toLocaleString()}`, icon: DollarSign, color: "text-success", bg: "bg-success/10" },
     { label: "Ventas Pendientes", value: counts.pendingSales.toString(), icon: MessageSquare, color: "text-warning", bg: "bg-warning/10" },
@@ -90,7 +90,7 @@ const Dashboard = () => {
                         </div>
                         <div>
                           <p className="text-sm font-medium text-foreground">{apt.patients?.first_name} {apt.patients?.last_name}</p>
-                          <p className="text-xs text-muted-foreground">{apt.treatments?.name || "Sin tratamiento"}</p>
+                          <p className="text-xs text-muted-foreground">{apt.treatments?.name || "Sin servicio"}</p>
                         </div>
                       </div>
                       <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
@@ -108,11 +108,11 @@ const Dashboard = () => {
 
           <Card className="shadow-card">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold">Pacientes Recientes</CardTitle>
+              <CardTitle className="text-lg font-semibold">Clientes Recientes</CardTitle>
             </CardHeader>
             <CardContent>
               {recentPatients.length === 0 ? (
-                <p className="text-muted-foreground text-sm py-4 text-center">No hay pacientes registrados aún</p>
+                <p className="text-muted-foreground text-sm py-4 text-center">No hay clientes registrados aún</p>
               ) : (
                 <div className="space-y-3">
                   {recentPatients.map((patient: any) => (

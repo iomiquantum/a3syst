@@ -167,7 +167,7 @@ const AgendaPage = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Agenda</h1>
-            <p className="text-muted-foreground">Gestiona las citas de tu clínica</p>
+            <p className="text-muted-foreground">Gestiona las citas de tu negocio</p>
           </div>
           <Button onClick={() => setCreateOpen(true)} className="gradient-primary text-primary-foreground hover:opacity-90">
             <Plus className="w-4 h-4 mr-2" /> Nueva Cita
@@ -180,9 +180,9 @@ const AgendaPage = () => {
             <DialogHeader><DialogTitle>Nueva Cita</DialogTitle></DialogHeader>
             <div className="space-y-4 pt-2">
               <div>
-                <Label>Paciente *</Label>
+                 <Label>Cliente *</Label>
                 <Select value={form.patient_id} onValueChange={v => setForm({ ...form, patient_id: v })}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar paciente" /></SelectTrigger>
+                   <SelectTrigger><SelectValue placeholder="Seleccionar cliente" /></SelectTrigger>
                   <SelectContent>{patients.map(p => <SelectItem key={p.id} value={p.id}>{p.first_name} {p.last_name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
@@ -226,9 +226,9 @@ const AgendaPage = () => {
             {detailApt && (
               <div className="space-y-4 pt-2">
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><p className="text-muted-foreground">Paciente</p><p className="font-medium text-foreground">{detailApt.patients ? `${detailApt.patients.first_name} ${detailApt.patients.last_name}` : "-"}</p></div>
-                  <div><p className="text-muted-foreground">Tratamiento</p><p className="font-medium text-foreground">{detailApt.treatments?.name || "-"}</p></div>
-                  <div><p className="text-muted-foreground">Profesional</p><p className="font-medium text-foreground">{detailApt.professionals?.full_name || "-"}</p></div>
+                   <div><p className="text-muted-foreground">Cliente</p><p className="font-medium text-foreground">{detailApt.patients ? `${detailApt.patients.first_name} ${detailApt.patients.last_name}` : "-"}</p></div>
+                   <div><p className="text-muted-foreground">Servicio</p><p className="font-medium text-foreground">{detailApt.treatments?.name || "-"}</p></div>
+                   <div><p className="text-muted-foreground">Responsable</p><p className="font-medium text-foreground">{detailApt.professionals?.full_name || "-"}</p></div>
                   <div><p className="text-muted-foreground">Hora</p><p className="font-medium text-foreground">{detailApt.time?.substring(0, 5)} ({detailApt.duration}min)</p></div>
                 </div>
                 <div>
