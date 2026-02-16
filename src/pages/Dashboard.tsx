@@ -3,10 +3,12 @@ import { Users, Calendar, TrendingUp, Clock, ArrowUpRight, MessageSquare, Dollar
 import AppLayout from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useClinic } from "@/hooks/useClinic";
+import { useBusinessLabels } from "@/hooks/useBusinessLabels";
 import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
   const { clinicId, clinicName } = useClinic();
+  const { labels } = useBusinessLabels();
   const [counts, setCounts] = useState({ patients: 0, todayAppts: 0, totalSales: 0, pendingSales: 0 });
   const [recentPatients, setRecentPatients] = useState<any[]>([]);
   const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
@@ -37,10 +39,10 @@ const Dashboard = () => {
   }, [clinicId]);
 
   const stats = [
-    { label: "Clientes Totales", value: counts.patients.toLocaleString(), icon: Users, color: "text-primary", bg: "bg-primary/10" },
-    { label: "Citas Hoy", value: counts.todayAppts.toString(), icon: Calendar, color: "text-info", bg: "bg-info/10" },
+    { label: `${labels.patients} Totales`, value: counts.patients.toLocaleString(), icon: Users, color: "text-primary", bg: "bg-primary/10" },
+    { label: `${labels.appointments} Hoy`, value: counts.todayAppts.toString(), icon: Calendar, color: "text-info", bg: "bg-info/10" },
     { label: "Ingresos Totales", value: `$${counts.totalSales.toLocaleString()}`, icon: DollarSign, color: "text-success", bg: "bg-success/10" },
-    { label: "Ventas Pendientes", value: counts.pendingSales.toString(), icon: MessageSquare, color: "text-warning", bg: "bg-warning/10" },
+    { label: `${labels.sales} Pendientes`, value: counts.pendingSales.toString(), icon: MessageSquare, color: "text-warning", bg: "bg-warning/10" },
   ];
 
   const initials = (p: any) => `${(p.first_name || "")[0] || ""}${(p.last_name || "")[0] || ""}`.toUpperCase();
@@ -74,11 +76,11 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-2 shadow-card">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold">Citas de Hoy</CardTitle>
+              <CardTitle className="text-lg font-semibold">{labels.appointments} de Hoy</CardTitle>
             </CardHeader>
             <CardContent>
               {todayAppointments.length === 0 ? (
-                <p className="text-muted-foreground text-sm py-4 text-center">No hay citas programadas para hoy</p>
+                <p className="text-muted-foreground text-sm py-4 text-center">No hay {labels.appointments.toLowerCase()} programadas para hoy</p>
               ) : (
                 <div className="space-y-3">
                   {todayAppointments.map((apt: any) => (
@@ -90,7 +92,7 @@ const Dashboard = () => {
                         </div>
                         <div>
                           <p className="text-sm font-medium text-foreground">{apt.patients?.first_name} {apt.patients?.last_name}</p>
-                          <p className="text-xs text-muted-foreground">{apt.treatments?.name || "Sin servicio"}</p>
+                          <p className="text-xs text-muted-foreground">{apt.treatments?.name || `Sin ${labels.treatments_singular?.toLowerCase() || "servicio"}`}</p>
                         </div>
                       </div>
                       <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
@@ -108,11 +110,11 @@ const Dashboard = () => {
 
           <Card className="shadow-card">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold">Clientes Recientes</CardTitle>
+              <CardTitle className="text-lg font-semibold">{labels.patients} Recientes</CardTitle>
             </CardHeader>
             <CardContent>
               {recentPatients.length === 0 ? (
-                <p className="text-muted-foreground text-sm py-4 text-center">No hay clientes registrados aún</p>
+                <p className="text-muted-foreground text-sm py-4 text-center">No hay {labels.patients.toLowerCase()} registrados aún</p>
               ) : (
                 <div className="space-y-3">
                   {recentPatients.map((patient: any) => (
