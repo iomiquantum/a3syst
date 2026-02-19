@@ -8,12 +8,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
   Rocket, Clock, Users, Gift, Copy, Check, ArrowRight, Sparkles,
   Mail, Phone, User, Briefcase, Globe, Share2, Image, FileText,
-  Menu, X, MessageCircle, ChevronRight, Zap, Star
+  Menu, X, MessageCircle, ChevronRight, Zap, Star,
+  MessageSquare, Calendar, DollarSign, Palette, Target,
+  Brain, Video, Building2, Shield, BarChart3, Headphones, Layers,
+  AlertTriangle, TrendingDown, UserX, Wrench, Play
 } from 'lucide-react';
 import quantumHeroImg from '@/assets/quantum-hero.jpg';
+import heroImg from '@/assets/landing-hero.jpg';
+import estrategaImg from '@/assets/landing-estratega.jpg';
+import problemImg from '@/assets/landing-problem.jpg';
+import solutionImg from '@/assets/landing-solution.jpg';
 
 const LAUNCH_DATE = new Date('2025-04-01T00:00:00');
 
@@ -30,6 +38,70 @@ function useCountdown(target: Date) {
   const seconds = Math.floor((diff % 60000) / 1000);
   return { days, hours, minutes, seconds };
 }
+
+const PROBLEM_CARDS = [
+  { icon: MessageSquare, text: 'Mensajes perdidos = ventas perdidas' },
+  { icon: Clock, text: 'Respuestas tarde = clientes fríos' },
+  { icon: TrendingDown, text: 'Seguimiento irregular = cero cierres' },
+  { icon: Wrench, text: 'Muchas herramientas = doble trabajo' },
+];
+
+const MODULES = [
+  { icon: MessageSquare, title: 'Inbox Web', subtitle: 'Atención al Cliente', bullets: ['Bandeja tipo CRM', 'Estados: abierta/cerrada/archivada', 'Ficha del cliente e historial'] },
+  { icon: Headphones, title: 'Call Center CRM', subtitle: 'Seguimiento Comercial', bullets: ['Etapas de seguimiento', 'Gestión comercial ordenada', 'Métricas y control'] },
+  { icon: Users, title: 'CRM de Clientes', subtitle: 'Base de Datos', bullets: ['Datos + historial', 'Estados y organización', 'Búsqueda y filtros'] },
+  { icon: Calendar, title: 'Agenda / Citas', subtitle: 'Calendario', bullets: ['Calendario interactivo', 'Estados de cita', 'Duración y asignación'] },
+  { icon: DollarSign, title: 'Control Contable', subtitle: 'Ventas', bullets: ['Pagos, descuentos', 'Estados y origen', 'Registro claro de ingresos'] },
+  { icon: Palette, title: 'Contenido con IA', subtitle: 'Copy + Imágenes + Videos', bullets: ['Crea piezas listas para publicar', 'Prompts y guiones', 'Consistencia de marca'] },
+  { icon: Target, title: 'Marketing', subtitle: 'Segmentación', bullets: ['Audiencias y segmentación', 'Organiza contactos', 'Mejor conversión'] },
+  { icon: Brain, title: 'PSYCHO-MATRIX', subtitle: 'Estrategias Cuánticas', bullets: ['Estrategias listas para convertir', 'Triggers, arquetipos y enfoque', 'Duplicar / regenerar estrategias'], badge: 'FULL' },
+  { icon: Sparkles, title: 'Estrategia Cuántica', subtitle: 'Framework', bullets: ['Framework de crecimiento', 'Plantillas estratégicas', 'Acción semanal dentro del sistema'], badge: 'FULL' },
+  { icon: MessageCircle, title: 'Agente Guía Conversacional', subtitle: 'IA Conversacional', bullets: ['IA que guía conversaciones', 'Objetivos, tono, idioma', 'On/Off por conversación'], badge: 'FULL' },
+  { icon: Video, title: 'AI Meeting Assistant', subtitle: 'Reuniones', bullets: ['Transcripción y resumen', 'Acciones y decisiones', 'Reuniones más rápidas'], badge: 'FULL' },
+  { icon: Building2, title: 'Multi-sucursal y Roles', subtitle: 'Escalabilidad', bullets: ['Control por equipo', 'Permisos', 'Escala sin perder orden'] },
+];
+
+const PLANS = [
+  {
+    name: 'START', price: 44, sub: 'Para empezar a operar con orden y velocidad.', recommended: false,
+    features: ['Inbox Web (widget)', 'Bandeja tipo CRM (Esencial)', 'Asignación de agente (Esencial)', 'Dashboard KPIs (Esencial)', 'Contenido con IA (copy + imágenes + videos)', 'Estratega Cuántico (incluido)'],
+    cta: 'Empezar con Start'
+  },
+  {
+    name: 'GROW', price: 99, sub: 'Para vender con seguimiento y control.', recommended: true,
+    features: ['Todo de Start +', 'CRM de clientes', 'Call Center CRM', 'Registro de llamadas + métricas', 'Agenda / Citas', 'Control Contable de Ventas', 'Marketing (Segmentación)', 'Calendario de contenido + analíticas', 'Multi-sucursal/roles (limitado)', 'Estratega Cuántico (incluido)'],
+    cta: 'Elegir Grow'
+  },
+  {
+    name: 'FULL', price: 199, sub: 'Autonomía real + estrategias cuánticas.', recommended: false,
+    features: ['Todo de Grow +', 'Agente Guía Conversacional (IA)', 'PSYCHO-MATRIX — Estrategias Cuánticas', 'Estrategia Cuántica (framework + plantillas)', 'AI Meeting Assistant', 'Multi-sucursal/roles (ampliado)', 'Estratega Cuántico (incluido)'],
+    cta: 'Elegir Full'
+  },
+];
+
+const FAQ_ITEMS = [
+  { q: '¿Necesito conocimientos técnicos?', a: 'No. Es simple y guiado. Si sabes usar WhatsApp, sabes usar A3.' },
+  { q: '¿Sirve para cualquier negocio?', a: 'Sí, es modular. Se adapta a salud, educación, belleza, fitness, gastronomía, inmobiliaria, legal, tecnología y más.' },
+  { q: '¿Qué logro con A3?', a: 'Orden, velocidad, control y ventas. Todo medido y automatizado.' },
+  { q: '¿Qué es Economía Cuántica?', a: 'Es nuestro concepto: A3 ejecuta tareas en paralelo sin cansarse. Atiende, vende, crea contenido y organiza al mismo tiempo.' },
+  { q: '¿Incluye acompañamiento?', a: 'Sí: Estratega Cuántico semanal en todos los planes. Sesión en vivo + replays + estrategia de la semana.' },
+  { q: '¿Puedo empezar pequeño?', a: 'Sí, con el plan Start a $44/mes. Creces cuando estés listo.' },
+];
+
+const TESTIMONIALS = [
+  { name: 'Clínica Dental Sonrisa', result: 'Más orden, más cierres', text: 'Antes perdíamos el 40% de los leads por responder tarde. Con A3 todo queda registrado y organizado.' },
+  { name: 'Academia FitPro', result: 'Menos tiempo respondiendo', text: 'Pasamos de 4 horas al día contestando mensajes a tener todo centralizado y controlado.' },
+  { name: 'Restaurante La Terraza', result: 'Operación más ligera', text: 'Un solo sistema para reservas, clientes y seguimiento. Dejamos de usar 5 herramientas diferentes.' },
+];
+
+const INDUSTRIES = ['Salud', 'Educación', 'Belleza', 'Fitness', 'Gastronomía', 'Inmobiliaria', 'Legal', 'Tecnología', 'Coaching', 'Retail', 'Consultoría', 'Servicios'];
+
+const NAV_LINKS = [
+  { label: 'Producto', id: 'solution' },
+  { label: 'Módulos', id: 'modules' },
+  { label: 'Planes', id: 'plans' },
+  { label: 'FAQ', id: 'faq' },
+];
 
 const PreLaunchPage = () => {
   const { toast } = useToast();
@@ -207,9 +279,11 @@ const PreLaunchPage = () => {
             <span className="text-xs text-muted-foreground">by IOMI</span>
           </Link>
           <div className="hidden items-center gap-4 lg:flex">
-            <Link to="/">
-              <Button variant="ghost" size="sm">Inicio</Button>
-            </Link>
+            {NAV_LINKS.map(l => (
+              <button key={l.id} onClick={() => document.getElementById(l.id)?.scrollIntoView({ behavior: 'smooth' })} className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+                {l.label}
+              </button>
+            ))}
             <Link to="/login">
               <Button variant="outline" size="sm">Iniciar Sesión</Button>
             </Link>
@@ -225,7 +299,11 @@ const PreLaunchPage = () => {
         </div>
         {mobileMenu && (
           <div className="border-t bg-white px-4 py-4 lg:hidden space-y-2">
-            <Link to="/"><Button variant="ghost" size="sm" className="w-full justify-start">Inicio</Button></Link>
+            {NAV_LINKS.map(l => (
+              <button key={l.id} onClick={() => { document.getElementById(l.id)?.scrollIntoView({ behavior: 'smooth' }); setMobileMenu(false); }} className="block w-full py-2 text-left text-sm font-medium text-muted-foreground">
+                {l.label}
+              </button>
+            ))}
             <Link to="/login"><Button variant="outline" size="sm" className="w-full">Iniciar Sesión</Button></Link>
             {!registered && (
               <Button size="sm" className="w-full" onClick={() => { document.getElementById('register')?.scrollIntoView({ behavior: 'smooth' }); setMobileMenu(false); }}>
@@ -532,30 +610,151 @@ const PreLaunchPage = () => {
         </div>
       </section>
 
-      {/* WHAT YOU GET */}
-      <section className="bg-[hsl(215,70%,97%)] py-16 lg:py-20">
-        <div className="mx-auto max-w-5xl px-4 text-center lg:px-8">
-          <h2 className="mb-3 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
-            ¿Qué es A3 SYS?
+      {/* ===== PROBLEM ===== */}
+      <section className="bg-white py-16 lg:py-24">
+        <div className="mx-auto max-w-7xl px-4 lg:px-8">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            <div>
+              <h2 className="mb-4 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
+                Tu negocio crece… y el caos también.
+              </h2>
+              <p className="mb-8 text-lg text-muted-foreground">
+                Más mensajes, más leads, más tareas. Y el mismo tiempo. Cuando dependes de personas y herramientas separadas, pierdes ventas y te quemas.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {PROBLEM_CARDS.map((c, i) => (
+                  <Card key={i} className="border-destructive/20 bg-destructive/5">
+                    <CardContent className="flex items-start gap-3 p-4">
+                      <c.icon className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+                      <span className="text-sm font-medium">{c.text}</span>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              <p className="mt-8 text-lg font-semibold text-foreground">
+                El caos es caro. <span className="text-accent">La automatización es rentable.</span>
+              </p>
+            </div>
+            <div>
+              <img src={problemImg} alt="Dueño de negocio abrumado por múltiples tareas" className="w-full rounded-xl shadow-lg" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== SOLUTION ===== */}
+      <section id="solution" className="bg-[hsl(215,70%,97%)] py-16 lg:py-24">
+        <div className="mx-auto max-w-7xl px-4 lg:px-8">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            <div className="order-2 lg:order-1">
+              <img src={solutionImg} alt="Dueño de negocio confiado usando A3 SYS by IOMI" className="w-full rounded-xl shadow-lg" />
+            </div>
+            <div className="order-1 lg:order-2">
+              <h2 className="mb-4 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
+                A3 SYS trabaja por ti. Tú solo decides.
+              </h2>
+              <p className="mb-8 text-lg text-muted-foreground">
+                Centraliza, automatiza y controla. A3 ejecuta en paralelo lo que antes requería varios roles.
+              </p>
+              <div className="space-y-4">
+                {[
+                  'Ahorra sueldos automatizando tareas repetitivas.',
+                  'Responde más rápido. Vende más rápido.',
+                  'Todo queda registrado y bajo control.',
+                ].map((t, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
+                      <Check className="h-3.5 w-3.5" />
+                    </div>
+                    <span className="text-base font-medium">{t}</span>
+                  </div>
+                ))}
+              </div>
+              <Button className="mt-8" onClick={() => document.getElementById('modules')?.scrollIntoView({ behavior: 'smooth' })}>
+                Ver plataforma <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== WHAT IS A3 ===== */}
+      <section className="bg-white py-16 lg:py-24">
+        <div className="mx-auto max-w-3xl px-4 text-center lg:px-8">
+          <h2 className="mb-4 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
+            A3 = tu <span className="text-primary">AI Automation Agency</span>.<br />
+            SYS = <span className="text-accent">el sistema que vale la pena</span>.
           </h2>
-          <p className="mx-auto mb-12 max-w-2xl text-lg text-muted-foreground">
-            Un sistema todo-en-uno con IA que opera tu negocio: atención, ventas, contenido, marketing y estrategia. 
-            Todo integrado. Todo automatizado.
+          <p className="mb-8 text-lg text-muted-foreground">
+            No es una agencia tradicional. Es un sistema end-to-end de operaciones autónomas. Un solo lugar para atención, ventas y crecimiento. Valor real, medible y escalable.
           </p>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-3">
             {[
-              { icon: MessageCircle, title: 'Atención al Cliente', desc: 'Inbox centralizado con IA conversacional' },
-              { icon: Users, title: 'CRM & Call Center', desc: 'Pipeline de ventas y seguimiento ordenado' },
-              { icon: Sparkles, title: 'Contenido con IA', desc: 'Imágenes, copies y videos listos para publicar' },
-              { icon: Zap, title: 'Automatización', desc: 'Tareas que se ejecutan solas, en paralelo' },
-              { icon: Globe, title: 'Marketing', desc: 'Segmentación y campañas inteligentes' },
-              { icon: Star, title: 'Estratega Cuántico', desc: 'Sesión semanal en vivo + estrategia aplicada' },
+              { icon: Layers, text: 'Todo en uno: Operación + Ventas + Marketing' },
+              { icon: Zap, text: 'Economía Cuántica: tareas en paralelo' },
+              { icon: Globe, text: 'Escalabilidad infinita: el software no se cansa' },
             ].map((item, i) => (
-              <Card key={i} className="transition-shadow hover:shadow-lg">
-                <CardContent className="flex flex-col items-center p-6 text-center">
-                  <item.icon className="mb-3 h-8 w-8 text-primary" />
-                  <h3 className="mb-1 font-semibold">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground">{item.desc}</p>
+              <div key={i} className="flex flex-col items-center gap-3 rounded-xl border bg-[hsl(215,70%,97%)] p-6">
+                <item.icon className="h-8 w-8 text-primary" />
+                <span className="text-sm font-medium text-center">{item.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== HOW IT WORKS ===== */}
+      <section className="bg-[hsl(215,70%,97%)] py-16 lg:py-24">
+        <div className="mx-auto max-w-5xl px-4 text-center lg:px-8">
+          <h2 className="mb-2 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
+            Si sabes usar WhatsApp, sabes usar A3.
+          </h2>
+          <p className="mb-12 text-lg text-muted-foreground">3 pasos y estás operando.</p>
+          <div className="grid gap-8 md:grid-cols-3">
+            {[
+              { step: '1', icon: MessageSquare, title: 'Instala el Web Inbox', desc: 'Widget en tu web para centralizar conversaciones.' },
+              { step: '2', icon: Users, title: 'Organiza con Call Center CRM', desc: 'Clientes, agenda y ventas ordenados y controlados.' },
+              { step: '3', icon: Sparkles, title: 'Produce con IA', desc: 'Contenido y estrategia semanal con IA + Estratega Cuántico.' },
+            ].map((s, i) => (
+              <div key={i} className="relative flex flex-col items-center rounded-2xl border bg-white p-8 shadow-sm">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground">
+                  {s.step}
+                </div>
+                <s.icon className="mb-3 h-8 w-8 text-accent" />
+                <h3 className="mb-2 text-lg font-semibold">{s.title}</h3>
+                <p className="text-sm text-muted-foreground">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== MODULES ===== */}
+      <section id="modules" className="bg-white py-16 lg:py-24">
+        <div className="mx-auto max-w-7xl px-4 lg:px-8">
+          <div className="mb-12 text-center">
+            <h2 className="mb-2 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
+              Todo lo que un negocio necesita para empezar a facturar ya.
+            </h2>
+            <p className="text-lg text-muted-foreground">Operación y crecimiento en un solo sistema.</p>
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {MODULES.map((m, i) => (
+              <Card key={i} className="relative overflow-hidden transition-shadow hover:shadow-lg">
+                {m.badge && (
+                  <Badge className="absolute right-3 top-3 bg-primary text-[10px]">{m.badge}</Badge>
+                )}
+                <CardContent className="p-5">
+                  <m.icon className="mb-3 h-8 w-8 text-primary" />
+                  <h3 className="text-base font-semibold">{m.title}</h3>
+                  <p className="mb-3 text-xs text-muted-foreground">{m.subtitle}</p>
+                  <ul className="space-y-1.5">
+                    {m.bullets.map((b, j) => (
+                      <li key={j} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" /> {b}
+                      </li>
+                    ))}
+                  </ul>
                 </CardContent>
               </Card>
             ))}
@@ -563,7 +762,151 @@ const PreLaunchPage = () => {
         </div>
       </section>
 
-      {/* CTA FINAL */}
+      {/* ===== ESTRATEGA CUÁNTICO ===== */}
+      <section className="bg-gradient-to-br from-primary to-[hsl(215,60%,22%)] py-16 text-primary-foreground lg:py-24">
+        <div className="mx-auto max-w-7xl px-4 lg:px-8">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            <div>
+              <Badge className="mb-4 border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground">
+                Incluido en TODOS los planes
+              </Badge>
+              <h2 className="mb-4 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
+                Estratega Cuántico.
+              </h2>
+              <p className="mb-8 text-lg text-primary-foreground/80">
+                Una sesión semanal en vivo para actualizarte en IA, tecnología y estrategias. Tu plataforma ejecuta; el Estratega Cuántico te guía.
+              </p>
+              <div className="space-y-4">
+                {[
+                  'Sesión semanal en vivo',
+                  'Replays (biblioteca)',
+                  'Estrategia de la semana para aplicar en A3',
+                ].map((t, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Check className="h-5 w-5 text-accent" /> <span className="font-medium">{t}</span>
+                  </div>
+                ))}
+              </div>
+              <Button
+                size="lg"
+                className="mt-8 bg-accent text-accent-foreground hover:bg-accent/90"
+                onClick={() => document.getElementById('register')?.scrollIntoView({ behavior: 'smooth' })}
+              >
+                Reservar mi lugar <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+            <div>
+              <img src={estrategaImg} alt="Estratega Cuántico presentando estrategia en vivo" className="w-full rounded-xl shadow-2xl" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== FOR WHOM ===== */}
+      <section className="bg-white py-16 lg:py-24">
+        <div className="mx-auto max-w-5xl px-4 text-center lg:px-8">
+          <h2 className="mb-2 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
+            Funciona para cualquier negocio.
+          </h2>
+          <p className="mb-10 text-lg text-muted-foreground">
+            Salud, educación, belleza, fitness, gastronomía, inmobiliaria, legal, tecnología y más.
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            {INDUSTRIES.map((ind, i) => (
+              <Badge key={i} variant="secondary" className="px-4 py-2 text-sm font-medium">
+                {ind}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== PLANS ===== */}
+      <section id="plans" className="bg-[hsl(215,70%,97%)] py-16 lg:py-24">
+        <div className="mx-auto max-w-6xl px-4 lg:px-8">
+          <div className="mb-12 text-center">
+            <h2 className="mb-2 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
+              Elige tu plan. Crece sin contratar más gente.
+            </h2>
+            <p className="text-lg text-muted-foreground">Pagas un sistema. Ahorras un equipo.</p>
+          </div>
+          <div className="grid gap-8 md:grid-cols-3">
+            {PLANS.map((p, i) => (
+              <Card key={i} className={`relative flex flex-col overflow-hidden transition-shadow hover:shadow-xl ${p.recommended ? 'border-2 border-primary ring-2 ring-primary/20' : ''}`}>
+                {p.recommended && (
+                  <div className="bg-primary py-1.5 text-center text-xs font-semibold uppercase tracking-wider text-primary-foreground">
+                    Recomendado
+                  </div>
+                )}
+                <CardContent className="flex flex-1 flex-col p-6">
+                  <h3 className="text-xl font-bold" style={{ fontFamily: 'Sora, sans-serif' }}>{p.name}</h3>
+                  <div className="my-4">
+                    <span className="text-4xl font-bold">${p.price}</span>
+                    <span className="text-muted-foreground"> / mes</span>
+                  </div>
+                  <p className="mb-6 text-sm text-muted-foreground">{p.sub}</p>
+                  <ul className="mb-8 flex-1 space-y-2.5">
+                    {p.features.map((f, j) => (
+                      <li key={j} className="flex items-start gap-2 text-sm">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent" /> {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button
+                    className={`w-full ${p.recommended ? '' : 'bg-primary/90 hover:bg-primary'}`}
+                    size="lg"
+                    onClick={() => document.getElementById('register')?.scrollIntoView({ behavior: 'smooth' })}
+                  >
+                    {p.cta}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== TESTIMONIALS ===== */}
+      <section className="bg-white py-16 lg:py-24">
+        <div className="mx-auto max-w-5xl px-4 lg:px-8">
+          <h2 className="mb-10 text-center text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
+            Negocios que decidieron simplificar y crecer.
+          </h2>
+          <div className="grid gap-8 md:grid-cols-3">
+            {TESTIMONIALS.map((t, i) => (
+              <Card key={i} className="transition-shadow hover:shadow-lg">
+                <CardContent className="p-6">
+                  <div className="mb-4 flex gap-1">
+                    {Array(5).fill(0).map((_, j) => <Star key={j} className="h-4 w-4 fill-[hsl(38,92%,55%)] text-[hsl(38,92%,55%)]" />)}
+                  </div>
+                  <p className="mb-4 text-sm text-muted-foreground italic">"{t.text}"</p>
+                  <p className="text-sm font-semibold">{t.name}</p>
+                  <Badge variant="secondary" className="mt-2 text-xs">{t.result}</Badge>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== FAQ ===== */}
+      <section id="faq" className="bg-[hsl(215,70%,97%)] py-16 lg:py-24">
+        <div className="mx-auto max-w-3xl px-4 lg:px-8">
+          <h2 className="mb-10 text-center text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
+            Preguntas frecuentes
+          </h2>
+          <Accordion type="single" collapsible className="w-full">
+            {FAQ_ITEMS.map((f, i) => (
+              <AccordionItem key={i} value={`faq-${i}`}>
+                <AccordionTrigger className="text-left text-base">{f.q}</AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">{f.a}</AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </div>
+      </section>
+
+      {/* ===== CTA FINAL ===== */}
       <section className="bg-gradient-to-br from-[hsl(215,70%,12%)] to-[hsl(160,40%,18%)] py-16 text-white lg:py-24">
         <div className="mx-auto max-w-3xl px-4 text-center lg:px-8">
           <h2 className="mb-4 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
