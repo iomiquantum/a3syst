@@ -562,8 +562,9 @@ const PreLaunchPage = () => {
                     className="bg-[hsl(142,70%,45%)] hover:bg-[hsl(142,70%,40%)] text-white shrink-0"
                     onClick={() => {
                       const referralLink = `${window.location.origin}/lanzamiento?ref=${userData?.referral_code}`;
+                      const dashboardLink = `${window.location.origin}/lanzamiento`;
                       const message = encodeURIComponent(
-                        `¡Hola! Acabo de registrarme al lanzamiento de A3 SYS. 🚀\n\nMi código de referido: ${userData?.referral_code}\nMi link: ${referralLink}\n\nNombre: ${userData?.full_name}\nEmail: ${userData?.email}\nNegocio: ${userData?.business_name}`
+                        `¡Hola! Acabo de registrarme al lanzamiento de A3 SYS. 🚀\n\nMi código de referido: ${userData?.referral_code}\nMi link para compartir: ${referralLink}\n\nNombre: ${userData?.full_name}\nEmail: ${userData?.email}\nNegocio: ${userData?.business_name}\n\n📊 Recuerda revisar el estado de tus referidos en: ${dashboardLink}`
                       );
                       window.open(`https://wa.me/14472871913?text=${message}`, '_blank');
                     }}
