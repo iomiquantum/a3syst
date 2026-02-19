@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,16 +6,19 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { useVoiceInput } from '@/hooks/useVoiceInput';
+import { usePageTracking } from '@/hooks/usePageTracking';
 import {
   Rocket, Clock, Users, Gift, Copy, Check, ArrowRight, Sparkles,
   Mail, Phone, User, Briefcase, Globe, Share2, Image, FileText,
   Menu, X, MessageCircle, ChevronRight, Zap, Star,
   MessageSquare, Calendar, DollarSign, Palette, Target,
   Brain, Video, Building2, Shield, BarChart3, Headphones, Layers,
-  AlertTriangle, TrendingDown, UserX, Wrench, Play
+  AlertTriangle, TrendingDown, UserX, Wrench, Play, Mic, MicOff
 } from 'lucide-react';
 import quantumHeroImg from '@/assets/quantum-hero.jpg';
 import heroImg from '@/assets/landing-hero.jpg';
@@ -23,7 +26,8 @@ import estrategaImg from '@/assets/landing-estratega.jpg';
 import problemImg from '@/assets/landing-problem.jpg';
 import solutionImg from '@/assets/landing-solution.jpg';
 
-const LAUNCH_DATE = new Date('2025-04-01T00:00:00');
+// April 1, 2025 at 7:00 PM Ecuador time (GMT-5) = midnight April 2 UTC
+const LAUNCH_DATE = new Date('2025-04-02T00:00:00Z');
 
 function useCountdown(target: Date) {
   const [now, setNow] = useState(new Date());
@@ -96,6 +100,28 @@ const TESTIMONIALS = [
 
 const INDUSTRIES = ['Salud', 'Educación', 'Belleza', 'Fitness', 'Gastronomía', 'Inmobiliaria', 'Legal', 'Tecnología', 'Coaching', 'Retail', 'Consultoría', 'Servicios'];
 
+const COUNTRY_CODES = [
+  { code: '+593', country: 'Ecuador', flag: '🇪🇨', digits: 9 },
+  { code: '+57', country: 'Colombia', flag: '🇨🇴', digits: 10 },
+  { code: '+52', country: 'México', flag: '🇲🇽', digits: 10 },
+  { code: '+1', country: 'Estados Unidos', flag: '🇺🇸', digits: 10 },
+  { code: '+34', country: 'España', flag: '🇪🇸', digits: 9 },
+  { code: '+51', country: 'Perú', flag: '🇵🇪', digits: 9 },
+  { code: '+56', country: 'Chile', flag: '🇨🇱', digits: 9 },
+  { code: '+54', country: 'Argentina', flag: '🇦🇷', digits: 10 },
+  { code: '+591', country: 'Bolivia', flag: '🇧🇴', digits: 8 },
+  { code: '+58', country: 'Venezuela', flag: '🇻🇪', digits: 10 },
+  { code: '+507', country: 'Panamá', flag: '🇵🇦', digits: 8 },
+  { code: '+506', country: 'Costa Rica', flag: '🇨🇷', digits: 8 },
+  { code: '+502', country: 'Guatemala', flag: '🇬🇹', digits: 8 },
+  { code: '+503', country: 'El Salvador', flag: '🇸🇻', digits: 8 },
+  { code: '+504', country: 'Honduras', flag: '🇭🇳', digits: 8 },
+  { code: '+505', country: 'Nicaragua', flag: '🇳🇮', digits: 8 },
+  { code: '+595', country: 'Paraguay', flag: '🇵🇾', digits: 9 },
+  { code: '+598', country: 'Uruguay', flag: '🇺🇾', digits: 8 },
+  { code: '+55', country: 'Brasil', flag: '🇧🇷', digits: 11 },
+];
+
 const NAV_LINKS = [
   { label: 'Producto', id: 'solution' },
   { label: 'Módulos', id: 'modules' },
@@ -117,6 +143,9 @@ const PreLaunchPage = () => {
 
   // Registration form
   const [form, setForm] = useState({ full_name: '', email: '', phone: '', business_name: '', industry: '', referral_code_input: '' });
+  const [countryCode, setCountryCode] = useState('+593');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const registerRef = useRef<HTMLDivElement>(null);
 
   // Content trial
   const [trialOpen, setTrialOpen] = useState(false);
@@ -125,6 +154,17 @@ const PreLaunchPage = () => {
   const [trialResult, setTrialResult] = useState('');
   const [trialImageUrl, setTrialImageUrl] = useState('');
   const [trialLoading, setTrialLoading] = useState(false);
+
+  // Voice input for trial
+  const { isListening, isSupported: voiceSupported, toggleListening } = useVoiceInput({
+    onResult: (transcript) => {
+      setTrialPrompt(prev => prev ? prev + ' ' + transcript : transcript);
+    },
+    language: 'es-ES',
+  });
+
+  // Page tracking
+  usePageTracking();
 
   // Check localStorage for existing registration
   useEffect(() => {
@@ -155,12 +195,20 @@ const PreLaunchPage = () => {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Validate phone number digits
+    const selectedCountry = COUNTRY_CODES.find(c => c.code === countryCode);
+    const cleanPhone = phoneNumber.replace(/\D/g, '');
+    if (selectedCountry && cleanPhone.length !== selectedCountry.digits) {
+      toast({ title: 'Número inválido', description: `El número para ${selectedCountry.country} debe tener ${selectedCountry.digits} dígitos.`, variant: 'destructive' });
+      return;
+    }
     setLoading(true);
     try {
+      const fullPhone = `${countryCode}${cleanPhone}`;
       const insertData: any = {
         full_name: form.full_name.trim(),
         email: form.email.trim().toLowerCase(),
-        phone: form.phone.trim(),
+        phone: fullPhone,
         business_name: form.business_name.trim(),
         industry: form.industry.trim(),
       };
@@ -207,12 +255,16 @@ const PreLaunchPage = () => {
     toast({ title: 'Link copiado', description: 'Comparte este enlace con tus contactos' });
   };
 
-  // Extract referral code from URL
+  // Extract referral code from URL and scroll to form
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('ref');
     if (ref) {
       setForm(p => ({ ...p, referral_code_input: ref }));
+      // Scroll to registration form after a short delay
+      setTimeout(() => {
+        registerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 500);
     }
   }, []);
 
@@ -486,7 +538,7 @@ const PreLaunchPage = () => {
       </section>
 
       {/* REGISTRATION / DASHBOARD */}
-      <section id="register" className="bg-white py-16 lg:py-20">
+      <section id="register" ref={registerRef} className="bg-white py-16 lg:py-20">
         <div className="mx-auto max-w-5xl px-4 lg:px-8">
           {!registered ? (
             /* REGISTRATION FORM */
@@ -512,7 +564,27 @@ const PreLaunchPage = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <Input placeholder="WhatsApp / Teléfono" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} required />
+                      <div className="flex gap-2 flex-1">
+                        <Select value={countryCode} onValueChange={setCountryCode}>
+                          <SelectTrigger className="w-[140px] shrink-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {COUNTRY_CODES.map(c => (
+                              <SelectItem key={c.code} value={c.code}>
+                                {c.flag} {c.code}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          placeholder={`${COUNTRY_CODES.find(c => c.code === countryCode)?.digits || 9} dígitos`}
+                          value={phoneNumber}
+                          onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
+                          maxLength={COUNTRY_CODES.find(c => c.code === countryCode)?.digits || 11}
+                          required
+                        />
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Briefcase className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -1066,14 +1138,14 @@ const PreLaunchPage = () => {
       </a>
 
       {/* TRIAL MODAL */}
-      <Dialog open={trialOpen} onOpenChange={setTrialOpen}>
-        <DialogContent className="sm:max-w-lg">
+      <Dialog open={trialOpen} onOpenChange={(open) => { setTrialOpen(open); if (!open && isListening) toggleListening(); }}>
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2" style={{ fontFamily: 'Sora, sans-serif' }}>
               <Sparkles className="h-5 w-5 text-primary" /> Prueba la IA de A3
             </DialogTitle>
             <DialogDescription>
-              Genera contenido profesional para tu negocio. Te quedan {generationsLeft} generación{generationsLeft !== 1 ? 'es' : ''}.
+              Describe con detalle qué tipo de contenido deseas. Puedes escribir o usar tu voz 🎙️. Te quedan {generationsLeft} generación{generationsLeft !== 1 ? 'es' : ''}.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1093,24 +1165,46 @@ const PreLaunchPage = () => {
                 onClick={() => setTrialType('image')}
                 className="flex-1"
               >
-                <Image className="mr-2 h-4 w-4" /> Imagen
+                <Image className="mr-2 h-4 w-4" /> Imagen + Copy
               </Button>
             </div>
-            <Textarea
-              placeholder={trialType === 'copy'
-                ? 'Ej: Escribe un post para Instagram sobre los beneficios de mi clínica dental...'
-                : 'Ej: Imagen promocional para una academia de fitness, estilo moderno y profesional...'
-              }
-              value={trialPrompt}
-              onChange={e => setTrialPrompt(e.target.value)}
-              rows={3}
-            />
+
+            {/* Prompt area with voice */}
+            <div className="relative">
+              <Textarea
+                placeholder={trialType === 'copy'
+                  ? 'Describe qué copy deseas: para qué negocio, qué tono, qué red social, qué quieres comunicar...\n\nEj: "Necesito un post para Instagram de mi clínica dental, tono profesional pero cercano, sobre blanqueamiento dental con promoción del 20%"'
+                  : 'Describe la imagen que deseas generar con su copy para redes sociales.\n\nEj: "Una imagen llamativa para promocionar mi academia de fitness, con colores vibrantes, estilo moderno, que muestre energía y motivación. El copy debe invitar a una clase gratis"'
+                }
+                value={trialPrompt}
+                onChange={e => setTrialPrompt(e.target.value)}
+                rows={5}
+                className="pr-14"
+              />
+              {voiceSupported && (
+                <Button
+                  type="button"
+                  variant={isListening ? 'default' : 'outline'}
+                  size="icon"
+                  className={`absolute right-2 bottom-2 h-10 w-10 rounded-full ${isListening ? 'bg-destructive hover:bg-destructive/90 animate-pulse' : ''}`}
+                  onClick={toggleListening}
+                >
+                  {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                </Button>
+              )}
+            </div>
+            {isListening && (
+              <p className="text-xs text-destructive font-medium flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-destructive animate-pulse" /> Escuchando... habla y se transcribirá automáticamente
+              </p>
+            )}
+
             <Button
               className="w-full"
               onClick={handleTrialGenerate}
               disabled={trialLoading || !trialPrompt.trim() || generationsLeft <= 0}
             >
-              {trialLoading ? 'Generando...' : `Generar ${trialType === 'copy' ? 'Copy' : 'Imagen'}`}
+              {trialLoading ? 'Generando...' : `Generar ${trialType === 'copy' ? 'Copy' : 'Imagen + Copy'}`}
               <Sparkles className="ml-2 h-4 w-4" />
             </Button>
 
@@ -1126,6 +1220,14 @@ const PreLaunchPage = () => {
                 <img src={trialImageUrl} alt="Imagen generada por IA" className="w-full" />
               </div>
             )}
+
+            {/* Platform teaser */}
+            <div className="rounded-lg border border-dashed border-primary/30 bg-primary/5 p-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                <span className="font-semibold text-foreground">Dentro de nuestra plataforma oficial</span> podrás crear varias imágenes en diferentes medidas y formatos para cada red social, generar copies y estrategias profesionales con IA avanzada.
+              </p>
+              <p className="text-xs text-muted-foreground mt-2 italic">Esto es solo una prueba de lo que A3 SYS puede hacer por tu negocio. 🚀</p>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
