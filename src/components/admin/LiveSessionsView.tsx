@@ -52,7 +52,7 @@ const DeviceIcon = ({ type }: { type: string }) => {
   return <Monitor className="h-4 w-4" />;
 };
 
-const ACTIVE_THRESHOLD_SECONDS = 60; // Consider inactive after 60s without heartbeat
+const ACTIVE_THRESHOLD_SECONDS = 90; // Consider inactive after 90s without heartbeat (heartbeat interval is 30s)
 
 const LiveSessionsView = () => {
   const [sessions, setSessions] = useState<LiveSession[]>([]);
@@ -61,6 +61,14 @@ const LiveSessionsView = () => {
 
   const fetchSessions = async () => {
     setLoading(true);
+    
+    // First, mark stale sessions as inactive server-side
+    await supabase
+      .from("live_sessions")
+      .update({ is_active: false, ended_at: new Date().toISOString() })
+      .eq("is_active", true)
+      .lt("last_heartbeat", new Date(Date.now() - ACTIVE_THRESHOLD_SECONDS * 1000).toISOString());
+    
     const { data, error } = await supabase
       .from("live_sessions")
       .select("*")
