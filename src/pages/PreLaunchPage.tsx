@@ -708,25 +708,6 @@ const PreLaunchPage = () => {
                 </CardContent>
               </Card>
 
-              {/* Dev: Reset local session */}
-              <div className="mt-6 text-center">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-muted-foreground hover:text-destructive"
-                  onClick={() => {
-                    localStorage.removeItem('a3_launch_email');
-                    setRegistered(false);
-                    setUserData(null);
-                    setReferralCount(0);
-                    setUserCreated(false);
-                    setForm({ full_name: '', email: '', phone: '', business_name: '', industry: '', referral_code_input: '' });
-                    toast({ title: 'Sesión limpiada', description: 'Puedes registrarte con otro email.' });
-                  }}
-                >
-                  🔄 Probar con otro email
-                </Button>
-              </div>
             </div>
           )}
         </div>
