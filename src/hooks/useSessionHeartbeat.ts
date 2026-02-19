@@ -56,18 +56,20 @@ const timezoneToCountry: Record<string, string> = {
 };
 
 const getCountryFromTimezone = (tz: string): string => {
-  // Check direct match
   if (timezoneToCountry[tz]) return timezoneToCountry[tz];
-
-  // Try partial match on major region
   const parts = tz.split('/');
   if (parts[0] === 'America') return 'América';
   if (parts[0] === 'Europe') return 'Europa';
   if (parts[0] === 'Asia') return 'Asia';
   if (parts[0] === 'Africa') return 'África';
   if (parts[0] === 'Australia') return 'Oceanía';
-
   return 'Desconocido';
+};
+
+const getCityFromTimezone = (tz: string): string => {
+  const parts = tz.split('/');
+  const city = parts[parts.length - 1];
+  return city ? city.replace(/_/g, ' ') : '';
 };
 
 export const useSessionHeartbeat = () => {
@@ -92,6 +94,7 @@ export const useSessionHeartbeat = () => {
         device_type: getDeviceType(),
         timezone: tz,
         country: country,
+        region: getCityFromTimezone(tz),
         ...(isFirst ? {
           started_at: new Date().toISOString(),
           referrer: document.referrer || null,
