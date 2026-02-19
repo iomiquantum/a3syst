@@ -958,6 +958,51 @@ export type Database = {
           },
         ]
       }
+      launch_registrations: {
+        Row: {
+          business_name: string
+          created_at: string
+          email: string
+          full_name: string
+          generations_used: number
+          id: string
+          industry: string
+          max_generations: number
+          phone: string
+          referral_code: string
+          referred_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_name: string
+          created_at?: string
+          email: string
+          full_name: string
+          generations_used?: number
+          id?: string
+          industry?: string
+          max_generations?: number
+          phone: string
+          referral_code?: string
+          referred_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_name?: string
+          created_at?: string
+          email?: string
+          full_name?: string
+          generations_used?: number
+          id?: string
+          industry?: string
+          max_generations?: number
+          phone?: string
+          referral_code?: string
+          referred_by?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       meeting_bots: {
         Row: {
           bot_id: string | null
