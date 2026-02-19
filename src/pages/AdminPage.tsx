@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, DollarSign, Key, Rocket, BarChart3 } from "lucide-react";
+import { Building2, Users, DollarSign, Key, Rocket, BarChart3, Flame } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
 import AdminClinicasTab from "@/components/admin/AdminClinicasTab";
@@ -10,6 +10,7 @@ import AdminTokenBudgets from "@/components/admin/AdminTokenBudgets";
 import AdminAPIKeysTab from "@/components/admin/AdminAPIKeysTab";
 import AdminLaunchTab from "@/components/admin/AdminLaunchTab";
 import AdminAnalyticsTab from "@/components/admin/AdminAnalyticsTab";
+import HeatmapView from "@/components/admin/HeatmapView";
 
 const AdminPage = () => {
   const { isSuperAdmin } = useClinic();
@@ -81,6 +82,9 @@ const AdminPage = () => {
               <TabsTrigger value="analytics" className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" /> Analítica Web
               </TabsTrigger>
+              <TabsTrigger value="heatmap" className="flex items-center gap-2">
+                <Flame className="w-4 h-4" /> Mapa de Calor
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="clinicas" className="mt-6">
               <AdminClinicasTab clinics={clinics} roles={roles} onRefresh={fetchData} />
@@ -99,6 +103,9 @@ const AdminPage = () => {
             </TabsContent>
             <TabsContent value="analytics" className="mt-6">
               <AdminAnalyticsTab />
+            </TabsContent>
+            <TabsContent value="heatmap" className="mt-6">
+              <HeatmapView />
             </TabsContent>
           </Tabs>
         )}

@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { usePageTracking } from '@/hooks/usePageTracking';
+import { useClickTracking } from '@/hooks/useClickTracking';
 import {
   Rocket, Clock, Users, Gift, Copy, Check, ArrowRight, Sparkles,
   Mail, Phone, User, Briefcase, Globe, Share2, Image, FileText,
@@ -165,6 +166,7 @@ const PreLaunchPage = () => {
 
   // Page tracking
   usePageTracking();
+  useClickTracking();
 
   // Check localStorage for existing registration
   useEffect(() => {

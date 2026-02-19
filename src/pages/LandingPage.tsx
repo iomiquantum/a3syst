@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useClickTracking } from '@/hooks/useClickTracking';
+import { usePageTracking } from '@/hooks/usePageTracking';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -88,6 +90,9 @@ const LandingPage = () => {
   const [demoOpen, setDemoOpen] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [formData, setFormData] = useState({ name: '', business: '', industry: '', whatsapp: '', email: '' });
+
+  usePageTracking();
+  useClickTracking();
 
   useEffect(() => {
     document.title = 'A3 SYS by IOMI | Operaciones Autónomas con IA para Vender Más';
