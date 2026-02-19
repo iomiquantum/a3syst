@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, DollarSign, Key, Rocket } from "lucide-react";
+import { Building2, Users, DollarSign, Key, Rocket, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
 import AdminClinicasTab from "@/components/admin/AdminClinicasTab";
@@ -9,6 +9,7 @@ import AdminUsuariosTab from "@/components/admin/AdminUsuariosTab";
 import AdminTokenBudgets from "@/components/admin/AdminTokenBudgets";
 import AdminAPIKeysTab from "@/components/admin/AdminAPIKeysTab";
 import AdminLaunchTab from "@/components/admin/AdminLaunchTab";
+import AdminAnalyticsTab from "@/components/admin/AdminAnalyticsTab";
 
 const AdminPage = () => {
   const { isSuperAdmin } = useClinic();
@@ -77,6 +78,9 @@ const AdminPage = () => {
               <TabsTrigger value="lanzamiento" className="flex items-center gap-2">
                 <Rocket className="w-4 h-4" /> Lanzamiento
               </TabsTrigger>
+              <TabsTrigger value="analytics" className="flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" /> Analítica Web
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="clinicas" className="mt-6">
               <AdminClinicasTab clinics={clinics} roles={roles} onRefresh={fetchData} />
@@ -92,6 +96,9 @@ const AdminPage = () => {
             </TabsContent>
             <TabsContent value="lanzamiento" className="mt-6">
               <AdminLaunchTab />
+            </TabsContent>
+            <TabsContent value="analytics" className="mt-6">
+              <AdminAnalyticsTab />
             </TabsContent>
           </Tabs>
         )}
