@@ -1039,6 +1039,66 @@ export type Database = {
         }
         Relationships: []
       }
+      live_sessions: {
+        Row: {
+          country: string | null
+          created_at: string
+          current_page: string
+          device_type: string
+          did_register: boolean
+          duration_seconds: number | null
+          ended_at: string | null
+          id: string
+          is_active: boolean
+          last_heartbeat: string
+          referrer: string | null
+          region: string | null
+          session_id: string
+          started_at: string
+          timezone: string | null
+          utm_campaign: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string
+          current_page?: string
+          device_type?: string
+          did_register?: boolean
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean
+          last_heartbeat?: string
+          referrer?: string | null
+          region?: string | null
+          session_id: string
+          started_at?: string
+          timezone?: string | null
+          utm_campaign?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          country?: string | null
+          created_at?: string
+          current_page?: string
+          device_type?: string
+          did_register?: boolean
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean
+          last_heartbeat?: string
+          referrer?: string | null
+          region?: string | null
+          session_id?: string
+          started_at?: string
+          timezone?: string | null
+          utm_campaign?: string | null
+          utm_source?: string | null
+        }
+        Relationships: []
+      }
       meeting_bots: {
         Row: {
           bot_id: string | null

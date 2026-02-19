@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useClickTracking } from '@/hooks/useClickTracking';
 import { usePageTracking } from '@/hooks/usePageTracking';
+import { useSessionHeartbeat } from '@/hooks/useSessionHeartbeat';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -93,6 +94,7 @@ const LandingPage = () => {
 
   usePageTracking();
   useClickTracking();
+  useSessionHeartbeat();
 
   useEffect(() => {
     document.title = 'A3 SYS by IOMI | Operaciones Autónomas con IA para Vender Más';
