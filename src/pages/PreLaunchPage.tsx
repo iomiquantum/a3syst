@@ -708,32 +708,23 @@ const PreLaunchPage = () => {
                 </CardContent>
               </Card>
 
-              {/* Dev: Reset registration */}
+              {/* Dev: Reset local session */}
               <div className="mt-6 text-center">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-xs text-destructive hover:text-destructive"
-                  onClick={async () => {
-                    if (!userData) return;
-                    const { error } = await supabase
-                      .from('launch_registrations')
-                      .delete()
-                      .eq('id', userData.id);
-                    if (error) {
-                      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-                      return;
-                    }
+                  className="text-xs text-muted-foreground hover:text-destructive"
+                  onClick={() => {
                     localStorage.removeItem('a3_launch_email');
                     setRegistered(false);
                     setUserData(null);
                     setReferralCount(0);
                     setUserCreated(false);
                     setForm({ full_name: '', email: '', phone: '', business_name: '', industry: '', referral_code_input: '' });
-                    toast({ title: 'Registro eliminado', description: 'Puedes registrarte de nuevo.' });
+                    toast({ title: 'Sesión limpiada', description: 'Puedes registrarte con otro email.' });
                   }}
                 >
-                  🗑️ Eliminar mi registro (prueba)
+                  🔄 Probar con otro email
                 </Button>
               </div>
             </div>

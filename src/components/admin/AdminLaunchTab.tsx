@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Rocket, Users, Search, RefreshCw, CheckCircle2, Clock, UserCheck, ExternalLink } from "lucide-react";
+import { Rocket, Users, Search, RefreshCw, CheckCircle2, Clock, UserCheck, ExternalLink, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -198,6 +198,7 @@ const AdminLaunchTab = () => {
                     <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">IA usada</th>
                     <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Estado</th>
                     <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Fecha</th>
+                    <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -244,6 +245,27 @@ const AdminLaunchTab = () => {
                         </td>
                         <td className="px-4 py-3">
                           <p className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(r.created_at)}</p>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 hover:bg-destructive/10"
+                            onClick={async () => {
+                              const { error } = await supabase
+                                .from("launch_registrations")
+                                .delete()
+                                .eq("id", r.id);
+                              if (error) {
+                                toast.error(error.message);
+                                return;
+                              }
+                              toast.success(`Registro de ${r.full_name} eliminado`);
+                              fetchData();
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
                         </td>
                       </tr>
                     );
