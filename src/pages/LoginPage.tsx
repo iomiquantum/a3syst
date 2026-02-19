@@ -22,6 +22,7 @@ const LoginPage = () => {
     return null;
   }
 
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) { toast.error("Completa todos los campos"); return; }
@@ -41,11 +42,11 @@ const LoginPage = () => {
         <div className="mb-12">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">IO</span>
+              <span className="text-primary-foreground font-bold text-sm">A3</span>
             </div>
             <div>
-            <span className="text-xl font-bold text-foreground tracking-tight">IOMI</span>
-              <span className="text-xs block text-muted-foreground -mt-1 tracking-widest">SYS</span>
+            <span className="text-xl font-bold text-foreground tracking-tight">A3 SYS</span>
+              <span className="text-xs block text-muted-foreground -mt-1 tracking-widest">by IOMI</span>
             </div>
           </div>
         </div>
@@ -84,7 +85,7 @@ const LoginPage = () => {
 
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground mb-3">¿No tienes cuenta aún?</p>
-            <Link to="/registro">
+            <Link to="/registro" className="block">
               <Button variant="outline" className="w-full h-11 border-primary text-primary hover:bg-sidebar-accent font-medium">
                 Regístrate y accede a una prueba gratuita
               </Button>

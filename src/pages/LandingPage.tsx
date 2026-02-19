@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -89,7 +90,7 @@ const LandingPage = () => {
   const [formData, setFormData] = useState({ name: '', business: '', industry: '', whatsapp: '', email: '' });
 
   useEffect(() => {
-    document.title = 'A3 NETWORTH | Operaciones Autónomas con IA para Vender Más';
+    document.title = 'A3 SYS by IOMI | Operaciones Autónomas con IA para Vender Más';
     const meta = document.querySelector('meta[name="description"]');
     if (meta) meta.setAttribute('content', 'Bienvenido a la Economía Cuántica. Ahorra sueldos y duplica ventas con un sistema todo-en-uno: atención al cliente, call center CRM, agenda, ventas, contenido con IA y estrategias cuánticas.');
   }, []);
@@ -122,7 +123,7 @@ const LandingPage = () => {
       <nav className="sticky top-0 z-50 border-b bg-white/95 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 lg:px-8">
           <button onClick={() => scrollTo('hero')} className="text-xl font-bold tracking-tight" style={{ fontFamily: 'Sora, sans-serif' }}>
-            <span className="text-primary">A3</span> <span className="text-foreground">NETWORTH</span>
+            <span className="text-primary">A3</span> <span className="text-foreground">SYS</span> <span className="text-xs text-muted-foreground">by IOMI</span>
           </button>
           <div className="hidden items-center gap-6 lg:flex">
             {NAV_LINKS.map(l => (
@@ -132,6 +133,9 @@ const LandingPage = () => {
             ))}
           </div>
           <div className="hidden items-center gap-3 lg:flex">
+            <Link to="/login">
+              <Button variant="ghost" size="sm">Iniciar Sesión</Button>
+            </Link>
             <Button variant="outline" size="sm" onClick={() => scrollTo('how')}>
               <Play className="mr-1 h-3 w-3" /> Ver Tour 2 min
             </Button>
@@ -148,9 +152,14 @@ const LandingPage = () => {
                 {l.label}
               </button>
             ))}
-            <div className="mt-3 flex gap-2">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => { scrollTo('how'); }}>Ver Tour</Button>
-              <Button size="sm" className="flex-1" onClick={() => { setDemoOpen(true); setMobileMenu(false); }}>Agendar Demo</Button>
+            <div className="mt-3 flex flex-col gap-2">
+              <Link to="/login">
+                <Button variant="ghost" size="sm" className="w-full">Iniciar Sesión</Button>
+              </Link>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => { scrollTo('how'); }}>Ver Tour</Button>
+                <Button size="sm" className="flex-1" onClick={() => { setDemoOpen(true); setMobileMenu(false); }}>Agendar Demo</Button>
+              </div>
             </div>
           </div>
         )}
@@ -198,7 +207,7 @@ const LandingPage = () => {
               </p>
             </div>
             <div className="relative">
-              <img src={heroImg} alt="Dashboard A3 NETWORTH - Sistema de gestión empresarial con IA" className="w-full rounded-xl shadow-2xl" />
+              <img src={heroImg} alt="Dashboard A3 SYS by IOMI - Sistema de gestión empresarial con IA" className="w-full rounded-xl shadow-2xl" />
             </div>
           </div>
         </div>
@@ -241,11 +250,11 @@ const LandingPage = () => {
         <div className="mx-auto max-w-7xl px-4 lg:px-8">
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <div className="order-2 lg:order-1">
-              <img src={solutionImg} alt="Dueño de negocio confiado usando A3 NETWORTH" className="w-full rounded-xl shadow-lg" />
+              <img src={solutionImg} alt="Dueño de negocio confiado usando A3 SYS by IOMI" className="w-full rounded-xl shadow-lg" />
             </div>
             <div className="order-1 lg:order-2">
               <h2 className="mb-4 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
-                A3 NETWORTH trabaja por ti. Tú solo decides.
+                A3 SYS trabaja por ti. Tú solo decides.
               </h2>
               <p className="mb-8 text-lg text-muted-foreground">
                 Centraliza, automatiza y controla. A3 ejecuta en paralelo lo que antes requería varios roles.
@@ -529,10 +538,10 @@ const LandingPage = () => {
       <footer className="border-t bg-white py-8">
         <div className="mx-auto max-w-7xl px-4 text-center lg:px-8">
           <p className="text-xl font-bold" style={{ fontFamily: 'Sora, sans-serif' }}>
-            <span className="text-primary">A3</span> NETWORTH
+            <span className="text-primary">A3</span> SYS <span className="text-sm text-muted-foreground font-normal">by IOMI</span>
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            © {new Date().getFullYear()} A3 NETWORTH. Todos los derechos reservados.
+            © {new Date().getFullYear()} A3 SYS by IOMI. Todos los derechos reservados.
           </p>
         </div>
       </footer>

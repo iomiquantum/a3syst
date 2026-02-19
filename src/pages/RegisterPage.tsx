@@ -26,7 +26,7 @@ const RegisterPage = () => {
       toast.error(error.message);
     } else {
       toast.success("¡Cuenta creada! Revisa tu email para confirmar tu cuenta.");
-      navigate("/");
+      navigate("/login");
     }
   };
 
@@ -36,11 +36,11 @@ const RegisterPage = () => {
         <div className="mb-12">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">IO</span>
+              <span className="text-primary-foreground font-bold text-sm">A3</span>
             </div>
             <div>
-            <span className="text-xl font-bold text-foreground tracking-tight">IOMI</span>
-              <span className="text-xs block text-muted-foreground -mt-1 tracking-widest">SYS</span>
+            <span className="text-xl font-bold text-foreground tracking-tight">A3 SYS</span>
+              <span className="text-xs block text-muted-foreground -mt-1 tracking-widest">by IOMI</span>
             </div>
           </div>
         </div>
@@ -73,7 +73,7 @@ const RegisterPage = () => {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">¿Ya tienes cuenta? <Link to="/" className="text-primary hover:underline font-medium">Iniciar sesión</Link></p>
+            <p className="text-sm text-muted-foreground">¿Ya tienes cuenta? <Link to="/login" className="text-primary hover:underline font-medium">Iniciar sesión</Link></p>
           </div>
         </div>
       </div>
@@ -81,9 +81,9 @@ const RegisterPage = () => {
       <div className="hidden lg:flex flex-1 items-center justify-center gradient-subtle p-12">
         <div className="w-full max-w-sm text-center">
           <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-6">
-            <span className="text-primary-foreground font-bold text-xl">IO</span>
+            <span className="text-primary-foreground font-bold text-xl">A3</span>
           </div>
-          <h2 className="text-2xl font-bold text-foreground mb-3">IOMI SYS</h2>
+          <h2 className="text-2xl font-bold text-foreground mb-3">A3 SYS <span className="text-base text-muted-foreground font-normal">by IOMI</span></h2>
           <p className="text-muted-foreground mb-8">Sistema integral de gestión para negocios modernos</p>
           <div className="space-y-3 text-left">
             {["📅 Agenda y turnos inteligentes", "👥 Gestión de clientes", "💰 Control de ventas", "📊 Reportes en tiempo real", "💬 Mensajería automatizada"].map(f => (
