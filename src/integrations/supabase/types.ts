@@ -649,6 +649,42 @@ export type Database = {
           },
         ]
       }
+      click_events: {
+        Row: {
+          created_at: string
+          element_tag: string | null
+          id: string
+          page_path: string
+          session_id: string
+          viewport_height: number | null
+          viewport_width: number | null
+          x_percent: number
+          y_percent: number
+        }
+        Insert: {
+          created_at?: string
+          element_tag?: string | null
+          id?: string
+          page_path?: string
+          session_id: string
+          viewport_height?: number | null
+          viewport_width?: number | null
+          x_percent: number
+          y_percent: number
+        }
+        Update: {
+          created_at?: string
+          element_tag?: string | null
+          id?: string
+          page_path?: string
+          session_id?: string
+          viewport_height?: number | null
+          viewport_width?: number | null
+          x_percent?: number
+          y_percent?: number
+        }
+        Relationships: []
+      }
       clinic_brand_styles: {
         Row: {
           clinic_id: string
