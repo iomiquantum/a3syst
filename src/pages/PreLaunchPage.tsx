@@ -112,6 +112,8 @@ const PreLaunchPage = () => {
   const [referralCount, setReferralCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [userCreated, setUserCreated] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
 
   // Registration form
   const [form, setForm] = useState({ full_name: '', email: '', phone: '', business_name: '', industry: '', referral_code_input: '' });
@@ -259,6 +261,51 @@ const PreLaunchPage = () => {
 
   const generationsLeft = userData ? userData.max_generations - userData.generations_used : 3;
   const freeMonthEarned = referralCount >= 4;
+
+  // Auto-create user when 4 referrals reached
+  const handleClaimAccount = async () => {
+    if (!userData || creatingUser || userCreated) return;
+    setCreatingUser(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-launch-user', {
+        body: {
+          email: userData.email,
+          full_name: userData.full_name,
+          referral_code: userData.referral_code,
+        },
+      });
+
+      if (error) throw error;
+
+      // Send WhatsApp notification for manual validation
+      const message = encodeURIComponent(
+        `🎉 ¡NUEVO USUARIO CREADO!\n\n` +
+        `Nombre: ${userData.full_name}\n` +
+        `Email: ${userData.email}\n` +
+        `Teléfono: ${userData.phone}\n` +
+        `Negocio: ${userData.business_name}\n` +
+        `Industria: ${userData.industry}\n` +
+        `Código: ${userData.referral_code}\n` +
+        `Referidos: ${referralCount}\n\n` +
+        `⚠️ Requiere validación manual.`
+      );
+      window.open(`https://wa.me/14472871913?text=${message}`, '_blank');
+
+      setUserCreated(true);
+      toast({
+        title: '🎉 ¡Cuenta creada exitosamente!',
+        description: 'Revisa tu email para los próximos pasos. Te contactaremos por WhatsApp para activar tu cuenta.',
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.message || 'No se pudo crear la cuenta. Intenta de nuevo.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCreatingUser(false);
+    }
+  };
 
   return (
     <div
@@ -573,9 +620,35 @@ const PreLaunchPage = () => {
                       ))}
                     </div>
                     {freeMonthEarned ? (
-                      <Badge className="mt-3 w-full justify-center bg-[hsl(160,55%,42%)] text-white py-1">
-                        🎉 ¡Primer mes GRATIS ganado!
-                      </Badge>
+                      <div className="mt-3 space-y-2">
+                        <Badge className="w-full justify-center bg-[hsl(160,55%,42%)] text-white py-1">
+                          🎉 ¡Primer mes GRATIS ganado!
+                        </Badge>
+                        {!userCreated ? (
+                          <Button
+                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                            size="sm"
+                            disabled={creatingUser}
+                            onClick={handleClaimAccount}
+                          >
+                            {creatingUser ? (
+                              <>
+                                <Clock className="mr-2 h-3.5 w-3.5 animate-spin" />
+                                Creando tu cuenta...
+                              </>
+                            ) : (
+                              <>
+                                <Rocket className="mr-2 h-3.5 w-3.5" />
+                                Reclamar mi cuenta A3 SYS
+                              </>
+                            )}
+                          </Button>
+                        ) : (
+                          <Badge className="w-full justify-center bg-primary text-primary-foreground py-1">
+                            ✅ Cuenta creada — Pendiente validación
+                          </Badge>
+                        )}
+                      </div>
                     ) : (
                       <p className="mt-3 text-center text-xs text-muted-foreground">
                         Te faltan {4 - referralCount} referido{4 - referralCount !== 1 ? 's' : ''} para tu mes gratis
