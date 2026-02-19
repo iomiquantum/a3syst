@@ -499,6 +499,34 @@ const PreLaunchPage = () => {
                 <p className="text-muted-foreground">Tu lugar está reservado para el lanzamiento del 1° de Abril.</p>
               </div>
 
+              {/* WhatsApp Confirmation Banner */}
+              <Card className="mb-6 border-2 border-[hsl(142,70%,45%)]/40 bg-[hsl(142,70%,45%)]/5">
+                <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[hsl(142,70%,45%)] text-white">
+                      <MessageCircle className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm">Confirma tu registro</p>
+                      <p className="text-xs text-muted-foreground">Envía un mensaje de WhatsApp para validar tu participación</p>
+                    </div>
+                  </div>
+                  <Button
+                    className="bg-[hsl(142,70%,45%)] hover:bg-[hsl(142,70%,40%)] text-white shrink-0"
+                    onClick={() => {
+                      const referralLink = `${window.location.origin}/lanzamiento?ref=${userData?.referral_code}`;
+                      const message = encodeURIComponent(
+                        `¡Hola! Acabo de registrarme al lanzamiento de A3 SYS. 🚀\n\nMi código de referido: ${userData?.referral_code}\nMi link: ${referralLink}\n\nNombre: ${userData?.full_name}\nEmail: ${userData?.email}\nNegocio: ${userData?.business_name}`
+                      );
+                      window.open(`https://wa.me/14472871913?text=${message}`, '_blank');
+                    }}
+                  >
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    Debes confirmar tu registro dando clic aquí
+                  </Button>
+                </CardContent>
+              </Card>
+
               <div className="grid gap-6 md:grid-cols-3 mb-8">
                 {/* Referral Code Card */}
                 <Card className="border-2 border-primary/20">
