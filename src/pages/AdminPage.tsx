@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, DollarSign, Key, Rocket, BarChart3, Flame } from "lucide-react";
+import { Building2, Users, DollarSign, Key, Rocket, BarChart3, Flame, Radio } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
 import AdminClinicasTab from "@/components/admin/AdminClinicasTab";
@@ -11,6 +11,7 @@ import AdminAPIKeysTab from "@/components/admin/AdminAPIKeysTab";
 import AdminLaunchTab from "@/components/admin/AdminLaunchTab";
 import AdminAnalyticsTab from "@/components/admin/AdminAnalyticsTab";
 import HeatmapView from "@/components/admin/HeatmapView";
+import LiveSessionsView from "@/components/admin/LiveSessionsView";
 
 const AdminPage = () => {
   const { isSuperAdmin } = useClinic();
@@ -85,6 +86,9 @@ const AdminPage = () => {
               <TabsTrigger value="heatmap" className="flex items-center gap-2">
                 <Flame className="w-4 h-4" /> Mapa de Calor
               </TabsTrigger>
+              <TabsTrigger value="live" className="flex items-center gap-2">
+                <Radio className="w-4 h-4" /> En Vivo
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="clinicas" className="mt-6">
               <AdminClinicasTab clinics={clinics} roles={roles} onRefresh={fetchData} />
@@ -106,6 +110,9 @@ const AdminPage = () => {
             </TabsContent>
             <TabsContent value="heatmap" className="mt-6">
               <HeatmapView />
+            </TabsContent>
+            <TabsContent value="live" className="mt-6">
+              <LiveSessionsView />
             </TabsContent>
           </Tabs>
         )}

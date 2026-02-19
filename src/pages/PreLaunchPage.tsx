@@ -13,6 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { usePageTracking } from '@/hooks/usePageTracking';
 import { useClickTracking } from '@/hooks/useClickTracking';
+import { useSessionHeartbeat, markSessionAsRegistered } from '@/hooks/useSessionHeartbeat';
 import {
   Rocket, Clock, Users, Gift, Copy, Check, ArrowRight, Sparkles,
   Mail, Phone, User, Briefcase, Globe, Share2, Image, FileText,
@@ -167,6 +168,7 @@ const PreLaunchPage = () => {
   // Page tracking
   usePageTracking();
   useClickTracking();
+  useSessionHeartbeat();
 
   // Check localStorage for existing registration
   useEffect(() => {
@@ -233,6 +235,7 @@ const PreLaunchPage = () => {
         setUserData(data);
         setRegistered(true);
         localStorage.setItem('a3_launch_email', data.email);
+        markSessionAsRegistered();
         toast({ title: '¡Registro exitoso! 🚀', description: 'Tu código de referido está listo. ¡Comparte y gana!' });
       }
     } catch (err: any) {
