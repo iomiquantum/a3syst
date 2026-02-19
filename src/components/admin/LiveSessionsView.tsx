@@ -250,10 +250,10 @@ const LiveSessionsView = () => {
                                 </Badge>
                               )}
                             </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
                               <span className="flex items-center gap-1">
                                 <MapPin className="h-3 w-3" />
-                                {s.country || 'Desconocido'}
+                                {s.region ? `${s.region}, ` : ''}{s.country || 'Desconocido'}
                               </span>
                               {s.utm_source && (
                                 <span className="flex items-center gap-1">
@@ -261,13 +261,19 @@ const LiveSessionsView = () => {
                                   {s.utm_source}
                                 </span>
                               )}
+                              {s.referrer && !s.utm_source && (
+                                <span className="flex items-center gap-1 text-muted-foreground">
+                                  <ArrowUpRight className="h-3 w-3" />
+                                  {(() => { try { return new URL(s.referrer).hostname; } catch { return 'Referido'; } })()}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-semibold">{formatDuration(s.duration_seconds)}</p>
+                          <p className="text-sm font-semibold text-green-600">{formatDuration(s.duration_seconds)} en línea</p>
                           <p className="text-[10px] text-muted-foreground">
-                            {timeAgo(s.last_heartbeat)}
+                            Último latido: {timeAgo(s.last_heartbeat)}
                           </p>
                         </div>
                       </div>
@@ -317,9 +323,10 @@ const LiveSessionsView = () => {
               <p className="text-sm text-muted-foreground text-center py-6">Sin historial</p>
             ) : (
               <div className="space-y-1">
-                <div className="grid grid-cols-6 gap-2 text-xs font-semibold text-muted-foreground px-3 py-2 border-b">
+                <div className="grid grid-cols-7 gap-2 text-xs font-semibold text-muted-foreground px-3 py-2 border-b">
                   <span>Dispositivo</span>
                   <span>País</span>
+                  <span>Ciudad</span>
                   <span>Página</span>
                   <span>Duración</span>
                   <span>Fuente</span>
@@ -328,13 +335,14 @@ const LiveSessionsView = () => {
                 {recentlyEnded.map(s => (
                   <div
                     key={s.id}
-                    className="grid grid-cols-6 gap-2 text-sm px-3 py-2.5 border-b last:border-0 items-center hover:bg-muted/30 transition-colors"
+                    className="grid grid-cols-7 gap-2 text-sm px-3 py-2.5 border-b last:border-0 items-center hover:bg-muted/30 transition-colors"
                   >
                     <div className="flex items-center gap-1.5">
                       <DeviceIcon type={s.device_type} />
                       <span className="text-xs capitalize">{s.device_type}</span>
                     </div>
                     <span className="text-xs">{s.country || '—'}</span>
+                    <span className="text-xs">{s.region || '—'}</span>
                     <span className="text-xs font-medium truncate">{s.current_page}</span>
                     <span className="text-xs font-semibold">{formatDuration(s.duration_seconds)}</span>
                     <span className="text-xs text-muted-foreground">{s.utm_source || (s.referrer ? (() => { try { return new URL(s.referrer).hostname; } catch { return 'Referido'; } })() : 'Directo')}</span>
