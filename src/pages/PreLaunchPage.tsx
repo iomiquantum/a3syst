@@ -13,6 +13,7 @@ import {
   Mail, Phone, User, Briefcase, Globe, Share2, Image, FileText,
   Menu, X, MessageCircle, ChevronRight, Zap, Star
 } from 'lucide-react';
+import quantumHeroImg from '@/assets/quantum-hero.jpg';
 
 const LAUNCH_DATE = new Date('2025-04-01T00:00:00');
 
@@ -236,22 +237,41 @@ const PreLaunchPage = () => {
       </nav>
 
       {/* HERO - COUNTDOWN */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[hsl(215,70%,12%)] via-[hsl(215,60%,18%)] to-[hsl(160,40%,20%)] py-20 text-white lg:py-32">
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, hsl(160,55%,42%) 0%, transparent 50%), radial-gradient(circle at 80% 50%, hsl(215,70%,50%) 0%, transparent 50%)' }} />
-        <div className="relative mx-auto max-w-5xl px-4 text-center lg:px-8">
-          <Badge className="mb-6 border-white/20 bg-white/10 text-white text-sm px-4 py-1.5">
-            <Rocket className="mr-2 h-4 w-4" /> Lanzamiento Oficial — 1° de Abril 2025
-          </Badge>
-          <h1 className="mb-6 text-4xl font-bold leading-tight tracking-tight lg:text-6xl xl:text-7xl" style={{ fontFamily: 'Sora, sans-serif' }}>
-            La revolución de tu negocio{' '}
-            <span className="bg-gradient-to-r from-[hsl(160,55%,55%)] to-[hsl(160,55%,70%)] bg-clip-text text-transparent">
-              comienza aquí.
+      <section className="relative overflow-hidden min-h-screen flex items-center text-white">
+        {/* Background image */}
+        <div className="absolute inset-0">
+          <img src={quantumHeroImg} alt="Economía Cuántica - Mente con telekinesis hacia computador" className="h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[hsl(215,70%,8%)]/80 via-[hsl(215,70%,8%)]/60 to-[hsl(215,70%,8%)]/90" />
+        </div>
+        {/* Glow effects */}
+        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 30% 40%, hsl(160,55%,42%) 0%, transparent 40%), radial-gradient(circle at 70% 60%, hsl(215,70%,50%) 0%, transparent 40%)' }} />
+        
+        <div className="relative mx-auto max-w-6xl px-4 py-24 text-center lg:px-8 lg:py-32">
+          {/* Big Quantum Economy Badge */}
+          <div className="mb-8 inline-flex items-center gap-3 rounded-full border-2 border-[hsl(160,55%,42%)]/40 bg-[hsl(160,55%,42%)]/10 px-8 py-3 backdrop-blur-md">
+            <Zap className="h-6 w-6 text-[hsl(160,55%,55%)]" />
+            <span className="text-lg font-bold tracking-wide uppercase text-[hsl(160,55%,70%)]" style={{ fontFamily: 'Sora, sans-serif' }}>
+              Bienvenido a la nueva Economía Cuántica
+            </span>
+            <Zap className="h-6 w-6 text-[hsl(160,55%,55%)]" />
+          </div>
+
+          <h1 className="mb-4 text-5xl font-extrabold leading-none tracking-tight lg:text-7xl xl:text-8xl" style={{ fontFamily: 'Sora, sans-serif' }}>
+            Tu mente controla.{' '}
+            <br className="hidden sm:block" />
+            <span className="bg-gradient-to-r from-[hsl(160,55%,50%)] via-[hsl(160,65%,65%)] to-[hsl(200,80%,70%)] bg-clip-text text-transparent">
+              A3 ejecuta.
             </span>
           </h1>
-          <p className="mx-auto mb-12 max-w-2xl text-lg text-white/70 lg:text-xl">
-            Regístrate ahora al lanzamiento de A3 SYS y prueba gratis la generación de contenido con IA. 
-            Refiere a 4 personas y obtén tu primer mes GRATIS.
+          
+          <p className="mx-auto mb-6 max-w-2xl text-lg text-white/60 lg:text-xl">
+            El sistema todo-en-uno con IA que opera tu negocio en paralelo. 
+            Tú piensas, A3 hace el resto.
           </p>
+
+          <Badge className="mb-10 border-white/20 bg-white/10 text-white text-sm px-5 py-2">
+            <Rocket className="mr-2 h-4 w-4" /> Lanzamiento Oficial — 1° de Abril 2025
+          </Badge>
 
           {/* COUNTDOWN */}
           <div className="mb-12 flex justify-center gap-4 sm:gap-8">
@@ -262,12 +282,12 @@ const PreLaunchPage = () => {
               { value: countdown.seconds, label: 'Segundos' },
             ].map((t, i) => (
               <div key={i} className="flex flex-col items-center">
-                <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-white/20 bg-white/10 backdrop-blur-sm sm:h-24 sm:w-24">
-                  <span className="text-3xl font-bold sm:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
+                <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-[hsl(160,55%,42%)]/30 bg-white/5 backdrop-blur-md sm:h-28 sm:w-28 shadow-lg shadow-[hsl(160,55%,42%)]/10">
+                  <span className="text-4xl font-bold sm:text-5xl" style={{ fontFamily: 'Sora, sans-serif' }}>
                     {String(t.value).padStart(2, '0')}
                   </span>
                 </div>
-                <span className="mt-2 text-xs font-medium text-white/50 uppercase tracking-wider">{t.label}</span>
+                <span className="mt-3 text-xs font-semibold text-[hsl(160,55%,55%)] uppercase tracking-widest">{t.label}</span>
               </div>
             ))}
           </div>
@@ -275,17 +295,21 @@ const PreLaunchPage = () => {
           {!registered ? (
             <Button
               size="lg"
-              className="bg-[hsl(160,55%,42%)] text-white hover:bg-[hsl(160,55%,38%)] text-base px-8"
+              className="bg-[hsl(160,55%,42%)] text-white hover:bg-[hsl(160,55%,38%)] text-lg px-10 py-6 shadow-xl shadow-[hsl(160,55%,42%)]/30"
               onClick={() => document.getElementById('register')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              Reservar mi lugar <ArrowRight className="ml-2 h-4 w-4" />
+              Reservar mi lugar <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           ) : (
-            <div className="inline-flex items-center gap-2 rounded-full border border-[hsl(160,55%,42%)]/30 bg-[hsl(160,55%,42%)]/10 px-6 py-3">
-              <Check className="h-5 w-5 text-[hsl(160,55%,55%)]" />
-              <span className="font-medium text-[hsl(160,55%,70%)]">¡Ya estás registrado!</span>
+            <div className="inline-flex items-center gap-2 rounded-full border-2 border-[hsl(160,55%,42%)]/40 bg-[hsl(160,55%,42%)]/15 px-8 py-4 backdrop-blur-md">
+              <Check className="h-6 w-6 text-[hsl(160,55%,55%)]" />
+              <span className="text-lg font-semibold text-[hsl(160,55%,70%)]">¡Ya estás registrado!</span>
             </div>
           )}
+
+          <p className="mt-8 text-sm text-white/30">
+            Regístrate • Prueba la IA gratis • Refiere 4 personas = primer mes GRATIS
+          </p>
         </div>
       </section>
 
