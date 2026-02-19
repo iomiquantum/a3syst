@@ -28,6 +28,7 @@ import ContentPage from "./pages/ContentPage";
 import PsychoMatrixPage from "./pages/PsychoMatrixPage";
 import PlanificacionPage from "./pages/PlanificacionPage";
 import ReunionesPage from "./pages/ReunionesPage";
+import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="/psycho-matrix" element={<ProtectedRoute><PsychoMatrixPage /></ProtectedRoute>} />
               <Route path="/planificacion" element={<ProtectedRoute><PlanificacionPage /></ProtectedRoute>} />
               <Route path="/reuniones" element={<ProtectedRoute><ReunionesPage /></ProtectedRoute>} />
+              <Route path="/landing" element={<LandingPage />} />
               <Route path="*" element={<NotFound />} />
            </Routes>
           </BusinessLabelsProvider>
