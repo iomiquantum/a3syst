@@ -114,19 +114,25 @@ export const useSessionHeartbeat = () => {
     // Mark session as inactive on unload
     const handleUnload = () => {
       const durationSeconds = Math.round((Date.now() - startTime.current) / 1000);
-      const blob = new Blob(
-        [JSON.stringify({
-          is_active: false,
-          ended_at: new Date().toISOString(),
-          duration_seconds: durationSeconds,
-          last_heartbeat: new Date().toISOString(),
-        })],
-        { type: 'application/json' }
-      );
-      navigator.sendBeacon(
-        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/live_sessions?session_id=eq.${sessionId}`,
-        blob
-      );
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/live_sessions?session_id=eq.${sessionId}`;
+      const body = JSON.stringify({
+        is_active: false,
+        ended_at: new Date().toISOString(),
+        duration_seconds: durationSeconds,
+        last_heartbeat: new Date().toISOString(),
+      });
+      // sendBeacon doesn't support custom headers, use fetch with keepalive instead
+      fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Prefer': 'return=minimal',
+        },
+        body,
+        keepalive: true,
+      }).catch(() => {});
     };
 
     // Update page on visibility change
