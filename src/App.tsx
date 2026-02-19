@@ -43,7 +43,8 @@ const App = () => (
           <ClinicProvider>
           <BusinessLabelsProvider>
             <Routes>
-              <Route path="/" element={<LoginPage />} />
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<LoginPage />} />
               <Route path="/registro" element={<RegisterPage />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/pacientes" element={<ProtectedRoute><PacientesPage /></ProtectedRoute>} />
@@ -65,7 +66,7 @@ const App = () => (
               <Route path="/psycho-matrix" element={<ProtectedRoute><PsychoMatrixPage /></ProtectedRoute>} />
               <Route path="/planificacion" element={<ProtectedRoute><PlanificacionPage /></ProtectedRoute>} />
               <Route path="/reuniones" element={<ProtectedRoute><ReunionesPage /></ProtectedRoute>} />
-              <Route path="/landing" element={<LandingPage />} />
+              
               <Route path="*" element={<NotFound />} />
            </Routes>
           </BusinessLabelsProvider>

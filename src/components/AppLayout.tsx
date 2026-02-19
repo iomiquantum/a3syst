@@ -70,12 +70,12 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         <div className={cn("h-16 flex items-center border-b border-sidebar-border", collapsed ? "justify-center px-2" : "px-5")}>
           <div className="flex items-center gap-2 overflow-hidden">
             <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shrink-0">
-              <span className="text-primary-foreground font-bold text-[10px]">IO</span>
+              <span className="text-primary-foreground font-bold text-[10px]">A3</span>
             </div>
             {!collapsed && (
               <div className="min-w-0">
-                <span className="text-lg font-bold text-foreground tracking-tight leading-none">IOMI</span>
-                <span className="text-[9px] block text-muted-foreground tracking-[0.2em] leading-none">SYS</span>
+                <span className="text-lg font-bold text-foreground tracking-tight leading-none">A3 SYS</span>
+                <span className="text-[9px] block text-muted-foreground tracking-[0.2em] leading-none">by IOMI</span>
               </div>
             )}
           </div>

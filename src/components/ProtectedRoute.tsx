@@ -10,7 +10,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center animate-pulse">
-            <span className="text-primary-foreground font-bold text-[10px]">IO</span>
+            <span className="text-primary-foreground font-bold text-[10px]">A3</span>
           </div>
           <span className="text-lg font-semibold text-foreground">Cargando...</span>
         </div>
@@ -18,7 +18,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  if (!user) return <Navigate to="/" replace />;
+  if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
 

@@ -17,7 +17,7 @@ const WidgetConfigPage = () => {
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 
-  const embedCode = `<!-- IOMI Chat Widget - ${clinicName || "Mi Clínica"} -->
+  const embedCode = `<!-- A3 SYS Chat Widget - ${clinicName || "Mi Negocio"} -->
 <script>
   window.IOMI_WIDGET = {
     clinicId: "${clinicId || 'TU_CLINIC_ID'}",
@@ -181,7 +181,7 @@ const WidgetConfigPage = () => {
                         Enviar mensaje
                       </div>
                     </div>
-                    <div className="text-center text-[9px] text-muted-foreground py-1">Powered by IOMI Clínicas</div>
+                    <div className="text-center text-[9px] text-muted-foreground py-1">Powered by A3 SYS</div>
                   </div>
                 </div>
               </div>
