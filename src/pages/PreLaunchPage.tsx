@@ -21,7 +21,7 @@ import {
   MessageSquare, Calendar, DollarSign, Palette, Target,
   Brain, Video, Building2, Shield, BarChart3, Headphones, Layers,
   AlertTriangle, TrendingDown, UserX, Wrench, Play, Mic, MicOff,
-  Trophy, Crown, Medal, Send
+  Trophy, Crown, Medal, Send, ArrowUp, ArrowDown, Minus
 } from 'lucide-react';
 import quantumHeroImg from '@/assets/quantum-hero.jpg';
 import heroImg from '@/assets/landing-hero.jpg';
@@ -103,30 +103,7 @@ const TESTIMONIALS = [
 
 const INDUSTRIES = ['Salud', 'Educación', 'Belleza', 'Fitness', 'Gastronomía', 'Inmobiliaria', 'Legal', 'Tecnología', 'Coaching', 'Retail', 'Consultoría', 'Servicios'];
 
-const LEADERBOARD = [
-  { rank: 1, name: 'Carlos M.', business: 'Clínica Dental Plus', referrals: 47, country: '🇪🇨' },
-  { rank: 2, name: 'María G.', business: 'FitPro Academy', referrals: 38, country: '🇨🇴' },
-  { rank: 3, name: 'Andrés P.', business: 'Restaurante La Brasa', referrals: 31, country: '🇲🇽' },
-  { rank: 4, name: 'Lucía R.', business: 'Salón Belle', referrals: 27, country: '🇪🇨' },
-  { rank: 5, name: 'Fernando T.', business: 'Academia Digital Pro', referrals: 24, country: '🇵🇪' },
-  { rank: 6, name: 'Valentina S.', business: 'Coaching Vital', referrals: 21, country: '🇨🇴' },
-  { rank: 7, name: 'Diego H.', business: 'Inmobiliaria Horizonte', referrals: 19, country: '🇪🇨' },
-  { rank: 8, name: 'Camila L.', business: 'Clínica Estética Glow', referrals: 17, country: '🇦🇷' },
-  { rank: 9, name: 'Roberto N.', business: 'Legal Express', referrals: 15, country: '🇲🇽' },
-  { rank: 10, name: 'Sofía V.', business: 'Yoga Studio Zen', referrals: 14, country: '🇨🇱' },
-  { rank: 11, name: 'Martín A.', business: 'Tech Solutions EC', referrals: 12, country: '🇪🇨' },
-  { rank: 12, name: 'Daniela C.', business: 'Pet Care Plus', referrals: 11, country: '🇨🇴' },
-  { rank: 13, name: 'Javier M.', business: 'Auto Detailing Pro', referrals: 10, country: '🇲🇽' },
-  { rank: 14, name: 'Isabella F.', business: 'Pastelería Dulce Amor', referrals: 9, country: '🇪🇨' },
-  { rank: 15, name: 'Sebastián D.', business: 'Gimnasio Iron', referrals: 8, country: '🇵🇪' },
-  { rank: 16, name: 'Paula B.', business: 'Centro Terapéutico', referrals: 7, country: '🇨🇱' },
-  { rank: 17, name: 'Nicolás R.', business: 'Fotografía Creativa', referrals: 7, country: '🇦🇷' },
-  { rank: 18, name: 'Ana K.', business: 'Tienda Orgánica', referrals: 6, country: '🇪🇨' },
-  { rank: 19, name: 'Tomás E.', business: 'Consultoría 360', referrals: 5, country: '🇨🇴' },
-  { rank: 20, name: 'Gabriela J.', business: 'Escuela de Idiomas', referrals: 5, country: '🇲🇽' },
-  { rank: 21, name: 'Alejandro W.', business: 'Barbería Urban', referrals: 4, country: '🇪🇨' },
-  { rank: 22, name: 'Carla O.', business: 'Floristería Bloom', referrals: 4, country: '🇵🇪' },
-];
+// Leaderboard is now fetched from DB
 
 const SHARE_TEXT = `🚀 ECONOMÍA CUÁNTICA — La IA hará TODO por ti.\n\n💡 A3 SYS: El sistema con IA que opera tu negocio en piloto automático.\n\n✅ Atención al cliente\n✅ Ventas y seguimiento\n✅ Contenido con IA\n✅ Estrategias cuánticas\n\n🔥 Regístrate GRATIS y prueba la IA ahora 👇`;
 
@@ -170,6 +147,7 @@ const PreLaunchPage = () => {
   const [codeCopied, setCodeCopied] = useState(false);
   const [userCreated, setUserCreated] = useState(false);
   const [creatingUser, setCreatingUser] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
   // Registration form
   const [form, setForm] = useState({ full_name: '', email: '', phone: '', business_name: '', industry: '', referral_code_input: '' });
@@ -198,9 +176,26 @@ const PreLaunchPage = () => {
   useClickTracking();
   useSessionHeartbeat();
 
+  // Fetch leaderboard from DB
+  const fetchLeaderboard = async () => {
+    const { data } = await supabase
+      .from('launch_registrations')
+      .select('id, full_name, business_name, referral_count, previous_position, referral_code')
+      .order('referral_count', { ascending: false });
+    if (data) {
+      const ranked = data.map((r: any, i: number) => ({
+        ...r,
+        rank: i + 1,
+        posChange: r.previous_position ? r.previous_position - (i + 1) : 0,
+      }));
+      setLeaderboard(ranked);
+    }
+  };
+
   // Check localStorage for existing registration
   useEffect(() => {
     document.title = 'A3 SYS by IOMI — Lanzamiento 1° de Abril';
+    fetchLeaderboard();
     const savedEmail = localStorage.getItem('a3_launch_email');
     if (savedEmail) {
       loadUserData(savedEmail);
@@ -608,6 +603,7 @@ const PreLaunchPage = () => {
                     <thead>
                       <tr className="border-b border-white/10 bg-white/5">
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-white/50">#</th>
+                        <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-white/50 w-10"></th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-white/50">Participante</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-white/50 hidden sm:table-cell">Negocio</th>
                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-white/50">Referidos</th>
@@ -615,9 +611,9 @@ const PreLaunchPage = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {LEADERBOARD.map((p) => (
+                      {leaderboard.map((p) => (
                         <tr
-                          key={p.rank}
+                          key={p.id}
                           className={`border-b border-white/5 transition-colors hover:bg-white/5 ${
                             p.rank === 1 ? 'bg-[hsl(38,92%,55%)]/10' : p.rank === 2 ? 'bg-[hsl(215,30%,60%)]/5' : p.rank === 3 ? 'bg-[hsl(25,60%,50%)]/5' : ''
                           }`}
@@ -629,23 +625,35 @@ const PreLaunchPage = () => {
                               <span className="text-white/40">{p.rank}</span>
                             )}
                           </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <span>{p.country}</span>
-                              <span className={`font-medium ${p.rank <= 3 ? 'text-white' : 'text-white/70'}`}>{p.name}</span>
-                            </div>
+                          <td className="px-3 py-3 text-center">
+                            {p.posChange > 0 ? (
+                              <span className="inline-flex items-center gap-0.5 text-[hsl(160,55%,55%)]">
+                                <ArrowUp className="h-3.5 w-3.5" />
+                                <span className="text-xs font-bold">{p.posChange}</span>
+                              </span>
+                            ) : p.posChange < 0 ? (
+                              <span className="inline-flex items-center gap-0.5 text-red-400">
+                                <ArrowDown className="h-3.5 w-3.5" />
+                                <span className="text-xs font-bold">{Math.abs(p.posChange)}</span>
+                              </span>
+                            ) : (
+                              <Minus className="h-3.5 w-3.5 text-white/20 mx-auto" />
+                            )}
                           </td>
-                          <td className="px-4 py-3 text-white/50 hidden sm:table-cell">{p.business}</td>
+                          <td className="px-4 py-3">
+                            <span className={`font-medium ${p.rank <= 3 ? 'text-white' : 'text-white/70'}`}>{p.full_name}</span>
+                          </td>
+                          <td className="px-4 py-3 text-white/50 hidden sm:table-cell">{p.business_name}</td>
                           <td className="px-4 py-3 text-right">
                             <span className={`font-bold text-lg ${p.rank <= 3 ? 'text-[hsl(160,55%,55%)]' : 'text-white/70'}`}>
-                              {p.referrals}
+                              {p.referral_count}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center">
                             {p.rank === 1 && <Badge className="bg-[hsl(38,92%,55%)] text-[hsl(38,92%,15%)] text-xs">1 Año</Badge>}
                             {p.rank === 2 && <Badge className="bg-[hsl(215,30%,60%)] text-white text-xs">6 Meses</Badge>}
                             {p.rank === 3 && <Badge className="bg-[hsl(25,60%,50%)] text-white text-xs">3 Meses</Badge>}
-                            {p.rank > 3 && p.referrals >= 4 && <Badge variant="outline" className="border-[hsl(160,55%,42%)]/50 text-[hsl(160,55%,55%)] text-xs">1 Mes</Badge>}
+                            {p.rank > 3 && p.referral_count >= 4 && <Badge variant="outline" className="border-[hsl(160,55%,42%)]/50 text-[hsl(160,55%,55%)] text-xs">1 Mes</Badge>}
                           </td>
                         </tr>
                       ))}
@@ -655,7 +663,7 @@ const PreLaunchPage = () => {
               </CardContent>
             </Card>
             <p className="text-center text-xs text-white/30 mt-3">
-              * Ranking actualizado en tiempo real. El ganador se define al momento del lanzamiento (1° de Abril 2026).
+              * Ranking actualizado diariamente. El ganador se define al momento del lanzamiento (1° de Abril 2026).
             </p>
           </div>
 
