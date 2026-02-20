@@ -1144,7 +1144,7 @@ const PreLaunchPage = () => {
 
       {/* TRIAL MODAL */}
       <Dialog open={trialOpen} onOpenChange={(open) => { setTrialOpen(open); if (!open && isListening) toggleListening(); }}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2" style={{ fontFamily: 'Sora, sans-serif' }}>
               <Sparkles className="h-5 w-5 text-primary" /> Prueba la IA de A3
