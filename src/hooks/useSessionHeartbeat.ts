@@ -42,6 +42,38 @@ const getBrowser = (): string => {
   return 'Otro';
 };
 
+const getDeviceModel = (): string => {
+  const ua = navigator.userAgent;
+  // iOS devices
+  if (/iPhone/.test(ua)) return 'iPhone';
+  if (/iPad/.test(ua)) return 'iPad';
+  if (/iPod/.test(ua)) return 'iPod';
+  // Mac with touch (iPad in desktop mode)
+  if (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) return 'iPad';
+  // Samsung
+  const samsung = ua.match(/SM-[A-Z0-9]+/);
+  if (samsung) return `Samsung ${samsung[0]}`;
+  // Huawei
+  if (/HUAWEI|huawei/.test(ua)) {
+    const hw = ua.match(/HUAWEI\s([A-Za-z0-9-]+)/i);
+    return hw ? `Huawei ${hw[1]}` : 'Huawei';
+  }
+  // Xiaomi / Redmi / POCO
+  if (/Redmi|POCO|Mi\s/.test(ua)) {
+    const xi = ua.match(/(Redmi[^\s;)]+|POCO[^\s;)]+|Mi\s[^\s;)]+)/);
+    return xi ? xi[1] : 'Xiaomi';
+  }
+  // Generic Android model
+  const android = ua.match(/;\s*([^;)]+)\s*Build\//);
+  if (android) return android[1].trim();
+  // Desktop
+  if (/Macintosh/.test(ua)) return 'Mac';
+  if (/Windows/.test(ua)) return 'PC Windows';
+  if (/CrOS/.test(ua)) return 'Chromebook';
+  if (/Linux/.test(ua)) return 'PC Linux';
+  return '';
+};
+
 // Map common timezones to country names
 const timezoneToCountry: Record<string, string> = {
   'America/Guayaquil': 'Ecuador',
@@ -115,6 +147,7 @@ export const useSessionHeartbeat = () => {
         is_active: true,
         duration_seconds: durationSeconds,
         device_type: getDeviceType(),
+        device_model: getDeviceModel(),
         os: getOS(),
         browser: getBrowser(),
         timezone: tz,

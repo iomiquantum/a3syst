@@ -23,6 +23,7 @@ interface LiveSession {
   is_active: boolean;
   did_register: boolean;
   device_type: string;
+  device_model: string | null;
   os: string | null;
   browser: string | null;
   referrer: string | null;
@@ -249,7 +250,7 @@ const LiveSessionsView = () => {
                         <div className="flex items-center gap-3">
                           <div className="flex flex-col items-center gap-0.5">
                             <DeviceIcon type={s.device_type} />
-                            <span className="text-[10px] text-muted-foreground capitalize">{s.device_type}</span>
+                            <span className="text-[10px] text-muted-foreground font-medium">{s.device_model || s.device_type}</span>
                             <span className="text-[10px] text-muted-foreground">{s.os || '—'} · {s.browser || '—'}</span>
                           </div>
                           <div>
@@ -352,7 +353,7 @@ const LiveSessionsView = () => {
                   >
                     <div className="flex items-center gap-1.5">
                       <DeviceIcon type={s.device_type} />
-                      <span className="text-xs capitalize">{s.device_type}</span>
+                      <span className="text-xs">{s.device_model || s.device_type}</span>
                     </div>
                     <span className="text-xs">{s.os || '—'}</span>
                     <span className="text-xs">{s.browser || '—'}</span>
