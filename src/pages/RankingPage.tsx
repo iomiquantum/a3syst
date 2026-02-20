@@ -4,11 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { Trophy, ArrowUp, ArrowDown, Minus, ArrowLeft, Gift, Users, Star, Crown } from 'lucide-react';
+import { Trophy, ArrowUp, ArrowDown, Minus, ArrowLeft, Gift, Users, Star, Crown, ChevronLeft, ChevronRight } from 'lucide-react';
+
+const ITEMS_PER_PAGE = 30;
 
 const RankingPage = () => {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     document.title = 'Ranking de Referidos — A3 SYS by IOMI';
@@ -29,6 +32,12 @@ const RankingPage = () => {
     };
     fetchLeaderboard();
   }, []);
+
+  const totalPages = Math.ceil(leaderboard.length / ITEMS_PER_PAGE);
+  const paginatedData = leaderboard.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[hsl(215,80%,8%)] via-[hsl(215,60%,12%)] to-[hsl(215,50%,6%)] text-white">
@@ -110,7 +119,7 @@ const RankingPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {leaderboard.map((p) => (
+                    {paginatedData.map((p) => (
                       <tr
                         key={p.id}
                         className={`border-b border-white/5 transition-colors hover:bg-white/5 ${
@@ -157,14 +166,49 @@ const RankingPage = () => {
           </CardContent>
         </Card>
 
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-6">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(p => p - 1)}
+              className="text-white/60 hover:text-white hover:bg-white/10 disabled:opacity-30"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
+            </Button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <Button
+                key={page}
+                variant="ghost"
+                size="sm"
+                onClick={() => setCurrentPage(page)}
+                className={`w-9 h-9 ${currentPage === page ? 'bg-white/15 text-white font-bold' : 'text-white/40 hover:text-white hover:bg-white/10'}`}
+              >
+                {page}
+              </Button>
+            ))}
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(p => p + 1)}
+              className="text-white/60 hover:text-white hover:bg-white/10 disabled:opacity-30"
+            >
+              Siguiente <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        )}
+
         <p className="text-center text-xs text-white/30 mt-4">
           * Ranking actualizado diariamente. El ganador se define al momento del lanzamiento (1° de Abril 2026).
         </p>
 
         {/* CTA */}
-        <div className="text-center mt-10">
-          <Link to="/lanzamiento">
-            <Button size="lg" className="bg-[hsl(160,55%,42%)] hover:bg-[hsl(160,55%,36%)] text-white font-bold">
+        <div className="text-center mt-10 px-4">
+          <Link to="/lanzamiento#register">
+            <Button size="lg" className="bg-[hsl(160,55%,42%)] hover:bg-[hsl(160,55%,36%)] text-white font-bold text-base md:text-lg px-10 md:px-14 py-6 md:py-7 w-full sm:w-auto max-w-md">
               ¡Regístrate y compite! 🚀
             </Button>
           </Link>
