@@ -1,0 +1,1 @@
+SELECT setval('public.live_sessions_device_number_seq', 1, false);
