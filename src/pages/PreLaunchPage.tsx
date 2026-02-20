@@ -29,7 +29,7 @@ import problemImg from '@/assets/landing-problem.jpg';
 import solutionImg from '@/assets/landing-solution.jpg';
 
 // April 1, 2025 at 7:00 PM Ecuador time (GMT-5) = midnight April 2 UTC
-const LAUNCH_DATE = new Date('2025-04-02T00:00:00Z');
+const LAUNCH_DATE = new Date('2026-04-01T00:00:00-05:00');
 
 function useCountdown(target: Date) {
   const [now, setNow] = useState(new Date());
