@@ -136,7 +136,9 @@ const LiveSessionsView = () => {
     const groups: Record<string, DeviceGroup> = {};
 
     sessions.forEach(s => {
-      const key = s.device_id || s.session_id; // fallback for old sessions
+      // Group by physical device fingerprint (model+os+browser+region) to merge same device across origins
+      const fingerprint = `${s.device_model || 'unknown'}_${s.os || 'unknown'}_${s.browser || 'unknown'}_${s.region || ''}_${s.country || ''}`;
+      const key = fingerprint;
       if (!groups[key]) {
         groups[key] = {
           device_id: key,
