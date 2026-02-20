@@ -19,6 +19,29 @@ const getDeviceType = () => {
   return 'desktop';
 };
 
+const getOS = (): string => {
+  const ua = navigator.userAgent;
+  if (/Windows/.test(ua)) return 'Windows';
+  if (/Mac OS X|Macintosh/.test(ua)) {
+    if (/iPad|iPhone/.test(ua) || (navigator.maxTouchPoints > 1)) return 'iOS';
+    return 'macOS';
+  }
+  if (/Android/.test(ua)) return 'Android';
+  if (/Linux/.test(ua)) return 'Linux';
+  if (/CrOS/.test(ua)) return 'ChromeOS';
+  return 'Otro';
+};
+
+const getBrowser = (): string => {
+  const ua = navigator.userAgent;
+  if (/OPR|Opera/.test(ua)) return 'Opera';
+  if (/Edg\//.test(ua)) return 'Edge';
+  if (/Chrome\//.test(ua) && !/Edg\//.test(ua)) return 'Chrome';
+  if (/Safari\//.test(ua) && !/Chrome/.test(ua)) return 'Safari';
+  if (/Firefox\//.test(ua)) return 'Firefox';
+  return 'Otro';
+};
+
 // Map common timezones to country names
 const timezoneToCountry: Record<string, string> = {
   'America/Guayaquil': 'Ecuador',
@@ -92,6 +115,8 @@ export const useSessionHeartbeat = () => {
         is_active: true,
         duration_seconds: durationSeconds,
         device_type: getDeviceType(),
+        os: getOS(),
+        browser: getBrowser(),
         timezone: tz,
         country: country,
         region: getCityFromTimezone(tz),

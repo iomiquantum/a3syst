@@ -1041,6 +1041,7 @@ export type Database = {
       }
       live_sessions: {
         Row: {
+          browser: string | null
           country: string | null
           created_at: string
           current_page: string
@@ -1051,6 +1052,7 @@ export type Database = {
           id: string
           is_active: boolean
           last_heartbeat: string
+          os: string | null
           referrer: string | null
           region: string | null
           session_id: string
@@ -1060,6 +1062,7 @@ export type Database = {
           utm_source: string | null
         }
         Insert: {
+          browser?: string | null
           country?: string | null
           created_at?: string
           current_page?: string
@@ -1070,6 +1073,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_heartbeat?: string
+          os?: string | null
           referrer?: string | null
           region?: string | null
           session_id: string
@@ -1079,6 +1083,7 @@ export type Database = {
           utm_source?: string | null
         }
         Update: {
+          browser?: string | null
           country?: string | null
           created_at?: string
           current_page?: string
@@ -1089,6 +1094,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_heartbeat?: string
+          os?: string | null
           referrer?: string | null
           region?: string | null
           session_id?: string
