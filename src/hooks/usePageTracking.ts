@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { isBot } from '@/lib/botDetection';
 
 const getSessionId = () => {
   let sid = sessionStorage.getItem('a3_session_id');
@@ -17,6 +18,9 @@ export const usePageTracking = () => {
   useEffect(() => {
     if (tracked.current) return;
     tracked.current = true;
+
+    // Skip bots, crawlers, and preview iframes
+    if (isBot()) return;
 
     const params = new URLSearchParams(window.location.search);
     const sessionId = getSessionId();

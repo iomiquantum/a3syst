@@ -97,9 +97,19 @@ const LiveSessionsView = () => {
       .select("*")
       .not("device_id", "is", null)
       .gt("device_number", 0)
+      .not("browser", "ilike", "%bot%")
+      .neq("country", "Desconocido")
       .order("last_heartbeat", { ascending: false })
       .limit(500);
-    if (!error && data) setSessions(data as unknown as LiveSession[]);
+    // Additional client-side filtering for edge cases
+    const filtered = (data || []).filter((s: any) => {
+      // Filter UTC timezone with 0 duration (health checks)
+      if (s.timezone === 'UTC' && s.duration_seconds === 0) return false;
+      // Filter browser = 'Otro' with no model (crawlers)
+      if (s.browser === 'Otro' && !s.device_model) return false;
+      return true;
+    });
+    if (!error) setSessions(filtered as unknown as LiveSession[]);
     setLoading(false);
   };
 
