@@ -5,13 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   RefreshCw, Radio, Globe, Clock, Monitor, Smartphone, Tablet,
-  UserCheck, UserX, Eye, MapPin, ArrowUpRight
+  UserCheck, UserX, Eye, MapPin, ArrowUpRight, ChevronDown, ChevronRight, Hash
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface LiveSession {
   id: string;
   session_id: string;
+  device_id: string | null;
   current_page: string;
   country: string | null;
   region: string | null;
@@ -31,6 +33,22 @@ interface LiveSession {
   utm_source: string | null;
   utm_campaign: string | null;
   created_at: string;
+}
+
+interface DeviceGroup {
+  device_id: string;
+  device_number: number;
+  device_type: string;
+  device_model: string | null;
+  os: string | null;
+  browser: string | null;
+  country: string | null;
+  region: string | null;
+  sessions: LiveSession[];
+  activeSessions: LiveSession[];
+  totalDuration: number;
+  lastSeen: string;
+  didRegister: boolean;
 }
 
 const formatDuration = (secs: number) => {
@@ -56,20 +74,20 @@ const DeviceIcon = ({ type }: { type: string }) => {
   return <Monitor className="h-4 w-4" />;
 };
 
-const ACTIVE_THRESHOLD_SECONDS = 90; // Consider inactive after 90s without heartbeat (heartbeat interval is 30s)
+const ACTIVE_THRESHOLD_SECONDS = 90;
 
 const LiveSessionsView = () => {
   const [sessions, setSessions] = useState<LiveSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [expandedDevices, setExpandedDevices] = useState<Set<string>>(new Set());
 
   const fetchSessions = async () => {
     setLoading(true);
     
-    // First, mark stale sessions as inactive server-side
     await supabase
       .from("live_sessions")
-      .update({ is_active: false, ended_at: new Date().toISOString() })
+      .update({ is_active: false, ended_at: new Date().toISOString() } as any)
       .eq("is_active", true)
       .lt("last_heartbeat", new Date(Date.now() - ACTIVE_THRESHOLD_SECONDS * 1000).toISOString());
     
@@ -77,77 +95,107 @@ const LiveSessionsView = () => {
       .from("live_sessions")
       .select("*")
       .order("last_heartbeat", { ascending: false })
-      .limit(200);
-    if (!error && data) setSessions(data as LiveSession[]);
+      .limit(500);
+    if (!error && data) setSessions(data as unknown as LiveSession[]);
     setLoading(false);
   };
 
   useEffect(() => { fetchSessions(); }, []);
 
-  // Auto-refresh every 10 seconds
   useEffect(() => {
     if (!autoRefresh) return;
     const interval = setInterval(fetchSessions, 10000);
     return () => clearInterval(interval);
   }, [autoRefresh]);
 
-  // Subscribe to realtime updates
   useEffect(() => {
     const channel = supabase
       .channel('live-sessions-realtime')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'live_sessions',
-      }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_sessions' }, () => {
         fetchSessions();
       })
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  const activeSessions = useMemo(() => {
+  const deviceGroups = useMemo(() => {
     const now = Date.now();
-    return sessions.filter(s => {
-      if (!s.is_active) return false;
-      const lastBeat = new Date(s.last_heartbeat).getTime();
-      return (now - lastBeat) < ACTIVE_THRESHOLD_SECONDS * 1000;
+    const groups: Record<string, DeviceGroup> = {};
+
+    sessions.forEach(s => {
+      const key = s.device_id || s.session_id; // fallback for old sessions
+      if (!groups[key]) {
+        groups[key] = {
+          device_id: key,
+          device_number: s.device_number || 0,
+          device_type: s.device_type,
+          device_model: s.device_model,
+          os: s.os,
+          browser: s.browser,
+          country: s.country,
+          region: s.region,
+          sessions: [],
+          activeSessions: [],
+          totalDuration: 0,
+          lastSeen: s.last_heartbeat,
+          didRegister: false,
+        };
+      }
+      groups[key].sessions.push(s);
+      groups[key].totalDuration += s.duration_seconds || 0;
+      if (s.did_register) groups[key].didRegister = true;
+
+      const isActive = s.is_active && (now - new Date(s.last_heartbeat).getTime()) < ACTIVE_THRESHOLD_SECONDS * 1000;
+      if (isActive) groups[key].activeSessions.push(s);
+
+      if (new Date(s.last_heartbeat) > new Date(groups[key].lastSeen)) {
+        groups[key].lastSeen = s.last_heartbeat;
+        groups[key].country = s.country;
+        groups[key].region = s.region;
+        groups[key].device_type = s.device_type;
+        groups[key].device_model = s.device_model;
+        groups[key].os = s.os;
+        groups[key].browser = s.browser;
+      }
+    });
+
+    return Object.values(groups).sort((a, b) => {
+      // Active devices first
+      if (a.activeSessions.length > 0 && b.activeSessions.length === 0) return -1;
+      if (a.activeSessions.length === 0 && b.activeSessions.length > 0) return 1;
+      return new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime();
     });
   }, [sessions]);
 
-  const recentlyEnded = useMemo(() => {
-    const now = Date.now();
-    return sessions.filter(s => {
-      if (s.is_active) {
-        const lastBeat = new Date(s.last_heartbeat).getTime();
-        return (now - lastBeat) >= ACTIVE_THRESHOLD_SECONDS * 1000;
-      }
-      return true;
-    }).slice(0, 50);
-  }, [sessions]);
+  const activeDevices = useMemo(() => deviceGroups.filter(d => d.activeSessions.length > 0), [deviceGroups]);
 
   const countryBreakdown = useMemo(() => {
     const counts: Record<string, number> = {};
-    activeSessions.forEach(s => {
-      const c = s.country || 'Desconocido';
+    activeDevices.forEach(d => {
+      const c = d.country || 'Desconocido';
       counts[c] = (counts[c] || 0) + 1;
     });
     return Object.entries(counts)
       .map(([country, count]) => ({ country, count }))
       .sort((a, b) => b.count - a.count);
-  }, [activeSessions]);
+  }, [activeDevices]);
 
-  const registeredCount = useMemo(
-    () => sessions.filter(s => s.did_register).length,
-    [sessions]
-  );
+  const registeredCount = useMemo(() => deviceGroups.filter(d => d.didRegister).length, [deviceGroups]);
 
   const avgDuration = useMemo(() => {
-    const ended = recentlyEnded.filter(s => s.duration_seconds > 0);
-    if (!ended.length) return 0;
-    return Math.round(ended.reduce((a, s) => a + s.duration_seconds, 0) / ended.length);
-  }, [recentlyEnded]);
+    const withDuration = deviceGroups.filter(d => d.totalDuration > 0);
+    if (!withDuration.length) return 0;
+    return Math.round(withDuration.reduce((a, d) => a + d.totalDuration, 0) / withDuration.length);
+  }, [deviceGroups]);
+
+  const toggleDevice = (deviceId: string) => {
+    setExpandedDevices(prev => {
+      const next = new Set(prev);
+      if (next.has(deviceId)) next.delete(deviceId);
+      else next.add(deviceId);
+      return next;
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -158,16 +206,10 @@ const LiveSessionsView = () => {
             <Radio className="h-5 w-5 text-green-500 animate-pulse" />
             Sesiones en Vivo
           </h2>
-          <p className="text-sm text-muted-foreground">
-            Monitorea visitantes en tiempo real
-          </p>
+          <p className="text-sm text-muted-foreground">Monitorea visitantes en tiempo real</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant={autoRefresh ? "default" : "outline"}
-            size="sm"
-            onClick={() => setAutoRefresh(!autoRefresh)}
-          >
+          <Button variant={autoRefresh ? "default" : "outline"} size="sm" onClick={() => setAutoRefresh(!autoRefresh)}>
             <Radio className="h-3.5 w-3.5 mr-1" />
             {autoRefresh ? "Auto-refresh ON" : "Auto-refresh OFF"}
           </Button>
@@ -177,15 +219,15 @@ const LiveSessionsView = () => {
         </div>
       </div>
 
-      {/* Live KPIs */}
+      {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="border-green-500/30 bg-green-500/5">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-1">
               <div className="h-2.5 w-2.5 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs text-muted-foreground">En vivo ahora</span>
+              <span className="text-xs text-muted-foreground">Dispositivos en vivo</span>
             </div>
-            <p className="text-3xl font-bold text-green-600">{activeSessions.length}</p>
+            <p className="text-3xl font-bold text-green-600">{activeDevices.length}</p>
           </CardContent>
         </Card>
         <Card>
@@ -218,80 +260,124 @@ const LiveSessionsView = () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-1">
-              <Eye className="h-4 w-4 text-blue-500" />
-              <span className="text-xs text-muted-foreground">Total sesiones</span>
+              <Hash className="h-4 w-4 text-blue-500" />
+              <span className="text-xs text-muted-foreground">Dispositivos únicos</span>
             </div>
-            <p className="text-2xl font-bold">{sessions.length}</p>
+            <p className="text-2xl font-bold">{deviceGroups.length}</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Active sessions list */}
+        {/* Device list */}
         <div className="lg:col-span-2">
           <Card>
             <CardContent className="p-5">
               <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                Visitantes activos ({activeSessions.length})
+                <Monitor className="h-4 w-4 text-primary" />
+                Dispositivos ({deviceGroups.length})
               </h3>
-              {activeSessions.length === 0 ? (
+              {deviceGroups.length === 0 ? (
                 <div className="text-center py-10">
                   <Radio className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">No hay visitantes activos en este momento</p>
+                  <p className="text-sm text-muted-foreground">No hay dispositivos registrados</p>
                 </div>
               ) : (
-                <ScrollArea className="h-[400px]">
+                <ScrollArea className="h-[500px]">
                   <div className="space-y-2">
-                    {activeSessions.map(s => (
-                      <div
-                        key={s.id}
-                        className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="flex flex-col items-center gap-0.5 min-w-[60px]">
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 mb-0.5">#{s.device_number || '—'}</Badge>
-                            <DeviceIcon type={s.device_type} />
-                            <span className="text-[10px] text-muted-foreground font-medium">{s.device_model || s.device_type}</span>
-                            <span className="text-[10px] text-muted-foreground">{s.os || '—'} · {s.browser || '—'}</span>
+                    {deviceGroups.map(device => {
+                      const isActive = device.activeSessions.length > 0;
+                      const isExpanded = expandedDevices.has(device.device_id);
+
+                      return (
+                        <Collapsible key={device.device_id} open={isExpanded} onOpenChange={() => toggleDevice(device.device_id)}>
+                          <div className={`rounded-lg border transition-colors ${isActive ? 'border-green-500/40 bg-green-500/5' : 'bg-card hover:bg-muted/50'}`}>
+                            <CollapsibleTrigger className="w-full">
+                              <div className="flex items-center justify-between p-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="flex flex-col items-center gap-0.5 min-w-[60px]">
+                                    <Badge variant={isActive ? "default" : "outline"} className="text-[10px] px-1.5 py-0 mb-0.5">
+                                      #{device.device_number}
+                                    </Badge>
+                                    <DeviceIcon type={device.device_type} />
+                                    <span className="text-[10px] text-muted-foreground font-medium">{device.device_model || device.device_type}</span>
+                                    <span className="text-[10px] text-muted-foreground">{device.os || '—'} · {device.browser || '—'}</span>
+                                  </div>
+                                  <div className="text-left">
+                                    <div className="flex items-center gap-2">
+                                      {isActive && <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />}
+                                      <span className="text-sm font-medium">
+                                        {device.activeSessions.length > 0 ? device.activeSessions[0].current_page : device.sessions[0]?.current_page || '/'}
+                                      </span>
+                                      {device.didRegister && (
+                                        <Badge variant="default" className="text-[10px] px-1.5 py-0">Registrado</Badge>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                                      <span className="flex items-center gap-1">
+                                        <MapPin className="h-3 w-3" />
+                                        {device.region ? `${device.region}, ` : ''}{device.country || 'Desconocido'}
+                                      </span>
+                                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                        {device.sessions.length} {device.sessions.length === 1 ? 'sesión' : 'sesiones'}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="text-right">
+                                    <p className={`text-sm font-semibold ${isActive ? 'text-green-600' : 'text-muted-foreground'}`}>
+                                      {isActive ? `${formatDuration(device.activeSessions[0]?.duration_seconds || 0)} en línea` : timeAgo(device.lastSeen)}
+                                    </p>
+                                    <p className="text-[10px] text-muted-foreground">
+                                      Total: {formatDuration(device.totalDuration)}
+                                    </p>
+                                  </div>
+                                  {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                                </div>
+                              </div>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <div className="border-t px-3 pb-3">
+                                <p className="text-xs font-semibold text-muted-foreground py-2">Historial de sesiones</p>
+                                <div className="space-y-1">
+                                  {device.sessions.map(s => {
+                                    const sActive = s.is_active && (Date.now() - new Date(s.last_heartbeat).getTime()) < ACTIVE_THRESHOLD_SECONDS * 1000;
+                                    return (
+                                      <div key={s.id} className={`flex items-center justify-between text-xs p-2 rounded ${sActive ? 'bg-green-500/10' : 'bg-muted/30'}`}>
+                                        <div className="flex items-center gap-2">
+                                          {sActive && <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />}
+                                          <span className="font-medium">{s.current_page}</span>
+                                          <span className="text-muted-foreground">
+                                            {new Date(s.started_at).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                                            {' '}
+                                            {new Date(s.started_at).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' })}
+                                          </span>
+                                          {s.ended_at && (
+                                            <span className="text-muted-foreground">
+                                              → {new Date(s.ended_at).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-semibold">{formatDuration(s.duration_seconds)}</span>
+                                          {s.utm_source && (
+                                            <span className="flex items-center gap-0.5 text-muted-foreground">
+                                              <ArrowUpRight className="h-3 w-3" />{s.utm_source}
+                                            </span>
+                                          )}
+                                          {s.did_register && <UserCheck className="h-3 w-3 text-emerald-500" />}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </CollapsibleContent>
                           </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium">{s.current_page}</span>
-                              {s.did_register && (
-                                <Badge variant="default" className="text-[10px] px-1.5 py-0">
-                                  Registrado
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
-                              <span className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {s.region ? `${s.region}, ` : ''}{s.country || 'Desconocido'}
-                              </span>
-                              {s.utm_source && (
-                                <span className="flex items-center gap-1">
-                                  <ArrowUpRight className="h-3 w-3" />
-                                  {s.utm_source}
-                                </span>
-                              )}
-                              {s.referrer && !s.utm_source && (
-                                <span className="flex items-center gap-1 text-muted-foreground">
-                                  <ArrowUpRight className="h-3 w-3" />
-                                  {(() => { try { return new URL(s.referrer).hostname; } catch { return 'Referido'; } })()}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-green-600">{formatDuration(s.duration_seconds)} en línea</p>
-                          <p className="text-[10px] text-muted-foreground">
-                            Último latido: {timeAgo(s.last_heartbeat)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                        </Collapsible>
+                      );
+                    })}
                   </div>
                 </ScrollArea>
               )}
@@ -316,7 +402,7 @@ const LiveSessionsView = () => {
                       <MapPin className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm font-medium">{c.country}</span>
                     </div>
-                    <Badge variant="secondary">{c.count} {c.count === 1 ? 'visitante' : 'visitantes'}</Badge>
+                    <Badge variant="secondary">{c.count} {c.count === 1 ? 'dispositivo' : 'dispositivos'}</Badge>
                   </div>
                 ))}
               </div>
@@ -324,72 +410,6 @@ const LiveSessionsView = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Recently ended sessions */}
-      <Card>
-        <CardContent className="p-5">
-          <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            Sesiones finalizadas (historial reciente)
-          </h3>
-          <ScrollArea className="h-[350px]">
-            {recentlyEnded.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">Sin historial</p>
-            ) : (
-              <div className="space-y-1">
-                <div className="grid grid-cols-13 gap-2 text-xs font-semibold text-muted-foreground px-3 py-2 border-b" style={{ gridTemplateColumns: 'repeat(13, minmax(0, 1fr))' }}>
-                  <span>N°</span>
-                  <span>Dispositivo</span>
-                  <span>SO</span>
-                  <span>Navegador</span>
-                  <span>Fecha</span>
-                  <span>Inicio</span>
-                  <span>Salida</span>
-                  <span>País</span>
-                  <span>Ciudad</span>
-                  <span>Página</span>
-                  <span>Duración</span>
-                  <span>Fuente</span>
-                  <span>¿Registrado?</span>
-                </div>
-                {recentlyEnded.map(s => (
-                  <div
-                    key={s.id}
-                    className="text-sm px-3 py-2.5 border-b last:border-0 items-center hover:bg-muted/30 transition-colors grid gap-2" style={{ gridTemplateColumns: 'repeat(13, minmax(0, 1fr))' }}
-                  >
-                    <span className="text-xs font-bold">#{s.device_number || '—'}</span>
-                    <div className="flex items-center gap-1.5">
-                      <DeviceIcon type={s.device_type} />
-                      <span className="text-xs">{s.device_model || s.device_type}</span>
-                    </div>
-                    <span className="text-xs">{s.os || '—'}</span>
-                    <span className="text-xs">{s.browser || '—'}</span>
-                    <span className="text-xs">{new Date(s.started_at).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: '2-digit' })}</span>
-                    <span className="text-xs">{new Date(s.started_at).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' })}</span>
-                    <span className="text-xs">{s.ended_at ? new Date(s.ended_at).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' }) : '—'}</span>
-                    <span className="text-xs">{s.country || '—'}</span>
-                    <span className="text-xs">{s.region || '—'}</span>
-                    <span className="text-xs font-medium truncate">{s.current_page}</span>
-                    <span className="text-xs font-semibold">{formatDuration(s.duration_seconds)}</span>
-                    <span className="text-xs text-muted-foreground">{s.utm_source || (s.referrer ? (() => { try { return new URL(s.referrer).hostname; } catch { return 'Referido'; } })() : 'Directo')}</span>
-                    <div>
-                      {s.did_register ? (
-                        <Badge variant="default" className="text-[10px]">
-                          <UserCheck className="h-3 w-3 mr-1" /> Sí
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-[10px] text-muted-foreground">
-                          <UserX className="h-3 w-3 mr-1" /> No
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
-        </CardContent>
-      </Card>
     </div>
   );
 };

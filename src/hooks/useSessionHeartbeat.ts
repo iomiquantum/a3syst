@@ -12,6 +12,15 @@ const getSessionId = () => {
   return sid;
 };
 
+const getDeviceId = () => {
+  let did = localStorage.getItem('a3_device_id');
+  if (!did) {
+    did = crypto.randomUUID();
+    localStorage.setItem('a3_device_id', did);
+  }
+  return did;
+};
+
 const getDeviceType = () => {
   const w = window.innerWidth;
   if (w <= 768) return 'mobile';
@@ -137,11 +146,14 @@ export const useSessionHeartbeat = () => {
     const country = getCountryFromTimezone(tz);
     const params = new URLSearchParams(window.location.search);
 
+    const deviceId = getDeviceId();
+
     const sendHeartbeat = async (isFirst = false) => {
       const durationSeconds = Math.round((Date.now() - startTime.current) / 1000);
 
-      const sessionData = {
+      const sessionData: Record<string, unknown> = {
         session_id: sessionId,
+        device_id: deviceId,
         current_page: window.location.pathname,
         last_heartbeat: new Date().toISOString(),
         is_active: true,
@@ -163,7 +175,7 @@ export const useSessionHeartbeat = () => {
 
       await supabase
         .from('live_sessions')
-        .upsert(sessionData, { onConflict: 'session_id' });
+        .upsert(sessionData as any, { onConflict: 'session_id' });
     };
 
     // Initial heartbeat
