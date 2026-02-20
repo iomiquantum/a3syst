@@ -658,7 +658,7 @@ const PreLaunchPage = () => {
             </Card>
             <div className="text-center mt-4 space-y-2">
               <Link to="/ranking">
-                <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+                <Button variant="outline" className="border-[hsl(160,55%,42%)] text-[hsl(160,55%,55%)] bg-[hsl(160,55%,42%)]/10 hover:bg-[hsl(160,55%,42%)]/20 font-semibold">
                   Ver ranking completo <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
