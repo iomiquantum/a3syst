@@ -611,7 +611,7 @@ const PreLaunchPage = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {leaderboard.map((p) => (
+                      {leaderboard.slice(0, 12).map((p) => (
                         <tr
                           key={p.id}
                           className={`border-b border-white/5 transition-colors hover:bg-white/5 ${
@@ -627,15 +627,9 @@ const PreLaunchPage = () => {
                           </td>
                           <td className="px-3 py-3 text-center">
                             {p.posChange > 0 ? (
-                              <span className="inline-flex items-center gap-0.5 text-[hsl(160,55%,55%)]">
-                                <ArrowUp className="h-3.5 w-3.5" />
-                                <span className="text-xs font-bold">{p.posChange}</span>
-                              </span>
+                              <ArrowUp className="h-3.5 w-3.5 text-[hsl(160,55%,55%)]" />
                             ) : p.posChange < 0 ? (
-                              <span className="inline-flex items-center gap-0.5 text-red-400">
-                                <ArrowDown className="h-3.5 w-3.5" />
-                                <span className="text-xs font-bold">{Math.abs(p.posChange)}</span>
-                              </span>
+                              <ArrowDown className="h-3.5 w-3.5 text-red-400" />
                             ) : (
                               <Minus className="h-3.5 w-3.5 text-white/20 mx-auto" />
                             )}
@@ -662,9 +656,16 @@ const PreLaunchPage = () => {
                 </div>
               </CardContent>
             </Card>
-            <p className="text-center text-xs text-white/30 mt-3">
-              * Ranking actualizado diariamente. El ganador se define al momento del lanzamiento (1° de Abril 2026).
-            </p>
+            <div className="text-center mt-4 space-y-2">
+              <Link to="/ranking">
+                <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+                  Ver ranking completo <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+              <p className="text-xs text-white/30">
+                * Ranking actualizado diariamente. El ganador se define al momento del lanzamiento (1° de Abril 2026).
+              </p>
+            </div>
           </div>
 
           {/* How it works - compact */}
