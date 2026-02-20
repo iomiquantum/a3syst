@@ -1,0 +1,1 @@
+ALTER TABLE public.live_sessions ADD COLUMN device_model text DEFAULT NULL;
