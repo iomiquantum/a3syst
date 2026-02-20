@@ -45,7 +45,7 @@ const ContentPage = () => {
 
   return (
     <AppLayout>
-      <div className="flex gap-0 h-[calc(100vh-8rem)]">
+      <div className="flex gap-0 h-[calc(100vh-7rem)] min-h-0">
         {/* Internal sidebar */}
         <div className="w-56 shrink-0 border-r border-border pr-4 space-y-5">
           <div className="flex items-center gap-2.5">
@@ -107,7 +107,7 @@ const ContentPage = () => {
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-w-0 overflow-y-auto pl-6">
+        <div className="flex-1 min-w-0 min-h-0 overflow-y-auto pl-6 pb-6">
           {section === "calendar" && <ContentCalendarView posts={content.posts} onCreatePost={() => setCreateOpen(true)} />}
           {section === "list" && <ContentListView content={content} />}
           {section === "drafts" && <ContentDraftsView content={content} />}
