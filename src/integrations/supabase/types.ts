@@ -1045,6 +1045,7 @@ export type Database = {
           country: string | null
           created_at: string
           current_page: string
+          device_id: string | null
           device_model: string | null
           device_number: number
           device_type: string
@@ -1068,8 +1069,9 @@ export type Database = {
           country?: string | null
           created_at?: string
           current_page?: string
+          device_id?: string | null
           device_model?: string | null
-          device_number?: number
+          device_number: number
           device_type?: string
           did_register?: boolean
           duration_seconds?: number | null
@@ -1091,6 +1093,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           current_page?: string
+          device_id?: string | null
           device_model?: string | null
           device_number?: number
           device_type?: string
