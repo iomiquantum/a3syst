@@ -39,8 +39,19 @@ const AdminAnalyticsTab = () => {
       .from("page_visits")
       .select("*")
       .gte("created_at", cutoff)
+      .not("user_agent", "ilike", "%bot%")
+      .not("user_agent", "ilike", "%crawl%")
+      .not("user_agent", "ilike", "%spider%")
+      .not("user_agent", "ilike", "%ahrefsbot%")
+      .not("user_agent", "ilike", "%Chrome/119.0.0.0%")
       .order("created_at", { ascending: false });
-    if (!error) setVisits((data || []) as PageVisit[]);
+    // Also filter preview iframe visits (referrer from lovable.dev)
+    const filtered = (data || []).filter((v: any) => {
+      if (v.referrer && (v.referrer.includes('lovable.dev') || v.referrer.includes('lovableproject.com'))) return false;
+      if (v.screen_width === 800 && v.user_agent?.includes('Chrome/119')) return false;
+      return true;
+    });
+    if (!error) setVisits(filtered as PageVisit[]);
     setLoading(false);
   };
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { isBot } from '@/lib/botDetection';
 
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 
@@ -141,6 +142,9 @@ export const useSessionHeartbeat = () => {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    // Skip bots, crawlers, and preview iframes
+    if (isBot()) return;
+
     const sessionId = getSessionId();
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const country = getCountryFromTimezone(tz);
