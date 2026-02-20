@@ -26,6 +26,7 @@ interface LiveSession {
   device_model: string | null;
   os: string | null;
   browser: string | null;
+  device_number: number | null;
   referrer: string | null;
   utm_source: string | null;
   utm_campaign: string | null;
@@ -248,7 +249,8 @@ const LiveSessionsView = () => {
                         className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="flex flex-col items-center gap-0.5">
+                          <div className="flex flex-col items-center gap-0.5 min-w-[60px]">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 mb-0.5">#{s.device_number || '—'}</Badge>
                             <DeviceIcon type={s.device_type} />
                             <span className="text-[10px] text-muted-foreground font-medium">{s.device_model || s.device_type}</span>
                             <span className="text-[10px] text-muted-foreground">{s.os || '—'} · {s.browser || '—'}</span>
@@ -335,7 +337,8 @@ const LiveSessionsView = () => {
               <p className="text-sm text-muted-foreground text-center py-6">Sin historial</p>
             ) : (
               <div className="space-y-1">
-                <div className="grid grid-cols-9 gap-2 text-xs font-semibold text-muted-foreground px-3 py-2 border-b">
+                <div className="grid grid-cols-10 gap-2 text-xs font-semibold text-muted-foreground px-3 py-2 border-b">
+                  <span>N°</span>
                   <span>Dispositivo</span>
                   <span>SO</span>
                   <span>Navegador</span>
@@ -349,8 +352,9 @@ const LiveSessionsView = () => {
                 {recentlyEnded.map(s => (
                   <div
                     key={s.id}
-                    className="grid grid-cols-9 gap-2 text-sm px-3 py-2.5 border-b last:border-0 items-center hover:bg-muted/30 transition-colors"
+                    className="grid grid-cols-10 gap-2 text-sm px-3 py-2.5 border-b last:border-0 items-center hover:bg-muted/30 transition-colors"
                   >
+                    <span className="text-xs font-bold">#{s.device_number || '—'}</span>
                     <div className="flex items-center gap-1.5">
                       <DeviceIcon type={s.device_type} />
                       <span className="text-xs">{s.device_model || s.device_type}</span>
