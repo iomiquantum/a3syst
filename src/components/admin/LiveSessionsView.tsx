@@ -94,6 +94,8 @@ const LiveSessionsView = () => {
     const { data, error } = await supabase
       .from("live_sessions")
       .select("*")
+      .not("device_id", "is", null)
+      .gt("device_number", 0)
       .order("last_heartbeat", { ascending: false })
       .limit(500);
     if (!error && data) setSessions(data as unknown as LiveSession[]);
