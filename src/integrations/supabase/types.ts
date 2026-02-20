@@ -1006,9 +1006,12 @@ export type Database = {
           generations_used: number
           id: string
           industry: string
+          is_fictional: boolean
           max_generations: number
           phone: string
+          previous_position: number | null
           referral_code: string
+          referral_count: number
           referred_by: string | null
           updated_at: string
         }
@@ -1020,9 +1023,12 @@ export type Database = {
           generations_used?: number
           id?: string
           industry?: string
+          is_fictional?: boolean
           max_generations?: number
           phone: string
+          previous_position?: number | null
           referral_code?: string
+          referral_count?: number
           referred_by?: string | null
           updated_at?: string
         }
@@ -1034,9 +1040,12 @@ export type Database = {
           generations_used?: number
           id?: string
           industry?: string
+          is_fictional?: boolean
           max_generations?: number
           phone?: string
+          previous_position?: number | null
           referral_code?: string
+          referral_count?: number
           referred_by?: string | null
           updated_at?: string
         }
