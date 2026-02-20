@@ -289,10 +289,17 @@ const PreLaunchPage = () => {
     const ref = params.get('ref');
     if (ref) {
       setForm(p => ({ ...p, referral_code_input: ref }));
-      // Scroll to registration form after a short delay
       setTimeout(() => {
         registerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 500);
+    }
+    // Handle hash navigation (e.g. /lanzamiento#register)
+    const hash = window.location.hash;
+    if (hash) {
+      setTimeout(() => {
+        const el = document.querySelector(hash);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 600);
     }
   }, []);
 
