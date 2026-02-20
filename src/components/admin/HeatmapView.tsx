@@ -29,14 +29,27 @@ const HEATMAP_COLORS = [
   "rgba(255, 0, 0, 0.8)",
 ];
 
+const PUBLISHED_URL = "https://a3syst.lovable.app";
+
+const VIEWPORT_PRESETS = {
+  desktop: { width: 1280, height: 900, label: "Escritorio" },
+  mobile: { width: 390, height: 844, label: "Móvil" },
+  tablet: { width: 768, height: 1024, label: "Tablet" },
+} as const;
+
 const HeatmapView = () => {
   const [clicks, setClicks] = useState<ClickEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("7");
   const [selectedPage, setSelectedPage] = useState("/");
-  const [deviceFilter, setDeviceFilter] = useState<"all" | "mobile" | "tablet" | "desktop">("all");
+  const [deviceFilter, setDeviceFilter] = useState<"all" | "mobile" | "tablet" | "desktop">("desktop");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+
+  const viewportPreset = deviceFilter === "mobile" ? VIEWPORT_PRESETS.mobile
+    : deviceFilter === "tablet" ? VIEWPORT_PRESETS.tablet
+    : VIEWPORT_PRESETS.desktop;
 
   const fetchClicks = async () => {
     setLoading(true);
@@ -64,6 +77,11 @@ const HeatmapView = () => {
     }
   }, [pages]);
 
+  // Reset iframe loaded state when page or device changes
+  useEffect(() => {
+    setIframeLoaded(false);
+  }, [selectedPage, deviceFilter]);
+
   const filteredClicks = useMemo(() => {
     return clicks.filter(c => {
       if (c.page_path !== selectedPage) return false;
@@ -87,42 +105,27 @@ const HeatmapView = () => {
       .slice(0, 10);
   }, [filteredClicks]);
 
-  // Draw heatmap on canvas
+  // Draw heatmap on canvas overlay
   useEffect(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
     if (!canvas || !container) return;
 
     const width = container.clientWidth;
-    const height = 800;
+    const height = container.clientHeight;
     canvas.width = width;
     canvas.height = height;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Clear
     ctx.clearRect(0, 0, width, height);
 
-    // Draw page background
-    ctx.fillStyle = "hsl(220, 15%, 97%)";
-    ctx.fillRect(0, 0, width, height);
-
-    // Draw grid lines for reference
-    ctx.strokeStyle = "hsl(220, 10%, 90%)";
-    ctx.lineWidth = 0.5;
-    for (let y = 0; y < height; y += 100) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
-      ctx.stroke();
-    }
-
     if (filteredClicks.length === 0) {
-      ctx.fillStyle = "hsl(220, 10%, 50%)";
+      ctx.fillStyle = "rgba(0,0,0,0.4)";
       ctx.font = "16px system-ui";
       ctx.textAlign = "center";
-      ctx.fillText("Sin datos de clics para esta página", width / 2, height / 2);
+      ctx.fillText("Sin datos de clics para esta vista", width / 2, height / 2);
       return;
     }
 
@@ -131,7 +134,6 @@ const HeatmapView = () => {
     const cols = Math.ceil(width / gridSize);
     const rows = Math.ceil(height / gridSize);
     const grid = new Float32Array(cols * rows);
-
     let maxDensity = 0;
 
     filteredClicks.forEach(c => {
@@ -140,7 +142,6 @@ const HeatmapView = () => {
       const col = Math.floor(px / gridSize);
       const row = Math.floor(py / gridSize);
 
-      // Apply gaussian spread
       const radius = 3;
       for (let dy = -radius; dy <= radius; dy++) {
         for (let dx = -radius; dx <= radius; dx++) {
@@ -157,34 +158,21 @@ const HeatmapView = () => {
       }
     });
 
-    // Render heatmap
     if (maxDensity > 0) {
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
           const density = grid[row * cols + col];
           if (density <= 0) continue;
-
           const intensity = density / maxDensity;
-          const colorIdx = Math.min(
-            HEATMAP_COLORS.length - 1,
-            Math.floor(intensity * HEATMAP_COLORS.length)
-          );
-
+          const colorIdx = Math.min(HEATMAP_COLORS.length - 1, Math.floor(intensity * HEATMAP_COLORS.length));
           ctx.fillStyle = HEATMAP_COLORS[colorIdx];
           ctx.beginPath();
-          ctx.arc(
-            col * gridSize + gridSize / 2,
-            row * gridSize + gridSize / 2,
-            gridSize * (0.8 + intensity * 0.6),
-            0,
-            Math.PI * 2
-          );
+          ctx.arc(col * gridSize + gridSize / 2, row * gridSize + gridSize / 2, gridSize * (0.8 + intensity * 0.6), 0, Math.PI * 2);
           ctx.fill();
         }
       }
     }
 
-    // Draw individual click dots for low-density areas
     if (filteredClicks.length < 200) {
       filteredClicks.forEach(c => {
         const px = (c.x_percent / 100) * width;
@@ -195,7 +183,13 @@ const HeatmapView = () => {
         ctx.fill();
       });
     }
-  }, [filteredClicks]);
+  }, [filteredClicks, iframeLoaded]);
+
+  // Compute iframe scale
+  const containerWidth = deviceFilter === "mobile" ? 420 : deviceFilter === "tablet" ? 800 : undefined;
+  const iframeScale = containerWidth
+    ? Math.min(1, (containerWidth - 32) / viewportPreset.width)
+    : 1;
 
   return (
     <div className="space-y-6">
@@ -206,7 +200,7 @@ const HeatmapView = () => {
             Mapa de Calor
           </h2>
           <p className="text-sm text-muted-foreground">
-            Visualiza dónde hacen clic tus visitantes
+            Visualiza dónde hacen clic tus visitantes sobre la página real
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -231,7 +225,6 @@ const HeatmapView = () => {
           )}
           <div className="flex border rounded-lg overflow-hidden">
             {([
-              { value: "all", icon: Monitor, label: "Todos" },
               { value: "desktop", icon: Monitor, label: "PC" },
               { value: "tablet", icon: Tablet, label: "Tablet" },
               { value: "mobile", icon: Smartphone, label: "Móvil" },
@@ -300,12 +293,15 @@ const HeatmapView = () => {
         </Card>
       </div>
 
-      {/* Heatmap Canvas */}
+      {/* Heatmap with page preview */}
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold">
               Mapa de calor — <span className="text-primary">{selectedPage}</span>
+              <Badge variant="outline" className="ml-2 text-[10px]">
+                {viewportPreset.label} ({viewportPreset.width}×{viewportPreset.height})
+              </Badge>
             </h3>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>Frío</span>
@@ -317,12 +313,50 @@ const HeatmapView = () => {
               <span>Caliente</span>
             </div>
           </div>
-          <div
-            ref={containerRef}
-            className="relative w-full rounded-lg overflow-hidden border"
-            style={{ height: 800 }}
-          >
-            <canvas ref={canvasRef} className="w-full h-full" />
+
+          <div className="flex justify-center">
+            <div
+              ref={containerRef}
+              className="relative rounded-lg overflow-hidden border shadow-inner"
+              style={{
+                width: deviceFilter === "mobile" ? 390 : deviceFilter === "tablet" ? 768 : "100%",
+                height: viewportPreset.height * iframeScale,
+                maxWidth: "100%",
+              }}
+            >
+              {/* Actual page as background */}
+              <iframe
+                src={`${PUBLISHED_URL}${selectedPage}`}
+                title="Page preview"
+                className="absolute inset-0 border-0"
+                style={{
+                  width: viewportPreset.width,
+                  height: viewportPreset.height,
+                  transform: `scale(${iframeScale})`,
+                  transformOrigin: "top left",
+                  pointerEvents: "none",
+                }}
+                onLoad={() => setIframeLoaded(true)}
+                sandbox="allow-same-origin allow-scripts"
+              />
+              {/* Semi-transparent overlay for readability */}
+              <div className="absolute inset-0 bg-background/20" />
+              {/* Heatmap canvas overlay */}
+              <canvas
+                ref={canvasRef}
+                className="absolute inset-0 w-full h-full"
+                style={{ zIndex: 10 }}
+              />
+              {/* Loading indicator */}
+              {!iframeLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center bg-muted/80 z-20">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Cargando vista previa...
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
