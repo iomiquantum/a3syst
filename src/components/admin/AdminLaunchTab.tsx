@@ -200,15 +200,9 @@ const AdminLaunchTab = () => {
                         <td className="px-4 py-3 font-bold text-muted-foreground">{rank}</td>
                         <td className="px-2 py-3 text-center">
                           {posChange > 0 ? (
-                            <span className="inline-flex items-center gap-0.5 text-emerald-500">
-                              <ArrowUp className="h-3.5 w-3.5" />
-                              <span className="text-xs font-bold">{posChange}</span>
-                            </span>
+                            <ArrowUp className="h-3.5 w-3.5 text-emerald-500 mx-auto" />
                           ) : posChange < 0 ? (
-                            <span className="inline-flex items-center gap-0.5 text-red-500">
-                              <ArrowDown className="h-3.5 w-3.5" />
-                              <span className="text-xs font-bold">{Math.abs(posChange)}</span>
-                            </span>
+                            <ArrowDown className="h-3.5 w-3.5 text-red-500 mx-auto" />
                           ) : (
                             <Minus className="h-3.5 w-3.5 text-muted-foreground/30 mx-auto" />
                           )}
