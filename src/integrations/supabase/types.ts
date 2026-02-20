@@ -660,6 +660,7 @@ export type Database = {
           viewport_width: number | null
           x_percent: number
           y_percent: number
+          zone_name: string | null
         }
         Insert: {
           created_at?: string
@@ -671,6 +672,7 @@ export type Database = {
           viewport_width?: number | null
           x_percent: number
           y_percent: number
+          zone_name?: string | null
         }
         Update: {
           created_at?: string
@@ -682,6 +684,7 @@ export type Database = {
           viewport_width?: number | null
           x_percent?: number
           y_percent?: number
+          zone_name?: string | null
         }
         Relationships: []
       }
