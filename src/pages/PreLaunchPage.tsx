@@ -20,7 +20,8 @@ import {
   Menu, X, MessageCircle, ChevronRight, Zap, Star,
   MessageSquare, Calendar, DollarSign, Palette, Target,
   Brain, Video, Building2, Shield, BarChart3, Headphones, Layers,
-  AlertTriangle, TrendingDown, UserX, Wrench, Play, Mic, MicOff
+  AlertTriangle, TrendingDown, UserX, Wrench, Play, Mic, MicOff,
+  Trophy, Crown, Medal, Send
 } from 'lucide-react';
 import quantumHeroImg from '@/assets/quantum-hero.jpg';
 import heroImg from '@/assets/landing-hero.jpg';
@@ -101,6 +102,33 @@ const TESTIMONIALS = [
 ];
 
 const INDUSTRIES = ['Salud', 'Educación', 'Belleza', 'Fitness', 'Gastronomía', 'Inmobiliaria', 'Legal', 'Tecnología', 'Coaching', 'Retail', 'Consultoría', 'Servicios'];
+
+const LEADERBOARD = [
+  { rank: 1, name: 'Carlos M.', business: 'Clínica Dental Plus', referrals: 47, country: '🇪🇨' },
+  { rank: 2, name: 'María G.', business: 'FitPro Academy', referrals: 38, country: '🇨🇴' },
+  { rank: 3, name: 'Andrés P.', business: 'Restaurante La Brasa', referrals: 31, country: '🇲🇽' },
+  { rank: 4, name: 'Lucía R.', business: 'Salón Belle', referrals: 27, country: '🇪🇨' },
+  { rank: 5, name: 'Fernando T.', business: 'Academia Digital Pro', referrals: 24, country: '🇵🇪' },
+  { rank: 6, name: 'Valentina S.', business: 'Coaching Vital', referrals: 21, country: '🇨🇴' },
+  { rank: 7, name: 'Diego H.', business: 'Inmobiliaria Horizonte', referrals: 19, country: '🇪🇨' },
+  { rank: 8, name: 'Camila L.', business: 'Clínica Estética Glow', referrals: 17, country: '🇦🇷' },
+  { rank: 9, name: 'Roberto N.', business: 'Legal Express', referrals: 15, country: '🇲🇽' },
+  { rank: 10, name: 'Sofía V.', business: 'Yoga Studio Zen', referrals: 14, country: '🇨🇱' },
+  { rank: 11, name: 'Martín A.', business: 'Tech Solutions EC', referrals: 12, country: '🇪🇨' },
+  { rank: 12, name: 'Daniela C.', business: 'Pet Care Plus', referrals: 11, country: '🇨🇴' },
+  { rank: 13, name: 'Javier M.', business: 'Auto Detailing Pro', referrals: 10, country: '🇲🇽' },
+  { rank: 14, name: 'Isabella F.', business: 'Pastelería Dulce Amor', referrals: 9, country: '🇪🇨' },
+  { rank: 15, name: 'Sebastián D.', business: 'Gimnasio Iron', referrals: 8, country: '🇵🇪' },
+  { rank: 16, name: 'Paula B.', business: 'Centro Terapéutico', referrals: 7, country: '🇨🇱' },
+  { rank: 17, name: 'Nicolás R.', business: 'Fotografía Creativa', referrals: 7, country: '🇦🇷' },
+  { rank: 18, name: 'Ana K.', business: 'Tienda Orgánica', referrals: 6, country: '🇪🇨' },
+  { rank: 19, name: 'Tomás E.', business: 'Consultoría 360', referrals: 5, country: '🇨🇴' },
+  { rank: 20, name: 'Gabriela J.', business: 'Escuela de Idiomas', referrals: 5, country: '🇲🇽' },
+  { rank: 21, name: 'Alejandro W.', business: 'Barbería Urban', referrals: 4, country: '🇪🇨' },
+  { rank: 22, name: 'Carla O.', business: 'Floristería Bloom', referrals: 4, country: '🇵🇪' },
+];
+
+const SHARE_TEXT = `🚀 ECONOMÍA CUÁNTICA — La IA hará TODO por ti.\n\n💡 A3 SYS: El sistema con IA que opera tu negocio en piloto automático.\n\n✅ Atención al cliente\n✅ Ventas y seguimiento\n✅ Contenido con IA\n✅ Estrategias cuánticas\n\n🔥 Regístrate GRATIS y prueba la IA ahora 👇`;
 
 const COUNTRY_CODES = [
   { code: '+593', country: 'Ecuador', flag: '🇪🇨', digits: 9 },
@@ -452,7 +480,7 @@ const PreLaunchPage = () => {
           </p>
 
           <Badge className="mb-10 border-white/20 bg-white/10 text-white text-sm px-5 py-2">
-            <Rocket className="mr-2 h-4 w-4" /> Lanzamiento Oficial — 1° de Abril 2025
+            <Rocket className="mr-2 h-4 w-4" /> Lanzamiento Oficial — 1° de Abril 2026
           </Badge>
 
           {/* COUNTDOWN */}
@@ -500,8 +528,8 @@ const PreLaunchPage = () => {
         <div className="mx-auto grid max-w-5xl grid-cols-2 gap-6 px-4 lg:grid-cols-4 lg:px-8">
           {[
             { icon: Sparkles, text: '3 generaciones IA gratis' },
-            { icon: Gift, text: 'Refiere 4 = 1er mes gratis' },
-            { icon: Zap, text: 'Acceso anticipado' },
+            { icon: Trophy, text: '1er lugar: 1 año Plan FULL gratis' },
+            { icon: Gift, text: '4 referidos = 1er mes gratis' },
             { icon: Star, text: 'Estratega Cuántico incluido' },
           ].map((b, i) => (
             <div key={i} className="flex items-center gap-3">
@@ -514,28 +542,137 @@ const PreLaunchPage = () => {
         </div>
       </section>
 
-      {/* REFERRAL PROGRAM EXPLANATION */}
-      <section className="bg-[hsl(215,70%,97%)] py-16 lg:py-20">
-        <div className="mx-auto max-w-5xl px-4 lg:px-8">
+      {/* REFERRAL PROGRAM - COMPARTE Y GANA */}
+      <section className="bg-gradient-to-br from-[hsl(215,70%,8%)] via-[hsl(215,60%,15%)] to-[hsl(160,40%,12%)] py-16 lg:py-24 text-white relative overflow-hidden">
+        {/* Glow effects */}
+        <div className="absolute inset-0 opacity-15" style={{ backgroundImage: 'radial-gradient(circle at 20% 30%, hsl(160,55%,42%) 0%, transparent 40%), radial-gradient(circle at 80% 70%, hsl(38,92%,55%) 0%, transparent 40%)' }} />
+        
+        <div className="relative mx-auto max-w-6xl px-4 lg:px-8">
+          {/* Header */}
           <div className="text-center mb-12">
-            <h2 className="mb-3 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
-              Refiere y gana tu <span className="text-[hsl(160,55%,42%)]">primer mes gratis</span>
+            <Badge className="mb-4 border-[hsl(38,92%,55%)]/30 bg-[hsl(38,92%,55%)]/10 text-[hsl(38,92%,65%)] text-sm px-5 py-2">
+              <Trophy className="mr-2 h-4 w-4" /> COMPETENCIA DE REFERIDOS ACTIVA
+            </Badge>
+            <h2 className="mb-3 text-3xl font-bold tracking-tight lg:text-5xl" style={{ fontFamily: 'Sora, sans-serif' }}>
+              Comparte y gana{' '}
+              <span className="bg-gradient-to-r from-[hsl(38,92%,55%)] to-[hsl(38,92%,70%)] bg-clip-text text-transparent">
+                1 AÑO de membresía gratis
+              </span>
             </h2>
-            <p className="text-lg text-muted-foreground">Así de simple: comparte, registran, y tú ganas.</p>
+            <p className="text-xl text-white/60 mb-2">
+              Plan FULL valorado en <span className="font-bold text-[hsl(38,92%,65%)] text-2xl">$2,388</span>{' '}
+              <span className="text-white/40">($199 × 12 meses)</span>
+            </p>
+            <p className="text-lg text-white/50">El que más referidos tenga al lanzamiento, ¡se lo lleva TODO!</p>
           </div>
-          <div className="grid gap-8 md:grid-cols-3">
+
+          {/* Prizes */}
+          <div className="grid gap-6 md:grid-cols-3 mb-12">
+            {[
+              { place: '🥇', title: '1er Lugar', prize: '1 AÑO GRATIS', value: '$2,388', color: 'from-[hsl(38,92%,55%)] to-[hsl(38,80%,40%)]', border: 'border-[hsl(38,92%,55%)]/50', icon: Crown },
+              { place: '🥈', title: '2do Lugar', prize: '6 MESES GRATIS', value: '$1,194', color: 'from-[hsl(215,30%,60%)] to-[hsl(215,30%,45%)]', border: 'border-[hsl(215,30%,60%)]/50', icon: Medal },
+              { place: '🥉', title: '3er Lugar', prize: '3 MESES GRATIS', value: '$597', color: 'from-[hsl(25,60%,50%)] to-[hsl(25,60%,35%)]', border: 'border-[hsl(25,60%,50%)]/50', icon: Medal },
+            ].map((p, i) => (
+              <Card key={i} className={`border-2 ${p.border} bg-white/5 backdrop-blur-md text-white`}>
+                <CardContent className="p-6 text-center">
+                  <span className="text-4xl">{p.place}</span>
+                  <h3 className="mt-2 text-lg font-bold" style={{ fontFamily: 'Sora, sans-serif' }}>{p.title}</h3>
+                  <div className={`mt-3 rounded-lg bg-gradient-to-r ${p.color} px-4 py-2`}>
+                    <p className="text-sm font-bold tracking-wide">{p.prize}</p>
+                    <p className="text-xs opacity-80">Plan Full · Valor {p.value}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Also: 4 referrals = 1 month free */}
+          <div className="text-center mb-12 rounded-2xl border border-[hsl(160,55%,42%)]/30 bg-[hsl(160,55%,42%)]/10 p-6 backdrop-blur-md">
+            <Gift className="mx-auto mb-3 h-10 w-10 text-[hsl(160,55%,55%)]" />
+            <p className="text-lg font-semibold text-white">
+              Además: <span className="text-[hsl(160,55%,55%)]">4 referidos = tu primer mes GRATIS</span>
+            </p>
+            <p className="text-sm text-white/50 mt-1">Todos los que consigan 4 referidos reciben su primer mes sin costo.</p>
+          </div>
+
+          {/* LEADERBOARD */}
+          <div className="mb-8">
+            <h3 className="text-center text-2xl font-bold mb-6" style={{ fontFamily: 'Sora, sans-serif' }}>
+              <Trophy className="inline-block mr-2 h-6 w-6 text-[hsl(38,92%,55%)]" />
+              Ranking de Referidos en Tiempo Real
+            </h3>
+            <Card className="bg-white/5 border-white/10 backdrop-blur-md overflow-hidden">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-white/10 bg-white/5">
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-white/50">#</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-white/50">Participante</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-white/50 hidden sm:table-cell">Negocio</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-white/50">Referidos</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-white/50">Premio</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {LEADERBOARD.map((p) => (
+                        <tr
+                          key={p.rank}
+                          className={`border-b border-white/5 transition-colors hover:bg-white/5 ${
+                            p.rank === 1 ? 'bg-[hsl(38,92%,55%)]/10' : p.rank === 2 ? 'bg-[hsl(215,30%,60%)]/5' : p.rank === 3 ? 'bg-[hsl(25,60%,50%)]/5' : ''
+                          }`}
+                        >
+                          <td className="px-4 py-3 font-bold text-white/80">
+                            {p.rank <= 3 ? (
+                              <span className="text-lg">{p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : '🥉'}</span>
+                            ) : (
+                              <span className="text-white/40">{p.rank}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <span>{p.country}</span>
+                              <span className={`font-medium ${p.rank <= 3 ? 'text-white' : 'text-white/70'}`}>{p.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-white/50 hidden sm:table-cell">{p.business}</td>
+                          <td className="px-4 py-3 text-right">
+                            <span className={`font-bold text-lg ${p.rank <= 3 ? 'text-[hsl(160,55%,55%)]' : 'text-white/70'}`}>
+                              {p.referrals}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {p.rank === 1 && <Badge className="bg-[hsl(38,92%,55%)] text-[hsl(38,92%,15%)] text-xs">1 Año</Badge>}
+                            {p.rank === 2 && <Badge className="bg-[hsl(215,30%,60%)] text-white text-xs">6 Meses</Badge>}
+                            {p.rank === 3 && <Badge className="bg-[hsl(25,60%,50%)] text-white text-xs">3 Meses</Badge>}
+                            {p.rank > 3 && p.referrals >= 4 && <Badge variant="outline" className="border-[hsl(160,55%,42%)]/50 text-[hsl(160,55%,55%)] text-xs">1 Mes</Badge>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+            <p className="text-center text-xs text-white/30 mt-3">
+              * Ranking actualizado en tiempo real. El ganador se define al momento del lanzamiento (1° de Abril 2026).
+            </p>
+          </div>
+
+          {/* How it works - compact */}
+          <div className="grid gap-6 md:grid-cols-3">
             {[
               { step: '1', icon: Share2, title: 'Regístrate', desc: 'Completa el formulario y recibe tu código único de referido.' },
-              { step: '2', icon: Users, title: 'Comparte tu código', desc: 'Envía tu link o código a contactos que quieran probar A3 SYS.' },
-              { step: '3', icon: Gift, title: '4 referidos = mes gratis', desc: 'Cuando 4 personas se registren con tu código, tu primer mes es GRATIS.' },
+              { step: '2', icon: Users, title: 'Comparte tu código', desc: 'Comparte en WhatsApp, Instagram, TikTok y más. ¡Cada registro cuenta!' },
+              { step: '3', icon: Trophy, title: '¡Gana premios!', desc: '4 referidos = 1er mes gratis. ¿Más referidos? Compite por 1 año del Plan FULL.' },
             ].map((s, i) => (
-              <div key={i} className="flex flex-col items-center rounded-2xl border bg-white p-8 text-center shadow-sm">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-xl font-bold text-white">
+              <div key={i} className="flex flex-col items-center rounded-2xl border border-white/10 bg-white/5 p-8 text-center backdrop-blur-md">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[hsl(160,55%,42%)] text-xl font-bold text-white">
                   {s.step}
                 </div>
-                <s.icon className="mb-3 h-8 w-8 text-[hsl(160,55%,42%)]" />
-                <h3 className="mb-2 text-lg font-semibold">{s.title}</h3>
-                <p className="text-sm text-muted-foreground">{s.desc}</p>
+                <s.icon className="mb-3 h-8 w-8 text-[hsl(38,92%,55%)]" />
+                <h3 className="mb-2 text-lg font-semibold text-white">{s.title}</h3>
+                <p className="text-sm text-white/60">{s.desc}</p>
               </div>
             ))}
           </div>
@@ -763,16 +900,21 @@ const PreLaunchPage = () => {
                 </Card>
               </div>
 
-              {/* Share section */}
-              <Card className="border-2 border-dashed border-primary/30 bg-[hsl(215,70%,98%)]">
-                <CardContent className="p-6 text-center">
-                  <h3 className="mb-2 text-lg font-semibold" style={{ fontFamily: 'Sora, sans-serif' }}>
-                    Comparte y gana tu primer mes gratis
-                  </h3>
-                  <p className="mb-4 text-sm text-muted-foreground">
-                    Envía tu link personalizado a colegas y conocidos. Cuando 4 se registren, tu primer mes es GRATIS.
-                  </p>
-                  <div className="flex items-center gap-2 max-w-md mx-auto">
+              {/* Share section - Enhanced */}
+              <Card className="border-2 border-[hsl(38,92%,55%)]/30 bg-gradient-to-br from-[hsl(215,70%,97%)] to-[hsl(38,92%,97%)]">
+                <CardContent className="p-6">
+                  <div className="text-center mb-4">
+                    <Trophy className="mx-auto mb-2 h-8 w-8 text-[hsl(38,92%,55%)]" />
+                    <h3 className="text-lg font-bold" style={{ fontFamily: 'Sora, sans-serif' }}>
+                      ¡Comparte y compite por <span className="text-[hsl(38,92%,50%)]">1 AÑO GRATIS</span>!
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Plan FULL valorado en <strong>$2,388</strong>. Cada persona que se registre con tu código te acerca al premio.
+                    </p>
+                  </div>
+                  
+                  {/* Link */}
+                  <div className="flex items-center gap-2 max-w-md mx-auto mb-5">
                     <Input
                       readOnly
                       value={`${window.location.origin}/lanzamiento?ref=${userData?.referral_code}`}
@@ -781,6 +923,118 @@ const PreLaunchPage = () => {
                     <Button size="sm" onClick={shareReferralLink}>
                       <Copy className="mr-1 h-3.5 w-3.5" /> Copiar
                     </Button>
+                  </div>
+
+                  {/* Social Share Buttons */}
+                  <p className="text-center text-xs text-muted-foreground mb-3 font-semibold uppercase tracking-wide">Compartir en redes sociales</p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {/* WhatsApp */}
+                    <Button
+                      size="sm"
+                      className="bg-[hsl(142,70%,45%)] hover:bg-[hsl(142,70%,40%)] text-white"
+                      onClick={() => {
+                        const url = `${window.location.origin}/lanzamiento?ref=${userData?.referral_code}`;
+                        const text = encodeURIComponent(`${SHARE_TEXT}\n\n👉 ${url}`);
+                        window.open(`https://wa.me/?text=${text}`, '_blank');
+                      }}
+                    >
+                      <MessageCircle className="mr-1 h-4 w-4" /> WhatsApp
+                    </Button>
+                    {/* WhatsApp Status/Stories */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-[hsl(142,70%,45%)]/50 text-[hsl(142,70%,40%)]"
+                      onClick={() => {
+                        const url = `${window.location.origin}/lanzamiento?ref=${userData?.referral_code}`;
+                        const text = encodeURIComponent(`${SHARE_TEXT}\n\n👉 ${url}`);
+                        window.open(`https://wa.me/?text=${text}`, '_blank');
+                        toast({ title: '💡 Tip', description: 'Pega el texto en tu estado/historia de WhatsApp para más alcance.' });
+                      }}
+                    >
+                      <MessageCircle className="mr-1 h-4 w-4" /> Historia WA
+                    </Button>
+                    {/* Instagram */}
+                    <Button
+                      size="sm"
+                      className="bg-gradient-to-r from-[hsl(330,70%,50%)] to-[hsl(270,70%,50%)] text-white hover:opacity-90"
+                      onClick={() => {
+                        const url = `${window.location.origin}/lanzamiento?ref=${userData?.referral_code}`;
+                        navigator.clipboard.writeText(`${SHARE_TEXT.replace(/\\n/g, '\n')}\n\n👉 ${url}`);
+                        toast({ title: '📋 Texto copiado', description: 'Pégalo en tu historia o publicación de Instagram.' });
+                      }}
+                    >
+                      <Image className="mr-1 h-4 w-4" /> Instagram
+                    </Button>
+                    {/* TikTok */}
+                    <Button
+                      size="sm"
+                      className="bg-[hsl(0,0%,8%)] text-white hover:bg-[hsl(0,0%,15%)]"
+                      onClick={() => {
+                        const url = `${window.location.origin}/lanzamiento?ref=${userData?.referral_code}`;
+                        navigator.clipboard.writeText(`${SHARE_TEXT.replace(/\\n/g, '\n')}\n\n👉 ${url}`);
+                        toast({ title: '📋 Texto copiado', description: 'Pégalo en tu bio o video de TikTok.' });
+                      }}
+                    >
+                      <Play className="mr-1 h-4 w-4" /> TikTok
+                    </Button>
+                    {/* Facebook */}
+                    <Button
+                      size="sm"
+                      className="bg-[hsl(220,46%,48%)] text-white hover:bg-[hsl(220,46%,42%)]"
+                      onClick={() => {
+                        const url = encodeURIComponent(`${window.location.origin}/lanzamiento?ref=${userData?.referral_code}`);
+                        window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
+                      }}
+                    >
+                      <Globe className="mr-1 h-4 w-4" /> Facebook
+                    </Button>
+                    {/* Twitter/X */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const url = `${window.location.origin}/lanzamiento?ref=${userData?.referral_code}`;
+                        const text = encodeURIComponent(`🚀 ECONOMÍA CUÁNTICA — La IA hará TODO por ti.\n\nA3 SYS: el sistema con IA que opera tu negocio.\n\n🔥 Regístrate GRATIS 👇\n${url}`);
+                        window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+                      }}
+                    >
+                      <Share2 className="mr-1 h-4 w-4" /> X / Twitter
+                    </Button>
+                    {/* LinkedIn */}
+                    <Button
+                      size="sm"
+                      className="bg-[hsl(210,80%,42%)] text-white hover:bg-[hsl(210,80%,36%)]"
+                      onClick={() => {
+                        const url = encodeURIComponent(`${window.location.origin}/lanzamiento?ref=${userData?.referral_code}`);
+                        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, '_blank');
+                      }}
+                    >
+                      <Briefcase className="mr-1 h-4 w-4" /> LinkedIn
+                    </Button>
+                    {/* Telegram */}
+                    <Button
+                      size="sm"
+                      className="bg-[hsl(200,80%,50%)] text-white hover:bg-[hsl(200,80%,44%)]"
+                      onClick={() => {
+                        const url = `${window.location.origin}/lanzamiento?ref=${userData?.referral_code}`;
+                        const text = encodeURIComponent(`${SHARE_TEXT}\n\n👉 ${url}`);
+                        window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${text}`, '_blank');
+                      }}
+                    >
+                      <Send className="mr-1 h-4 w-4" /> Telegram
+                    </Button>
+                  </div>
+
+                  {/* Copyable text preview */}
+                  <div className="mt-5 rounded-lg bg-white border p-3 max-w-md mx-auto">
+                    <p className="text-[10px] uppercase font-semibold text-muted-foreground mb-1">Texto para compartir:</p>
+                    <p className="text-xs text-muted-foreground whitespace-pre-line leading-relaxed">
+                      🚀 ECONOMÍA CUÁNTICA — La IA hará TODO por ti.{'\n\n'}
+                      💡 A3 SYS: El sistema con IA que opera tu negocio en piloto automático.{'\n\n'}
+                      🔥 Regístrate GRATIS y prueba la IA ahora 👇{'\n'}
+                      {window.location.origin}/lanzamiento?ref={userData?.referral_code}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -1114,7 +1368,7 @@ const PreLaunchPage = () => {
             </Button>
           )}
           <p className="mt-6 text-sm text-white/40">
-            Lanzamiento 1° de Abril 2025 • Acceso anticipado • Prueba gratuita de IA
+            Lanzamiento 1° de Abril 2026 • Acceso anticipado • Prueba gratuita de IA
           </p>
         </div>
       </section>
