@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   RefreshCw, Radio, Globe, Clock, Monitor, Smartphone, Tablet,
-  UserCheck, UserX, Eye, MapPin, ArrowUpRight, ChevronDown, ChevronRight, Hash
+  UserCheck, UserX, Eye, MapPin, ArrowUpRight, ChevronDown, ChevronRight, Hash, MousePointer
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -81,6 +81,7 @@ const LiveSessionsView = () => {
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [expandedDevices, setExpandedDevices] = useState<Set<string>>(new Set());
+  const [sessionZones, setSessionZones] = useState<Record<string, string[]>>({});
 
   const fetchSessions = async () => {
     setLoading(true);
@@ -198,6 +199,44 @@ const LiveSessionsView = () => {
       return next;
     });
   };
+
+  // Fetch zones for sessions when a device is expanded
+  const fetchZonesForDevice = useCallback(async (deviceId: string) => {
+    const device = deviceGroups.find(d => d.device_id === deviceId);
+    if (!device) return;
+    const sessionIds = device.sessions.map(s => s.session_id);
+    // Skip already fetched
+    const missing = sessionIds.filter(sid => !sessionZones[sid]);
+    if (missing.length === 0) return;
+
+    const { data } = await supabase
+      .from('click_events')
+      .select('session_id, zone_name')
+      .in('session_id', missing)
+      .not('zone_name', 'is', null);
+
+    if (data) {
+      const zonesMap: Record<string, Set<string>> = {};
+      data.forEach((row: any) => {
+        if (!zonesMap[row.session_id]) zonesMap[row.session_id] = new Set();
+        if (row.zone_name) zonesMap[row.session_id].add(row.zone_name);
+      });
+      setSessionZones(prev => {
+        const updated = { ...prev };
+        missing.forEach(sid => {
+          updated[sid] = zonesMap[sid] ? Array.from(zonesMap[sid]) : [];
+        });
+        return updated;
+      });
+    }
+  }, [deviceGroups, sessionZones]);
+
+  // Fetch zones when device is expanded
+  useEffect(() => {
+    expandedDevices.forEach(deviceId => {
+      fetchZonesForDevice(deviceId);
+    });
+  }, [expandedDevices]);
 
   return (
     <div className="space-y-6">
@@ -346,30 +385,45 @@ const LiveSessionsView = () => {
                                   {device.sessions.map(s => {
                                     const sActive = s.is_active && (Date.now() - new Date(s.last_heartbeat).getTime()) < ACTIVE_THRESHOLD_SECONDS * 1000;
                                     return (
-                                      <div key={s.id} className={`flex items-center justify-between text-xs p-2 rounded ${sActive ? 'bg-green-500/10' : 'bg-muted/30'}`}>
-                                        <div className="flex items-center gap-2">
-                                          {sActive && <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />}
-                                          <span className="font-medium">{s.current_page}</span>
-                                          <span className="text-muted-foreground">
-                                            {new Date(s.started_at).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: '2-digit' })}
-                                            {' '}
-                                            {new Date(s.started_at).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' })}
-                                          </span>
-                                          {s.ended_at && (
+                                      <div key={s.id} className={`text-xs p-2 rounded ${sActive ? 'bg-green-500/10' : 'bg-muted/30'}`}>
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-2">
+                                            {sActive && <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />}
+                                            <span className="font-medium">{s.current_page}</span>
                                             <span className="text-muted-foreground">
-                                              → {new Date(s.ended_at).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' })}
+                                              {new Date(s.started_at).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                                              {' '}
+                                              {new Date(s.started_at).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' })}
                                             </span>
-                                          )}
+                                            {s.ended_at && (
+                                              <span className="text-muted-foreground">
+                                                → {new Date(s.ended_at).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' })}
+                                              </span>
+                                            )}
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-semibold">{formatDuration(s.duration_seconds)}</span>
+                                            {s.utm_source && (
+                                              <span className="flex items-center gap-0.5 text-muted-foreground">
+                                                <ArrowUpRight className="h-3 w-3" />{s.utm_source}
+                                              </span>
+                                            )}
+                                            {s.did_register && <UserCheck className="h-3 w-3 text-emerald-500" />}
+                                          </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-semibold">{formatDuration(s.duration_seconds)}</span>
-                                          {s.utm_source && (
-                                            <span className="flex items-center gap-0.5 text-muted-foreground">
-                                              <ArrowUpRight className="h-3 w-3" />{s.utm_source}
-                                            </span>
-                                          )}
-                                          {s.did_register && <UserCheck className="h-3 w-3 text-emerald-500" />}
-                                        </div>
+                                        {sessionZones[s.session_id] && sessionZones[s.session_id].length > 0 && (
+                                          <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                                            <MousePointer className="h-3 w-3 text-muted-foreground" />
+                                            {sessionZones[s.session_id].slice(0, 5).map(zone => (
+                                              <Badge key={zone} variant="outline" className="text-[10px] px-1.5 py-0">
+                                                {zone}
+                                              </Badge>
+                                            ))}
+                                            {sessionZones[s.session_id].length > 5 && (
+                                              <span className="text-[10px] text-muted-foreground">+{sessionZones[s.session_id].length - 5}</span>
+                                            )}
+                                          </div>
+                                        )}
                                       </div>
                                     );
                                   })}

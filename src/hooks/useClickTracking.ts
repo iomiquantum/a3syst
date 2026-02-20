@@ -10,6 +10,41 @@ const getSessionId = () => {
   return sid;
 };
 
+// Detect the meaningful zone name from the DOM hierarchy
+const getZoneName = (el: HTMLElement): string => {
+  let current: HTMLElement | null = el;
+  while (current && current !== document.body) {
+    // Check data-zone attribute first (explicit zone labeling)
+    const zone = current.getAttribute('data-zone');
+    if (zone) return zone;
+
+    // Check aria-label
+    const ariaLabel = current.getAttribute('aria-label');
+    if (ariaLabel) return ariaLabel;
+
+    // Check section/nav/header/footer/main/aside with id or class hint
+    const tag = current.tagName.toLowerCase();
+    if (['section', 'nav', 'header', 'footer', 'main', 'aside', 'form'].includes(tag)) {
+      const id = current.id;
+      if (id) return `${tag}#${id}`;
+      const heading = current.querySelector('h1, h2, h3');
+      if (heading?.textContent) {
+        const text = heading.textContent.trim().slice(0, 40);
+        return text;
+      }
+      return tag;
+    }
+
+    // Check meaningful id
+    if (current.id && !/^:r|^radix-/.test(current.id)) {
+      return `#${current.id}`;
+    }
+
+    current = current.parentElement;
+  }
+  return el.tagName.toLowerCase();
+};
+
 // Batch clicks and flush periodically to reduce DB writes
 let clickBuffer: {
   page_path: string;
@@ -18,6 +53,7 @@ let clickBuffer: {
   viewport_width: number;
   viewport_height: number;
   element_tag: string;
+  zone_name: string;
   session_id: string;
 }[] = [];
 
@@ -52,6 +88,7 @@ export const useClickTracking = () => {
         viewport_width: window.innerWidth,
         viewport_height: window.innerHeight,
         element_tag: target.tagName?.toLowerCase() || 'unknown',
+        zone_name: getZoneName(target),
         session_id: sessionId,
       });
 

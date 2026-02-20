@@ -15,6 +15,7 @@ interface ClickEvent {
   viewport_width: number | null;
   viewport_height: number | null;
   element_tag: string | null;
+  zone_name: string | null;
   session_id: string;
   created_at: string;
 }
@@ -74,14 +75,14 @@ const HeatmapView = () => {
     });
   }, [clicks, selectedPage, deviceFilter]);
 
-  const elementStats = useMemo(() => {
+  const zoneStats = useMemo(() => {
     const counts: Record<string, number> = {};
     filteredClicks.forEach(c => {
-      const tag = c.element_tag || "unknown";
-      counts[tag] = (counts[tag] || 0) + 1;
+      const zone = c.zone_name || c.element_tag || "desconocido";
+      counts[zone] = (counts[zone] || 0) + 1;
     });
     return Object.entries(counts)
-      .map(([tag, count]) => ({ tag, count }))
+      .map(([zone, count]) => ({ zone, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
   }, [filteredClicks]);
@@ -290,10 +291,10 @@ const HeatmapView = () => {
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-1">
               <MousePointer className="h-4 w-4 text-emerald-500" />
-              <span className="text-xs text-muted-foreground">Elemento más clicado</span>
+              <span className="text-xs text-muted-foreground">Zona más clicada</span>
             </div>
-            <p className="text-2xl font-bold uppercase">
-              {elementStats[0]?.tag || "—"}
+            <p className="text-lg font-bold truncate">
+              {zoneStats[0]?.zone || "—"}
             </p>
           </CardContent>
         </Card>
@@ -326,25 +327,25 @@ const HeatmapView = () => {
         </CardContent>
       </Card>
 
-      {/* Element breakdown */}
+      {/* Zone breakdown */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-sm font-semibold mb-4">Elementos más clicados</h3>
-          {elementStats.length === 0 ? (
+          <h3 className="text-sm font-semibold mb-4">Zonas más clicadas</h3>
+          {zoneStats.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">Sin datos</p>
           ) : (
             <div className="space-y-2">
-              {elementStats.map((e, i) => {
+              {zoneStats.map((e, i) => {
                 const pct = filteredClicks.length > 0
                   ? Math.round((e.count / filteredClicks.length) * 100)
                   : 0;
                 return (
-                  <div key={e.tag} className="flex items-center gap-3">
+                  <div key={e.zone} className="flex items-center gap-3">
                     <span className="text-xs font-bold text-muted-foreground w-6">#{i + 1}</span>
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-mono font-medium uppercase">&lt;{e.tag}&gt;</span>
-                        <span className="text-xs text-muted-foreground">{e.count} clics ({pct}%)</span>
+                        <span className="text-sm font-medium truncate max-w-[300px]">{e.zone}</span>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">{e.count} clics ({pct}%)</span>
                       </div>
                       <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                         <div
