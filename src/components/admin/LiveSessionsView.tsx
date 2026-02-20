@@ -337,11 +337,14 @@ const LiveSessionsView = () => {
               <p className="text-sm text-muted-foreground text-center py-6">Sin historial</p>
             ) : (
               <div className="space-y-1">
-                <div className="grid grid-cols-10 gap-2 text-xs font-semibold text-muted-foreground px-3 py-2 border-b">
+                <div className="grid grid-cols-13 gap-2 text-xs font-semibold text-muted-foreground px-3 py-2 border-b" style={{ gridTemplateColumns: 'repeat(13, minmax(0, 1fr))' }}>
                   <span>N°</span>
                   <span>Dispositivo</span>
                   <span>SO</span>
                   <span>Navegador</span>
+                  <span>Fecha</span>
+                  <span>Inicio</span>
+                  <span>Salida</span>
                   <span>País</span>
                   <span>Ciudad</span>
                   <span>Página</span>
@@ -352,7 +355,7 @@ const LiveSessionsView = () => {
                 {recentlyEnded.map(s => (
                   <div
                     key={s.id}
-                    className="grid grid-cols-10 gap-2 text-sm px-3 py-2.5 border-b last:border-0 items-center hover:bg-muted/30 transition-colors"
+                    className="text-sm px-3 py-2.5 border-b last:border-0 items-center hover:bg-muted/30 transition-colors grid gap-2" style={{ gridTemplateColumns: 'repeat(13, minmax(0, 1fr))' }}
                   >
                     <span className="text-xs font-bold">#{s.device_number || '—'}</span>
                     <div className="flex items-center gap-1.5">
@@ -361,6 +364,9 @@ const LiveSessionsView = () => {
                     </div>
                     <span className="text-xs">{s.os || '—'}</span>
                     <span className="text-xs">{s.browser || '—'}</span>
+                    <span className="text-xs">{new Date(s.started_at).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: '2-digit' })}</span>
+                    <span className="text-xs">{new Date(s.started_at).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="text-xs">{s.ended_at ? new Date(s.ended_at).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' }) : '—'}</span>
                     <span className="text-xs">{s.country || '—'}</span>
                     <span className="text-xs">{s.region || '—'}</span>
                     <span className="text-xs font-medium truncate">{s.current_page}</span>

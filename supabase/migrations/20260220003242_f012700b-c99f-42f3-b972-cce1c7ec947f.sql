@@ -1,0 +1,1 @@
+ALTER SEQUENCE public.live_sessions_device_number_seq RESTART WITH 1;
