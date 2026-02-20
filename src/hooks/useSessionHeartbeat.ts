@@ -181,6 +181,9 @@ export const useSessionHeartbeat = () => {
     // Initial heartbeat
     sendHeartbeat(true);
 
+    // Early heartbeat after 5s to capture short sessions
+    const earlyTimeout = setTimeout(() => sendHeartbeat(), 5000);
+
     // Periodic heartbeat
     intervalRef.current = setInterval(() => sendHeartbeat(), HEARTBEAT_INTERVAL);
 
@@ -216,11 +219,14 @@ export const useSessionHeartbeat = () => {
     };
 
     window.addEventListener('beforeunload', handleUnload);
+    window.addEventListener('pagehide', handleUnload);
     document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
+      clearTimeout(earlyTimeout);
       if (intervalRef.current) clearInterval(intervalRef.current);
       window.removeEventListener('beforeunload', handleUnload);
+      window.removeEventListener('pagehide', handleUnload);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
