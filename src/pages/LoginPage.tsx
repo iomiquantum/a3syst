@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, Navigate } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Zap } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,7 +13,7 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const { signIn, user } = useAuth();
 
-  if (user) { navigate("/dashboard", { replace: true }); return null; }
+  if (user) return <Navigate to="/dashboard" replace />;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

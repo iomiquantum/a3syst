@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Palette, Sparkles, FileCheck, CalendarDays, List, Loader2, CheckCircle, XCircle, RefreshCw, Pencil, Instagram, Facebook, Music, Linkedin, Globe, Megaphone, Lightbulb, Star, Image, Heart, PartyPopper, Brain, ChevronRight, ChevronLeft, Wand2, Save, Clock } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { useContentPosts, type ContentPost } from "@/hooks/useContentPosts";
@@ -439,11 +439,11 @@ const ContentWizard = ({ open, onOpenChange, content }: {
   const { data: strategies = [] } = usePsychoStrategies();
 
   // Load treatments
-  useState(() => {
+  useEffect(() => {
     if (clinicId) {
       supabase.from("treatments").select("id, name, price").eq("clinic_id", clinicId).then(({ data }) => setTreatments(data || []));
     }
-  });
+  }, [clinicId]);
 
   const selectedType = contentTypes.find(t => t.id === contentType);
 
