@@ -143,16 +143,21 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Extract user from auth header
-    let userId: string | null = null;
+    // Auth check - require valid user
     const authHeader = req.headers.get("Authorization");
-    if (authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-      try {
-        const { data: claimsData } = await supabaseAdmin.auth.getUser(token);
-        userId = claimsData?.user?.id || null;
-      } catch { /* ignore */ }
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "No autorizado" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: authError } = await supabaseAdmin.auth.getUser(token);
+    if (authError || !claimsData?.user) {
+      return new Response(JSON.stringify({ error: "Token inválido" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userId: string = claimsData.user.id;
 
     // Resolve clinic_id: use provided or look up from user's roles
     let clinic_id = providedClinicId || null;
