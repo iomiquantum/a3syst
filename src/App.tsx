@@ -34,6 +34,7 @@ import PreLaunchPage from "./pages/PreLaunchPage";
 import RankingPage from "./pages/RankingPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
+import MiCuentaPage from "./pages/MiCuentaPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -82,6 +83,7 @@ const App = () => (
               <Route path="/planificacion" element={<ProtectedRoute><PlanificacionPage /></ProtectedRoute>} />
               <Route path="/reuniones" element={<ProtectedRoute><ReunionesPage /></ProtectedRoute>} />
               <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
+              <Route path="/mi-cuenta" element={<ProtectedRoute><MiCuentaPage /></ProtectedRoute>} />
               
               <Route path="*" element={<NotFound />} />
            </Routes>
