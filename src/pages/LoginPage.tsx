@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Eye, EyeOff, User } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Zap } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
@@ -11,17 +9,11 @@ const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { signIn, user } = useAuth();
 
-  // Redirect if already logged in
-  if (user) {
-    navigate("/dashboard", { replace: true });
-    return null;
-  }
-
+  if (user) { navigate("/dashboard", { replace: true }); return null; }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,75 +29,81 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-card">
-      <div className="flex-1 flex flex-col justify-center px-8 md:px-20 lg:px-32">
-        <div className="mb-12">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">A3</span>
-            </div>
-            <div>
-            <span className="text-xl font-bold text-foreground tracking-tight">A3 SYS</span>
-              <span className="text-xs block text-muted-foreground -mt-1 tracking-widest">by IOMI</span>
-            </div>
-          </div>
+    <div className="min-h-screen flex bg-[#060611]">
+      {/* Left — form */}
+      <div className="flex-1 flex flex-col justify-center px-8 md:px-16 lg:px-24">
+        <div className="mb-10">
+          <span className="text-xl font-bold">
+            <span className="bg-gradient-to-r from-[#8B5CF6] to-[#3B82F6] bg-clip-text text-transparent">A3</span>
+            <span className="text-white/90">syst</span>
+          </span>
         </div>
 
         <div className="max-w-md w-full">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Bienvenido de vuelta</h1>
-          <p className="text-muted-foreground mb-8">Inicia sesión en tu cuenta</p>
+          <h1 className="text-3xl font-bold text-white mb-2">Bienvenido de vuelta</h1>
+          <p className="text-white/40 mb-8">Inicia sesión en tu cuenta</p>
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Email</label>
+              <label className="block text-sm font-medium text-white/60 mb-2">Email</label>
               <div className="relative">
-                <Input type="email" placeholder="tu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="pr-10 h-11 bg-card border-border" />
-                <User className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  type="email" placeholder="tu@email.com" value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/20 pr-10 focus:border-[#8B5CF6]/50 focus:ring-[#8B5CF6]/20"
+                />
+                <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Contraseña</label>
+              <label className="block text-sm font-medium text-white/60 mb-2">Contraseña</label>
               <div className="relative">
-                <Input type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="pr-10 h-11 bg-card border-border" />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                <Input
+                  type={showPassword ? "text" : "password"} placeholder="••••••••" value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/20 pr-10 focus:border-[#8B5CF6]/50 focus:ring-[#8B5CF6]/20"
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/40">
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Checkbox id="remember" checked={remember} onCheckedChange={(c) => setRemember(c as boolean)} />
-                <label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer">Recordarme</label>
-              </div>
-            </div>
-            <Button type="submit" disabled={loading} className="w-full h-11 gradient-primary text-primary-foreground hover:opacity-90 transition-opacity font-medium">
+            <button
+              type="submit" disabled={loading}
+              className="w-full h-12 rounded-xl bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white font-semibold shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] transition-all disabled:opacity-50"
+            >
               {loading ? "Ingresando..." : "Iniciar Sesión"}
-            </Button>
+            </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground mb-3">¿No tienes cuenta aún?</p>
-            <Link to="/registro" className="block">
-              <Button variant="outline" className="w-full h-11 border-primary text-primary hover:bg-sidebar-accent font-medium">
-                Regístrate y accede a una prueba gratuita
-              </Button>
+          <div className="mt-8 text-center">
+            <p className="text-sm text-white/30 mb-3">¿No tienes cuenta?</p>
+            <Link to="/registro">
+              <button className="w-full h-12 rounded-xl border border-white/10 text-white/60 font-medium hover:bg-white/5 hover:text-white transition-all">
+                Crear cuenta gratis <ArrowRight className="inline ml-1 w-4 h-4" />
+              </button>
             </Link>
           </div>
         </div>
       </div>
 
-      <div className="hidden lg:flex flex-1 items-center justify-center gradient-subtle p-12">
-        <div className="w-full max-w-md">
-          <div className="bg-card rounded-2xl shadow-elevated p-6 space-y-4">
-            <div className="flex gap-2">{[...Array(6)].map((_, i) => <div key={i} className="h-8 rounded-md bg-muted flex-1" />)}</div>
-            <div className="flex gap-2">{[...Array(4)].map((_, i) => <div key={i} className="h-8 rounded-md bg-muted flex-1" />)}</div>
-            <div className="space-y-3 pt-4">
-              <div><div className="bg-muted rounded-xl rounded-bl-sm p-3 max-w-[80%]"><p className="text-sm text-foreground">Hola, ¿te gustaría confirmar tu reunión para mañana?</p></div><span className="text-xs text-muted-foreground mt-1 block">10:28</span></div>
-              <div className="flex justify-end"><div><div className="gradient-primary rounded-xl rounded-br-sm p-3"><p className="text-sm text-primary-foreground">Sí, 10:30 está perfecto.</p></div><span className="text-xs text-muted-foreground mt-1 block text-right">10:30 ✓✓</span></div></div>
-              <div><div className="bg-muted rounded-xl rounded-bl-sm p-3 max-w-[80%]"><p className="text-sm text-foreground">Listo. Envié el recordatorio por WhatsApp 📅</p></div><span className="text-xs text-muted-foreground mt-1 block">10:31</span></div>
-            </div>
-            <div className="grid grid-cols-3 gap-2 pt-2">{[...Array(3)].map((_, i) => <div key={i} className="h-16 rounded-lg bg-primary/20" />)}</div>
+      {/* Right — branding panel */}
+      <div className="hidden lg:flex flex-1 items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0c1445] via-[#1a0a2e] to-[#060611]" />
+        <div className="absolute top-1/3 left-1/3 h-[400px] w-[400px] rounded-full bg-[#8B5CF6]/10 blur-[120px]" />
+        <div className="absolute bottom-1/4 right-1/4 h-[300px] w-[300px] rounded-full bg-[#3B82F6]/10 blur-[100px]" />
+
+        <div className="relative text-center max-w-md px-8">
+          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-[#8B5CF6]/30 bg-[#8B5CF6]/10 px-4 py-1.5 text-sm text-[#A78BFA]">
+            <Zap className="h-3.5 w-3.5" /> Economía Cuántica
           </div>
+          <h2 className="text-4xl font-extrabold text-white mb-4 leading-tight">
+            Tu negocio funciona.{" "}
+            <span className="bg-gradient-to-r from-[#8B5CF6] to-[#3B82F6] bg-clip-text text-transparent">Tú vives.</span>
+          </h2>
+          <p className="text-white/30 text-lg">
+            8 autopilotos de IA trabajando por ti. Solo necesitas 3 horas al día.
+          </p>
         </div>
       </div>
     </div>
