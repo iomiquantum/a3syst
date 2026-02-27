@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Clock } from "lucide-react";
+import { Plus, Pencil, Trash2, Clock, Sparkles } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -82,6 +82,60 @@ const TratamientosPage = () => {
     toast.success("Categoría eliminada"); fetchData();
   };
 
+  const AI_TEMPLATES: Record<string, { name: string; duration: number; price: number; description: string }[]> = {
+    dental: [
+      { name: "Limpieza dental", duration: 45, price: 80, description: "Limpieza profesional con ultrasonido" },
+      { name: "Blanqueamiento", duration: 60, price: 250, description: "Blanqueamiento LED profesional" },
+      { name: "Ortodoncia - Consulta", duration: 30, price: 50, description: "Evaluación y plan de ortodoncia" },
+      { name: "Extracción simple", duration: 30, price: 100, description: "Extracción de pieza dental" },
+      { name: "Carillas de porcelana", duration: 90, price: 500, description: "Carilla estética por pieza" },
+    ],
+    estetica: [
+      { name: "Limpieza facial profunda", duration: 60, price: 80, description: "Limpieza con extracción y mascarilla" },
+      { name: "Botox", duration: 30, price: 300, description: "Aplicación de toxina botulínica" },
+      { name: "Ácido hialurónico", duration: 45, price: 400, description: "Relleno dérmico facial" },
+      { name: "Peeling químico", duration: 45, price: 120, description: "Renovación de piel con ácidos" },
+      { name: "Microdermoabrasión", duration: 40, price: 90, description: "Exfoliación mecánica avanzada" },
+    ],
+    spa: [
+      { name: "Masaje relajante", duration: 60, price: 70, description: "Masaje de cuerpo completo" },
+      { name: "Masaje descontracturante", duration: 50, price: 85, description: "Terapia de puntos de tensión" },
+      { name: "Aromaterapia", duration: 45, price: 65, description: "Sesión con aceites esenciales" },
+      { name: "Reflexología podal", duration: 40, price: 55, description: "Masaje terapéutico de pies" },
+    ],
+    general: [
+      { name: "Consulta general", duration: 30, price: 50, description: "Consulta de evaluación inicial" },
+      { name: "Consulta de seguimiento", duration: 20, price: 35, description: "Control y seguimiento" },
+      { name: "Servicio premium", duration: 60, price: 120, description: "Servicio completo premium" },
+      { name: "Paquete básico", duration: 45, price: 80, description: "Paquete de servicios básicos" },
+    ],
+  };
+
+  const generateWithAI = async () => {
+    if (!clinicId) return;
+    // Get clinic business_type
+    const { data: clinic } = await supabase.from("clinics").select("business_type").eq("id", clinicId).single();
+    const type = clinic?.business_type || "general";
+    const templates = AI_TEMPLATES[type] || AI_TEMPLATES.general;
+    
+    let created = 0;
+    for (const t of templates) {
+      const exists = treatments.some(ex => ex.name.toLowerCase() === t.name.toLowerCase());
+      if (!exists) {
+        await supabase.from("treatments").insert({
+          clinic_id: clinicId, name: t.name, duration: t.duration, price: t.price, description: t.description,
+        });
+        created++;
+      }
+    }
+    if (created > 0) {
+      toast.success(`✨ ${created} ${labels.treatments.toLowerCase()} generados con IA`);
+      fetchData();
+    } else {
+      toast.info("Ya tienes todos los servicios sugeridos");
+    }
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -94,7 +148,10 @@ const TratamientosPage = () => {
           <TabsList><TabsTrigger value="tratamientos">{labels.treatments}</TabsTrigger><TabsTrigger value="especialidades">{labels.specialties}</TabsTrigger></TabsList>
 
           <TabsContent value="tratamientos" className="space-y-4 mt-4">
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={generateWithAI} className="border-white/10 hover:bg-white/5">
+                <Sparkles className="w-4 h-4 mr-2 text-yellow-400" /> Generar con IA
+              </Button>
               <Dialog open={openTreatment} onOpenChange={setOpenTreatment}>
                 <DialogTrigger asChild><Button className="gradient-primary text-primary-foreground hover:opacity-90"><Plus className="w-4 h-4 mr-2" /> Nuevo {labels.treatments_singular}</Button></DialogTrigger>
                 <DialogContent>
