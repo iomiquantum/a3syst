@@ -1,11 +1,12 @@
 import { ReactNode } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useClinic } from "@/hooks/useClinic";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
-  const { clinicId, loading: clinicLoading } = useClinic();
+  const { clinicId, loading: clinicLoading, needsOnboarding } = useClinic();
+  const location = useLocation();
 
   if (authLoading || clinicLoading) {
     return (
@@ -22,8 +23,10 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  // If user has no clinic, the handle_new_clinic_setup trigger should have created one.
-  // If for some reason it didn't, redirect to dashboard anyway (it will show empty state).
+  // If user needs onboarding and isn't already on that page
+  if (needsOnboarding && location.pathname !== "/onboarding") {
+    return <Navigate to="/onboarding" replace />;
+  }
 
   return <>{children}</>;
 };
