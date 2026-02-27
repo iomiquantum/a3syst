@@ -97,7 +97,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
     setMobileOpen(false);
   };
 
-  const SidebarContent = () => (
+  const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className={cn("h-16 flex items-center border-b border-white/5 shrink-0", collapsed ? "justify-center px-2" : "px-5")}>
@@ -238,7 +238,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         "fixed inset-y-0 left-0 z-50 w-[260px] bg-[#0d0d1a] transform transition-transform duration-300 lg:hidden",
         mobileOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        <SidebarContent />
+        {sidebarContent}
       </aside>
 
       {/* Desktop sidebar */}
@@ -246,7 +246,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         "hidden lg:flex h-screen sticky top-0 flex-col bg-[#0d0d1a] border-r border-white/5 transition-all duration-300",
         collapsed ? "w-[60px]" : "w-[240px]"
       )}>
-        <SidebarContent />
+        {sidebarContent}
       </aside>
 
       {/* Main */}
