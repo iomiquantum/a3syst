@@ -32,6 +32,7 @@ import ReunionesPage from "./pages/ReunionesPage";
 import LandingPage from "./pages/LandingPage";
 import PreLaunchPage from "./pages/PreLaunchPage";
 import RankingPage from "./pages/RankingPage";
+import OnboardingPage from "./pages/OnboardingPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ const App = () => (
               <Route path="/registro" element={<RegisterPage />} />
               <Route path="/lanzamiento" element={<PreLaunchPage />} />
               <Route path="/ranking" element={<RankingPage />} />
+              <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/pacientes" element={<ProtectedRoute><PacientesPage /></ProtectedRoute>} />
               <Route path="/agenda" element={<ProtectedRoute><AgendaPage /></ProtectedRoute>} />
