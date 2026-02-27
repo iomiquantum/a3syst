@@ -67,6 +67,10 @@ const AgendaPage = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [detailApt, setDetailApt] = useState<any | null>(null);
   const [patientSearch, setPatientSearch] = useState("");
+  const [saleDialogApt, setSaleDialogApt] = useState<any | null>(null);
+  const [saleAmount, setSaleAmount] = useState("");
+  const [salePaymentMethod, setSalePaymentMethod] = useState("");
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
 
   const [form, setForm] = useState({
     patient_id: "", treatment_id: "", professional_id: "",
@@ -90,7 +94,7 @@ const AgendaPage = () => {
     const startDate = fmtDate(weekDates[0]);
     const endDate = fmtDate(weekDates[6]);
 
-    const [{ data: a }, { data: p }, { data: t }, { data: pr }] = await Promise.all([
+    const [{ data: a }, { data: p }, { data: t }, { data: pr }, { data: pm }] = await Promise.all([
       supabase.from("appointments")
         .select("*, patients(first_name, last_name), treatments(name, price), professionals(full_name)")
         .eq("clinic_id", clinicId).gte("date", startDate).lte("date", endDate)
@@ -98,11 +102,13 @@ const AgendaPage = () => {
       supabase.from("patients").select("id, first_name, last_name").eq("clinic_id", clinicId).order("first_name"),
       supabase.from("treatments").select("id, name, duration, price").eq("clinic_id", clinicId),
       supabase.from("professionals").select("id, full_name").eq("clinic_id", clinicId).eq("active", true),
+      supabase.from("payment_methods").select("id, name").eq("clinic_id", clinicId),
     ]);
     setAppointments(a || []);
     setPatients(p || []);
     setTreatments(t || []);
     setProfessionals(pr || []);
+    setPaymentMethods(pm || []);
     setLoading(false);
   }, [clinicId, weekDates]);
 
@@ -142,7 +148,32 @@ const AgendaPage = () => {
     };
     toast.success(msgs[status] || "Estado actualizado");
     if (detailApt?.id === id) setDetailApt((prev: any) => prev ? { ...prev, status } : null);
+    
+    // When completing, offer to register a sale
+    if (status === "completado") {
+      const apt = appointments.find(a => a.id === id);
+      if (apt) {
+        setSaleAmount(apt.treatments?.price ? String(apt.treatments.price) : "");
+        setSalePaymentMethod(paymentMethods[0]?.id || "");
+        setSaleDialogApt(apt);
+      }
+    }
     fetchData();
+  };
+
+  const handleRegisterSale = async () => {
+    if (!clinicId || !saleDialogApt) return;
+    const { error } = await supabase.from("sales").insert({
+      clinic_id: clinicId,
+      patient_id: saleDialogApt.patient_id,
+      treatment_id: saleDialogApt.treatment_id || null,
+      amount: parseFloat(saleAmount) || 0,
+      payment_method_id: salePaymentMethod || null,
+      status: "pendiente" as any,
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success("💰 Venta registrada");
+    setSaleDialogApt(null);
   };
 
   const handleCreate = async () => {
@@ -521,6 +552,40 @@ const AgendaPage = () => {
               <Button onClick={handleCreate} disabled={!form.patient_id || !form.date || !form.time}
                 className="flex-1 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white hover:opacity-90">
                 Crear cita
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══ REGISTER SALE DIALOG ═══ */}
+      <Dialog open={!!saleDialogApt} onOpenChange={o => !o && setSaleDialogApt(null)}>
+        <DialogContent className="bg-[#0d0d1a] border-white/10 text-foreground max-w-sm">
+          <DialogHeader><DialogTitle>💰 Registrar venta</DialogTitle></DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Cita de <span className="text-foreground font-medium">{saleDialogApt?.patients?.first_name} {saleDialogApt?.patients?.last_name}</span> completada.
+              ¿Registrar la venta?
+            </p>
+            <div>
+              <Label className="text-xs text-muted-foreground">Monto</Label>
+              <Input type="number" value={saleAmount} onChange={e => setSaleAmount(e.target.value)}
+                className="h-9 bg-white/5 border-white/10 text-foreground mt-1" min={0} />
+            </div>
+            {paymentMethods.length > 0 && (
+              <div>
+                <Label className="text-xs text-muted-foreground">Método de pago</Label>
+                <Select value={salePaymentMethod} onValueChange={setSalePaymentMethod}>
+                  <SelectTrigger className="h-9 bg-white/5 border-white/10 mt-1"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                  <SelectContent>{paymentMethods.map(pm => <SelectItem key={pm.id} value={pm.id}>{pm.name}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="flex gap-3 pt-1">
+              <Button variant="outline" onClick={() => setSaleDialogApt(null)} className="flex-1 border-white/10 hover:bg-white/5">Omitir</Button>
+              <Button onClick={handleRegisterSale} disabled={!saleAmount}
+                className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-700 text-white hover:opacity-90">
+                Registrar venta
               </Button>
             </div>
           </div>
