@@ -349,7 +349,7 @@
         const res = await fetch(API_URL + '/functions/v1/widget-messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ conversation_id: conversationId }),
+          body: JSON.stringify({ conversation_id: conversationId, clinic_id: CLINIC_ID }),
         });
         const data = await res.json();
         const msgs = data.messages || [];
@@ -384,7 +384,7 @@
         const res = await fetch(API_URL + '/functions/v1/widget-messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ conversation_id: conversationId }),
+          body: JSON.stringify({ conversation_id: conversationId, clinic_id: CLINIC_ID }),
         });
         const data = await res.json();
         messagesArea.innerHTML = '';

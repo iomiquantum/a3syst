@@ -17,9 +17,7 @@ const RankingPage = () => {
     document.title = 'Ranking de Referidos — A3 SYS by IOMI';
     const fetchLeaderboard = async () => {
       const { data } = await supabase
-        .from('launch_registrations')
-        .select('id, full_name, business_name, referral_count, previous_position, referral_code')
-        .order('referral_count', { ascending: false });
+        .rpc('get_launch_leaderboard');
       if (data) {
         const ranked = data.map((r: any, i: number) => ({
           ...r,
