@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, MessageSquare, Calendar, BarChart3, Megaphone,
+  LayoutDashboard, MessageSquare, Calendar, BarChart3, Megaphone, Palette,
   Rocket, DollarSign, Brain, Users, Briefcase, Stethoscope, Building2,
   Bot, TrendingUp, User, LogOut, ChevronLeft, Menu, X, ShieldCheck,
 } from "lucide-react";
@@ -67,6 +67,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         { icon: Calendar, label: "Agenda", path: "/agenda", badge: todayAppointments },
         { icon: BarChart3, label: "CRM", path: "/crm" },
         { icon: Megaphone, label: "Marketing", path: "/marketing" },
+        { icon: Palette, label: "Contenido", path: "/contenido" },
         { icon: Rocket, label: "Ads", path: "/ads" },
         { icon: DollarSign, label: "Ventas", path: "/ventas" },
         { icon: Brain, label: "Psycho-Matrix", path: "/psycho-matrix" },
