@@ -1,105 +1,128 @@
-import { useState, useEffect } from 'react';
-import { useClickTracking } from '@/hooks/useClickTracking';
-import { usePageTracking } from '@/hooks/usePageTracking';
-import { useSessionHeartbeat } from '@/hooks/useSessionHeartbeat';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Badge } from '@/components/ui/badge';
+import { usePageTracking } from '@/hooks/usePageTracking';
+import { useClickTracking } from '@/hooks/useClickTracking';
+import { useSessionHeartbeat } from '@/hooks/useSessionHeartbeat';
 import {
-  MessageSquare, Users, Calendar, DollarSign, Palette, Target,
-  Brain, Sparkles, Video, Building2, Shield, Zap, Check, Menu, X,
-  ArrowRight, Star, Phone, Mail, User, Briefcase,
-  BarChart3, Clock, Headphones, Layers, Globe, ChevronRight,
-  AlertTriangle, TrendingDown, UserX, Wrench, Play, MessageCircle
+  MessageSquare, Calendar, BarChart3, Palette, Rocket, DollarSign,
+  Brain, TrendingUp, Menu, X, ArrowRight, Check, Sparkles,
+  Stethoscope, Scissors, Star, Heart, Dog, SmilePlus, Users,
+  Building2, ChevronRight, Zap, Shield, Headphones, Globe
 } from 'lucide-react';
-import heroImg from '@/assets/landing-hero.jpg';
-import estrategaImg from '@/assets/landing-estratega.jpg';
-import problemImg from '@/assets/landing-problem.jpg';
-import solutionImg from '@/assets/landing-solution.jpg';
 
-const NAV_LINKS = [
-  { label: 'Producto', id: 'solution' },
-  { label: 'Cómo funciona', id: 'how' },
-  { label: 'Módulos', id: 'modules' },
-  { label: 'Planes', id: 'plans' },
-  { label: 'Estratega Cuántico', id: 'estratega' },
-  { label: 'FAQ', id: 'faq' },
+/* ───── animate-on-scroll hook ───── */
+const useInView = (threshold = 0.15) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } }, { threshold });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return { ref, visible };
+};
+
+const FadeIn = ({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) => {
+  const { ref, visible } = useInView();
+  return (
+    <div
+      ref={ref}
+      className={`transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'} ${className}`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {children}
+    </div>
+  );
+};
+
+/* ───── animated counter ───── */
+const Counter = ({ end, suffix = '', duration = 2000 }: { end: number; suffix?: string; duration?: number }) => {
+  const { ref, visible } = useInView();
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!visible) return;
+    let start = 0;
+    const step = Math.ceil(end / (duration / 16));
+    const timer = setInterval(() => {
+      start += step;
+      if (start >= end) { setCount(end); clearInterval(timer); }
+      else setCount(start);
+    }, 16);
+    return () => clearInterval(timer);
+  }, [visible, end, duration]);
+  return <span ref={ref}>{count}{suffix}</span>;
+};
+
+/* ───── data ───── */
+const AUTOPILOTS = [
+  { icon: MessageSquare, emoji: '🤖', title: 'Autopilot de Mensajes', desc: 'Responde WhatsApp e Instagram 24/7' },
+  { icon: Calendar, emoji: '📅', title: 'Autopilot de Agenda', desc: 'Citas agendadas y confirmadas automáticamente' },
+  { icon: BarChart3, emoji: '📊', title: 'Autopilot de CRM', desc: 'Leads clasificados y nutridos sin que muevas un dedo' },
+  { icon: Palette, emoji: '📱', title: 'Autopilot de Marketing', desc: 'Contenido creado y publicado por la IA' },
+  { icon: Rocket, emoji: '🚀', title: 'Autopilot de Ads', desc: 'Campañas en paralelo. La IA encuentra la ganadora.' },
+  { icon: DollarSign, emoji: '💰', title: 'Autopilot de Ventas', desc: 'Ventas registradas y oportunidades detectadas' },
+  { icon: Brain, emoji: '🧠', title: 'Psycho-Matrix', desc: 'Estrategias de persuasión generadas con IA' },
+  { icon: TrendingUp, emoji: '📈', title: 'Analytics Inteligente', desc: 'No solo datos, sino insights y recomendaciones' },
 ];
 
-const PROBLEM_CARDS = [
-  { icon: MessageSquare, text: 'Mensajes perdidos = ventas perdidas' },
-  { icon: Clock, text: 'Respuestas tarde = clientes fríos' },
-  { icon: TrendingDown, text: 'Seguimiento irregular = cero cierres' },
-  { icon: Wrench, text: 'Muchas herramientas = doble trabajo' },
+const TIMELINE = [
+  { time: '8:00 AM', emoji: '☀️', title: 'Briefing matutino (20 min)', desc: 'La IA te cuenta qué hizo mientras dormías' },
+  { time: '1:00 PM', emoji: '📋', title: 'Revisión rápida (10 min)', desc: 'Apruebas sugerencias con un click' },
+  { time: '6:00 PM', emoji: '🌙', title: 'Cierre del día (10 min)', desc: 'Resumen y plan de mañana' },
+  { time: 'Resto', emoji: '🏖️', title: 'Tú decides', desc: 'Tu negocio sigue funcionando sin ti' },
 ];
 
-const MODULES = [
-  { icon: MessageSquare, title: 'Inbox Web', subtitle: 'Atención al Cliente', bullets: ['Bandeja tipo CRM', 'Estados: abierta/cerrada/archivada', 'Ficha del cliente e historial'] },
-  { icon: Headphones, title: 'Call Center CRM', subtitle: 'Seguimiento Comercial', bullets: ['Etapas de seguimiento', 'Gestión comercial ordenada', 'Métricas y control'] },
-  { icon: Users, title: 'CRM de Clientes', subtitle: 'Base de Datos', bullets: ['Datos + historial', 'Estados y organización', 'Búsqueda y filtros'] },
-  { icon: Calendar, title: 'Agenda / Citas', subtitle: 'Calendario', bullets: ['Calendario interactivo', 'Estados de cita', 'Duración y asignación'] },
-  { icon: DollarSign, title: 'Control Contable', subtitle: 'Ventas', bullets: ['Pagos, descuentos', 'Estados y origen', 'Registro claro de ingresos'] },
-  { icon: Palette, title: 'Contenido con IA', subtitle: 'Copy + Imágenes + Videos', bullets: ['Crea piezas listas para publicar', 'Prompts y guiones', 'Consistencia de marca'] },
-  { icon: Target, title: 'Marketing', subtitle: 'Segmentación', bullets: ['Audiencias y segmentación', 'Organiza contactos', 'Mejor conversión'] },
-  { icon: Brain, title: 'PSYCHO-MATRIX', subtitle: 'Estrategias Cuánticas', bullets: ['Estrategias listas para convertir', 'Triggers, arquetipos y enfoque', 'Duplicar / regenerar estrategias'], badge: 'FULL' },
-  { icon: Sparkles, title: 'Estrategia Cuántica', subtitle: 'Framework', bullets: ['Framework de crecimiento', 'Plantillas estratégicas', 'Acción semanal dentro del sistema'], badge: 'FULL' },
-  { icon: MessageCircle, title: 'Agente Guía Conversacional', subtitle: 'IA Conversacional', bullets: ['IA que guía conversaciones', 'Objetivos, tono, idioma', 'On/Off por conversación'], badge: 'FULL' },
-  { icon: Video, title: 'AI Meeting Assistant', subtitle: 'Reuniones', bullets: ['Transcripción y resumen', 'Acciones y decisiones', 'Reuniones más rápidas'], badge: 'FULL' },
-  { icon: Building2, title: 'Multi-sucursal y Roles', subtitle: 'Escalabilidad', bullets: ['Control por equipo', 'Permisos', 'Escala sin perder orden'] },
+const BUSINESSES = [
+  { icon: SmilePlus, name: 'Clínicas dentales' },
+  { icon: Sparkles, name: 'Clínicas estéticas' },
+  { icon: Heart, name: 'Spas' },
+  { icon: Scissors, name: 'Salones de belleza' },
+  { icon: Scissors, name: 'Barberías' },
+  { icon: Stethoscope, name: 'Consultorios médicos' },
+  { icon: Brain, name: 'Psicología' },
+  { icon: Star, name: 'Centros de bienestar' },
+  { icon: Dog, name: 'Veterinarias' },
 ];
 
 const PLANS = [
   {
-    name: 'START', price: 44, sub: 'Para empezar a operar con orden y velocidad.', recommended: false,
-    features: ['Inbox Web (widget)', 'Bandeja tipo CRM (Esencial)', 'Asignación de agente (Esencial)', 'Dashboard KPIs (Esencial)', 'Contenido con IA (copy + imágenes + videos)', 'Estratega Cuántico (incluido)'],
-    cta: 'Empezar con Start'
+    name: 'FREE', price: 0, badge: '', sub: 'Prueba la revolución',
+    features: ['1 autopiloto', '100 mensajes IA/mes', '1 usuario'],
+    cta: 'Empezar gratis',
   },
   {
-    name: 'GROW', price: 99, sub: 'Para vender con seguimiento y control.', recommended: true,
-    features: ['Todo de Start +', 'CRM de clientes', 'Call Center CRM', 'Registro de llamadas + métricas', 'Agenda / Citas', 'Control Contable de Ventas', 'Marketing (Segmentación)', 'Calendario de contenido + analíticas', 'Multi-sucursal/roles (limitado)', 'Estratega Cuántico (incluido)'],
-    cta: 'Elegir Grow'
+    name: 'PRO', price: 49, badge: 'Más popular', sub: 'Libera tu tiempo',
+    features: ['Todos los autopilotos', '2,000 mensajes IA/mes', '5 usuarios', 'Psycho-Matrix'],
+    cta: 'Elegir Pro',
   },
   {
-    name: 'FULL', price: 199, sub: 'Autonomía real + estrategias cuánticas.', recommended: false,
-    features: ['Todo de Grow +', 'Agente Guía Conversacional (IA)', 'PSYCHO-MATRIX — Estrategias Cuánticas', 'Estrategia Cuántica (framework + plantillas)', 'AI Meeting Assistant', 'Multi-sucursal/roles (ampliado)', 'Estratega Cuántico (incluido)'],
-    cta: 'Elegir Full'
+    name: 'QUANTUM', price: 149, badge: '', sub: 'Economía cuántica total',
+    features: ['Todo ilimitado', 'Motor Cuántico de Ads', 'API completa', 'Soporte prioritario'],
+    cta: 'Elegir Quantum',
   },
 ];
 
-const FAQ_ITEMS = [
-  { q: '¿Necesito conocimientos técnicos?', a: 'No. Es simple y guiado. Si sabes usar WhatsApp, sabes usar A3.' },
-  { q: '¿Sirve para cualquier negocio?', a: 'Sí, es modular. Se adapta a salud, educación, belleza, fitness, gastronomía, inmobiliaria, legal, tecnología y más.' },
-  { q: '¿Qué logro con A3?', a: 'Orden, velocidad, control y ventas. Todo medido y automatizado.' },
-  { q: '¿Qué es Economía Cuántica?', a: 'Es nuestro concepto: A3 ejecuta tareas en paralelo sin cansarse. Atiende, vende, crea contenido y organiza al mismo tiempo.' },
-  { q: '¿Incluye acompañamiento?', a: 'Sí: Estratega Cuántico semanal en todos los planes. Sesión en vivo + replays + estrategia de la semana.' },
-  { q: '¿Puedo empezar pequeño?', a: 'Sí, con el plan Start a $44/mes. Creces cuando estés listo.' },
+const NAV_LINKS = [
+  { label: 'Autopilotos', id: 'autopilots' },
+  { label: 'Tu Día', id: 'day' },
+  { label: 'Para quién', id: 'who' },
+  { label: 'Planes', id: 'pricing' },
 ];
 
-const TESTIMONIALS = [
-  { name: 'Clínica Dental Sonrisa', result: 'Más orden, más cierres', text: 'Antes perdíamos el 40% de los leads por responder tarde. Con A3 todo queda registrado y organizado.' },
-  { name: 'Academia FitPro', result: 'Menos tiempo respondiendo', text: 'Pasamos de 4 horas al día contestando mensajes a tener todo centralizado y controlado.' },
-  { name: 'Restaurante La Terraza', result: 'Operación más ligera', text: 'Un solo sistema para reservas, clientes y seguimiento. Dejamos de usar 5 herramientas diferentes.' },
-];
-
-const INDUSTRIES = ['Salud', 'Educación', 'Belleza', 'Fitness', 'Gastronomía', 'Inmobiliaria', 'Legal', 'Tecnología', 'Coaching', 'Retail', 'Consultoría', 'Servicios'];
-
+/* ───── component ───── */
 const LandingPage = () => {
-  const [demoOpen, setDemoOpen] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
-  const [formData, setFormData] = useState({ name: '', business: '', industry: '', whatsapp: '', email: '' });
 
   usePageTracking();
   useClickTracking();
   useSessionHeartbeat();
 
   useEffect(() => {
-    document.title = 'A3 SYS by IOMI | Operaciones Autónomas con IA para Vender Más';
+    document.title = 'A3syst — Tu negocio funciona. Tú vives.';
     const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute('content', 'Bienvenido a la Economía Cuántica. Ahorra sueldos y duplica ventas con un sistema todo-en-uno: atención al cliente, call center CRM, agenda, ventas, contenido con IA y estrategias cuánticas.');
+    if (meta) meta.setAttribute('content', 'A3syst es el primer sistema de economía cuántica para negocios de bienestar. La IA opera tu negocio 24/7.');
   }, []);
 
   const scrollTo = (id: string) => {
@@ -107,499 +130,316 @@ const LandingPage = () => {
     setMobileMenu(false);
   };
 
-  const handleSubmitDemo = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Track conversion
-    window.dispatchEvent(new CustomEvent('demo-requested', { detail: formData }));
-    setDemoOpen(false);
-    setFormData({ name: '', business: '', industry: '', whatsapp: '', email: '' });
-  };
-
   return (
-    <div
-      className="min-h-screen bg-background text-foreground"
-      style={{
-        '--primary': '215 70% 30%',
-        '--primary-foreground': '0 0% 100%',
-        '--accent': '160 55% 42%',
-        '--accent-foreground': '0 0% 100%',
-        '--ring': '215 70% 30%',
-      } as React.CSSProperties}
-    >
-      {/* ===== NAVBAR ===== */}
-      <nav className="sticky top-0 z-50 border-b bg-white/95 backdrop-blur-md">
+    <div className="min-h-screen bg-[#060611] text-white overflow-x-hidden" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+
+      {/* ══════ NAVBAR ══════ */}
+      <nav className="sticky top-0 z-50 border-b border-white/5 bg-[#060611]/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 lg:px-8">
-          <button onClick={() => scrollTo('hero')} className="text-xl font-bold tracking-tight" style={{ fontFamily: 'Sora, sans-serif' }}>
-            <span className="text-primary">A3</span> <span className="text-foreground">SYS</span> <span className="text-xs text-muted-foreground">by IOMI</span>
+          <button onClick={() => scrollTo('hero')} className="text-xl font-bold tracking-tight">
+            <span className="bg-gradient-to-r from-[#8B5CF6] to-[#3B82F6] bg-clip-text text-transparent">A3</span>
+            <span className="text-white/90">syst</span>
           </button>
-          <div className="hidden items-center gap-6 lg:flex">
+          <div className="hidden items-center gap-8 lg:flex">
             {NAV_LINKS.map(l => (
-              <button key={l.id} onClick={() => scrollTo(l.id)} className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+              <button key={l.id} onClick={() => scrollTo(l.id)} className="text-sm text-white/50 transition-colors hover:text-white">
                 {l.label}
               </button>
             ))}
           </div>
           <div className="hidden items-center gap-3 lg:flex">
-            <Link to="/login">
-              <Button variant="ghost" size="sm">Iniciar Sesión</Button>
+            <Link to="/login" className="text-sm text-white/60 hover:text-white transition-colors">Iniciar Sesión</Link>
+            <Link to="/registro">
+              <button className="rounded-lg bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] px-5 py-2 text-sm font-semibold text-white shadow-[0_0_20px_rgba(139,92,246,0.3)] transition-all hover:shadow-[0_0_30px_rgba(139,92,246,0.5)]">
+                Comienza gratis
+              </button>
             </Link>
-            <Button variant="outline" size="sm" onClick={() => scrollTo('how')}>
-              <Play className="mr-1 h-3 w-3" /> Ver Tour 2 min
-            </Button>
-            <Button size="sm" onClick={() => setDemoOpen(true)}>Agendar Demo</Button>
           </div>
-          <button className="lg:hidden" onClick={() => setMobileMenu(!mobileMenu)}>
+          <button className="lg:hidden text-white/70" onClick={() => setMobileMenu(!mobileMenu)}>
             {mobileMenu ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
         {mobileMenu && (
-          <div className="border-t bg-white px-4 py-4 lg:hidden">
+          <div className="border-t border-white/5 bg-[#060611] px-4 py-4 lg:hidden">
             {NAV_LINKS.map(l => (
-              <button key={l.id} onClick={() => scrollTo(l.id)} className="block w-full py-2 text-left text-sm font-medium text-muted-foreground">
+              <button key={l.id} onClick={() => scrollTo(l.id)} className="block w-full py-2 text-left text-sm text-white/60">
                 {l.label}
               </button>
             ))}
             <div className="mt-3 flex flex-col gap-2">
-              <Link to="/login">
-                <Button variant="ghost" size="sm" className="w-full">Iniciar Sesión</Button>
+              <Link to="/login" className="text-sm text-white/60 py-2">Iniciar Sesión</Link>
+              <Link to="/registro">
+                <button className="w-full rounded-lg bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] px-5 py-2.5 text-sm font-semibold text-white">
+                  Comienza gratis
+                </button>
               </Link>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1" onClick={() => { scrollTo('how'); }}>Ver Tour</Button>
-                <Button size="sm" className="flex-1" onClick={() => { setDemoOpen(true); setMobileMenu(false); }}>Agendar Demo</Button>
-              </div>
             </div>
           </div>
         )}
       </nav>
 
-      {/* ===== HERO ===== */}
-      <section id="hero" className="relative overflow-hidden bg-gradient-to-br from-[hsl(215,70%,97%)] via-white to-[hsl(160,40%,96%)]">
-        <div className="mx-auto max-w-7xl px-4 py-16 lg:px-8 lg:py-24">
-          <div className="grid items-center gap-12 lg:grid-cols-2">
-            <div>
-              <Badge variant="secondary" className="mb-4 bg-[hsl(215,70%,92%)] text-primary">
-                Bienvenido a la nueva Economía Cuántica
-              </Badge>
-              <h1 className="mb-6 text-4xl font-bold leading-tight tracking-tight lg:text-5xl xl:text-6xl" style={{ fontFamily: 'Sora, sans-serif' }}>
-                Todo tu negocio en un solo sistema con{' '}
-                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                  Inteligencia Artificial.
+      {/* ══════ HERO ══════ */}
+      <section id="hero" className="relative overflow-hidden">
+        {/* gradient bg */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#060611] via-[#0c1445] to-[#1a0a2e]" />
+        {/* glow orbs */}
+        <div className="absolute top-1/4 left-1/4 h-[500px] w-[500px] rounded-full bg-[#8B5CF6]/10 blur-[120px]" />
+        <div className="absolute bottom-0 right-1/4 h-[400px] w-[400px] rounded-full bg-[#3B82F6]/10 blur-[120px]" />
+
+        <div className="relative mx-auto max-w-5xl px-4 py-24 text-center lg:py-36">
+          <FadeIn>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#8B5CF6]/30 bg-[#8B5CF6]/10 px-4 py-1.5 text-sm text-[#A78BFA]">
+              <Zap className="h-3.5 w-3.5" /> Economía Cuántica
+            </div>
+          </FadeIn>
+          <FadeIn delay={100}>
+            <h1 className="mb-6 text-5xl font-extrabold leading-[1.1] tracking-tight md:text-6xl lg:text-7xl">
+              Tu negocio funciona.{' '}
+              <span className="bg-gradient-to-r from-[#8B5CF6] via-[#A78BFA] to-[#3B82F6] bg-clip-text text-transparent">
+                Tú vives.
+              </span>
+            </h1>
+          </FadeIn>
+          <FadeIn delay={200}>
+            <p className="mx-auto mb-10 max-w-2xl text-lg text-white/50 md:text-xl">
+              A3syst es el primer sistema de economía cuántica para negocios de bienestar. La IA opera tu negocio 24/7. Tú solo supervisas 3 horas al día.
+            </p>
+          </FadeIn>
+          <FadeIn delay={300}>
+            <Link to="/registro">
+              <button className="group relative rounded-xl bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] px-8 py-4 text-lg font-bold text-white shadow-[0_0_40px_rgba(139,92,246,0.4)] transition-all hover:shadow-[0_0_60px_rgba(139,92,246,0.6)] hover:scale-[1.02]">
+                Comienza tu libertad <ArrowRight className="ml-2 inline h-5 w-5 transition-transform group-hover:translate-x-1" />
+              </button>
+            </Link>
+          </FadeIn>
+          <FadeIn delay={400}>
+            <div className="mt-10 inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-6 py-3 backdrop-blur-sm">
+              <span className="text-white/40 line-through text-lg">12 horas/día</span>
+              <ArrowRight className="h-4 w-4 text-[#8B5CF6]" />
+              <span className="text-2xl font-bold text-[#8B5CF6]">3 horas/día</span>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* ══════ 8 AUTOPILOTS ══════ */}
+      <section id="autopilots" className="relative py-24 lg:py-32">
+        <div className="mx-auto max-w-7xl px-4 lg:px-8">
+          <FadeIn>
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl">
+                8 autopilotos de IA{' '}
+                <span className="bg-gradient-to-r from-[#8B5CF6] to-[#3B82F6] bg-clip-text text-transparent">
+                  trabajando por ti
                 </span>
-              </h1>
-              <p className="mb-8 text-lg text-muted-foreground lg:text-xl">
-                Ahorra sueldos, ahorra tiempo y duplica ventas con operaciones autónomas: atención al cliente, call center CRM, ventas, contenido, marketing y estrategias… todo integrado.
-              </p>
-              <ul className="mb-8 space-y-3">
-                {[
-                  'Lo que antes hacía un equipo completo, ahora lo hace A3.',
-                  'Atiende en paralelo: 1 o 1,000,000 clientes, sin cansarse.',
-                  'Fácil de usar, sin conocimientos técnicos.',
-                  'Empieza hoy: orden + velocidad + control.',
-                ].map((b, i) => (
-                  <li key={i} className="flex items-start gap-2 text-foreground">
-                    <Check className="mt-0.5 h-5 w-5 shrink-0 text-accent" /> {b}
+              </h2>
+            </div>
+          </FadeIn>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {AUTOPILOTS.map((a, i) => (
+              <FadeIn key={i} delay={i * 80}>
+                <div className="group relative rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-md transition-all duration-300 hover:border-[#8B5CF6]/40 hover:shadow-[0_0_30px_rgba(139,92,246,0.15)]">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#8B5CF6]/20 to-[#3B82F6]/20 text-2xl">
+                    {a.emoji}
+                  </div>
+                  <h3 className="mb-2 text-base font-semibold text-white">{a.title}</h3>
+                  <p className="text-sm text-white/40">{a.desc}</p>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════ YOUR DAY ══════ */}
+      <section id="day" className="relative py-24 lg:py-32 bg-gradient-to-b from-transparent via-[#0c1445]/30 to-transparent">
+        <div className="mx-auto max-w-4xl px-4 lg:px-8">
+          <FadeIn>
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl">
+                Así se ve tu día con la{' '}
+                <span className="bg-gradient-to-r from-[#8B5CF6] to-[#3B82F6] bg-clip-text text-transparent">
+                  Economía Cuántica
+                </span>
+              </h2>
+            </div>
+          </FadeIn>
+
+          <div className="relative">
+            {/* vertical line */}
+            <div className="absolute left-6 top-0 bottom-0 w-px bg-gradient-to-b from-[#8B5CF6]/50 via-[#3B82F6]/30 to-transparent md:left-1/2" />
+
+            {TIMELINE.map((t, i) => (
+              <FadeIn key={i} delay={i * 150}>
+                <div className={`relative mb-12 flex flex-col md:flex-row md:items-center ${i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'}`}>
+                  {/* dot */}
+                  <div className="absolute left-6 md:left-1/2 -translate-x-1/2 z-10 flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#8B5CF6]/50 bg-[#060611] text-xl">
+                    {t.emoji}
+                  </div>
+                  {/* card */}
+                  <div className={`ml-16 md:ml-0 md:w-[45%] ${i % 2 === 0 ? 'md:pr-12 md:text-right' : 'md:pl-12'}`}>
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
+                      <span className="text-xs font-bold text-[#8B5CF6] uppercase tracking-wider">{t.time}</span>
+                      <h3 className="mt-1 text-lg font-semibold text-white">{t.title}</h3>
+                      <p className="mt-1 text-sm text-white/40">{t.desc}</p>
+                    </div>
+                  </div>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════ THE PROMISE ══════ */}
+      <section className="py-24 lg:py-32">
+        <div className="mx-auto max-w-5xl px-4 lg:px-8">
+          <FadeIn>
+            <div className="text-center mb-4">
+              <h2 className="text-3xl font-bold md:text-4xl">La promesa</h2>
+            </div>
+          </FadeIn>
+          <div className="mt-12 grid gap-8 sm:grid-cols-3">
+            {[
+              { end: 3, suffix: 'h', sub: 'Máximo de trabajo diario' },
+              { end: 24, suffix: '/7', sub: 'Tu negocio nunca se detiene' },
+              { end: 90, suffix: '%', sub: 'De tareas automatizadas por IA' },
+            ].map((s, i) => (
+              <FadeIn key={i} delay={i * 150}>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center backdrop-blur-sm">
+                  <div className="text-5xl font-extrabold bg-gradient-to-r from-[#8B5CF6] to-[#3B82F6] bg-clip-text text-transparent md:text-6xl">
+                    <Counter end={s.end} suffix={s.suffix} />
+                  </div>
+                  <p className="mt-3 text-sm text-white/40">{s.sub}</p>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════ FOR WHO ══════ */}
+      <section id="who" className="py-24 lg:py-32 bg-gradient-to-b from-transparent via-[#0c1445]/20 to-transparent">
+        <div className="mx-auto max-w-6xl px-4 lg:px-8">
+          <FadeIn>
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl">
+                Para todo negocio de{' '}
+                <span className="bg-gradient-to-r from-[#8B5CF6] to-[#3B82F6] bg-clip-text text-transparent">
+                  bienestar y wellness
+                </span>
+              </h2>
+            </div>
+          </FadeIn>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3">
+            {BUSINESSES.map((b, i) => (
+              <FadeIn key={i} delay={i * 60}>
+                <div className="group flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur-sm transition-all hover:border-[#8B5CF6]/30 hover:bg-white/[0.07]">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#8B5CF6]/20 to-[#3B82F6]/20">
+                    <b.icon className="h-6 w-6 text-[#A78BFA]" />
+                  </div>
+                  <span className="text-sm font-semibold text-white">{b.name}</span>
+                  <span className="text-xs text-white/30">La IA entiende tu negocio</span>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════ PRICING ══════ */}
+      <section id="pricing" className="py-24 lg:py-32">
+        <div className="mx-auto max-w-6xl px-4 lg:px-8">
+          <FadeIn>
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl">Elige tu plan</h2>
+            </div>
+          </FadeIn>
+
+          <div className="grid gap-6 sm:grid-cols-3">
+            {PLANS.map((p, i) => (
+              <FadeIn key={i} delay={i * 120}>
+                <div className={`relative flex flex-col rounded-2xl border p-8 backdrop-blur-sm transition-all ${
+                  p.badge
+                    ? 'border-[#8B5CF6]/50 bg-gradient-to-b from-[#8B5CF6]/10 to-transparent shadow-[0_0_40px_rgba(139,92,246,0.15)]'
+                    : 'border-white/10 bg-white/5'
+                }`}>
+                  {p.badge && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] px-4 py-1 text-xs font-bold text-white">
+                      {p.badge}
+                    </div>
+                  )}
+                  <h3 className="text-lg font-bold text-white">{p.name}</h3>
+                  <p className="mt-1 text-sm text-white/40">{p.sub}</p>
+                  <div className="mt-6 mb-6">
+                    <span className="text-4xl font-extrabold text-white">${p.price}</span>
+                    {p.price > 0 && <span className="text-white/40 text-sm">/mes</span>}
+                  </div>
+                  <ul className="mb-8 flex-1 space-y-3">
+                    {p.features.map((f, j) => (
+                      <li key={j} className="flex items-start gap-2 text-sm text-white/60">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#8B5CF6]" /> {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link to="/registro">
+                    <button className={`w-full rounded-xl py-3 text-sm font-semibold transition-all ${
+                      p.badge
+                        ? 'bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_30px_rgba(139,92,246,0.5)]'
+                        : 'border border-white/20 text-white hover:bg-white/10'
+                    }`}>
+                      {p.cta}
+                    </button>
+                  </Link>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════ FOOTER ══════ */}
+      <footer className="border-t border-white/5 bg-[#060611] py-16">
+        <div className="mx-auto max-w-7xl px-4 lg:px-8">
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <span className="text-lg font-bold">
+                <span className="bg-gradient-to-r from-[#8B5CF6] to-[#3B82F6] bg-clip-text text-transparent">A3</span>
+                <span className="text-white/90">syst</span>
+              </span>
+              <p className="mt-3 text-sm text-white/30">La Economía Cuántica para negocios de bienestar.</p>
+            </div>
+            <div>
+              <h4 className="mb-3 text-sm font-semibold text-white/60">Producto</h4>
+              <ul className="space-y-2">
+                {['Autopilotos', 'Planes', 'FAQ'].map(l => (
+                  <li key={l}>
+                    <button onClick={() => scrollTo(l.toLowerCase() === 'autopilotos' ? 'autopilots' : l.toLowerCase() === 'planes' ? 'pricing' : 'pricing')} className="text-sm text-white/30 hover:text-white transition-colors">
+                      {l}
+                    </button>
                   </li>
                 ))}
               </ul>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Button size="lg" onClick={() => setDemoOpen(true)} className="text-base">
-                  Quiero ahorrar sueldos y vender más <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-                <Button size="lg" variant="outline" onClick={() => scrollTo('how')} className="text-base">
-                  Ver cómo funciona
-                </Button>
-              </div>
-              <p className="mt-6 text-xs text-muted-foreground">
-                Plataforma todo-en-uno • Operación + crecimiento • Para cualquier industria • Sin humo: resultados medibles
-              </p>
             </div>
-            <div className="relative">
-              <img src={heroImg} alt="Dashboard A3 SYS by IOMI - Sistema de gestión empresarial con IA" className="w-full rounded-xl shadow-2xl" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ===== PROBLEM ===== */}
-      <section className="bg-white py-16 lg:py-24">
-        <div className="mx-auto max-w-7xl px-4 lg:px-8">
-          <div className="grid items-center gap-12 lg:grid-cols-2">
             <div>
-              <h2 className="mb-4 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
-                Tu negocio crece… y el caos también.
-              </h2>
-              <p className="mb-8 text-lg text-muted-foreground">
-                Más mensajes, más leads, más tareas. Y el mismo tiempo. Cuando dependes de personas y herramientas separadas, pierdes ventas y te quemas.
-              </p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {PROBLEM_CARDS.map((c, i) => (
-                  <Card key={i} className="border-destructive/20 bg-destructive/5">
-                    <CardContent className="flex items-start gap-3 p-4">
-                      <c.icon className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
-                      <span className="text-sm font-medium">{c.text}</span>
-                    </CardContent>
-                  </Card>
+              <h4 className="mb-3 text-sm font-semibold text-white/60">Legal</h4>
+              <ul className="space-y-2">
+                {['Términos', 'Privacidad'].map(l => (
+                  <li key={l}><span className="text-sm text-white/30">{l}</span></li>
                 ))}
-              </div>
-              <p className="mt-8 text-lg font-semibold text-foreground">
-                El caos es caro. <span className="text-accent">La automatización es rentable.</span>
-              </p>
+              </ul>
             </div>
             <div>
-              <img src={problemImg} alt="Dueño de negocio abrumado por múltiples tareas" className="w-full rounded-xl shadow-lg" />
+              <h4 className="mb-3 text-sm font-semibold text-white/60">Contacto</h4>
+              <p className="text-sm text-white/30">hola@a3syst.com</p>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* ===== SOLUTION ===== */}
-      <section id="solution" className="bg-[hsl(215,70%,97%)] py-16 lg:py-24">
-        <div className="mx-auto max-w-7xl px-4 lg:px-8">
-          <div className="grid items-center gap-12 lg:grid-cols-2">
-            <div className="order-2 lg:order-1">
-              <img src={solutionImg} alt="Dueño de negocio confiado usando A3 SYS by IOMI" className="w-full rounded-xl shadow-lg" />
-            </div>
-            <div className="order-1 lg:order-2">
-              <h2 className="mb-4 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
-                A3 SYS trabaja por ti. Tú solo decides.
-              </h2>
-              <p className="mb-8 text-lg text-muted-foreground">
-                Centraliza, automatiza y controla. A3 ejecuta en paralelo lo que antes requería varios roles.
-              </p>
-              <div className="space-y-4">
-                {[
-                  'Ahorra sueldos automatizando tareas repetitivas.',
-                  'Responde más rápido. Vende más rápido.',
-                  'Todo queda registrado y bajo control.',
-                ].map((t, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
-                      <Check className="h-3.5 w-3.5" />
-                    </div>
-                    <span className="text-base font-medium">{t}</span>
-                  </div>
-                ))}
-              </div>
-              <Button className="mt-8" onClick={() => scrollTo('modules')}>
-                Ver plataforma <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            </div>
+          <div className="mt-12 border-t border-white/5 pt-8 text-center text-sm text-white/20">
+            © 2026 A3syst — La Economía Cuántica
           </div>
-        </div>
-      </section>
-
-      {/* ===== WHAT IS A3 ===== */}
-      <section className="bg-white py-16 lg:py-24">
-        <div className="mx-auto max-w-3xl px-4 text-center lg:px-8">
-          <h2 className="mb-4 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
-            A3 = tu <span className="text-primary">AI Automation Agency</span>.<br />
-            NETWORTH = <span className="text-accent">red que vale la pena</span>.
-          </h2>
-          <p className="mb-8 text-lg text-muted-foreground">
-            No es una agencia tradicional. Es un sistema end-to-end de operaciones autónomas. Un solo lugar para atención, ventas y crecimiento. Valor real, medible y escalable.
-          </p>
-          <div className="grid gap-6 sm:grid-cols-3">
-            {[
-              { icon: Layers, text: 'Todo en uno: Operación + Ventas + Marketing' },
-              { icon: Zap, text: 'Economía Cuántica: tareas en paralelo' },
-              { icon: Globe, text: 'Escalabilidad infinita: el software no se cansa' },
-            ].map((item, i) => (
-              <div key={i} className="flex flex-col items-center gap-3 rounded-xl border bg-[hsl(215,70%,97%)] p-6">
-                <item.icon className="h-8 w-8 text-primary" />
-                <span className="text-sm font-medium text-center">{item.text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ===== HOW IT WORKS ===== */}
-      <section id="how" className="bg-[hsl(215,70%,97%)] py-16 lg:py-24">
-        <div className="mx-auto max-w-5xl px-4 text-center lg:px-8">
-          <h2 className="mb-2 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
-            Si sabes usar WhatsApp, sabes usar A3.
-          </h2>
-          <p className="mb-12 text-lg text-muted-foreground">3 pasos y estás operando.</p>
-          <div className="grid gap-8 md:grid-cols-3">
-            {[
-              { step: '1', icon: MessageSquare, title: 'Instala el Web Inbox', desc: 'Widget en tu web para centralizar conversaciones.' },
-              { step: '2', icon: Users, title: 'Organiza con Call Center CRM', desc: 'Clientes, agenda y ventas ordenados y controlados.' },
-              { step: '3', icon: Sparkles, title: 'Produce con IA', desc: 'Contenido y estrategia semanal con IA + Estratega Cuántico.' },
-            ].map((s, i) => (
-              <div key={i} className="relative flex flex-col items-center rounded-2xl border bg-white p-8 shadow-sm">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground">
-                  {s.step}
-                </div>
-                <s.icon className="mb-3 h-8 w-8 text-accent" />
-                <h3 className="mb-2 text-lg font-semibold">{s.title}</h3>
-                <p className="text-sm text-muted-foreground">{s.desc}</p>
-              </div>
-            ))}
-          </div>
-          <Button className="mt-10" size="lg" onClick={() => setDemoOpen(true)}>
-            Agendar Demo <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
-      </section>
-
-      {/* ===== MODULES ===== */}
-      <section id="modules" className="bg-white py-16 lg:py-24">
-        <div className="mx-auto max-w-7xl px-4 lg:px-8">
-          <div className="mb-12 text-center">
-            <h2 className="mb-2 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
-              Todo lo que un negocio necesita para empezar a facturar ya.
-            </h2>
-            <p className="text-lg text-muted-foreground">Operación y crecimiento en un solo sistema.</p>
-          </div>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {MODULES.map((m, i) => (
-              <Card key={i} className="relative overflow-hidden transition-shadow hover:shadow-lg">
-                {m.badge && (
-                  <Badge className="absolute right-3 top-3 bg-primary text-[10px]">{m.badge}</Badge>
-                )}
-                <CardContent className="p-5">
-                  <m.icon className="mb-3 h-8 w-8 text-primary" />
-                  <h3 className="text-base font-semibold">{m.title}</h3>
-                  <p className="mb-3 text-xs text-muted-foreground">{m.subtitle}</p>
-                  <ul className="space-y-1.5">
-                    {m.bullets.map((b, j) => (
-                      <li key={j} className="flex items-start gap-2 text-sm text-muted-foreground">
-                        <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" /> {b}
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ===== ESTRATEGA CUÁNTICO ===== */}
-      <section id="estratega" className="bg-gradient-to-br from-primary to-[hsl(215,60%,22%)] py-16 text-primary-foreground lg:py-24">
-        <div className="mx-auto max-w-7xl px-4 lg:px-8">
-          <div className="grid items-center gap-12 lg:grid-cols-2">
-            <div>
-              <Badge className="mb-4 border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground">
-                Incluido en TODOS los planes
-              </Badge>
-              <h2 className="mb-4 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
-                Estratega Cuántico.
-              </h2>
-              <p className="mb-8 text-lg text-primary-foreground/80">
-                Una sesión semanal en vivo para actualizarte en IA, tecnología y estrategias. Tu plataforma ejecuta; el Estratega Cuántico te guía.
-              </p>
-              <div className="space-y-4">
-                {[
-                  'Sesión semanal en vivo',
-                  'Replays (biblioteca)',
-                  'Estrategia de la semana para aplicar en A3',
-                ].map((t, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <Check className="h-5 w-5 text-accent" /> <span className="font-medium">{t}</span>
-                  </div>
-                ))}
-              </div>
-              <Button
-                size="lg"
-                className="mt-8 bg-accent text-accent-foreground hover:bg-accent/90"
-                onClick={() => setDemoOpen(true)}
-              >
-                Quiero entrar al programa <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-            <div>
-              <img src={estrategaImg} alt="Estratega Cuántico presentando estrategia en vivo" className="w-full rounded-xl shadow-2xl" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ===== FOR WHOM ===== */}
-      <section className="bg-white py-16 lg:py-24">
-        <div className="mx-auto max-w-5xl px-4 text-center lg:px-8">
-          <h2 className="mb-2 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
-            Funciona para cualquier negocio.
-          </h2>
-          <p className="mb-10 text-lg text-muted-foreground">
-            Salud, educación, belleza, fitness, gastronomía, inmobiliaria, legal, tecnología y más.
-          </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            {INDUSTRIES.map((ind, i) => (
-              <Badge key={i} variant="secondary" className="px-4 py-2 text-sm font-medium">
-                {ind}
-              </Badge>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ===== PLANS ===== */}
-      <section id="plans" className="bg-[hsl(215,70%,97%)] py-16 lg:py-24">
-        <div className="mx-auto max-w-6xl px-4 lg:px-8">
-          <div className="mb-12 text-center">
-            <h2 className="mb-2 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
-              Elige tu plan. Crece sin contratar más gente.
-            </h2>
-            <p className="text-lg text-muted-foreground">Pagas un sistema. Ahorras un equipo.</p>
-          </div>
-          <div className="grid gap-8 md:grid-cols-3">
-            {PLANS.map((p, i) => (
-              <Card key={i} className={`relative flex flex-col overflow-hidden transition-shadow hover:shadow-xl ${p.recommended ? 'border-2 border-primary ring-2 ring-primary/20' : ''}`}>
-                {p.recommended && (
-                  <div className="bg-primary py-1.5 text-center text-xs font-semibold uppercase tracking-wider text-primary-foreground">
-                    Recomendado
-                  </div>
-                )}
-                <CardContent className="flex flex-1 flex-col p-6">
-                  <h3 className="text-xl font-bold" style={{ fontFamily: 'Sora, sans-serif' }}>{p.name}</h3>
-                  <div className="my-4">
-                    <span className="text-4xl font-bold">${p.price}</span>
-                    <span className="text-muted-foreground"> / mes</span>
-                  </div>
-                  <p className="mb-6 text-sm text-muted-foreground">{p.sub}</p>
-                  <ul className="mb-8 flex-1 space-y-2.5">
-                    {p.features.map((f, j) => (
-                      <li key={j} className="flex items-start gap-2 text-sm">
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent" /> {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button
-                    className={`w-full ${p.recommended ? '' : 'bg-primary/90 hover:bg-primary'}`}
-                    size="lg"
-                    onClick={() => setDemoOpen(true)}
-                  >
-                    {p.cta}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ===== TESTIMONIALS ===== */}
-      <section className="bg-white py-16 lg:py-24">
-        <div className="mx-auto max-w-5xl px-4 lg:px-8">
-          <h2 className="mb-10 text-center text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
-            Negocios que decidieron simplificar y crecer.
-          </h2>
-          <div className="grid gap-8 md:grid-cols-3">
-            {TESTIMONIALS.map((t, i) => (
-              <Card key={i} className="transition-shadow hover:shadow-lg">
-                <CardContent className="p-6">
-                  <div className="mb-4 flex gap-1">
-                    {Array(5).fill(0).map((_, j) => <Star key={j} className="h-4 w-4 fill-[hsl(38,92%,55%)] text-[hsl(38,92%,55%)]" />)}
-                  </div>
-                  <p className="mb-4 text-sm text-muted-foreground italic">"{t.text}"</p>
-                  <p className="text-sm font-semibold">{t.name}</p>
-                  <Badge variant="secondary" className="mt-2 text-xs">{t.result}</Badge>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ===== FAQ ===== */}
-      <section id="faq" className="bg-[hsl(215,70%,97%)] py-16 lg:py-24">
-        <div className="mx-auto max-w-3xl px-4 lg:px-8">
-          <h2 className="mb-10 text-center text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
-            Preguntas frecuentes
-          </h2>
-          <Accordion type="single" collapsible className="w-full">
-            {FAQ_ITEMS.map((f, i) => (
-              <AccordionItem key={i} value={`faq-${i}`}>
-                <AccordionTrigger className="text-left text-base">{f.q}</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">{f.a}</AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </div>
-      </section>
-
-      {/* ===== CTA FINAL ===== */}
-      <section className="bg-gradient-to-br from-primary to-[hsl(215,60%,22%)] py-16 text-primary-foreground lg:py-24">
-        <div className="mx-auto max-w-3xl px-4 text-center lg:px-8">
-          <h2 className="mb-4 text-3xl font-bold tracking-tight lg:text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>
-            Deja de pagar caos. Empieza a pagar resultados.
-          </h2>
-          <p className="mb-8 text-lg text-primary-foreground/80">
-            Bienvenido a la Economía Cuántica: operaciones autónomas con IA para ahorrar sueldos y vender más.
-          </p>
-          <Button
-            size="lg"
-            className="bg-accent text-accent-foreground hover:bg-accent/90 text-base"
-            onClick={() => setDemoOpen(true)}
-          >
-            Agendar Demo Ahora <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-          <p className="mt-6 text-sm text-primary-foreground/60">
-            Sin compromiso • Enfocado a facturación • Fácil de implementar
-          </p>
-        </div>
-      </section>
-
-      {/* ===== FOOTER ===== */}
-      <footer className="border-t bg-white py-8">
-        <div className="mx-auto max-w-7xl px-4 text-center lg:px-8">
-          <p className="text-xl font-bold" style={{ fontFamily: 'Sora, sans-serif' }}>
-            <span className="text-primary">A3</span> SYS <span className="text-sm text-muted-foreground font-normal">by IOMI</span>
-          </p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            © {new Date().getFullYear()} A3 SYS by IOMI. Todos los derechos reservados.
-          </p>
         </div>
       </footer>
-
-      {/* ===== WHATSAPP FLOATING ===== */}
-      <a
-        href="https://wa.me/1234567890?text=Quiero%20A3"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[hsl(142,70%,45%)] text-white shadow-lg transition-transform hover:scale-110"
-        aria-label="Contactar por WhatsApp"
-      >
-        <MessageCircle className="h-7 w-7" />
-      </a>
-
-      {/* ===== DEMO MODAL ===== */}
-      <Dialog open={demoOpen} onOpenChange={setDemoOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle style={{ fontFamily: 'Sora, sans-serif' }}>Agendar Demo</DialogTitle>
-            <DialogDescription>Completa tus datos y te contactamos en menos de 24 horas.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmitDemo} className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Tu nombre" value={formData.name} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))} required />
-              </div>
-              <div className="flex items-center gap-2">
-                <Briefcase className="h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Nombre del negocio" value={formData.business} onChange={e => setFormData(p => ({ ...p, business: e.target.value }))} required />
-              </div>
-              <div className="flex items-center gap-2">
-                <Globe className="h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Industria" value={formData.industry} onChange={e => setFormData(p => ({ ...p, industry: e.target.value }))} required />
-              </div>
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <Input placeholder="WhatsApp" value={formData.whatsapp} onChange={e => setFormData(p => ({ ...p, whatsapp: e.target.value }))} required />
-              </div>
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <Input type="email" placeholder="Email" value={formData.email} onChange={e => setFormData(p => ({ ...p, email: e.target.value }))} required />
-              </div>
-            </div>
-            <Button type="submit" className="w-full" size="lg">
-              Agendar mi Demo <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
