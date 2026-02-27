@@ -2248,6 +2248,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_launch_leaderboard: {
+        Args: never
+        Returns: {
+          business_name: string
+          full_name: string
+          id: string
+          previous_position: number
+          referral_code: string
+          referral_count: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
