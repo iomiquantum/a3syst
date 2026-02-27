@@ -1,343 +1,531 @@
-import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Plus, Clock, X } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  ChevronLeft, ChevronRight, Plus, Clock, X, Check, Calendar as CalIcon,
+  Search, Bot, CheckCircle2, XCircle, AlertCircle
+} from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useClinic } from "@/hooks/useClinic";
+import { useBusinessLabels } from "@/hooks/useBusinessLabels";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { appointmentSchema, getValidationError } from "@/lib/validations";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
-const daysOfWeek = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+const DAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+const TIME_SLOTS = Array.from({ length: 26 }, (_, i) => {
+  const h = Math.floor(i / 2) + 7;
+  const m = i % 2 === 0 ? "00" : "30";
+  return `${String(h).padStart(2, "0")}:${m}`;
+});
 
-const timeSlots = [
-  "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
-  "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
-  "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00",
-];
+type AptStatus = "pendiente" | "confirmado" | "completado" | "cancelado";
 
-type AppointmentStatus = "pendiente" | "confirmado" | "completado" | "cancelado";
-
-const statusConfig: Record<AppointmentStatus, { label: string; emoji: string; color: string }> = {
-  pendiente: { label: "Pendiente", emoji: "🟡", color: "bg-warning/10 text-warning" },
-  confirmado: { label: "Confirmado", emoji: "🔵", color: "bg-info/10 text-info" },
-  completado: { label: "Completado", emoji: "🟢", color: "bg-success/10 text-success" },
-  cancelado: { label: "Cancelado", emoji: "🔴", color: "bg-destructive/10 text-destructive" },
+const STATUS_CFG: Record<AptStatus, { label: string; dot: string; bg: string; text: string }> = {
+  pendiente: { label: "Pendiente", dot: "bg-yellow-400", bg: "bg-yellow-500/20 border-yellow-500/30", text: "text-yellow-300" },
+  confirmado: { label: "Confirmado", dot: "bg-blue-400", bg: "bg-blue-500/20 border-blue-500/30", text: "text-blue-300" },
+  completado: { label: "Completado", dot: "bg-emerald-400", bg: "bg-emerald-500/20 border-emerald-500/30", text: "text-emerald-300" },
+  cancelado: { label: "Cancelado", dot: "bg-gray-400", bg: "bg-gray-500/20 border-gray-500/30", text: "text-gray-400" },
 };
+
+const getWeekStart = (d: Date) => {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  date.setDate(diff);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const fmtDate = (d: Date) => d.toISOString().split("T")[0];
 
 const AgendaPage = () => {
   const { clinicId } = useClinic();
+  const { labels } = useBusinessLabels();
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [view, setView] = useState<"dia" | "semana" | "mes">("semana");
   const [appointments, setAppointments] = useState<any[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
   const [treatments, setTreatments] = useState<any[]>([]);
   const [professionals, setProfessionals] = useState<any[]>([]);
-  const [branches, setBranches] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Filters
+  const [filterPro, setFilterPro] = useState("todos");
+  const [filterStatus, setFilterStatus] = useState("todos");
+
+  // Modals
   const [createOpen, setCreateOpen] = useState(false);
   const [detailApt, setDetailApt] = useState<any | null>(null);
-  const [view, setView] = useState<"semana" | "mes">("semana");
+  const [patientSearch, setPatientSearch] = useState("");
+
   const [form, setForm] = useState({
-    patient_id: "", treatment_id: "", professional_id: "", branch_id: "",
+    patient_id: "", treatment_id: "", professional_id: "",
     date: "", time: "", duration: "30", notes: "",
   });
 
-  const getWeekStart = (d: Date) => {
-    const date = new Date(d);
-    const day = date.getDay();
-    const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-    date.setDate(diff);
-    return date;
-  };
-
-  const getWeekDates = () => {
+  const weekDates = useMemo(() => {
     const start = getWeekStart(currentDate);
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       return d;
     });
-  };
+  }, [currentDate]);
 
-  const weekDates = getWeekDates();
+  const todayStr = fmtDate(new Date());
 
-  const formatDate = (d: Date) => d.toISOString().split("T")[0];
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!clinicId) return;
-    const startDate = formatDate(weekDates[0]);
-    const endDate = formatDate(weekDates[6]);
+    setLoading(true);
+    const startDate = fmtDate(weekDates[0]);
+    const endDate = fmtDate(weekDates[6]);
 
-    const [{ data: a }, { data: p }, { data: t }, { data: pr }, { data: b }] = await Promise.all([
-      supabase.from("appointments").select("*, patients(first_name, last_name), treatments(name), professionals(full_name)")
-        .eq("clinic_id", clinicId).gte("date", startDate).lte("date", endDate).order("date").order("time"),
+    const [{ data: a }, { data: p }, { data: t }, { data: pr }] = await Promise.all([
+      supabase.from("appointments")
+        .select("*, patients(first_name, last_name), treatments(name, price), professionals(full_name)")
+        .eq("clinic_id", clinicId).gte("date", startDate).lte("date", endDate)
+        .order("date").order("time"),
       supabase.from("patients").select("id, first_name, last_name").eq("clinic_id", clinicId).order("first_name"),
-      supabase.from("treatments").select("id, name, duration").eq("clinic_id", clinicId),
-      supabase.from("professionals").select("id, full_name").eq("clinic_id", clinicId),
-      supabase.from("branches").select("id, name").eq("clinic_id", clinicId),
+      supabase.from("treatments").select("id, name, duration, price").eq("clinic_id", clinicId),
+      supabase.from("professionals").select("id, full_name").eq("clinic_id", clinicId).eq("active", true),
     ]);
     setAppointments(a || []);
     setPatients(p || []);
     setTreatments(t || []);
     setProfessionals(pr || []);
-    setBranches(b || []);
+    setLoading(false);
+  }, [clinicId, weekDates]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Today stats
+  const todayAppts = appointments.filter(a => a.date === todayStr);
+  const todayStats = {
+    total: todayAppts.length,
+    confirmadas: todayAppts.filter(a => a.status === "confirmado").length,
+    pendientes: todayAppts.filter(a => a.status === "pendiente").length,
+    canceladas: todayAppts.filter(a => a.status === "cancelado").length,
   };
 
-  useEffect(() => { fetchData(); }, [clinicId, currentDate]);
+  // Pending approvals
+  const pendingApprovals = todayAppts.filter(a => a.status === "pendiente");
 
-  const getAppointmentForSlot = (date: Date, time: string) => {
-    const dateStr = formatDate(date);
-    return appointments.find((a) => a.date === dateStr && a.time?.substring(0, 5) === time && a.status !== "cancelado");
-  };
+  // Filter appointments
+  const filteredAppts = useMemo(() => {
+    let list = appointments;
+    if (filterPro !== "todos") list = list.filter(a => a.professional_id === filterPro);
+    if (filterStatus !== "todos") list = list.filter(a => a.status === filterStatus);
+    return list;
+  }, [appointments, filterPro, filterStatus]);
 
-  const getStatusColor = (status: AppointmentStatus) => {
-    switch (status) {
-      case "confirmado": return "gradient-primary";
-      case "pendiente": return "bg-warning/80";
-      case "completado": return "bg-success/80";
-      case "cancelado": return "bg-muted";
-      default: return "gradient-primary";
-    }
-  };
+  const getAptsForSlot = (dateStr: string, time: string) =>
+    filteredAppts.filter(a => a.date === dateStr && a.time?.substring(0, 5) === time);
 
-  const updateStatus = async (id: string, status: AppointmentStatus) => {
+  // Actions
+  const updateStatus = async (id: string, status: AptStatus) => {
     const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
     if (error) { toast.error(error.message); return; }
-    toast.success("Estado actualizado");
-    setDetailApt((prev: any) => prev ? { ...prev, status } : null);
-    fetchData();
-  };
-
-  const deleteAppointment = async (id: string) => {
-    const { error } = await supabase.from("appointments").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Cita eliminada");
-    setDetailApt(null);
+    const msgs: Record<string, string> = {
+      confirmado: "✅ Cita confirmada",
+      completado: "✅ Cita completada",
+      cancelado: "❌ Cita cancelada",
+    };
+    toast.success(msgs[status] || "Estado actualizado");
+    if (detailApt?.id === id) setDetailApt((prev: any) => prev ? { ...prev, status } : null);
     fetchData();
   };
 
   const handleCreate = async () => {
     if (!clinicId) return;
     try {
-      const validated = appointmentSchema.parse({
-        ...form,
-        duration: parseInt(form.duration) || 30,
-      });
+      const validated = appointmentSchema.parse({ ...form, duration: parseInt(form.duration) || 30 });
       const { error } = await supabase.from("appointments").insert({
         clinic_id: clinicId,
         patient_id: validated.patient_id,
         treatment_id: validated.treatment_id || null,
         professional_id: validated.professional_id || null,
-        branch_id: validated.branch_id || null,
         date: validated.date,
         time: validated.time,
         duration: validated.duration,
         notes: validated.notes || "",
+        status: "pendiente",
       });
       if (error) { toast.error(error.message); return; }
-      toast.success("Cita creada");
+      toast.success("✅ Cita creada");
       setCreateOpen(false);
-      setForm({ patient_id: "", treatment_id: "", professional_id: "", branch_id: "", date: "", time: "", duration: "30", notes: "" });
+      resetForm();
       fetchData();
-    } catch (e) {
-      toast.error(getValidationError(e));
-    }
+    } catch (e) { toast.error(getValidationError(e)); }
   };
 
-  const handleTreatmentChange = (treatmentId: string) => {
-    const treatment = treatments.find(t => t.id === treatmentId);
-    setForm({ ...form, treatment_id: treatmentId, duration: treatment ? String(treatment.duration) : form.duration });
+  const resetForm = () => setForm({ patient_id: "", treatment_id: "", professional_id: "", date: "", time: "", duration: "30", notes: "" });
+
+  const handleTreatmentChange = (tid: string) => {
+    const t = treatments.find(x => x.id === tid);
+    setForm({ ...form, treatment_id: tid, duration: t ? String(t.duration) : form.duration });
   };
 
-  const navigateWeek = (direction: number) => {
-    const newDate = new Date(currentDate);
-    newDate.setDate(newDate.getDate() + direction * 7);
-    setCurrentDate(newDate);
+  const navigateWeek = (dir: number) => {
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() + dir * 7);
+    setCurrentDate(d);
   };
 
-  const goToToday = () => setCurrentDate(new Date());
+  const openSlot = (dateStr: string, time: string) => {
+    setForm({ ...form, date: dateStr, time });
+    setCreateOpen(true);
+  };
+
+  const filteredPatients = patientSearch
+    ? patients.filter(p => `${p.first_name} ${p.last_name}`.toLowerCase().includes(patientSearch.toLowerCase())).slice(0, 8)
+    : patients.slice(0, 20);
 
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        {/* ═══ HEADER ═══ */}
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Agenda</h1>
-            <p className="text-muted-foreground">Gestiona las citas de tu negocio</p>
+            <h1 className="text-2xl font-bold text-foreground">📅 {labels.appointments || "Agenda"}</h1>
+            <p className="text-sm text-muted-foreground">Autopilot de agenda</p>
           </div>
-          <Button onClick={() => setCreateOpen(true)} className="gradient-primary text-primary-foreground hover:opacity-90">
-            <Plus className="w-4 h-4 mr-2" /> Nueva Cita
-          </Button>
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Autopilot activo
+            </span>
+            <Button onClick={() => { resetForm(); setCreateOpen(true); }}
+              className="bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white hover:opacity-90 shadow-[0_0_20px_rgba(139,92,246,0.3)]">
+              <Plus className="w-4 h-4 mr-2" /> Nueva cita
+            </Button>
+          </div>
         </div>
 
-        {/* Create appointment dialog */}
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Nueva Cita</DialogTitle></DialogHeader>
-            <div className="space-y-4 pt-2">
-              <div>
-                 <Label>Cliente *</Label>
-                <Select value={form.patient_id} onValueChange={v => setForm({ ...form, patient_id: v })}>
-                   <SelectTrigger><SelectValue placeholder="Seleccionar cliente" /></SelectTrigger>
-                  <SelectContent>{patients.map(p => <SelectItem key={p.id} value={p.id}>{p.first_name} {p.last_name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Tratamiento</Label>
-                <Select value={form.treatment_id} onValueChange={handleTreatmentChange}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                  <SelectContent>{treatments.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Profesional</Label>
-                  <Select value={form.professional_id} onValueChange={v => setForm({ ...form, professional_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                    <SelectContent>{professionals.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}</SelectContent>
-                  </Select>
+        {/* ═══ TODAY STATS ═══ */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: "Hoy", value: todayStats.total, icon: CalIcon, color: "from-[#8B5CF6] to-[#6D28D9]" },
+            { label: "Confirmadas", value: todayStats.confirmadas, icon: CheckCircle2, color: "from-blue-500 to-blue-700" },
+            { label: "Pendientes", value: todayStats.pendientes, icon: AlertCircle, color: "from-yellow-500 to-yellow-700" },
+            { label: "Canceladas", value: todayStats.canceladas, icon: XCircle, color: "from-gray-500 to-gray-700" },
+          ].map(s => (
+            <Card key={s.label} className="border-white/5 bg-white/[0.03]">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${s.color} flex items-center justify-center`}>
+                  <s.icon className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <Label>Sucursal</Label>
-                  <Select value={form.branch_id} onValueChange={v => setForm({ ...form, branch_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                    <SelectContent>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <p className="text-xl font-bold text-foreground">{loading ? "—" : s.value}</p>
+                  <p className="text-[10px] text-muted-foreground">{s.label}</p>
                 </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div><Label>Fecha *</Label><Input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} /></div>
-                <div><Label>Hora *</Label><Input type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })} /></div>
-                <div><Label>Duración (min)</Label><Input type="number" value={form.duration} onChange={e => setForm({ ...form, duration: e.target.value })} min={5} max={480} /></div>
-              </div>
-              <Button onClick={handleCreate} className="w-full gradient-primary text-primary-foreground" disabled={!form.patient_id || !form.date || !form.time}>Crear Cita</Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* ═══ AI SUGGESTIONS ═══ */}
+        {!loading && pendingApprovals.length > 0 && (
+          <section>
+            <h2 className="flex items-center gap-2 text-sm font-bold text-foreground mb-3">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /> Necesita tu aprobación
+            </h2>
+            <div className="grid gap-3 md:grid-cols-2">
+              {pendingApprovals.slice(0, 6).map(apt => (
+                <Card key={apt.id} className="border-white/10 bg-white/[0.03]">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 rounded-lg bg-yellow-500/10 shrink-0">
+                        <CalIcon className="w-4 h-4 text-yellow-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Cita pendiente</p>
+                        <p className="text-sm text-foreground mt-0.5 truncate">
+                          {apt.patients?.first_name} {apt.patients?.last_name} a las {apt.time?.slice(0, 5)} — {apt.treatments?.name || "Sin servicio"}
+                          {apt.professionals?.full_name ? ` con ${apt.professionals.full_name}` : ""}
+                        </p>
+                        <div className="flex gap-2 mt-2">
+                          <button onClick={() => updateStatus(apt.id, "confirmado")}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 text-xs font-medium hover:bg-emerald-500/25 transition-colors">
+                            <Check className="w-3.5 h-3.5" /> Confirmar
+                          </button>
+                          <button onClick={() => updateStatus(apt.id, "cancelado")}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-red-500/20 text-red-400 text-xs font-medium hover:bg-red-500/10 transition-colors">
+                            <X className="w-3.5 h-3.5" /> Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          </DialogContent>
-        </Dialog>
+          </section>
+        )}
 
-        {/* Appointment detail dialog */}
-        <Dialog open={!!detailApt} onOpenChange={o => !o && setDetailApt(null)}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Detalle de Cita</DialogTitle></DialogHeader>
-            {detailApt && (
-              <div className="space-y-4 pt-2">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                   <div><p className="text-muted-foreground">Cliente</p><p className="font-medium text-foreground">{detailApt.patients ? `${detailApt.patients.first_name} ${detailApt.patients.last_name}` : "-"}</p></div>
-                   <div><p className="text-muted-foreground">Servicio</p><p className="font-medium text-foreground">{detailApt.treatments?.name || "-"}</p></div>
-                   <div><p className="text-muted-foreground">Responsable</p><p className="font-medium text-foreground">{detailApt.professionals?.full_name || "-"}</p></div>
-                  <div><p className="text-muted-foreground">Hora</p><p className="font-medium text-foreground">{detailApt.time?.substring(0, 5)} ({detailApt.duration}min)</p></div>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">Estado</p>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {(Object.keys(statusConfig) as AppointmentStatus[]).map(s => (
-                      <button
-                        key={s}
-                        onClick={() => updateStatus(detailApt.id, s)}
-                        className={cn(
-                          "text-xs font-medium px-3 py-1.5 rounded-full border-2 transition-all",
-                          detailApt.status === s ? `${statusConfig[s].color} border-current` : "border-transparent bg-muted text-muted-foreground hover:bg-muted/80"
-                        )}
-                      >
-                        {statusConfig[s].emoji} {statusConfig[s].label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 pt-2">
-                  <Button variant="destructive" size="sm" onClick={() => deleteAppointment(detailApt.id)}>
-                    <X className="w-4 h-4 mr-1" /> Eliminar
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Calendar */}
-        <Card className="shadow-card">
-          <CardHeader className="pb-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <CardTitle className="text-lg font-semibold capitalize">
-                  {currentDate.toLocaleDateString("es-ES", { month: "long", year: "numeric" })}
-                </CardTitle>
+        {/* ═══ CALENDAR ═══ */}
+        <Card className="border-white/5 bg-white/[0.03] backdrop-blur-sm">
+          <CardContent className="p-4">
+            {/* Nav */}
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <div className="flex items-center gap-3">
+                <h3 className="text-base font-semibold text-foreground capitalize">
+                  {format(currentDate, "MMMM yyyy", { locale: es })}
+                </h3>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => navigateWeek(-1)} className="p-1.5 rounded-md hover:bg-muted transition-colors"><ChevronLeft className="w-4 h-4 text-muted-foreground" /></button>
-                  <button onClick={() => navigateWeek(1)} className="p-1.5 rounded-md hover:bg-muted transition-colors"><ChevronRight className="w-4 h-4 text-muted-foreground" /></button>
+                  <button onClick={() => navigateWeek(-1)} className="p-1.5 rounded hover:bg-white/5"><ChevronLeft className="w-4 h-4 text-muted-foreground" /></button>
+                  <button onClick={() => navigateWeek(1)} className="p-1.5 rounded hover:bg-white/5"><ChevronRight className="w-4 h-4 text-muted-foreground" /></button>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="text-xs" onClick={goToToday}>Hoy</Button>
-                <Button variant={view === "semana" ? "default" : "outline"} size="sm" className="text-xs" onClick={() => setView("semana")}>Semana</Button>
-                <Button variant={view === "mes" ? "default" : "outline"} size="sm" className="text-xs" onClick={() => setView("mes")}>Mes</Button>
+                <Button variant="outline" size="sm" className="text-xs border-white/10 hover:bg-white/5" onClick={() => setCurrentDate(new Date())}>Hoy</Button>
+                {(["dia", "semana", "mes"] as const).map(v => (
+                  <Button key={v} variant={view === v ? "default" : "outline"} size="sm"
+                    className={cn("text-xs", view !== v && "border-white/10 hover:bg-white/5")}
+                    onClick={() => setView(v)}>
+                    {v === "dia" ? "Día" : v === "semana" ? "Semana" : "Mes"}
+                  </Button>
+                ))}
               </div>
             </div>
-            {/* Status legend */}
-            <div className="flex items-center gap-4 mt-3 text-xs">
-              {(Object.entries(statusConfig) as [AppointmentStatus, typeof statusConfig[AppointmentStatus]][]).map(([key, val]) => (
-                <div key={key} className="flex items-center gap-1.5">
-                  <span>{val.emoji}</span><span className="text-muted-foreground">{val.label}</span>
-                </div>
-              ))}
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div className="overflow-x-auto">
-              <div className="min-w-[800px]">
-                <div className="grid grid-cols-8 border-b border-border">
-                  <div className="p-3" />
-                  {weekDates.map((date, i) => {
-                    const isToday = date.toDateString() === new Date().toDateString();
-                    return (
-                      <div key={i} className="p-3 text-center">
-                        <p className="text-xs text-muted-foreground">{daysOfWeek[i]}</p>
-                        <p className={cn("text-lg font-semibold mt-0.5", isToday ? "text-primary" : "text-foreground")}>{date.getDate()}</p>
-                      </div>
-                    );
-                  })}
-                </div>
 
-                <div className="max-h-[500px] overflow-y-auto">
-                  {timeSlots.map((time) => (
-                    <div key={time} className="grid grid-cols-8 border-b border-border/50 min-h-[48px]">
-                      <div className="p-2 flex items-start justify-end pr-3">
-                        <span className="text-xs text-muted-foreground">{time}</span>
-                      </div>
-                      {weekDates.map((date, dayIndex) => {
-                        const apt = getAppointmentForSlot(date, time);
-                        return (
-                          <div key={dayIndex} className="p-1 border-l border-border/50">
-                            {apt && (
-                              <button
-                                onClick={() => setDetailApt(apt)}
-                                className={cn(
-                                  "w-full rounded-lg p-2 text-left cursor-pointer hover:opacity-90 transition-opacity text-primary-foreground",
-                                  getStatusColor(apt.status)
-                                )}
-                              >
-                                <p className="text-xs font-medium truncate">{apt.patients ? `${apt.patients.first_name} ${apt.patients.last_name}` : "-"}</p>
-                                <div className="flex items-center gap-1 mt-0.5">
-                                  <Clock className="w-3 h-3" />
-                                  <span className="text-[10px]">{apt.duration}min</span>
-                                </div>
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+            {/* Filters */}
+            <div className="flex items-center gap-3 mb-4 flex-wrap">
+              <Select value={filterPro} onValueChange={setFilterPro}>
+                <SelectTrigger className="w-44 h-8 text-xs bg-white/5 border-white/10"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos los profesionales</SelectItem>
+                  {professionals.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-36 h-8 text-xs bg-white/5 border-white/10"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  {(Object.keys(STATUS_CFG) as AptStatus[]).map(s => (
+                    <SelectItem key={s} value={s}>{STATUS_CFG[s].label}</SelectItem>
                   ))}
-                </div>
+                </SelectContent>
+              </Select>
+              {/* Legend */}
+              <div className="flex items-center gap-3 ml-auto">
+                {(Object.entries(STATUS_CFG) as [AptStatus, typeof STATUS_CFG[AptStatus]][]).map(([k, v]) => (
+                  <div key={k} className="flex items-center gap-1.5">
+                    <span className={`w-2 h-2 rounded-full ${v.dot}`} />
+                    <span className="text-[10px] text-muted-foreground">{v.label}</span>
+                  </div>
+                ))}
               </div>
             </div>
+
+            {/* Calendar grid */}
+            {loading ? (
+              <div className="space-y-2">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-12 bg-white/5" />)}</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <div className="min-w-[800px]">
+                  {/* Header */}
+                  <div className="grid grid-cols-8 border-b border-white/5">
+                    <div className="p-2" />
+                    {weekDates.map((date, i) => {
+                      const isToday = fmtDate(date) === todayStr;
+                      return (
+                        <div key={i} className={cn("p-2 text-center border-l border-white/5", isToday && "bg-[#8B5CF6]/5")}>
+                          <p className="text-[10px] text-muted-foreground">{DAYS[i]}</p>
+                          <p className={cn("text-sm font-semibold mt-0.5", isToday ? "text-[#A78BFA]" : "text-foreground")}>{date.getDate()}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Time rows */}
+                  <div className="max-h-[500px] overflow-y-auto">
+                    {TIME_SLOTS.map(time => (
+                      <div key={time} className="grid grid-cols-8 border-b border-white/[0.03] min-h-[44px]">
+                        <div className="p-1.5 flex items-start justify-end pr-2">
+                          <span className="text-[10px] text-muted-foreground">{time}</span>
+                        </div>
+                        {weekDates.map((date, di) => {
+                          const dateStr = fmtDate(date);
+                          const slotApts = getAptsForSlot(dateStr, time);
+                          return (
+                            <div key={di}
+                              className="border-l border-white/[0.03] p-0.5 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                              onClick={() => slotApts.length === 0 && openSlot(dateStr, time)}>
+                              {slotApts.map(apt => {
+                                const cfg = STATUS_CFG[apt.status as AptStatus] || STATUS_CFG.pendiente;
+                                return (
+                                  <button key={apt.id}
+                                    onClick={e => { e.stopPropagation(); setDetailApt(apt); }}
+                                    className={cn("w-full rounded-md p-1.5 text-left border transition-all hover:scale-[1.02]", cfg.bg)}>
+                                    <p className={cn("text-[10px] font-medium truncate", cfg.text)}>
+                                      {apt.patients?.first_name} {apt.patients?.last_name}
+                                    </p>
+                                    <p className="text-[9px] text-muted-foreground truncate">
+                                      {apt.treatments?.name || ""} · {apt.duration}min
+                                    </p>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
+
+      {/* ═══ DETAIL DIALOG ═══ */}
+      <Dialog open={!!detailApt} onOpenChange={o => !o && setDetailApt(null)}>
+        <DialogContent className="bg-[#0d0d1a] border-white/10 text-foreground max-w-md">
+          <DialogHeader><DialogTitle>Detalle de cita</DialogTitle></DialogHeader>
+          {detailApt && (() => {
+            const cfg = STATUS_CFG[detailApt.status as AptStatus] || STATUS_CFG.pendiente;
+            return (
+              <div className="space-y-4 pt-2">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase">Paciente</p>
+                    <p className="font-medium">{detailApt.patients?.first_name} {detailApt.patients?.last_name}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase">Servicio</p>
+                    <p className="font-medium">{detailApt.treatments?.name || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase">Profesional</p>
+                    <p className="font-medium">{detailApt.professionals?.full_name || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase">Horario</p>
+                    <p className="font-medium">{detailApt.date} · {detailApt.time?.slice(0, 5)} ({detailApt.duration}min)</p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase mb-2">Estado</p>
+                  <span className={cn("text-xs font-medium px-3 py-1.5 rounded-full border", cfg.bg, cfg.text)}>{cfg.label}</span>
+                </div>
+
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {detailApt.status === "pendiente" && (
+                    <Button size="sm" onClick={() => updateStatus(detailApt.id, "confirmado")}
+                      className="bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border-0">
+                      <Check className="w-3.5 h-3.5 mr-1" /> Confirmar
+                    </Button>
+                  )}
+                  {detailApt.status === "confirmado" && (
+                    <Button size="sm" onClick={() => updateStatus(detailApt.id, "completado")}
+                      className="bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border-0">
+                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Completar
+                    </Button>
+                  )}
+                  {detailApt.status !== "cancelado" && detailApt.status !== "completado" && (
+                    <Button size="sm" variant="outline" onClick={() => updateStatus(detailApt.id, "cancelado")}
+                      className="border-red-500/20 text-red-400 hover:bg-red-500/10">
+                      <X className="w-3.5 h-3.5 mr-1" /> Cancelar
+                    </Button>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══ CREATE DIALOG ═══ */}
+      <Dialog open={createOpen} onOpenChange={o => { if (!o) { setCreateOpen(false); resetForm(); setPatientSearch(""); } else setCreateOpen(true); }}>
+        <DialogContent className="bg-[#0d0d1a] border-white/10 text-foreground max-w-md">
+          <DialogHeader><DialogTitle>Nueva cita</DialogTitle></DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <Label className="text-xs text-muted-foreground">Paciente *</Label>
+              <div className="mt-1">
+                <Input placeholder="Buscar paciente..." value={patientSearch} onChange={e => setPatientSearch(e.target.value)}
+                  className="h-9 bg-white/5 border-white/10 text-foreground placeholder:text-white/20 mb-1" />
+                {form.patient_id && (
+                  <span className="text-xs text-[#A78BFA]">
+                    ✓ {patients.find(p => p.id === form.patient_id)?.first_name} {patients.find(p => p.id === form.patient_id)?.last_name}
+                  </span>
+                )}
+                {patientSearch && !form.patient_id && (
+                  <div className="max-h-32 overflow-y-auto rounded-lg border border-white/10 bg-[#0d0d1a]">
+                    {filteredPatients.map(p => (
+                      <button key={p.id} onClick={() => { setForm({ ...form, patient_id: p.id }); setPatientSearch(""); }}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-white/5 truncate">
+                        {p.first_name} {p.last_name}
+                      </button>
+                    ))}
+                    {filteredPatients.length === 0 && <p className="px-3 py-2 text-xs text-muted-foreground">Sin resultados</p>}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs text-muted-foreground">Servicio</Label>
+              <Select value={form.treatment_id} onValueChange={handleTreatmentChange}>
+                <SelectTrigger className="h-9 bg-white/5 border-white/10 mt-1"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                <SelectContent>{treatments.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-xs text-muted-foreground">Profesional</Label>
+              <Select value={form.professional_id} onValueChange={v => setForm({ ...form, professional_id: v })}>
+                <SelectTrigger className="h-9 bg-white/5 border-white/10 mt-1"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                <SelectContent>{professionals.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label className="text-xs text-muted-foreground">Fecha *</Label>
+                <Input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
+                  className="h-9 bg-white/5 border-white/10 text-foreground mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Hora *</Label>
+                <Input type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })}
+                  className="h-9 bg-white/5 border-white/10 text-foreground mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Duración</Label>
+                <Input type="number" value={form.duration} min={5} max={480}
+                  onChange={e => setForm({ ...form, duration: e.target.value })}
+                  className="h-9 bg-white/5 border-white/10 text-foreground mt-1" />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs text-muted-foreground">Notas</Label>
+              <Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
+                className="bg-white/5 border-white/10 text-foreground mt-1 min-h-[60px]" maxLength={1000} />
+            </div>
+
+            <div className="flex gap-3 pt-1">
+              <Button variant="outline" onClick={() => { setCreateOpen(false); resetForm(); }} className="flex-1 border-white/10 hover:bg-white/5">Cancelar</Button>
+              <Button onClick={handleCreate} disabled={!form.patient_id || !form.date || !form.time}
+                className="flex-1 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white hover:opacity-90">
+                Crear cita
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 };
