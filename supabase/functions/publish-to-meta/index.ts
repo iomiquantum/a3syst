@@ -16,10 +16,34 @@ function buildCaption(post: any): string {
 
 async function publishToFacebook(post: any, creds: Record<string, string>): Promise<{ success: boolean; externalId?: string; error?: string }> {
   const { access_token, page_id } = creds;
-  if (!access_token || !page_id) return { success: false, error: "Missing Facebook credentials" };
+  if (!access_token || !page_id) return { success: false, error: "Faltan credenciales de Facebook (access_token o page_id)" };
 
   try {
     if (post.media_urls?.length > 0 && post.media_type === "image") {
+      // Multiple photos → publish each then create multi-photo post
+      if (post.media_urls.length > 1) {
+        const photoIds: string[] = [];
+        for (const url of post.media_urls.slice(0, 10)) {
+          const res = await fetch(`https://graph.facebook.com/v21.0/${page_id}/photos`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url, published: false, access_token }),
+          });
+          const data = await res.json();
+          if (data.id) photoIds.push(data.id);
+        }
+        if (photoIds.length > 0) {
+          const attached: Record<string, string> = {};
+          photoIds.forEach((id, i) => { attached[`attached_media[${i}]`] = JSON.stringify({ media_fbid: id }); });
+          const params = new URLSearchParams({ message: buildCaption(post), access_token, ...attached });
+          const res = await fetch(`https://graph.facebook.com/v21.0/${page_id}/feed`, { method: "POST", body: params });
+          const data = await res.json();
+          if (data.error) return { success: false, error: data.error.message };
+          return { success: true, externalId: data.id };
+        }
+      }
+
+      // Single photo
       const res = await fetch(`https://graph.facebook.com/v21.0/${page_id}/photos`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -30,6 +54,19 @@ async function publishToFacebook(post: any, creds: Record<string, string>): Prom
       return { success: true, externalId: data.id || data.post_id };
     }
 
+    // Video post
+    if (post.media_urls?.length > 0 && post.media_type === "video") {
+      const res = await fetch(`https://graph.facebook.com/v21.0/${page_id}/videos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file_url: post.media_urls[0], description: buildCaption(post), access_token }),
+      });
+      const data = await res.json();
+      if (data.error) return { success: false, error: data.error.message };
+      return { success: true, externalId: data.id };
+    }
+
+    // Text-only post
     const res = await fetch(`https://graph.facebook.com/v21.0/${page_id}/feed`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -45,15 +82,15 @@ async function publishToFacebook(post: any, creds: Record<string, string>): Prom
 
 async function publishToInstagram(post: any, creds: Record<string, string>): Promise<{ success: boolean; externalId?: string; error?: string }> {
   const { access_token, ig_account_id } = creds;
-  if (!access_token || !ig_account_id) return { success: false, error: "Missing Instagram credentials" };
+  if (!access_token || !ig_account_id) return { success: false, error: "Faltan credenciales de Instagram (access_token o ig_account_id)" };
 
   try {
-    if (!post.media_urls?.length) return { success: false, error: "Instagram requires media" };
+    if (!post.media_urls?.length) return { success: false, error: "Instagram requiere al menos una imagen o video" };
 
     const isVideo = post.media_type === "video";
     const caption = buildCaption(post);
 
-    // Carousel
+    // Carousel for multiple images
     if (post.media_urls.length > 1 && !isVideo && post.post_type === "post") {
       const itemIds: string[] = [];
       for (const url of post.media_urls.slice(0, 10)) {
@@ -65,6 +102,7 @@ async function publishToInstagram(post: any, creds: Record<string, string>): Pro
         const itemData = await itemRes.json();
         if (itemData.id) itemIds.push(itemData.id);
       }
+
       if (itemIds.length > 0) {
         const carouselRes = await fetch(`https://graph.facebook.com/v21.0/${ig_account_id}/media`, {
           method: "POST",
@@ -73,6 +111,7 @@ async function publishToInstagram(post: any, creds: Record<string, string>): Pro
         });
         const carouselData = await carouselRes.json();
         if (carouselData.error) return { success: false, error: carouselData.error.message };
+
         const publishRes = await fetch(`https://graph.facebook.com/v21.0/${ig_account_id}/media_publish`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -84,7 +123,7 @@ async function publishToInstagram(post: any, creds: Record<string, string>): Pro
       }
     }
 
-    // Single media
+    // Single media container
     const containerBody: any = { caption, access_token };
     if (isVideo || post.post_type === "reel") {
       containerBody.media_type = post.post_type === "reel" ? "REELS" : "VIDEO";
@@ -104,6 +143,7 @@ async function publishToInstagram(post: any, creds: Record<string, string>): Pro
     const containerData = await containerRes.json();
     if (containerData.error) return { success: false, error: containerData.error.message };
 
+    // Wait for video processing
     if (isVideo || post.post_type === "reel") {
       let attempts = 0;
       while (attempts < 30) {
@@ -111,11 +151,12 @@ async function publishToInstagram(post: any, creds: Record<string, string>): Pro
         const statusRes = await fetch(`https://graph.facebook.com/v21.0/${containerData.id}?fields=status_code&access_token=${access_token}`);
         const statusData = await statusRes.json();
         if (statusData.status_code === "FINISHED") break;
-        if (statusData.status_code === "ERROR") return { success: false, error: "Error procesando video" };
+        if (statusData.status_code === "ERROR") return { success: false, error: "Error procesando video en Instagram" };
         attempts++;
       }
     }
 
+    // Publish
     const publishRes = await fetch(`https://graph.facebook.com/v21.0/${ig_account_id}/media_publish`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -124,6 +165,7 @@ async function publishToInstagram(post: any, creds: Record<string, string>): Pro
     const publishData = await publishRes.json();
     if (publishData.error) return { success: false, error: publishData.error.message };
 
+    // First comment
     if (post.first_comment && publishData.id) {
       await fetch(`https://graph.facebook.com/v21.0/${publishData.id}/comments`, {
         method: "POST",
@@ -144,78 +186,118 @@ serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Find posts that are scheduled and due
-    const now = new Date().toISOString();
-    const { data: posts, error: fetchError } = await supabase
-      .from("content_posts")
-      .select("*")
-      .eq("status", "scheduled")
-      .lte("scheduled_at", now)
-      .order("scheduled_at", { ascending: true })
-      .limit(50);
-
-    if (fetchError) throw fetchError;
-    if (!posts || posts.length === 0) {
-      return new Response(JSON.stringify({ message: "No posts to publish", processed: 0 }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // Auth check
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "No autorizado" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const results: any[] = [];
-
-    for (const post of posts) {
-      const platformResults: Record<string, any> = {};
-      const externalIds: Record<string, string> = {};
-
-      // Get Meta credentials from ads_accounts
-      const { data: metaAccount } = await supabase
-        .from("ads_accounts")
-        .select("credentials")
-        .eq("clinic_id", post.clinic_id)
-        .eq("platform", "meta")
-        .eq("status", "connected")
-        .single();
-
-      const creds = (metaAccount?.credentials || {}) as Record<string, string>;
-
-      for (const platform of (post.platforms || [])) {
-        let result;
-        switch (platform) {
-          case "facebook":
-            result = creds.access_token && creds.page_id
-              ? await publishToFacebook(post, creds)
-              : { success: false, error: "No hay credenciales de Facebook configuradas" };
-            break;
-          case "instagram":
-            result = creds.access_token && creds.ig_account_id
-              ? await publishToInstagram(post, creds)
-              : { success: false, error: "No hay credenciales de Instagram configuradas" };
-            break;
-          default:
-            result = { success: false, error: `Platform ${platform} not yet supported` };
-        }
-        platformResults[platform] = result;
-        if (result.success && result.externalId) externalIds[platform] = result.externalId;
-      }
-
-      const anySucceeded = Object.values(platformResults).some((r: any) => r.success);
-
-      await supabase.from("content_posts").update({
-        status: anySucceeded ? "published" : "failed",
-        published_at: anySucceeded ? new Date().toISOString() : null,
-        external_ids: { ...((post.external_ids as any) || {}), ...externalIds },
-      }).eq("id", post.id);
-
-      results.push({ postId: post.id, status: anySucceeded ? "published" : "failed", platforms: platformResults });
+    const authClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData, error: authError } = await authClient.auth.getUser();
+    if (authError || !userData?.user) {
+      return new Response(JSON.stringify({ error: "Token inválido" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    return new Response(JSON.stringify({ message: "Publishing complete", processed: results.length, results }), {
+    const { post_id, action } = await req.json();
+    if (!post_id) {
+      return new Response(JSON.stringify({ error: "post_id es requerido" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Fetch the post
+    const { data: post, error: postErr } = await supabase
+      .from("content_posts")
+      .select("*")
+      .eq("id", post_id)
+      .single();
+    if (postErr || !post) {
+      return new Response(JSON.stringify({ error: "Publicación no encontrada" }), {
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Verify user has access to this clinic
+    const { data: hasAccess } = await supabase.rpc("user_has_clinic_access", {
+      _user_id: userData.user.id,
+      _clinic_id: post.clinic_id,
+    });
+    if (!hasAccess) {
+      return new Response(JSON.stringify({ error: "Sin acceso a este negocio" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Get Meta credentials from ads_accounts
+    const { data: metaAccount } = await supabase
+      .from("ads_accounts")
+      .select("credentials")
+      .eq("clinic_id", post.clinic_id)
+      .eq("platform", "meta")
+      .eq("status", "connected")
+      .single();
+
+    if (!metaAccount?.credentials) {
+      return new Response(JSON.stringify({ error: "No hay cuenta de Meta conectada. Ve a Ads > Configuración para conectar tu cuenta." }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const creds = metaAccount.credentials as Record<string, string>;
+    const platforms = post.platforms || [];
+    const results: Record<string, any> = {};
+    const externalIds: Record<string, string> = {};
+
+    for (const platform of platforms) {
+      let result;
+      switch (platform) {
+        case "facebook":
+          result = await publishToFacebook(post, creds);
+          break;
+        case "instagram":
+          result = await publishToInstagram(post, creds);
+          break;
+        default:
+          result = { success: false, error: `Plataforma ${platform} no soportada aún` };
+      }
+      results[platform] = result;
+      if (result.success && result.externalId) {
+        externalIds[platform] = result.externalId;
+      }
+    }
+
+    const anySucceeded = Object.values(results).some((r: any) => r.success);
+    const allFailed = Object.values(results).every((r: any) => !r.success);
+
+    // Update post status
+    await supabase.from("content_posts").update({
+      status: anySucceeded ? "published" : "failed",
+      published_at: anySucceeded ? new Date().toISOString() : null,
+      external_ids: { ...((post.external_ids as any) || {}), ...externalIds },
+    }).eq("id", post.id);
+
+    const statusCode = allFailed ? 422 : 200;
+    return new Response(JSON.stringify({
+      success: anySucceeded,
+      results,
+      message: anySucceeded
+        ? "Publicación exitosa" + (Object.values(results).some((r: any) => !r.success) ? " (algunas plataformas fallaron)" : "")
+        : "Error publicando en todas las plataformas",
+    }), {
+      status: statusCode,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("publish-scheduled-posts error:", e);
+    console.error("publish-to-meta error:", e);
     return new Response(JSON.stringify({ error: e.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

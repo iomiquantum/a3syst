@@ -7,13 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Clock, Image, Send, Save, Upload, X, Eye, Loader2 } from "lucide-react";
+import { Calendar, Clock, Image, Send, Save, Upload, X, Eye, Loader2, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
 import type { ContentPost } from "@/hooks/useContentPosts";
 import PostPreview from "./PostPreview";
+import { usePublishToMeta } from "@/hooks/usePublishToMeta";
 
 interface Props {
   open: boolean;
@@ -31,6 +32,7 @@ const platformOptions = [
 
 const CreatePostDialog = ({ open, onOpenChange, content }: Props) => {
   const { clinicId } = useClinic();
+  const { publishNow, publishing: publishingNow } = usePublishToMeta();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -88,19 +90,20 @@ const CreatePostDialog = ({ open, onOpenChange, content }: Props) => {
     return urls;
   };
 
-  const handleSubmit = async (status: "draft" | "scheduled") => {
+  const handleSubmit = async (status: "draft" | "scheduled" | "publish_now") => {
     if (!body.trim() && mediaFiles.length === 0) return;
     setSaving(true);
     
     const urls = await uploadFiles();
     const parsedHashtags = hashtags ? hashtags.split(/[,\s]+/).filter(Boolean).map(h => h.startsWith("#") ? h : `#${h}`) : [];
     
+    const postStatus = status === "publish_now" ? "draft" : status;
     const data: Partial<ContentPost> = {
       title: title || undefined,
       body,
       post_type: postType,
       platforms,
-      status,
+      status: postStatus,
       media_urls: urls,
       media_type: mediaFiles.some(f => f.type.startsWith("video")) ? "video" : "image",
       hashtags: parsedHashtags,
@@ -109,7 +112,13 @@ const CreatePostDialog = ({ open, onOpenChange, content }: Props) => {
     if (status === "scheduled" && scheduledDate && scheduledTime) {
       data.scheduled_at = `${scheduledDate}T${scheduledTime}:00`;
     }
-    await content.createPost(data);
+    const created = await content.createPost(data);
+    
+    // If publish now, immediately publish via Meta API
+    if (status === "publish_now" && created?.id) {
+      await publishNow(created.id);
+    }
+    
     setSaving(false);
     onOpenChange(false);
     resetForm();
@@ -249,11 +258,14 @@ const CreatePostDialog = ({ open, onOpenChange, content }: Props) => {
 
               {/* Actions */}
               <div className="flex gap-3 pt-2">
-                <Button variant="outline" className="flex-1 gap-1.5" onClick={() => handleSubmit("draft")} disabled={saving || uploading || (!body.trim() && mediaFiles.length === 0)}>
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Guardar borrador
+                <Button variant="outline" className="flex-1 gap-1.5" onClick={() => handleSubmit("draft")} disabled={saving || uploading || publishingNow || (!body.trim() && mediaFiles.length === 0)}>
+                  {saving && !publishingNow ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Borrador
                 </Button>
-                <Button className="flex-1 gap-1.5 gradient-primary text-primary-foreground" onClick={() => handleSubmit("scheduled")} disabled={saving || uploading || (!body.trim() && mediaFiles.length === 0) || !scheduledDate || !scheduledTime}>
-                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} {uploading ? "Subiendo..." : "Programar"}
+                <Button variant="outline" className="flex-1 gap-1.5" onClick={() => handleSubmit("scheduled")} disabled={saving || uploading || publishingNow || (!body.trim() && mediaFiles.length === 0) || !scheduledDate || !scheduledTime}>
+                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />} Programar
+                </Button>
+                <Button className="flex-1 gap-1.5 gradient-primary text-primary-foreground" onClick={() => handleSubmit("publish_now")} disabled={saving || uploading || publishingNow || (!body.trim() && mediaFiles.length === 0) || platforms.length === 0}>
+                  {publishingNow ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />} {publishingNow ? "Publicando..." : "Publicar ahora"}
                 </Button>
               </div>
             </div>
