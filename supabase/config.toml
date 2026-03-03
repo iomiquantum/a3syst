@@ -18,5 +18,8 @@ verify_jwt = false
 [functions.personalize-business]
 verify_jwt = false
 
+[functions.publish-to-meta]
+verify_jwt = false
+
 [functions.create-launch-user]
 verify_jwt = false

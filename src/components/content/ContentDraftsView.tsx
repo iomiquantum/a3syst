@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo } from "react";
-import { Edit, Trash2, Clock, Pencil, RefreshCw, Loader2, Check, X, Copy, Video, Upload, Image, FileText, LayoutGrid } from "lucide-react";
+import { Edit, Trash2, Clock, Pencil, RefreshCw, Loader2, Check, X, Copy, Video, Upload, Image, FileText, LayoutGrid, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import type { ContentPost } from "@/hooks/useContentPosts";
 import { supabase } from "@/integrations/supabase/client";
+import { usePublishToMeta } from "@/hooks/usePublishToMeta";
 
 interface Props {
   content: {
@@ -20,6 +21,7 @@ interface Props {
 }
 
 const ContentDraftsView = ({ content }: Props) => {
+  const { publishNow, publishing: publishingMeta } = usePublishToMeta();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editBody, setEditBody] = useState("");
   const [regeneratingImageId, setRegeneratingImageId] = useState<string | null>(null);
@@ -309,6 +311,21 @@ const ContentDraftsView = ({ content }: Props) => {
                   )}
                   <Button variant="outline" size="sm" className="flex-1 text-xs gap-1.5" onClick={() => duplicateDraft(draft)}>
                     <Copy className="w-3.5 h-3.5" /> Reutilizar
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="flex-1 text-xs gap-1.5 gradient-primary text-primary-foreground"
+                    disabled={publishingMeta}
+                    onClick={async () => {
+                      const result = await publishNow(draft.id);
+                      if (result?.success) {
+                        // Refresh will happen via fetchPosts
+                      }
+                    }}
+                  >
+                    {publishingMeta ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                    Publicar ahora
                   </Button>
                   <Button variant="outline" size="sm" className="flex-1 text-xs gap-1.5">
                     <Clock className="w-3.5 h-3.5" /> Programar
