@@ -385,6 +385,38 @@ export type Database = {
           },
         ]
       }
+      ai_training_data: {
+        Row: {
+          answer: string
+          clinic_id: string
+          created_at: string
+          id: string
+          question: string
+        }
+        Insert: {
+          answer: string
+          clinic_id: string
+          created_at?: string
+          id?: string
+          question: string
+        }
+        Update: {
+          answer?: string
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          question?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_training_data_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           branch_id: string | null
@@ -734,40 +766,61 @@ export type Database = {
           address: string | null
           business_category: string
           business_type: string
+          city: string | null
+          closing_hour: string | null
           created_at: string
           description: string | null
           id: string
           logo_url: string | null
           monthly_token_budget_usd: number | null
           name: string
+          onboarding_completed: boolean | null
+          opening_hour: string | null
           owner_id: string
+          slug: string | null
           updated_at: string
+          whatsapp: string | null
+          working_days: string[] | null
         }
         Insert: {
           address?: string | null
           business_category?: string
           business_type?: string
+          city?: string | null
+          closing_hour?: string | null
           created_at?: string
           description?: string | null
           id?: string
           logo_url?: string | null
           monthly_token_budget_usd?: number | null
           name: string
+          onboarding_completed?: boolean | null
+          opening_hour?: string | null
           owner_id: string
+          slug?: string | null
           updated_at?: string
+          whatsapp?: string | null
+          working_days?: string[] | null
         }
         Update: {
           address?: string | null
           business_category?: string
           business_type?: string
+          city?: string | null
+          closing_hour?: string | null
           created_at?: string
           description?: string | null
           id?: string
           logo_url?: string | null
           monthly_token_budget_usd?: number | null
           name?: string
+          onboarding_completed?: boolean | null
+          opening_hour?: string | null
           owner_id?: string
+          slug?: string | null
           updated_at?: string
+          whatsapp?: string | null
+          working_days?: string[] | null
         }
         Relationships: []
       }
@@ -942,6 +995,8 @@ export type Database = {
           status: string
           unread_count: number
           updated_at: string
+          visitor_contact: string | null
+          visitor_name: string | null
         }
         Insert: {
           archived?: boolean
@@ -957,6 +1012,8 @@ export type Database = {
           status?: string
           unread_count?: number
           updated_at?: string
+          visitor_contact?: string | null
+          visitor_name?: string | null
         }
         Update: {
           archived?: boolean
@@ -972,6 +1029,8 @@ export type Database = {
           status?: string
           unread_count?: number
           updated_at?: string
+          visitor_contact?: string | null
+          visitor_name?: string | null
         }
         Relationships: [
           {
@@ -2139,6 +2198,7 @@ export type Database = {
           description: string | null
           duration: number
           id: string
+          image_url: string | null
           name: string
           price: number
           updated_at: string
@@ -2149,6 +2209,7 @@ export type Database = {
           description?: string | null
           duration?: number
           id?: string
+          image_url?: string | null
           name: string
           price?: number
           updated_at?: string
@@ -2159,6 +2220,7 @@ export type Database = {
           description?: string | null
           duration?: number
           id?: string
+          image_url?: string | null
           name?: string
           price?: number
           updated_at?: string
@@ -2248,6 +2310,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_clinic_slug: { Args: { clinic_name: string }; Returns: string }
       get_launch_leaderboard: {
         Args: never
         Returns: {

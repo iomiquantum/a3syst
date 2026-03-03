@@ -64,8 +64,8 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
     if (ownedClinic) {
       setClinicId(ownedClinic.id);
       setClinicName(ownedClinic.name);
-      // If business_type is still default 'general', needs onboarding
-      setNeedsOnboarding(ownedClinic.business_type === 'general');
+      // Needs onboarding if not completed
+      setNeedsOnboarding(!(ownedClinic as any).onboarding_completed);
       setLoading(false);
       return;
     }
