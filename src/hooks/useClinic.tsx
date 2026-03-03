@@ -56,7 +56,7 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
     // Regular user: check owned clinic
     const { data: ownedClinic } = await supabase
       .from("clinics")
-      .select("id, name, business_type")
+      .select("id, name, business_type, onboarding_completed")
       .eq("owner_id", user.id)
       .limit(1)
       .maybeSingle();
