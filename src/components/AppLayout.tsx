@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, MessageSquare, Calendar, BarChart3, Megaphone, Palette,
   Rocket, DollarSign, Brain, Users, Briefcase, Stethoscope, Building2,
-  Bot, TrendingUp, User, LogOut, ChevronLeft, Menu, X, ShieldCheck,
+  Bot, TrendingUp, User, LogOut, ChevronLeft, Menu, Sun, Moon, ShieldCheck,
 } from "lucide-react";
 import HelpButton from "@/components/help/HelpButton";
 import HelpPanel from "@/components/help/HelpPanel";
@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/hooks/useAuth";
 import { useClinic } from "@/hooks/useClinic";
 import { useBusinessLabels } from "@/hooks/useBusinessLabels";
+import { useTheme } from "@/hooks/useTheme";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AppLayoutProps { children: ReactNode; }
@@ -27,6 +28,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   const { user, signOut } = useAuth();
   const { clinicName, isSuperAdmin, allClinics, selectClinic, clinicId } = useClinic();
   const { labels } = useBusinessLabels();
+  const { theme, toggleTheme } = useTheme();
 
   // Badges
   const [unreadMessages, setUnreadMessages] = useState(0);
@@ -109,14 +111,14 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className={cn("h-16 flex items-center border-b border-white/5 shrink-0", collapsed ? "justify-center px-2" : "px-5")}>
+      <div className={cn("h-16 flex items-center border-b border-sidebar-border shrink-0", collapsed ? "justify-center px-2" : "px-5")}>
         <div className="flex items-center gap-2.5 overflow-hidden">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#8B5CF6] to-[#6D28D9] flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-[10px]">A3</span>
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shrink-0">
+            <span className="text-primary-foreground font-bold text-[10px]">A3</span>
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <span className="text-base font-bold text-white tracking-tight leading-none">A3syst</span>
+              <span className="text-base font-bold text-sidebar-foreground tracking-tight leading-none">A3syst</span>
             </div>
           )}
         </div>
@@ -124,23 +126,23 @@ const AppLayout = ({ children }: AppLayoutProps) => {
 
       {/* Clinic name + autopilot badge */}
       {!collapsed && (
-        <div className="px-4 py-3 border-b border-white/5 shrink-0">
-          <p className="text-xs text-white/40 truncate">{clinicName}</p>
+        <div className="px-4 py-3 border-b border-sidebar-border shrink-0">
+          <p className="text-xs text-sidebar-foreground/50 truncate">{clinicName}</p>
           <div className="mt-1.5 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[10px] text-emerald-400 font-medium">Autopilotos: ON</span>
+            <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+            <span className="text-[10px] text-success font-medium">Autopilotos: ON</span>
           </div>
         </div>
       )}
 
       {/* Super admin clinic selector */}
       {isSuperAdmin && allClinics.length > 0 && !collapsed && (
-        <div className="px-3 py-2 border-b border-white/5 shrink-0">
+        <div className="px-3 py-2 border-b border-sidebar-border shrink-0">
           <Select value={clinicId || ""} onValueChange={(v) => {
             const clinic = allClinics.find(c => c.id === v);
             if (clinic) selectClinic(clinic.id, clinic.name);
           }}>
-            <SelectTrigger className="h-8 text-xs bg-white/5 border-white/10 text-white/70">
+            <SelectTrigger className="h-8 text-xs bg-sidebar-accent border-sidebar-border text-sidebar-foreground">
               <SelectValue placeholder="Seleccionar negocio" />
             </SelectTrigger>
             <SelectContent>
@@ -155,7 +157,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         {navGroups.map(group => (
           <div key={group.label} className="space-y-0.5">
             {!collapsed && (
-              <p className="text-[10px] font-semibold text-white/25 uppercase tracking-[0.15em] px-3 mb-1.5">
+              <p className="text-[10px] font-semibold text-sidebar-foreground/30 uppercase tracking-[0.15em] px-3 mb-1.5">
                 {group.label}
               </p>
             )}
@@ -170,19 +172,19 @@ const AppLayout = ({ children }: AppLayoutProps) => {
                     "w-full flex items-center gap-3 rounded-lg text-sm font-medium transition-all relative",
                     collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2",
                     active
-                      ? "bg-[#8B5CF6]/15 text-[#A78BFA] border-l-2 border-[#8B5CF6]"
-                      : "text-white/40 hover:text-white/70 hover:bg-white/5 border-l-2 border-transparent"
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground border-l-2 border-sidebar-primary"
+                      : "text-sidebar-foreground/50 hover:text-sidebar-foreground/80 hover:bg-sidebar-accent/50 border-l-2 border-transparent"
                   )}
                 >
-                  <item.icon className={cn("w-[18px] h-[18px] shrink-0", active ? "text-[#A78BFA]" : "text-white/30")} />
+                  <item.icon className={cn("w-[18px] h-[18px] shrink-0", active ? "text-sidebar-primary" : "text-sidebar-foreground/40")} />
                   {!collapsed && <span className="truncate">{item.label}</span>}
                   {badge > 0 && !collapsed && (
-                    <span className="ml-auto text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
+                    <span className="ml-auto text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
                       {badge > 99 ? "99+" : badge}
                     </span>
                   )}
                   {badge > 0 && collapsed && (
-                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />
+                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-destructive" />
                   )}
                 </button>
               );
@@ -192,27 +194,39 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       </nav>
 
       {/* Footer */}
-      <div className="p-3 border-t border-white/5 space-y-2 shrink-0">
+      <div className="p-3 border-t border-sidebar-border space-y-2 shrink-0">
         {/* User info */}
         <div className={cn("flex items-center gap-2.5 px-2 py-1.5", collapsed && "justify-center")}>
           <Avatar className="w-8 h-8 shrink-0">
-            <AvatarFallback className="bg-gradient-to-br from-[#8B5CF6] to-[#6D28D9] text-white text-[10px] font-bold">
+            <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-[10px] font-bold">
               {initials}
             </AvatarFallback>
           </Avatar>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium text-white/70 truncate">{userName}</p>
-              <p className="text-[10px] text-white/25">Plan: FREE</p>
+              <p className="text-xs font-medium text-sidebar-foreground/80 truncate">{userName}</p>
+              <p className="text-[10px] text-sidebar-foreground/30">Plan: FREE</p>
             </div>
           )}
         </div>
+
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          className={cn(
+            "w-full flex items-center gap-2.5 rounded-lg text-xs text-sidebar-foreground/40 hover:text-sidebar-foreground/70 hover:bg-sidebar-accent/50 transition-all",
+            collapsed ? "justify-center px-0 py-2" : "px-3 py-2"
+          )}
+        >
+          {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          {!collapsed && <span>{theme === "dark" ? "Tema claro" : "Tema oscuro"}</span>}
+        </button>
 
         {/* Collapse toggle */}
         <button
           onClick={() => setCollapsed(!collapsed)}
           className={cn(
-            "w-full flex items-center gap-2.5 rounded-lg text-xs text-white/30 hover:text-white/50 hover:bg-white/5 transition-all",
+            "w-full flex items-center gap-2.5 rounded-lg text-xs text-sidebar-foreground/40 hover:text-sidebar-foreground/70 hover:bg-sidebar-accent/50 transition-all",
             collapsed ? "justify-center px-0 py-2" : "px-3 py-2"
           )}
         >
@@ -224,7 +238,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         <button
           onClick={handleSignOut}
           className={cn(
-            "w-full flex items-center gap-2.5 rounded-lg text-xs text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-all",
+            "w-full flex items-center gap-2.5 rounded-lg text-xs text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-all",
             collapsed ? "justify-center px-0 py-2" : "px-3 py-2"
           )}
         >
@@ -236,7 +250,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   );
 
   return (
-    <div className="min-h-screen flex bg-[#0a0a1a]">
+    <div className="min-h-screen flex bg-background">
       {/* Mobile overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setMobileOpen(false)} />
@@ -244,7 +258,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
 
       {/* Mobile drawer */}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 w-[260px] bg-[#0d0d1a] transform transition-transform duration-300 lg:hidden",
+        "fixed inset-y-0 left-0 z-50 w-[260px] bg-sidebar transform transition-transform duration-300 lg:hidden",
         mobileOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         {sidebarContent}
@@ -252,7 +266,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
 
       {/* Desktop sidebar */}
       <aside className={cn(
-        "hidden lg:flex h-screen sticky top-0 flex-col bg-[#0d0d1a] border-r border-white/5 transition-all duration-300",
+        "hidden lg:flex h-screen sticky top-0 flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300",
         collapsed ? "w-[60px]" : "w-[240px]"
       )}>
         {sidebarContent}
@@ -261,23 +275,23 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       {/* Main */}
       <div className="flex-1 flex flex-col min-h-screen min-w-0">
         {/* Top bar */}
-        <header className="h-14 bg-[#0d0d1a]/80 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30">
-          <button className="lg:hidden p-2 -ml-2 text-white/50 hover:text-white" onClick={() => setMobileOpen(true)}>
+        <header className="h-14 bg-card/80 backdrop-blur-xl border-b border-border flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30">
+          <button className="lg:hidden p-2 -ml-2 text-muted-foreground hover:text-foreground" onClick={() => setMobileOpen(true)}>
             <Menu className="w-5 h-5" />
           </button>
           <div className="hidden lg:block" />
           <div className="flex items-center gap-3">
             <div className="hidden md:flex items-center gap-2.5">
               <Avatar className="w-7 h-7">
-                <AvatarFallback className="bg-gradient-to-br from-[#8B5CF6] to-[#6D28D9] text-white text-[9px] font-bold">
+                <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-[9px] font-bold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-sm text-white/50">{userName}</span>
+              <span className="text-sm text-muted-foreground">{userName}</span>
             </div>
           </div>
         </header>
-        <main className="flex-1 p-4 lg:p-6 text-white">{children}</main>
+        <main className="flex-1 p-4 lg:p-6 text-foreground">{children}</main>
       </div>
 
       {/* Help system */}
