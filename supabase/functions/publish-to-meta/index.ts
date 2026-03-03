@@ -237,22 +237,48 @@ serve(async (req) => {
       });
     }
 
-    // Get Meta credentials from ads_accounts
-    const { data: metaAccount } = await supabase
-      .from("ads_accounts")
-      .select("credentials")
+    // Get Meta credentials - try social_media_connections first, then ads_accounts
+    let creds: Record<string, string> = {};
+    
+    const { data: socialConn } = await supabase
+      .from("social_media_connections")
+      .select("access_token, platform_account_id, platform")
       .eq("clinic_id", post.clinic_id)
-      .eq("platform", "meta")
-      .eq("status", "connected")
-      .single();
+      .eq("token_status", "active")
+      .in("platform", ["facebook", "instagram"]);
 
-    if (!metaAccount?.credentials) {
-      return new Response(JSON.stringify({ error: "No hay cuenta de Meta conectada. Ve a Ads > Configuración para conectar tu cuenta." }), {
+    if (socialConn && socialConn.length > 0) {
+      const fbConn = socialConn.find((c: any) => c.platform === "facebook");
+      const igConn = socialConn.find((c: any) => c.platform === "instagram");
+      if (fbConn) {
+        creds.access_token = fbConn.access_token;
+        creds.page_id = fbConn.platform_account_id;
+      }
+      if (igConn) {
+        creds.ig_account_id = igConn.platform_account_id;
+        if (!creds.access_token) creds.access_token = igConn.access_token;
+      }
+    }
+
+    // Fallback to ads_accounts
+    if (!creds.access_token) {
+      const { data: metaAccount } = await supabase
+        .from("ads_accounts")
+        .select("credentials")
+        .eq("clinic_id", post.clinic_id)
+        .eq("platform", "meta")
+        .eq("status", "connected")
+        .single();
+      if (metaAccount?.credentials) {
+        creds = metaAccount.credentials as Record<string, string>;
+      }
+    }
+
+    if (!creds.access_token) {
+      return new Response(JSON.stringify({ error: "No hay cuenta de Meta conectada. Ve a Mi Cuenta > Redes Sociales para conectar tu cuenta." }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const creds = metaAccount.credentials as Record<string, string>;
     const platforms = post.platforms || [];
     const results: Record<string, any> = {};
     const externalIds: Record<string, string> = {};

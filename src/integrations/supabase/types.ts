@@ -2174,6 +2174,144 @@ export type Database = {
           },
         ]
       }
+      social_media_connections: {
+        Row: {
+          access_token: string
+          clinic_id: string
+          connected_at: string | null
+          connected_by: string | null
+          id: string
+          is_primary: boolean | null
+          metadata: Json | null
+          platform: string
+          platform_account_id: string
+          platform_name: string
+          token_expires_at: string | null
+          token_last_verified_at: string | null
+          token_status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          access_token?: string
+          clinic_id: string
+          connected_at?: string | null
+          connected_by?: string | null
+          id?: string
+          is_primary?: boolean | null
+          metadata?: Json | null
+          platform: string
+          platform_account_id?: string
+          platform_name?: string
+          token_expires_at?: string | null
+          token_last_verified_at?: string | null
+          token_status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          access_token?: string
+          clinic_id?: string
+          connected_at?: string | null
+          connected_by?: string | null
+          id?: string
+          is_primary?: boolean | null
+          metadata?: Json | null
+          platform?: string
+          platform_account_id?: string
+          platform_name?: string
+          token_expires_at?: string | null
+          token_last_verified_at?: string | null
+          token_status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_media_connections_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_media_posts_log: {
+        Row: {
+          clinic_id: string
+          connection_id: string
+          content_post_id: string | null
+          content_text: string | null
+          created_at: string | null
+          created_by: string | null
+          engagement_data: Json | null
+          error_message: string | null
+          id: string
+          media_urls: string[] | null
+          platform: string
+          platform_post_id: string | null
+          post_type: string | null
+          published_at: string | null
+          scheduled_for: string | null
+          status: string | null
+        }
+        Insert: {
+          clinic_id: string
+          connection_id: string
+          content_post_id?: string | null
+          content_text?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          engagement_data?: Json | null
+          error_message?: string | null
+          id?: string
+          media_urls?: string[] | null
+          platform: string
+          platform_post_id?: string | null
+          post_type?: string | null
+          published_at?: string | null
+          scheduled_for?: string | null
+          status?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          connection_id?: string
+          content_post_id?: string | null
+          content_text?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          engagement_data?: Json | null
+          error_message?: string | null
+          id?: string
+          media_urls?: string[] | null
+          platform?: string
+          platform_post_id?: string | null
+          post_type?: string | null
+          published_at?: string | null
+          scheduled_for?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_media_posts_log_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_media_posts_log_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "social_media_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_media_posts_log_content_post_id_fkey"
+            columns: ["content_post_id"]
+            isOneToOne: false
+            referencedRelation: "content_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       specialties: {
         Row: {
           clinic_id: string

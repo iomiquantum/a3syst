@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { User, Mail, Shield, Save, Loader2 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
+import SocialMediaSection from "@/components/social/SocialMediaSection";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -128,6 +129,9 @@ const MiCuentaPage = () => {
                 </Button>
               </CardContent>
             </Card>
+
+            {/* Social Media Connections */}
+            <SocialMediaSection />
           </>
         )}
       </div>
