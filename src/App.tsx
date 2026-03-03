@@ -36,6 +36,14 @@ import OnboardingPage from "./pages/OnboardingPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import MiCuentaPage from "./pages/MiCuentaPage";
 import BusinessLandingPage from "./pages/BusinessLandingPage";
+import PrivacyPage from "./pages/PrivacyPage";
+import TermsPage from "./pages/TermsPage";
+import DataDeletionPage from "./pages/DataDeletionPage";
+import DataDeletionStatusPage from "./pages/DataDeletionStatusPage";
+import CookiesPage from "./pages/CookiesPage";
+import AcceptableUsePage from "./pages/AcceptableUsePage";
+import SecurityPage from "./pages/SecurityPage";
+import CookieBanner from "./components/legal/CookieBanner";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +59,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <CookieBanner />
         <AppContent />
         <AuthProvider>
           <ClinicProvider>
@@ -63,6 +72,13 @@ const App = () => (
               <Route path="/lanzamiento" element={<PreLaunchPage />} />
               <Route path="/ranking" element={<RankingPage />} />
               <Route path="/negocio/:slug" element={<BusinessLandingPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/data-deletion" element={<DataDeletionPage />} />
+              <Route path="/data-deletion-status" element={<DataDeletionStatusPage />} />
+              <Route path="/cookies" element={<CookiesPage />} />
+              <Route path="/acceptable-use" element={<AcceptableUsePage />} />
+              <Route path="/security" element={<SecurityPage />} />
               <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/pacientes" element={<ProtectedRoute><PacientesPage /></ProtectedRoute>} />

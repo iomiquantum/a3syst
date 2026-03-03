@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.create-launch-user]
 verify_jwt = false
+
+[functions.meta-data-deletion]
+verify_jwt = false
