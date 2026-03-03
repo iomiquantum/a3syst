@@ -5,6 +5,10 @@ import {
   Rocket, DollarSign, Brain, Users, Briefcase, Stethoscope, Building2,
   Bot, TrendingUp, User, LogOut, ChevronLeft, Menu, X, ShieldCheck,
 } from "lucide-react";
+import HelpButton from "@/components/help/HelpButton";
+import HelpPanel from "@/components/help/HelpPanel";
+import GuidedTour from "@/components/help/GuidedTour";
+import { getHelpForRoute } from "@/components/help/helpContent";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,6 +31,11 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   // Badges
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [todayAppointments, setTodayAppointments] = useState(0);
+
+  // Help system
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [tourRunning, setTourRunning] = useState(false);
+  const helpContent = getHelpForRoute(location.pathname);
 
   useEffect(() => {
     if (!clinicId) return;
@@ -270,6 +279,16 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         </header>
         <main className="flex-1 p-4 lg:p-6 text-white">{children}</main>
       </div>
+
+      {/* Help system */}
+      <HelpButton onClick={() => setHelpOpen(true)} />
+      <HelpPanel
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        content={helpContent}
+        onStartTour={() => setTourRunning(true)}
+      />
+      <GuidedTour run={tourRunning} onFinish={() => setTourRunning(false)} />
     </div>
   );
 };
