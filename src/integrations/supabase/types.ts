@@ -763,6 +763,7 @@ export type Database = {
       }
       clinics: {
         Row: {
+          additional_info: string | null
           address: string | null
           business_category: string
           business_type: string
@@ -775,14 +776,18 @@ export type Database = {
           monthly_token_budget_usd: number | null
           name: string
           onboarding_completed: boolean | null
+          onboarding_method: string | null
           opening_hour: string | null
           owner_id: string
+          primary_color: string | null
+          secondary_color: string | null
           slug: string | null
           updated_at: string
           whatsapp: string | null
           working_days: string[] | null
         }
         Insert: {
+          additional_info?: string | null
           address?: string | null
           business_category?: string
           business_type?: string
@@ -795,14 +800,18 @@ export type Database = {
           monthly_token_budget_usd?: number | null
           name: string
           onboarding_completed?: boolean | null
+          onboarding_method?: string | null
           opening_hour?: string | null
           owner_id: string
+          primary_color?: string | null
+          secondary_color?: string | null
           slug?: string | null
           updated_at?: string
           whatsapp?: string | null
           working_days?: string[] | null
         }
         Update: {
+          additional_info?: string | null
           address?: string | null
           business_category?: string
           business_type?: string
@@ -815,8 +824,11 @@ export type Database = {
           monthly_token_budget_usd?: number | null
           name?: string
           onboarding_completed?: boolean | null
+          onboarding_method?: string | null
           opening_hour?: string | null
           owner_id?: string
+          primary_color?: string | null
+          secondary_color?: string | null
           slug?: string | null
           updated_at?: string
           whatsapp?: string | null
