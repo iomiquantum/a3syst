@@ -171,9 +171,25 @@ const InboxSidebar = ({ conversations, allConversations, selected, funnelFilter,
                   </div>
                   <p className="text-xs text-muted-foreground truncate mt-0.5">{conv.last_message_preview || "Sin mensajes"}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] text-muted-foreground">● {FUNNEL_STAGES.find(s => s.key === conv.contact?.funnel_stage)?.label || conv.contact?.funnel_stage}</span>
+                    {conv.chatbot_active && conv.unread_count === 0 ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
+                        🤖 IA respondiendo
+                      </span>
+                    ) : conv.unread_count > 0 && !conv.chatbot_active ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded-full">
+                        🔴 Necesita atención
+                      </span>
+                    ) : conv.unread_count > 0 ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded-full">
+                        ⚡ {conv.unread_count} nuevos
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                        ✅ Resuelto
+                      </span>
+                    )}
                     {conv.unread_count > 0 && (
-                      <span className="w-5 h-5 rounded-full bg-success text-success-foreground text-[10px] font-bold flex items-center justify-center">{conv.unread_count}</span>
+                      <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center ml-auto">{conv.unread_count}</span>
                     )}
                   </div>
                 </div>
