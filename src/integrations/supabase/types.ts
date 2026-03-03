@@ -2453,6 +2453,39 @@ export type Database = {
           },
         ]
       }
+      user_consents: {
+        Row: {
+          accepted_at: string | null
+          consent_type: string
+          id: string
+          ip_address: string | null
+          revoked_at: string | null
+          user_agent: string | null
+          user_id: string
+          version: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          consent_type: string
+          id?: string
+          ip_address?: string | null
+          revoked_at?: string | null
+          user_agent?: string | null
+          user_id: string
+          version: string
+        }
+        Update: {
+          accepted_at?: string | null
+          consent_type?: string
+          id?: string
+          ip_address?: string | null
+          revoked_at?: string | null
+          user_agent?: string | null
+          user_id?: string
+          version?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           clinic_id: string

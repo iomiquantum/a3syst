@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff, Zap, ArrowRight, Sun, Moon } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
@@ -11,6 +12,7 @@ const RegisterPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { signUp } = useAuth();
@@ -19,6 +21,7 @@ const RegisterPage = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName || !email || !password) { toast.error("Completa todos los campos"); return; }
+    if (!acceptedTerms) { toast.error("Debes aceptar los Términos y la Política de Privacidad"); return; }
     if (password.length < 6) { toast.error("La contraseña debe tener al menos 6 caracteres"); return; }
     setLoading(true);
     const { error } = await signUp(email, password, fullName);
@@ -85,8 +88,16 @@ const RegisterPage = () => {
                 </button>
               </div>
             </div>
+            <div className="flex items-start gap-2">
+              <Checkbox id="terms" checked={acceptedTerms} onCheckedChange={(c) => setAcceptedTerms(!!c)} className="mt-1" />
+              <label htmlFor="terms" className="text-sm text-muted-foreground cursor-pointer leading-tight">
+                He leído y acepto los{" "}
+                <a href="/terms" target="_blank" className="text-primary hover:underline">Términos y Condiciones</a> y la{" "}
+                <a href="/privacy" target="_blank" className="text-primary hover:underline">Política de Privacidad</a> de a3syst.
+              </label>
+            </div>
             <button
-              type="submit" disabled={loading}
+              type="submit" disabled={loading || !acceptedTerms}
               className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg hover:opacity-90 transition-all disabled:opacity-50"
             >
               {loading ? "Creando cuenta..." : "Crear Cuenta"}

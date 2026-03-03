@@ -11,6 +11,7 @@ import AdminAPIKeysTab from "@/components/admin/AdminAPIKeysTab";
 import AdminLaunchTab from "@/components/admin/AdminLaunchTab";
 import AdminAnalyticsUnified from "@/components/admin/AdminAnalyticsUnified";
 import AdminSocialStatus from "@/components/admin/AdminSocialStatus";
+import AdminMetaURLs from "@/components/admin/AdminMetaURLs";
 
 const AdminPage = () => {
   const { isSuperAdmin } = useClinic();
@@ -105,7 +106,10 @@ const AdminPage = () => {
               <AdminAnalyticsUnified />
             </TabsContent>
             <TabsContent value="social" className="mt-6">
-              <AdminSocialStatus />
+              <div className="space-y-6">
+                <AdminSocialStatus />
+                <AdminMetaURLs />
+              </div>
             </TabsContent>
           </Tabs>
         )}
