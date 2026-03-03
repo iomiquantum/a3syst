@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { Link2, CheckCircle2, AlertCircle, Clock, Unplug, ShieldCheck, FlaskConical, Loader2 } from "lucide-react";
+import { Link2, CheckCircle2, AlertCircle, Clock, Unplug, ShieldCheck, FlaskConical, Loader2, Shield, Building2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSocialConnections, type SocialConnection } from "@/hooks/useSocialConnections";
+import { useMetaAppConfig } from "@/hooks/useMetaAppConfig";
 import FacebookWizard from "./FacebookWizard";
 import InstagramWizard from "./InstagramWizard";
 import TestPublishModal from "./TestPublishModal";
+import MetaAppModeSelector from "./MetaAppModeSelector";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -56,6 +58,7 @@ const platforms = [
 
 const SocialMediaSection = () => {
   const social = useSocialConnections();
+  const metaConfig = useMetaAppConfig();
   const [showFbWizard, setShowFbWizard] = useState(false);
   const [showIgWizard, setShowIgWizard] = useState(false);
   const [testConnection, setTestConnection] = useState<SocialConnection | null>(null);
@@ -74,6 +77,8 @@ const SocialMediaSection = () => {
     return "••••••••••••" + token.slice(-4);
   };
 
+  const isMetaPlatform = (key: string) => key === "facebook" || key === "instagram";
+
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
@@ -91,6 +96,22 @@ const SocialMediaSection = () => {
         </Badge>
       </div>
 
+      {/* Meta App Mode Selector */}
+      <MetaAppModeSelector metaConfig={metaConfig} />
+
+      {/* Mode Change Banner */}
+      {metaConfig.config && metaConfig.currentMode === "custom" && !metaConfig.config.setup_completed && (
+        <div className="bg-purple-500/5 rounded-xl p-4 border border-purple-500/20 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-purple-500 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm text-foreground font-medium">App Propia en configuración</p>
+            <p className="text-xs text-muted-foreground">
+              Completa la configuración de tu app propia para activar la independencia total.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Platform Cards */}
       <div className="grid md:grid-cols-2 gap-4">
         {platforms.map(p => {
@@ -98,6 +119,7 @@ const SocialMediaSection = () => {
           const isConnected = conn?.token_status === "active";
           const isExpired = conn?.token_status === "expired";
           const needsFb = p.requiresFb && !social.fbConnection;
+          const showAppMode = isMetaPlatform(p.key) && isConnected;
 
           return (
             <Card key={p.key} className={`shadow-card hover:shadow-lg transition-all duration-300 ${isConnected ? p.borderColor : "border-border/50"} ${isConnected ? "border-2" : ""}`}>
@@ -114,6 +136,26 @@ const SocialMediaSection = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* App Mode Badge */}
+                {showAppMode && (
+                  <div className="flex items-center gap-2">
+                    {metaConfig.currentMode === "custom" ? (
+                      <Badge className="bg-purple-500/10 text-purple-500 border-purple-500/20 gap-1 text-[10px]">
+                        <Building2 className="w-3 h-3" /> App propia{metaConfig.config?.custom_app_name ? ` — ${metaConfig.config.custom_app_name}` : ""}
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-[#1877F2]/10 text-[#1877F2] border-[#1877F2]/20 gap-1 text-[10px]">
+                        <Shield className="w-3 h-3" /> App compartida a3syst
+                      </Badge>
+                    )}
+                    {metaConfig.currentMode === "custom" && (
+                      <Badge variant="outline" className="text-[10px] gap-1 text-muted-foreground">
+                        <ShieldCheck className="w-3 h-3" /> Independiente
+                      </Badge>
+                    )}
+                  </div>
+                )}
 
                 {/* Status section */}
                 {!p.available ? (
@@ -163,6 +205,9 @@ const SocialMediaSection = () => {
                         <p><span className="font-medium text-foreground">Nombre:</span> {conn.platform_name}</p>
                         <p><span className="font-medium text-foreground">{p.key === "instagram" ? "IG Business ID" : "Page ID"}:</span> {conn.platform_account_id.slice(0, 8)}...{conn.platform_account_id.slice(-4)}</p>
                         <p><span className="font-medium text-foreground">Token:</span> {maskToken(conn.access_token)}</p>
+                        {metaConfig.currentMode === "custom" && metaConfig.config?.custom_app_id && (
+                          <p><span className="font-medium text-foreground">App ID:</span> {metaConfig.config.custom_app_id.slice(0, 4)}...{metaConfig.config.custom_app_id.slice(-3)}</p>
+                        )}
                         {conn.token_last_verified_at && (
                           <p className="flex items-center gap-1">
                             <span className="font-medium text-foreground">Último check:</span>

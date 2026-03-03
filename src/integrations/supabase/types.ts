@@ -1460,6 +1460,65 @@ export type Database = {
           },
         ]
       }
+      meta_app_configurations: {
+        Row: {
+          app_mode: string | null
+          clinic_id: string
+          configured_by: string | null
+          created_at: string | null
+          custom_app_id: string | null
+          custom_app_name: string | null
+          custom_app_secret_encrypted: string | null
+          custom_app_status: string | null
+          custom_app_verified_at: string | null
+          id: string
+          notes: string | null
+          setup_completed: boolean | null
+          shared_app_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          app_mode?: string | null
+          clinic_id: string
+          configured_by?: string | null
+          created_at?: string | null
+          custom_app_id?: string | null
+          custom_app_name?: string | null
+          custom_app_secret_encrypted?: string | null
+          custom_app_status?: string | null
+          custom_app_verified_at?: string | null
+          id?: string
+          notes?: string | null
+          setup_completed?: boolean | null
+          shared_app_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          app_mode?: string | null
+          clinic_id?: string
+          configured_by?: string | null
+          created_at?: string | null
+          custom_app_id?: string | null
+          custom_app_name?: string | null
+          custom_app_secret_encrypted?: string | null
+          custom_app_status?: string | null
+          custom_app_verified_at?: string | null
+          id?: string
+          notes?: string | null
+          setup_completed?: boolean | null
+          shared_app_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_app_configurations_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       page_visits: {
         Row: {
           created_at: string
@@ -2177,9 +2236,12 @@ export type Database = {
       social_media_connections: {
         Row: {
           access_token: string
+          app_mode: string | null
           clinic_id: string
           connected_at: string | null
           connected_by: string | null
+          custom_app_id: string | null
+          custom_app_secret_encrypted: string | null
           id: string
           is_primary: boolean | null
           metadata: Json | null
@@ -2193,9 +2255,12 @@ export type Database = {
         }
         Insert: {
           access_token?: string
+          app_mode?: string | null
           clinic_id: string
           connected_at?: string | null
           connected_by?: string | null
+          custom_app_id?: string | null
+          custom_app_secret_encrypted?: string | null
           id?: string
           is_primary?: boolean | null
           metadata?: Json | null
@@ -2209,9 +2274,12 @@ export type Database = {
         }
         Update: {
           access_token?: string
+          app_mode?: string | null
           clinic_id?: string
           connected_at?: string | null
           connected_by?: string | null
+          custom_app_id?: string | null
+          custom_app_secret_encrypted?: string | null
           id?: string
           is_primary?: boolean | null
           metadata?: Json | null
