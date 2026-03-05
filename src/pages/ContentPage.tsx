@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Palette, Sparkles, FileCheck, CalendarDays, List, Loader2, CheckCircle, XCircle, RefreshCw, Pencil, Instagram, Facebook, Music, Linkedin, Globe, Megaphone, Lightbulb, Star, Image, Heart, PartyPopper, Brain, ChevronRight, ChevronLeft, Wand2, Save, Clock } from "lucide-react";
+import ContentAIGenerator from "@/components/content/ContentAIGenerator";
 import AppLayout from "@/components/AppLayout";
 import { useContentPosts, type ContentPost } from "@/hooks/useContentPosts";
 import { cn } from "@/lib/utils";
@@ -156,8 +157,16 @@ const ContentPage = () => {
         </div>
       </div>
 
-      {/* AI Wizard */}
-      <ContentWizard open={wizardOpen} onOpenChange={setWizardOpen} content={content} />
+      {/* AI Generator — full page */}
+      {wizardOpen && (
+        <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
+          <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto p-0">
+            <div className="p-6">
+              <ContentAIGenerator content={content} />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Edit Modal */}
       {editPost && <EditPostModal post={editPost} onClose={() => setEditPost(null)} content={content} />}
