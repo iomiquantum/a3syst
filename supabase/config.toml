@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.meta-data-deletion]
 verify_jwt = false
+
+[functions.exchange-facebook-token]
+verify_jwt = false
