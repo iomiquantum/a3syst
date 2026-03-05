@@ -970,10 +970,10 @@ Responde SOLO en JSON: {"title":"...","body":"...","hashtags":"#h1 #h2...","firs
 
   return (
     <Dialog open onOpenChange={o => !o && onClose()}>
-      <DialogContent className="bg-[#0d0d1a] border-white/10 text-foreground max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bg-background border-border text-foreground max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Pencil className="w-5 h-5 text-[#A78BFA]" /> Editar publicación
+            <Pencil className="w-5 h-5 text-primary" /> Editar publicación
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
@@ -981,8 +981,8 @@ Responde SOLO en JSON: {"title":"...","body":"...","hashtags":"#h1 #h2...","firs
           {mediaPreview && (
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground font-medium">📷 Imagen / Media</Label>
-              <div className="rounded-lg overflow-hidden border border-white/10 relative group">
-                <img src={mediaPreview} alt="" className="w-full max-h-[250px] object-contain bg-black/20" />
+              <div className="rounded-lg overflow-hidden border border-border relative group">
+                <img src={mediaPreview} alt="" className="w-full max-h-[250px] object-contain bg-muted/30" />
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                   <Button size="sm" variant="secondary" className="text-xs gap-1" onClick={() => fileInputRef.current?.click()}>
                     <Upload className="w-3.5 h-3.5" /> Cambiar
@@ -998,16 +998,16 @@ Responde SOLO en JSON: {"title":"...","body":"...","hashtags":"#h1 #h2...","firs
 
           {/* Image AI tools */}
           {showImageTools && (
-            <div className="border border-white/10 rounded-lg p-3 space-y-3 bg-white/5">
-              <p className="text-xs font-medium text-[#A78BFA]">🤖 Herramientas de imagen con IA</p>
+            <div className="border border-border rounded-lg p-3 space-y-3 bg-muted/30">
+              <p className="text-xs font-medium text-primary">🤖 Herramientas de imagen con IA</p>
               
               {/* Regenerate */}
               <div className="space-y-1.5">
                 <Label className="text-[10px] text-muted-foreground">Regenerar imagen con nuevo prompt</Label>
                 <div className="flex gap-2">
                   <Textarea value={imagePrompt} onChange={e => setImagePrompt(e.target.value)} 
-                    placeholder="Describe la nueva imagen..." className="min-h-[50px] text-xs bg-white/5 border-white/10 flex-1" />
-                  <Button size="sm" onClick={handleRegenerateImage} disabled={regeneratingImage} className="gap-1 bg-[#8B5CF6] text-white shrink-0">
+                    placeholder="Describe la nueva imagen..." className="min-h-[50px] text-xs flex-1" />
+                  <Button size="sm" onClick={handleRegenerateImage} disabled={regeneratingImage} className="gap-1 shrink-0">
                     {regeneratingImage ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                   </Button>
                 </div>
@@ -1018,12 +1018,12 @@ Responde SOLO en JSON: {"title":"...","body":"...","hashtags":"#h1 #h2...","firs
                 <Label className="text-[10px] text-muted-foreground">Redimensionar para plataforma</Label>
                 <div className="flex gap-2">
                   <Select value={resizeSize} onValueChange={setResizeSize}>
-                    <SelectTrigger className="bg-white/5 border-white/10 text-xs flex-1"><SelectValue placeholder="Elegir tamaño" /></SelectTrigger>
+                    <SelectTrigger className="text-xs flex-1"><SelectValue placeholder="Elegir tamaño" /></SelectTrigger>
                     <SelectContent>
                       {sizesForResize.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Button size="sm" onClick={handleResize} disabled={resizing || !resizeSize} className="gap-1 bg-[#8B5CF6] text-white shrink-0">
+                  <Button size="sm" onClick={handleResize} disabled={resizing || !resizeSize} className="gap-1 shrink-0">
                     {resizing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Maximize2 className="w-3.5 h-3.5" />}
                   </Button>
                 </div>
@@ -1036,7 +1036,7 @@ Responde SOLO en JSON: {"title":"...","body":"...","hashtags":"#h1 #h2...","firs
             <div>
               <Label className="text-xs text-muted-foreground">Formato</Label>
               <Select value={postType} onValueChange={setPostType}>
-                <SelectTrigger className="mt-1 bg-white/5 border-white/10"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {postFormats.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
                 </SelectContent>
@@ -1048,7 +1048,7 @@ Responde SOLO en JSON: {"title":"...","body":"...","hashtags":"#h1 #h2...","firs
                 {[{ value: "instagram", label: "📸 IG" }, { value: "facebook", label: "📘 FB" }].map(p => (
                   <button key={p.value} onClick={() => togglePlatform(p.value)}
                     className={cn("px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
-                      platforms.includes(p.value) ? "border-[#8B5CF6] bg-[#8B5CF6]/20 text-[#A78BFA]" : "border-white/10 bg-white/5 text-muted-foreground"
+                      platforms.includes(p.value) ? "border-primary bg-primary/10 text-primary" : "border-border bg-muted/30 text-muted-foreground"
                     )}>
                     {p.label}
                   </button>
@@ -1060,53 +1060,55 @@ Responde SOLO en JSON: {"title":"...","body":"...","hashtags":"#h1 #h2...","firs
           {/* Title */}
           <div>
             <Label className="text-xs text-muted-foreground">Título (interno)</Label>
-            <Input value={title} onChange={e => setTitle(e.target.value)} className="mt-1 bg-white/5 border-white/10" />
+            <Input value={title} onChange={e => setTitle(e.target.value)} className="mt-1" />
           </div>
 
           {/* Copy with AI regenerate */}
           <div>
             <div className="flex items-center justify-between">
               <Label className="text-xs text-muted-foreground">Copy / Texto</Label>
-              <Button size="sm" variant="ghost" className="text-[10px] gap-1 text-[#A78BFA] h-6" onClick={handleRegenerateCopy} disabled={regeneratingCopy}>
+              <Button size="sm" variant="ghost" className="text-[10px] gap-1 text-primary h-6" onClick={handleRegenerateCopy} disabled={regeneratingCopy}>
                 {regeneratingCopy ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
                 Regenerar con IA
               </Button>
             </div>
-            <Textarea value={body} onChange={e => setBody(e.target.value)} className="mt-1 bg-white/5 border-white/10 min-h-[120px]" />
+            <Textarea value={body} onChange={e => setBody(e.target.value)} className="mt-1 min-h-[120px]" />
             <p className="text-[10px] text-muted-foreground mt-1">{body.length} caracteres</p>
           </div>
 
           {/* Hashtags */}
           <div>
             <Label className="text-xs text-muted-foreground">Hashtags</Label>
-            <Input value={hashtags} onChange={e => setHashtags(e.target.value)} className="mt-1 bg-white/5 border-white/10" placeholder="#hashtag1 #hashtag2" />
+            <Input value={hashtags} onChange={e => setHashtags(e.target.value)} className="mt-1" placeholder="#hashtag1 #hashtag2" />
           </div>
 
           {/* First comment */}
           <div>
             <Label className="text-xs text-muted-foreground">Primer comentario (opcional, para engagement)</Label>
-            <Input value={firstComment} onChange={e => setFirstComment(e.target.value)} className="mt-1 bg-white/5 border-white/10" placeholder="Comentario estratégico..." />
+            <Input value={firstComment} onChange={e => setFirstComment(e.target.value)} className="mt-1" placeholder="Comentario estratégico..." />
           </div>
 
           {/* Actions */}
-          <div className="flex flex-wrap gap-2 pt-2 border-t border-white/10">
-            <Button onClick={handleSave} variant="outline" className="flex-1 border-white/10 hover:bg-white/5 gap-2 text-sm">
-              <Save className="w-4 h-4" /> Guardar cambios
-            </Button>
+          <div className="space-y-2 pt-3 border-t border-border">
             {post.status !== "published" && (
-              <Button onClick={handlePublishNow} disabled={publishing} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white gap-2 text-sm">
+              <Button onClick={handlePublishNow} disabled={publishing} className="w-full gap-2 text-sm gradient-primary text-primary-foreground h-11">
                 {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                Publicar ahora
+                {publishing ? "Publicando..." : "✅ Listo — Publicar ahora"}
               </Button>
             )}
-            <Button onClick={async () => {
-              if (window.confirm("¿Eliminar esta publicación?")) {
-                await content.deletePost(post.id);
-                onClose();
-              }
-            }} variant="outline" className="text-xs gap-1 border-white/10 hover:bg-red-500/10 text-red-400">
-              <Trash2 className="w-3.5 h-3.5" /> Eliminar
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleSave} variant="outline" className="flex-1 gap-2 text-sm">
+                <Save className="w-4 h-4" /> Guardar borrador
+              </Button>
+              <Button onClick={async () => {
+                if (window.confirm("¿Eliminar esta publicación?")) {
+                  await content.deletePost(post.id);
+                  onClose();
+                }
+              }} variant="outline" className="text-xs gap-1 text-destructive hover:bg-destructive/10">
+                <Trash2 className="w-3.5 h-3.5" /> Eliminar
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>
