@@ -125,15 +125,22 @@ async function publishToInstagram(post: any, creds: Record<string, string>): Pro
 
     // Single media container
     const containerBody: any = { caption, access_token };
-    if (isVideo || post.post_type === "reel") {
-      containerBody.media_type = post.post_type === "reel" ? "REELS" : "VIDEO";
+    if (post.post_type === "reel") {
+      containerBody.media_type = "REELS";
+      containerBody.video_url = post.media_urls[0];
+    } else if (isVideo && post.post_type !== "story") {
+      containerBody.media_type = "VIDEO";
       containerBody.video_url = post.media_urls[0];
     } else if (post.post_type === "story") {
       containerBody.media_type = "STORIES";
       containerBody.image_url = post.media_urls[0];
     } else {
+      // Feed post — explicitly set IMAGE type to avoid wrong placement
+      containerBody.media_type = "IMAGE";
       containerBody.image_url = post.media_urls[0];
     }
+
+    console.log("Instagram container request:", JSON.stringify({ post_type: post.post_type, media_type: containerBody.media_type, isVideo }));
 
     const containerRes = await fetch(`https://graph.facebook.com/v21.0/${ig_account_id}/media`, {
       method: "POST",
