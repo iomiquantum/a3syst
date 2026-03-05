@@ -829,6 +829,7 @@ const EditPostModal = ({ post, onClose, content }: {
   const [showImageTools, setShowImageTools] = useState(false);
   const [resizeSize, setResizeSize] = useState("");
   const [resizing, setResizing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const togglePlatform = (p: string) => {
