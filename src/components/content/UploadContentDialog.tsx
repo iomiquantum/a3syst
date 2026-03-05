@@ -71,6 +71,18 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
+// Helper to get base64 from a URL (for resized images stored as URLs)
+const urlToBase64 = async (url: string): Promise<string> => {
+  const response = await fetch(url);
+  const blob = await response.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
 const STEPS = [
   { id: 1, title: "Subir archivo", desc: "Sube tu imagen o video" },
   { id: 2, title: "Formato y redes", desc: "Elige formato y plataformas" },
@@ -116,13 +128,14 @@ const UploadContentDialog = ({ open, onOpenChange, content }: Props) => {
   // Regenerating per-platform copy
   const [regeneratingCopy, setRegeneratingCopy] = useState<string | null>(null);
 
-  // Auto-duplicate files when enabling per-platform
+  // Sync platform images/previews from main files whenever customPerPlatform is enabled or files change
   useEffect(() => {
-    if (customPerPlatform && files.length > 0) {
+    if (customPerPlatform && (files.length > 0 || previews.length > 0)) {
       const newPF: Record<string, File[]> = {};
       const newPP: Record<string, string[]> = {};
       for (const p of platforms) {
-        if (!platformFiles[p]?.length) {
+        // Always sync to the latest main files/previews (including resized ones)
+        if (!platformFiles[p]?.length || platformPreviews[p]?.[0] !== previews[0]) {
           newPF[p] = [...files];
           newPP[p] = [...previews];
         }
@@ -132,7 +145,7 @@ const UploadContentDialog = ({ open, onOpenChange, content }: Props) => {
         setPlatformPreviews(prev => ({ ...prev, ...newPP }));
       }
     }
-  }, [customPerPlatform]);
+  }, [customPerPlatform, files, previews]);
 
   // Auto-generate per-platform copy when enabling customization
   useEffect(() => {
@@ -302,8 +315,29 @@ Responde SOLO en JSON:
     const selectedSize = allSizes.find(s => s.value === sizeKey);
     if (!selectedSize) return;
 
+    // Get image data - try File first, then fall back to preview URL
     const sourceFiles = isShared ? files : (platformFiles[platform] || files);
-    if (!sourceFiles?.length || !sourceFiles[0]?.type.startsWith("image/")) {
+    const sourcePreviews = isShared ? previews : (platformPreviews[platform] || previews);
+    
+    let imageDataUrl: string | null = null;
+    
+    if (sourceFiles?.length > 0 && sourceFiles[0]?.type?.startsWith("image/")) {
+      imageDataUrl = await fileToBase64(sourceFiles[0]);
+    } else if (sourcePreviews?.length > 0 && sourcePreviews[0] && sourcePreviews[0] !== "video") {
+      // Preview is either a data URL or a public URL from a previous resize
+      const previewUrl = sourcePreviews[0];
+      if (previewUrl.startsWith("data:")) {
+        imageDataUrl = previewUrl;
+      } else {
+        try {
+          imageDataUrl = await urlToBase64(previewUrl);
+        } catch (e) {
+          console.error("Error converting URL to base64:", e);
+        }
+      }
+    }
+
+    if (!imageDataUrl) {
       toast.error("No hay imagen para redimensionar");
       return;
     }
@@ -312,7 +346,6 @@ Responde SOLO en JSON:
     else setResizingPlatform(platform);
 
     try {
-      const imageDataUrl = await fileToBase64(sourceFiles[0]);
       const { data, error } = await supabase.functions.invoke("ai-generate-content", {
         body: {
           prompt: `Redimensiona esta imagen al formato ${selectedSize.label} (${selectedSize.w}x${selectedSize.h}, ratio ${selectedSize.ratio}). Mantén la composición, textos y elementos visuales adaptándolos al nuevo formato. NO agregues nuevos elementos.`,
@@ -430,7 +463,7 @@ Responde SOLO en JSON:
     switch (step) {
       case 1: return files.length > 0;
       case 2: return platforms.length > 0;
-      case 3: return true; // copy is optional
+      case 3: return true;
       case 4: return true;
       case 5: return true;
       default: return false;
@@ -453,6 +486,9 @@ Responde SOLO en JSON:
 
   // All platform sizes flat for shared resize
   const sharedSizes = platforms.length > 0 ? (sizesByPlatform[platforms[0]] || []) : [];
+
+  // Get current format label
+  const currentFormatLabel = postFormats.find(f => f.value === postFormat)?.label || postFormat;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
@@ -654,14 +690,7 @@ Responde SOLO en JSON:
                 <p className="text-sm text-muted-foreground mt-1">La IA analiza tu imagen y crea el mejor texto vendedor, o escríbelo tú mismo</p>
               </div>
 
-              {/* Title */}
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Título interno (opcional)</Label>
-                <Input placeholder="Ej: Promoción de verano — solo para ti, no se publica" value={title} onChange={e => setTitle(e.target.value)} />
-                <p className="text-[10px] text-muted-foreground">Este título es solo para organizar tu contenido, no se publica</p>
-              </div>
-
-              {/* AI button */}
+              {/* AI button - ABOVE title */}
               <div className="p-4 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -673,6 +702,13 @@ Responde SOLO en JSON:
                     {generatingCopy ? "Analizando..." : "Generar"}
                   </Button>
                 </div>
+              </div>
+
+              {/* Title */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Título interno (opcional)</Label>
+                <Input placeholder="Ej: Promoción de verano — solo para ti, no se publica" value={title} onChange={e => setTitle(e.target.value)} />
+                <p className="text-[10px] text-muted-foreground">Este título es solo para organizar tu contenido, no se publica</p>
               </div>
 
               {/* Copy */}
@@ -691,7 +727,11 @@ Responde SOLO en JSON:
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-medium">Hashtags</Label>
-                  <Select value={hashtagMode} onValueChange={(v: "with" | "without") => { setHashtagMode(v); if (v === "without") setHashtags(""); }}>
+                  <Select value={hashtagMode} onValueChange={(v: "with" | "without") => {
+                    setHashtagMode(v);
+                    // Only clear hashtags, don't change anything else
+                    if (v === "without") setHashtags("");
+                  }}>
                     <SelectTrigger className="w-[150px] h-7 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {hashtagOptions.map(o => (
@@ -722,6 +762,14 @@ Responde SOLO en JSON:
                 <p className="text-sm text-muted-foreground mt-1">Usa la misma imagen y copy para ambas redes, o personaliza cada una</p>
               </div>
 
+              {/* Format badge */}
+              <div className="flex items-center justify-center gap-2">
+                <Badge variant="secondary" className="text-xs gap-1">
+                  {postFormat === "post" ? <Image className="w-3 h-3" /> : postFormat === "story" ? <FileUp className="w-3 h-3" /> : <Video className="w-3 h-3" />}
+                  Formato: {currentFormatLabel}
+                </Badge>
+              </div>
+
               {/* Toggle */}
               <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/30">
                 <div>
@@ -743,13 +791,18 @@ Responde SOLO en JSON:
                 const platformSizes = sizesByPlatform[platform] || [];
                 const isResizing = resizingPlatform === platform;
                 const isRegenerating = regeneratingCopy === platform;
-                const pPreviews = platformPreviews[platform] || [];
+                const pPreviews = platformPreviews[platform] || previews;
 
                 return (
                   <div key={platform} className="space-y-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
-                    <Badge className="bg-primary/20 text-primary border-primary/30">
-                      {platform === "facebook" ? "📘 Facebook" : "📸 Instagram"}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-primary/20 text-primary border-primary/30">
+                        {platform === "facebook" ? "📘 Facebook" : "📸 Instagram"}
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px]">
+                        {currentFormatLabel}
+                      </Badge>
+                    </div>
 
                     {/* Platform image */}
                     <div className="space-y-2">
@@ -775,7 +828,7 @@ Responde SOLO en JSON:
                           </div>
 
                           {/* Resize */}
-                          {(platformFiles[platform]?.[0]?.type?.startsWith("image/") || (pPreviews[0] && pPreviews[0] !== "video")) && (
+                          {(pPreviews[0] && pPreviews[0] !== "video") && (
                             <div className="flex items-center gap-2">
                               <Select value={resizeSize[platform] || ""} onValueChange={v => setResizeSize(prev => ({ ...prev, [platform]: v }))}>
                                 <SelectTrigger className="flex-1 h-8 text-xs"><SelectValue placeholder="Redimensionar..." /></SelectTrigger>
@@ -859,7 +912,7 @@ Responde SOLO en JSON:
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Formato</p>
-                    <p className="font-medium">{postFormats.find(f => f.value === postFormat)?.label}</p>
+                    <p className="font-medium">{currentFormatLabel}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Archivos</p>
@@ -927,7 +980,7 @@ Responde SOLO en JSON:
               Siguiente <ChevronRight className="w-4 h-4" />
             </Button>
           ) : (
-            <div /> // Actions are already in step 5
+            <div />
           )}
         </div>
       </DialogContent>
