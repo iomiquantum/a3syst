@@ -135,7 +135,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { prompt, tone, platform, type, width, height, imageModel, sizeLabel, expertMode, referenceImageUrl, referenceImageUrls, clinic_id: providedClinicId, action_label } = await req.json();
+    const { prompt, tone, platform, type, width, height, imageModel, sizeLabel, expertMode, referenceImageUrl, referenceImageUrls, clinic_id: providedClinicId, action_label, imageDataUrl } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -192,12 +192,20 @@ serve(async (req) => {
       const systemPrompt = `Eres un experto en marketing digital y copywriting para redes sociales. Genera contenido profesional, atractivo y optimizado para la plataforma ${platform}. 
 Tono: ${tone}.
 Reglas:
+- Si se proporciona una imagen, ANALÍZALA en detalle: identifica elementos visuales, colores, texto visible, logotipos, productos, personas, ambiente
+- Genera contenido basado en lo que VES en la imagen
 - Usa emojis relevantes pero sin exceso
 - Incluye un call-to-action claro
 - Optimiza la longitud para ${platform} (Instagram: 2200 chars max, Facebook: más largo OK, TikTok: corto y directo)
-- Si aplica, sugiere hashtags relevantes al final
 - Escribe en español
-- Responde SOLO con el texto de la publicación, sin explicaciones adicionales`;
+- Responde SOLO con el contenido solicitado, sin explicaciones adicionales`;
+
+      // Build multimodal message if image is provided
+      const userContent: any[] = [];
+      if (imageDataUrl) {
+        userContent.push({ type: "image_url", image_url: { url: imageDataUrl } });
+      }
+      userContent.push({ type: "text", text: prompt });
 
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -206,10 +214,10 @@ Reglas:
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: imageDataUrl ? "google/gemini-2.5-flash" : "google/gemini-3-flash-preview",
           messages: [
             { role: "system", content: systemPrompt },
-            { role: "user", content: prompt },
+            { role: "user", content: userContent.length > 1 ? userContent : prompt },
           ],
         }),
       });
