@@ -1,9 +1,11 @@
 import { useState, useRef, useMemo } from "react";
-import { Edit, Trash2, Clock, Pencil, RefreshCw, Loader2, Check, X, Copy, Video, Upload, Image, FileText, LayoutGrid, Zap } from "lucide-react";
+import { Edit, Trash2, Clock, Pencil, RefreshCw, Loader2, Check, X, Copy, Video, Upload, Image, FileText, LayoutGrid, Zap, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
@@ -31,6 +33,12 @@ const ContentDraftsView = ({ content }: Props) => {
   const [filter, setFilter] = useState<"all" | "image" | "video" | "copy">("all");
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const [videoUploadTargetId, setVideoUploadTargetId] = useState<string | null>(null);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
+
+  // Schedule popover state
+  const [schedulingId, setSchedulingId] = useState<string | null>(null);
+  const [scheduleDate, setScheduleDate] = useState("");
+  const [scheduleTime, setScheduleTime] = useState("10:00");
 
   const startEditing = (draft: ContentPost) => {
     setEditingId(draft.id);
@@ -39,26 +47,17 @@ const ContentDraftsView = ({ content }: Props) => {
 
   const saveEdit = async (id: string) => {
     const ok = await content.updatePost(id, { body: editBody });
-    if (ok) {
-      toast.success("Copy actualizado");
-      setEditingId(null);
-    }
+    if (ok) { toast.success("Copy actualizado"); setEditingId(null); }
   };
 
   const duplicateDraft = async (draft: ContentPost) => {
     const result = await content.createPost({
       title: draft.title ? `${draft.title} (copia)` : "Copia",
-      body: draft.body,
-      media_urls: draft.media_urls,
-      media_type: draft.media_type,
-      post_type: draft.post_type,
-      platforms: draft.platforms,
-      hashtags: draft.hashtags,
-      ai_generated: draft.ai_generated,
-      ai_prompt: draft.ai_prompt,
-      status: "draft",
+      body: draft.body, media_urls: draft.media_urls, media_type: draft.media_type,
+      post_type: draft.post_type, platforms: draft.platforms, hashtags: draft.hashtags,
+      ai_generated: draft.ai_generated, ai_prompt: draft.ai_prompt, status: "draft",
     });
-    if (result) toast.success("Borrador duplicado — edítalo como quieras");
+    if (result) toast.success("Borrador duplicado");
   };
 
   const regenerateImage = async (id: string, prompt: string) => {
@@ -80,18 +79,14 @@ const ContentDraftsView = ({ content }: Props) => {
       setRegeneratingImageId(null);
     }
   };
+
   const handleUploadVideoToDraft = async (draftId: string, file: File) => {
-    if (file.size > 100 * 1024 * 1024) {
-      toast.error("El video no puede superar los 100MB");
-      return;
-    }
+    if (file.size > 100 * 1024 * 1024) { toast.error("El video no puede superar los 100MB"); return; }
     setUploadingVideoId(draftId);
     try {
       const ext = file.name.split(".").pop() || "mp4";
       const fileName = `videos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from("content-media")
-        .upload(fileName, file, { contentType: file.type });
+      const { error: uploadError } = await supabase.storage.from("content-media").upload(fileName, file, { contentType: file.type });
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from("content-media").getPublicUrl(fileName);
       await content.updatePost(draftId, { media_urls: [urlData.publicUrl] });
@@ -101,6 +96,30 @@ const ContentDraftsView = ({ content }: Props) => {
       toast.error("Error subiendo video");
     } finally {
       setUploadingVideoId(null);
+    }
+  };
+
+  const handlePublishNow = async (draftId: string) => {
+    setPublishingId(draftId);
+    try {
+      const result = await publishNow(draftId);
+      if (result?.success) {
+        // fetchPosts will refresh
+      }
+    } finally {
+      setPublishingId(null);
+    }
+  };
+
+  const handleSchedule = async (draftId: string) => {
+    if (!scheduleDate) { toast.error("Selecciona una fecha"); return; }
+    const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
+    const ok = await content.updatePost(draftId, { status: "scheduled", scheduled_at: scheduledAt } as any);
+    if (ok) {
+      toast.success("📅 Post programado para " + format(new Date(scheduledAt), "dd MMM yyyy HH:mm", { locale: es }));
+      setSchedulingId(null);
+      setScheduleDate("");
+      setScheduleTime("10:00");
     }
   };
 
@@ -130,15 +149,10 @@ const ContentDraftsView = ({ content }: Props) => {
         </div>
         <div className="flex gap-1.5 bg-muted/50 p-1 rounded-lg border border-border/50">
           {filterButtons.map(({ key, label, icon: Icon, count }) => (
-            <Button
-              key={key}
-              variant={filter === key ? "default" : "ghost"}
-              size="sm"
+            <Button key={key} variant={filter === key ? "default" : "ghost"} size="sm"
               className={`gap-1.5 text-xs h-8 ${filter === key ? "gradient-primary text-primary-foreground" : ""}`}
-              onClick={() => setFilter(key)}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {label}
+              onClick={() => setFilter(key)}>
+              <Icon className="w-3.5 h-3.5" />{label}
               <Badge variant={filter === key ? "secondary" : "outline"} className="text-[10px] px-1.5 py-0 h-4 ml-0.5">{count}</Badge>
             </Button>
           ))}
@@ -162,25 +176,20 @@ const ContentDraftsView = ({ content }: Props) => {
             const isVideo = draft.media_type === "video";
             const hasMedia = draft.media_urls && draft.media_urls.length > 0 && draft.media_urls[0];
             const isUploadingVideo = uploadingVideoId === draft.id;
+            const isPublishing = publishingId === draft.id;
 
             return (
               <div key={draft.id} className="bg-card border border-border rounded-xl p-4 space-y-3 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="bg-[hsl(var(--warning)/0.1)] text-[hsl(var(--warning))] border-[hsl(var(--warning)/0.2)] text-xs">Borrador</Badge>
-                    {isVideo && (
-                      <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20 gap-1">
-                        <Video className="w-3 h-3" /> Video
-                      </Badge>
-                    )}
-                    {draft.ai_generated && (
-                      <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">✨ IA</Badge>
-                    )}
+                    {isVideo && <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20 gap-1"><Video className="w-3 h-3" /> Video</Badge>}
+                    {draft.ai_generated && <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">✨ IA</Badge>}
                   </div>
                   <span className="text-[10px] text-muted-foreground">{format(new Date(draft.created_at), "dd MMM", { locale: es })}</span>
                 </div>
 
-                {/* Media: image or video */}
+                {/* Media */}
                 {isVideo && hasMedia && (
                   <div className="rounded-lg overflow-hidden border border-border">
                     <video src={draft.media_urls[0]} controls className="w-full max-h-[240px] bg-muted" />
@@ -189,21 +198,10 @@ const ContentDraftsView = ({ content }: Props) => {
                 {isVideo && !hasMedia && (
                   <div className="rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 p-6 flex flex-col items-center justify-center gap-2">
                     <Upload className="w-8 h-8 text-primary/50" />
-                    <p className="text-xs text-muted-foreground text-center">
-                      Genera el video con el prompt y súbelo aquí
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 text-xs mt-1"
-                      disabled={isUploadingVideo}
-                      onClick={() => {
-                        setVideoUploadTargetId(draft.id);
-                        videoInputRef.current?.click();
-                      }}
-                    >
-                      {isUploadingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                      Subir video
+                    <p className="text-xs text-muted-foreground text-center">Genera el video con el prompt y súbelo aquí</p>
+                    <Button variant="outline" size="sm" className="gap-1.5 text-xs mt-1" disabled={isUploadingVideo}
+                      onClick={() => { setVideoUploadTargetId(draft.id); videoInputRef.current?.click(); }}>
+                      {isUploadingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />} Subir video
                     </Button>
                   </div>
                 )}
@@ -211,68 +209,36 @@ const ContentDraftsView = ({ content }: Props) => {
                   <div className="rounded-lg overflow-hidden border border-border relative group">
                     <img src={draft.media_urls[0]} alt="Draft" className="w-full max-h-[240px] object-contain bg-muted" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="gap-1.5"
-                        onClick={() => {
-                          setShowPromptId(showingPrompt ? null : draft.id);
-                          setImagePrompt(draft.ai_prompt || "");
-                        }}
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        Regenerar imagen
+                      <Button variant="secondary" size="sm" className="gap-1.5"
+                        onClick={() => { setShowPromptId(showingPrompt ? null : draft.id); setImagePrompt(draft.ai_prompt || ""); }}>
+                        <RefreshCw className="w-3.5 h-3.5" /> Regenerar imagen
                       </Button>
                     </div>
                   </div>
                 )}
 
-                {/* Image prompt editor */}
                 {showingPrompt && (
                   <div className="space-y-2 border border-border rounded-lg p-3 bg-muted/30">
                     <Label className="text-xs font-medium">Prompt de imagen</Label>
-                    <Textarea
-                      value={imagePrompt}
-                      onChange={e => setImagePrompt(e.target.value)}
-                      className="min-h-[60px] text-xs"
-                      placeholder="Describe la imagen que quieres generar..."
-                    />
+                    <Textarea value={imagePrompt} onChange={e => setImagePrompt(e.target.value)} className="min-h-[60px] text-xs" placeholder="Describe la imagen..." />
                     <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        className="text-xs gap-1 gradient-primary text-primary-foreground"
-                        onClick={() => regenerateImage(draft.id, imagePrompt)}
-                        disabled={isRegenerating}
-                      >
-                        {isRegenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                        Regenerar
+                      <Button size="sm" className="text-xs gap-1 gradient-primary text-primary-foreground" onClick={() => regenerateImage(draft.id, imagePrompt)} disabled={isRegenerating}>
+                        {isRegenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />} Regenerar
                       </Button>
-                      <Button variant="ghost" size="sm" className="text-xs" onClick={() => setShowPromptId(null)}>
-                        Cancelar
-                      </Button>
+                      <Button variant="ghost" size="sm" className="text-xs" onClick={() => setShowPromptId(null)}>Cancelar</Button>
                     </div>
                   </div>
                 )}
 
                 {/* Copy */}
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-foreground line-clamp-1">{draft.title || "Sin título"}</p>
-                  </div>
+                  <p className="text-sm font-medium text-foreground line-clamp-1">{draft.title || "Sin título"}</p>
                   {isEditing ? (
                     <div className="space-y-2">
-                      <Textarea
-                        value={editBody}
-                        onChange={e => setEditBody(e.target.value)}
-                        className="min-h-[100px] text-sm"
-                      />
+                      <Textarea value={editBody} onChange={e => setEditBody(e.target.value)} className="min-h-[100px] text-sm" />
                       <div className="flex gap-2">
-                        <Button size="sm" className="text-xs gap-1" onClick={() => saveEdit(draft.id)}>
-                          <Check className="w-3 h-3" /> Guardar
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={() => setEditingId(null)}>
-                          <X className="w-3 h-3" /> Cancelar
-                        </Button>
+                        <Button size="sm" className="text-xs gap-1" onClick={() => saveEdit(draft.id)}><Check className="w-3 h-3" /> Guardar</Button>
+                        <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={() => setEditingId(null)}><X className="w-3 h-3" /> Cancelar</Button>
                       </div>
                     </div>
                   ) : (
@@ -282,9 +248,7 @@ const ContentDraftsView = ({ content }: Props) => {
 
                 {draft.platforms && draft.platforms.length > 0 && (
                   <div className="flex gap-1">
-                    {draft.platforms.map(p => (
-                      <Badge key={p} variant="outline" className="text-[10px] capitalize">{p}</Badge>
-                    ))}
+                    {draft.platforms.map(p => <Badge key={p} variant="outline" className="text-[10px] capitalize">{p}</Badge>)}
                   </div>
                 )}
 
@@ -295,41 +259,47 @@ const ContentDraftsView = ({ content }: Props) => {
                     </Button>
                   )}
                   {isVideo && hasMedia && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 text-xs gap-1.5"
-                      disabled={isUploadingVideo}
-                      onClick={() => {
-                        setVideoUploadTargetId(draft.id);
-                        videoInputRef.current?.click();
-                      }}
-                    >
-                      {isUploadingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                      Cambiar video
+                    <Button variant="outline" size="sm" className="flex-1 text-xs gap-1.5" disabled={isUploadingVideo}
+                      onClick={() => { setVideoUploadTargetId(draft.id); videoInputRef.current?.click(); }}>
+                      {isUploadingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />} Cambiar video
                     </Button>
                   )}
                   <Button variant="outline" size="sm" className="flex-1 text-xs gap-1.5" onClick={() => duplicateDraft(draft)}>
                     <Copy className="w-3.5 h-3.5" /> Reutilizar
                   </Button>
-                  <Button
-                    variant="default"
-                    size="sm"
+                  <Button variant="default" size="sm"
                     className="flex-1 text-xs gap-1.5 gradient-primary text-primary-foreground"
-                    disabled={publishingMeta}
-                    onClick={async () => {
-                      const result = await publishNow(draft.id);
-                      if (result?.success) {
-                        // Refresh will happen via fetchPosts
-                      }
-                    }}
-                  >
-                    {publishingMeta ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                    disabled={isPublishing || publishingMeta}
+                    onClick={() => handlePublishNow(draft.id)}>
+                    {isPublishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
                     Publicar ahora
                   </Button>
-                  <Button variant="outline" size="sm" className="flex-1 text-xs gap-1.5">
-                    <Clock className="w-3.5 h-3.5" /> Programar
-                  </Button>
+                  
+                  {/* Schedule with popover */}
+                  <Popover open={schedulingId === draft.id} onOpenChange={(open) => { setSchedulingId(open ? draft.id : null); if (!open) { setScheduleDate(""); setScheduleTime("10:00"); } }}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="flex-1 text-xs gap-1.5">
+                        <CalendarDays className="w-3.5 h-3.5" /> Programar
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 space-y-3" align="end">
+                      <p className="text-sm font-medium">Programar publicación</p>
+                      <div className="space-y-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Fecha</Label>
+                          <Input type="date" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} className="mt-1" />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Hora</Label>
+                          <Input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} className="mt-1" />
+                        </div>
+                      </div>
+                      <Button size="sm" className="w-full gap-1.5 gradient-primary text-primary-foreground" onClick={() => handleSchedule(draft.id)} disabled={!scheduleDate}>
+                        <CalendarDays className="w-3.5 h-3.5" /> Confirmar
+                      </Button>
+                    </PopoverContent>
+                  </Popover>
+
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => content.deletePost(draft.id)}>
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
@@ -340,18 +310,8 @@ const ContentDraftsView = ({ content }: Props) => {
         </div>
       )}
 
-      {/* Hidden video file input */}
-      <input
-        ref={videoInputRef}
-        type="file"
-        accept="video/*"
-        className="hidden"
-        onChange={e => {
-          const file = e.target.files?.[0];
-          if (file && videoUploadTargetId) handleUploadVideoToDraft(videoUploadTargetId, file);
-          e.target.value = "";
-        }}
-      />
+      <input ref={videoInputRef} type="file" accept="video/*" className="hidden"
+        onChange={e => { const file = e.target.files?.[0]; if (file && videoUploadTargetId) handleUploadVideoToDraft(videoUploadTargetId, file); e.target.value = ""; }} />
     </div>
   );
 };
