@@ -39,6 +39,10 @@ async function publishToFacebook(post: any, creds: Record<string, string>): Prom
           const res = await fetch(`https://graph.facebook.com/v21.0/${page_id}/feed`, { method: "POST", body: params });
           const data = await res.json();
           if (data.error) return { success: false, error: data.error.message };
+          // First comment on multi-photo
+          if (post.first_comment && data.id) {
+            try { await fetch(`https://graph.facebook.com/v21.0/${data.id}/comments`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: post.first_comment, access_token }) }); } catch {}
+          }
           return { success: true, externalId: data.id };
         }
       }
@@ -51,7 +55,12 @@ async function publishToFacebook(post: any, creds: Record<string, string>): Prom
       });
       const data = await res.json();
       if (data.error) return { success: false, error: data.error.message };
-      return { success: true, externalId: data.id || data.post_id };
+      const singleId = data.id || data.post_id;
+      // First comment on single photo
+      if (post.first_comment && singleId) {
+        try { await fetch(`https://graph.facebook.com/v21.0/${singleId}/comments`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: post.first_comment, access_token }) }); } catch {}
+      }
+      return { success: true, externalId: singleId };
     }
 
     // Video post
@@ -74,7 +83,22 @@ async function publishToFacebook(post: any, creds: Record<string, string>): Prom
     });
     const data = await res.json();
     if (data.error) return { success: false, error: data.error.message };
-    return { success: true, externalId: data.id };
+    
+    // First comment on Facebook
+    const fbPostId = data.id;
+    if (post.first_comment && fbPostId) {
+      try {
+        await fetch(`https://graph.facebook.com/v21.0/${fbPostId}/comments`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: post.first_comment, access_token }),
+        });
+      } catch (commentErr) {
+        console.error("Error posting first comment on Facebook:", commentErr);
+      }
+    }
+    
+    return { success: true, externalId: fbPostId };
   } catch (e) {
     return { success: false, error: e.message };
   }
