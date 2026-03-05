@@ -19,6 +19,7 @@ import TratamientosPage from "./pages/TratamientosPage";
 import ProfesionalesPage from "./pages/ProfesionalesPage";
 import UsuariosPage from "./pages/UsuariosPage";
 import AdminPage from "./pages/AdminPage";
+import AdminUsuariosPage from "./pages/AdminUsuariosPage";
 import MensajesPage from "./pages/MensajesPage";
 import WidgetConfigPage from "./pages/WidgetConfigPage";
 import CRMPage from "./pages/CRMPage";
@@ -95,6 +96,7 @@ const App = () => (
               <Route path="/configuracion/usuarios" element={<ProtectedRoute><UsuariosPage /></ProtectedRoute>} />
               <Route path="/configuracion/ajustes" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
+              <Route path="/admin/usuarios" element={<ProtectedRoute><AdminUsuariosPage /></ProtectedRoute>} />
               <Route path="/ads" element={<ProtectedRoute><AdsPage /></ProtectedRoute>} />
               <Route path="/contenido" element={<ProtectedRoute><ContentPage /></ProtectedRoute>} />
               <Route path="/psycho-matrix" element={<ProtectedRoute><PsychoMatrixPage /></ProtectedRoute>} />

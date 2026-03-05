@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      actividad_usuarios: {
+        Row: {
+          accion: string
+          created_at: string
+          detalle: Json | null
+          id: string
+          realizado_por: string | null
+          usuario_id: string
+        }
+        Insert: {
+          accion: string
+          created_at?: string
+          detalle?: Json | null
+          id?: string
+          realizado_por?: string | null
+          usuario_id: string
+        }
+        Update: {
+          accion?: string
+          created_at?: string
+          detalle?: Json | null
+          id?: string
+          realizado_por?: string | null
+          usuario_id?: string
+        }
+        Relationships: []
+      }
       ads_accounts: {
         Row: {
           clinic_id: string
@@ -1973,29 +2000,44 @@ export type Database = {
       }
       profiles: {
         Row: {
+          apellido: string
           avatar_url: string | null
           created_at: string
           email: string
+          estado: string
           full_name: string
           id: string
+          notas: string | null
+          telefono: string | null
+          ultimo_acceso: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          apellido?: string
           avatar_url?: string | null
           created_at?: string
           email?: string
+          estado?: string
           full_name?: string
           id?: string
+          notas?: string | null
+          telefono?: string | null
+          ultimo_acceso?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          apellido?: string
           avatar_url?: string | null
           created_at?: string
           email?: string
+          estado?: string
           full_name?: string
           id?: string
+          notas?: string | null
+          telefono?: string | null
+          ultimo_acceso?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -2573,6 +2615,10 @@ export type Database = {
           referral_count: number
         }[]
       }
+      get_role_nivel: {
+        Args: { r: Database["public"]["Enums"]["app_role"] }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2587,7 +2633,14 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "secretary" | "professional"
+      app_role:
+        | "admin"
+        | "secretary"
+        | "professional"
+        | "manager"
+        | "empleado"
+        | "vendedor"
+        | "super_admin"
       appointment_status:
         | "pendiente"
         | "confirmado"
@@ -2721,7 +2774,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "secretary", "professional"],
+      app_role: [
+        "admin",
+        "secretary",
+        "professional",
+        "manager",
+        "empleado",
+        "vendedor",
+        "super_admin",
+      ],
       appointment_status: [
         "pendiente",
         "confirmado",
