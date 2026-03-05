@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Wand2, Loader2, Plus, Minus, Sparkles, RefreshCw, Settings2, Mic, MicOff, ChevronDown } from "lucide-react";
+import { Wand2, Loader2, Plus, Minus, Sparkles, RefreshCw, Settings2, Mic, MicOff, ChevronDown, Package, PlusCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,7 +12,7 @@ import type { ContentPost } from "@/hooks/useContentPosts";
 import { supabase } from "@/integrations/supabase/client";
 import AIGeneratedPiece, { type GeneratedPiece } from "./AIGeneratedPiece";
 import PromptTemplateEditor from "./PromptTemplateEditor";
-import { usePsychoStrategies } from "@/hooks/usePsychoMatrix";
+import { usePsychoStrategies, usePsychoServices, useCreateService, type PsychoService } from "@/hooks/usePsychoMatrix";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import BrandStyleManager from "./BrandStyleManager";
 import type { BrandStyle } from "@/hooks/useBrandStyles";
@@ -186,8 +186,15 @@ const ContentAIGenerator = ({ content }: Props) => {
   const [resizingIds, setResizingIds] = useState<Set<number>>(new Set());
   const [pieceDimensions, setPieceDimensions] = useState<Record<number, { w: number; h: number; label: string }>>({});
   const [selectedBrandStyle, setSelectedBrandStyle] = useState<BrandStyle | null>(null);
+  
+  // Product/service selector state
+  const [selectedProductId, setSelectedProductId] = useState<string>("none");
+  const [showNewProduct, setShowNewProduct] = useState(false);
+  const [newProductForm, setNewProductForm] = useState({ name: "", core_benefit: "", pain_point: "", price: "" });
 
   const { data: strategies = [] } = usePsychoStrategies();
+  const { data: products = [] } = usePsychoServices();
+  const createService = useCreateService();
   const { isSuperAdmin } = useClinic();
   const { data: imagePromptTemplate } = useActivePromptTemplate("image");
   const { data: copyPromptTemplate } = useActivePromptTemplate("copy");
@@ -437,6 +444,115 @@ const ContentAIGenerator = ({ content }: Props) => {
         <p className="text-sm text-muted-foreground">
           Genera imágenes publicitarias con copies optimizados. Cada variación usa un ángulo creativo diferente.
         </p>
+      </div>
+
+      {/* Product/Service Selector */}
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium flex items-center gap-1.5">
+            <Package className="w-4 h-4 text-primary" />
+            Producto / Servicio
+          </Label>
+          <div className="flex gap-2">
+            <Select value={selectedProductId} onValueChange={(val) => {
+              setSelectedProductId(val);
+              if (val !== "none" && val !== "new") {
+                const product = products.find(p => p.id === val);
+                if (product) {
+                  const parts = [`Promocionar: ${product.name}`];
+                  if (product.core_benefit) parts.push(`Beneficio: ${product.core_benefit}`);
+                  if (product.pain_point) parts.push(`Dolor que resuelve: ${product.pain_point}`);
+                  if (product.price > 0) parts.push(`Precio: $${product.price}`);
+                  if (product.observations) parts.push(`Info adicional: ${product.observations}`);
+                  setMainPrompt(parts.join(". "));
+                }
+                setShowNewProduct(false);
+              } else if (val === "new") {
+                setShowNewProduct(true);
+              } else {
+                setShowNewProduct(false);
+              }
+            }}>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Selecciona un producto (opcional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Escribir manualmente</SelectItem>
+                {products.map(p => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name} {p.price > 0 ? `— $${p.price}` : ""}
+                  </SelectItem>
+                ))}
+                <SelectItem value="new">
+                  <span className="flex items-center gap-1.5 text-primary font-medium">
+                    <PlusCircle className="w-3.5 h-3.5" /> Crear nuevo producto
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            {selectedProductId !== "none" && selectedProductId !== "new" && (
+              <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => { setSelectedProductId("none"); setMainPrompt(""); }}>
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Inline new product form */}
+        {showNewProduct && (
+          <div className="p-4 rounded-lg border border-primary/20 bg-primary/5 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-foreground">Nuevo Producto / Servicio</p>
+              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => { setShowNewProduct(false); setSelectedProductId("none"); }}>
+                <X className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Nombre *</Label>
+                <Input placeholder='Ej: "Blanqueamiento Dental"' value={newProductForm.name} onChange={e => setNewProductForm({ ...newProductForm, name: e.target.value })} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Precio (opcional)</Label>
+                <Input type="number" min={0} step={0.01} placeholder="Ej: 250.00" value={newProductForm.price} onChange={e => setNewProductForm({ ...newProductForm, price: e.target.value })} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Beneficio principal *</Label>
+              <Input placeholder='Ej: "Sonrisa más blanca en 1 sesión"' value={newProductForm.core_benefit} onChange={e => setNewProductForm({ ...newProductForm, core_benefit: e.target.value })} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Punto de dolor</Label>
+              <Input placeholder='Ej: "Inseguridad al sonreír"' value={newProductForm.pain_point} onChange={e => setNewProductForm({ ...newProductForm, pain_point: e.target.value })} />
+            </div>
+            <Button
+              className="w-full gradient-primary text-primary-foreground"
+              disabled={!newProductForm.name.trim() || createService.isPending}
+              onClick={async () => {
+                const result = await createService.mutateAsync({
+                  name: newProductForm.name,
+                  core_benefit: newProductForm.core_benefit,
+                  pain_point: newProductForm.pain_point,
+                  target_price: "mid",
+                  price: newProductForm.price ? parseFloat(newProductForm.price) : 0,
+                  observations: "",
+                });
+                setNewProductForm({ name: "", core_benefit: "", pain_point: "", price: "" });
+                setShowNewProduct(false);
+                setSelectedProductId(result.id);
+                const parts = [`Promocionar: ${result.name}`];
+                if (result.core_benefit) parts.push(`Beneficio: ${result.core_benefit}`);
+                if (result.pain_point) parts.push(`Dolor que resuelve: ${result.pain_point}`);
+                if (result.price > 0) parts.push(`Precio: $${result.price}`);
+                setMainPrompt(parts.join(". "));
+                toast.success("Producto creado y seleccionado");
+              }}
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              {createService.isPending ? "Creando..." : "Crear y seleccionar"}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Main prompt */}
