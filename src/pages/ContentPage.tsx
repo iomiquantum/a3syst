@@ -969,6 +969,35 @@ Responde SOLO en JSON: {"title":"...","body":"...","hashtags":"#h1 #h2...","firs
     }
   };
 
+  const handleDelete = async () => {
+    const isPublished = post.status === "published" && post.external_ids && Object.keys(post.external_ids as any).length > 0;
+    const msg = isPublished
+      ? "⚠️ Esta publicación ya fue publicada en tus redes. ¿Eliminarla también de Facebook/Instagram?"
+      : "¿Eliminar esta publicación?";
+    if (!window.confirm(msg)) return;
+    
+    setDeleting(true);
+    try {
+      if (isPublished) {
+        // Delete from Meta platforms AND locally
+        const { data, error } = await supabase.functions.invoke("delete-from-meta", {
+          body: { post_id: post.id },
+        });
+        if (error) { toast.error("Error: " + error.message); return; }
+        toast.success(data?.message || "Publicación eliminada");
+      } else {
+        // Just delete locally
+        await content.deletePost(post.id);
+      }
+      await content.fetchPosts(true);
+      onClose();
+    } catch (err: any) {
+      toast.error("Error eliminando: " + err.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <Dialog open onOpenChange={o => !o && onClose()}>
       <DialogContent className="bg-background border-border text-foreground max-w-2xl max-h-[90vh] overflow-y-auto">
