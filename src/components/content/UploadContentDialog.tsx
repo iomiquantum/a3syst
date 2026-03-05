@@ -931,13 +931,28 @@ Responde SOLO en JSON:
                 )}
               </div>
 
-              {/* Schedule */}
+              {/* Publish Now - Primary action */}
+              <div className="p-4 rounded-xl border-2 border-primary/30 bg-primary/5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-semibold">Publicar ahora</p>
+                    <p className="text-xs text-muted-foreground">Se publicará inmediatamente en {platforms.map(p => p === "instagram" ? "Instagram" : "Facebook").join(" y ")}</p>
+                  </div>
+                </div>
+                <Button onClick={() => handleSubmit("publish_now")} className="w-full gap-2 gradient-primary text-primary-foreground" disabled={isProcessing || platforms.length === 0}>
+                  {publishingNow ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                  {publishingNow ? "Publicando en redes..." : "🚀 Publicar ahora"}
+                </Button>
+              </div>
+
+              {/* Schedule - Secondary */}
               <div className="p-4 rounded-xl border border-border bg-muted/30 space-y-3">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
                   <CalendarDays className="w-4 h-4 text-primary" />
                   Programar publicación
                 </Label>
-                <p className="text-xs text-muted-foreground">Si quieres programar, elige fecha y hora. Si no, publica ahora o guárdalo como borrador.</p>
+                <p className="text-xs text-muted-foreground">Elige fecha y hora para que se publique automáticamente</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Fecha</Label>
@@ -948,23 +963,17 @@ Responde SOLO en JSON:
                     <Input type="time" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)} />
                   </div>
                 </div>
+                <Button onClick={() => handleSubmit("scheduled")} variant="outline" className="w-full gap-2" disabled={isProcessing || !scheduledDate}>
+                  {uploading && !publishingNow ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarDays className="w-4 h-4" />}
+                  📅 Programar para {scheduledDate ? new Date(`${scheduledDate}T${scheduledTime}`).toLocaleString("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "..."}
+                </Button>
               </div>
 
-              {/* Actions */}
-              <div className="grid grid-cols-3 gap-3">
-                <Button onClick={() => handleSubmit("draft")} variant="outline" className="gap-2" disabled={isProcessing}>
-                  {uploading && !publishingNow ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileUp className="w-4 h-4" />}
-                  Borrador
-                </Button>
-                <Button onClick={() => handleSubmit("scheduled")} variant="outline" className="gap-2" disabled={isProcessing || !scheduledDate}>
-                  {uploading && !publishingNow ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarDays className="w-4 h-4" />}
-                  Programar
-                </Button>
-                <Button onClick={() => handleSubmit("publish_now")} className="gap-2 gradient-primary text-primary-foreground" disabled={isProcessing || platforms.length === 0}>
-                  {publishingNow ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                  {publishingNow ? "..." : "Publicar"}
-                </Button>
-              </div>
+              {/* Draft - Tertiary */}
+              <Button onClick={() => handleSubmit("draft")} variant="ghost" className="w-full gap-2 text-muted-foreground" disabled={isProcessing}>
+                {uploading && !publishingNow ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileUp className="w-4 h-4" />}
+                Guardar como borrador (no publicar)
+              </Button>
             </div>
           )}
         </div>
