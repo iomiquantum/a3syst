@@ -1121,22 +1121,18 @@ Responde SOLO en JSON: {"title":"...","body":"...","hashtags":"#h1 #h2...","firs
           {/* Actions */}
           <div className="space-y-2 pt-3 border-t border-border">
             {post.status !== "published" && (
-              <Button onClick={handlePublishNow} disabled={publishing} className="w-full gap-2 text-sm gradient-primary text-primary-foreground h-11">
+              <Button onClick={handlePublishNow} disabled={publishing || deleting} className="w-full gap-2 text-sm gradient-primary text-primary-foreground h-11">
                 {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
                 {publishing ? "Publicando..." : "✅ Listo — Publicar ahora"}
               </Button>
             )}
             <div className="flex gap-2">
-              <Button onClick={handleSave} variant="outline" className="flex-1 gap-2 text-sm">
-                <Save className="w-4 h-4" /> Guardar borrador
+              <Button onClick={handleSave} variant="outline" className="flex-1 gap-2 text-sm" disabled={deleting}>
+                <Save className="w-4 h-4" /> Guardar cambios
               </Button>
-              <Button onClick={async () => {
-                if (window.confirm("¿Eliminar esta publicación?")) {
-                  await content.deletePost(post.id);
-                  onClose();
-                }
-              }} variant="outline" className="text-xs gap-1 text-destructive hover:bg-destructive/10">
-                <Trash2 className="w-3.5 h-3.5" /> Eliminar
+              <Button onClick={handleDelete} variant="outline" disabled={deleting || publishing} className="gap-1.5 text-sm text-destructive border-destructive/30 hover:bg-destructive/10">
+                {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                {deleting ? "Eliminando..." : "Eliminar"}
               </Button>
             </div>
           </div>
