@@ -829,6 +829,7 @@ const EditPostModal = ({ post, onClose, content }: {
   const [showImageTools, setShowImageTools] = useState(false);
   const [resizeSize, setResizeSize] = useState("");
   const [resizing, setResizing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const togglePlatform = (p: string) => {
@@ -968,6 +969,35 @@ Responde SOLO en JSON: {"title":"...","body":"...","hashtags":"#h1 #h2...","firs
     }
   };
 
+  const handleDelete = async () => {
+    const isPublished = post.status === "published" && post.external_ids && Object.keys(post.external_ids as any).length > 0;
+    const msg = isPublished
+      ? "⚠️ Esta publicación ya fue publicada en tus redes. ¿Eliminarla también de Facebook/Instagram?"
+      : "¿Eliminar esta publicación?";
+    if (!window.confirm(msg)) return;
+    
+    setDeleting(true);
+    try {
+      if (isPublished) {
+        // Delete from Meta platforms AND locally
+        const { data, error } = await supabase.functions.invoke("delete-from-meta", {
+          body: { post_id: post.id },
+        });
+        if (error) { toast.error("Error: " + error.message); return; }
+        toast.success(data?.message || "Publicación eliminada");
+      } else {
+        // Just delete locally
+        await content.deletePost(post.id);
+      }
+      await content.fetchPosts(true);
+      onClose();
+    } catch (err: any) {
+      toast.error("Error eliminando: " + err.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <Dialog open onOpenChange={o => !o && onClose()}>
       <DialogContent className="bg-background border-border text-foreground max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -1091,22 +1121,18 @@ Responde SOLO en JSON: {"title":"...","body":"...","hashtags":"#h1 #h2...","firs
           {/* Actions */}
           <div className="space-y-2 pt-3 border-t border-border">
             {post.status !== "published" && (
-              <Button onClick={handlePublishNow} disabled={publishing} className="w-full gap-2 text-sm gradient-primary text-primary-foreground h-11">
+              <Button onClick={handlePublishNow} disabled={publishing || deleting} className="w-full gap-2 text-sm gradient-primary text-primary-foreground h-11">
                 {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
                 {publishing ? "Publicando..." : "✅ Listo — Publicar ahora"}
               </Button>
             )}
             <div className="flex gap-2">
-              <Button onClick={handleSave} variant="outline" className="flex-1 gap-2 text-sm">
-                <Save className="w-4 h-4" /> Guardar borrador
+              <Button onClick={handleSave} variant="outline" className="flex-1 gap-2 text-sm" disabled={deleting}>
+                <Save className="w-4 h-4" /> Guardar cambios
               </Button>
-              <Button onClick={async () => {
-                if (window.confirm("¿Eliminar esta publicación?")) {
-                  await content.deletePost(post.id);
-                  onClose();
-                }
-              }} variant="outline" className="text-xs gap-1 text-destructive hover:bg-destructive/10">
-                <Trash2 className="w-3.5 h-3.5" /> Eliminar
+              <Button onClick={handleDelete} variant="outline" disabled={deleting || publishing} className="gap-1.5 text-sm text-destructive border-destructive/30 hover:bg-destructive/10">
+                {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                {deleting ? "Eliminando..." : "Eliminar"}
               </Button>
             </div>
           </div>
