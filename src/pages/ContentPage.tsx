@@ -1,6 +1,7 @@
-import { useState, useMemo, useEffect } from "react";
-import { Palette, Sparkles, FileCheck, CalendarDays, List, Loader2, CheckCircle, XCircle, RefreshCw, Pencil, Instagram, Facebook, Music, Linkedin, Globe, Megaphone, Lightbulb, Star, Image, Heart, PartyPopper, Brain, ChevronRight, ChevronLeft, Wand2, Save, Clock, Upload } from "lucide-react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { Palette, Sparkles, FileCheck, CalendarDays, List, Loader2, CheckCircle, XCircle, RefreshCw, Pencil, Instagram, Facebook, Music, Linkedin, Globe, Megaphone, Lightbulb, Star, Image, Heart, PartyPopper, Brain, ChevronRight, ChevronLeft, Wand2, Save, Clock, Upload, Trash2, Zap, Maximize2, Eye } from "lucide-react";
 import ContentAIGenerator from "@/components/content/ContentAIGenerator";
+import { usePublishToMeta } from "@/hooks/usePublishToMeta";
 import UploadContentDialog from "@/components/content/UploadContentDialog";
 import AppLayout from "@/components/AppLayout";
 import { useContentPosts, type ContentPost } from "@/hooks/useContentPosts";
@@ -220,13 +221,30 @@ const PostCard = ({ post, content, onEdit, showActions }: {
   onEdit: (p: ContentPost) => void;
   showActions?: boolean;
 }) => {
+  const { publishNow, publishing } = usePublishToMeta();
+  const [approving, setApproving] = useState(false);
+
   const handleApprove = async () => {
-    await content.updatePost(post.id, { status: "scheduled" });
-    toast.success("✅ Post aprobado y programado");
+    setApproving(true);
+    try {
+      const result = await publishNow(post.id);
+      if (result?.success) {
+        toast.success("✅ Post publicado exitosamente en tus redes");
+      }
+    } finally {
+      setApproving(false);
+    }
   };
+
   const handleDiscard = async () => {
     await content.updatePost(post.id, { status: "discarded" as any });
     toast.success("Post descartado");
+  };
+
+  const handleDelete = async () => {
+    if (window.confirm("¿Estás seguro de eliminar esta publicación? Esta acción no se puede deshacer.")) {
+      await content.deletePost(post.id);
+    }
   };
 
   return (
@@ -235,11 +253,11 @@ const PostCard = ({ post, content, onEdit, showActions }: {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-lg">{platformEmoji[post.platforms?.[0] || ""] || "📱"}</span>
-          <span className="text-xs text-muted-foreground capitalize">{post.platforms?.[0] || "General"}</span>
+          <span className="text-xs text-muted-foreground capitalize">{post.platforms?.join(", ") || "General"}</span>
         </div>
         <div className="flex items-center gap-2">
           {post.ai_generated && <Badge variant="outline" className="text-[10px] bg-[#8B5CF6]/10 text-[#A78BFA] border-[#8B5CF6]/20">🤖 IA</Badge>}
-          <Badge variant="outline" className={cn("text-[10px]", post.status === "draft" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" : "bg-blue-500/10 text-blue-400 border-blue-500/20")}>
+          <Badge variant="outline" className={cn("text-[10px]", post.status === "draft" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" : post.status === "published" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-blue-500/10 text-blue-400 border-blue-500/20")}>
             {statusLabel[post.status] || post.status}
           </Badge>
         </div>
@@ -248,7 +266,11 @@ const PostCard = ({ post, content, onEdit, showActions }: {
       {/* Image */}
       {post.media_urls?.[0] && (
         <div className="rounded-lg overflow-hidden border border-white/10">
-          <img src={post.media_urls[0]} alt="" className="w-full h-40 object-cover" />
+          {post.media_type === "video" ? (
+            <video src={post.media_urls[0]} controls className="w-full h-40 object-cover" />
+          ) : (
+            <img src={post.media_urls[0]} alt="" className="w-full h-40 object-cover" />
+          )}
         </div>
       )}
 
@@ -265,20 +287,36 @@ const PostCard = ({ post, content, onEdit, showActions }: {
 
       {/* Date */}
       <p className="text-[10px] text-muted-foreground">
-        {post.scheduled_at ? `📅 ${format(new Date(post.scheduled_at), "dd MMM yyyy HH:mm", { locale: es })}` : format(new Date(post.created_at), "dd MMM yyyy", { locale: es })}
+        {post.published_at ? `✅ Publicado: ${format(new Date(post.published_at), "dd MMM yyyy HH:mm", { locale: es })}` :
+         post.scheduled_at ? `📅 ${format(new Date(post.scheduled_at), "dd MMM yyyy HH:mm", { locale: es })}` :
+         format(new Date(post.created_at), "dd MMM yyyy", { locale: es })}
       </p>
 
-      {/* Actions */}
-      {showActions && (
+      {/* Actions for pending/draft posts */}
+      {showActions && (post.status === "draft" || post.status === "pending_approval") && (
         <div className="flex gap-2 pt-1">
-          <Button size="sm" onClick={handleApprove} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1">
-            <CheckCircle className="w-3.5 h-3.5" /> Aprobar
+          <Button size="sm" onClick={handleApprove} disabled={approving || publishing}
+            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1">
+            {approving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+            {approving ? "Publicando..." : "Aprobar y publicar"}
           </Button>
           <Button size="sm" variant="outline" onClick={() => onEdit(post)} className="flex-1 text-xs gap-1 border-white/10 hover:bg-white/5">
             <Pencil className="w-3.5 h-3.5" /> Editar
           </Button>
           <Button size="sm" variant="outline" onClick={handleDiscard} className="text-xs gap-1 border-white/10 hover:bg-red-500/10 text-red-400">
             <XCircle className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      )}
+
+      {/* Actions for all posts (edit + delete) */}
+      {!showActions && (
+        <div className="flex gap-2 pt-1">
+          <Button size="sm" variant="outline" onClick={() => onEdit(post)} className="flex-1 text-xs gap-1 border-white/10 hover:bg-white/5">
+            <Pencil className="w-3.5 h-3.5" /> Editar
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleDelete} className="text-xs gap-1 border-white/10 hover:bg-red-500/10 text-red-400">
+            <Trash2 className="w-3.5 h-3.5" />
           </Button>
         </div>
       )}
@@ -777,52 +815,299 @@ const EditPostModal = ({ post, onClose, content }: {
   onClose: () => void;
   content: ReturnType<typeof useContentPosts>;
 }) => {
+  const { publishNow, publishing } = usePublishToMeta();
   const [title, setTitle] = useState(post.title || "");
   const [body, setBody] = useState(post.body || "");
   const [hashtags, setHashtags] = useState(post.hashtags?.join(" ") || "");
-  const [status, setStatus] = useState(post.status);
+  const [firstComment, setFirstComment] = useState(post.first_comment || "");
+  const [platforms, setPlatforms] = useState<string[]>(post.platforms || []);
+  const [postType, setPostType] = useState(post.post_type || "post");
+  const [mediaPreview, setMediaPreview] = useState(post.media_urls?.[0] || "");
+  const [regeneratingCopy, setRegeneratingCopy] = useState(false);
+  const [regeneratingImage, setRegeneratingImage] = useState(false);
+  const [imagePrompt, setImagePrompt] = useState(post.ai_prompt || "");
+  const [showImageTools, setShowImageTools] = useState(false);
+  const [resizeSize, setResizeSize] = useState("");
+  const [resizing, setResizing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const togglePlatform = (p: string) => {
+    setPlatforms(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+  };
+
+  const postFormats = [
+    { value: "post", label: "Post / Feed" },
+    { value: "story", label: "Historia / Story" },
+    { value: "reel", label: "Reel / Video corto" },
+  ];
+
+  const sizesForResize = [
+    { label: "Feed vertical 4:5", value: "feed-v", w: 1080, h: 1350, ratio: "4:5" },
+    { label: "Feed cuadrado 1:1", value: "feed-sq", w: 1080, h: 1080, ratio: "1:1" },
+    { label: "Feed horizontal 1.91:1", value: "feed-h", w: 1200, h: 628, ratio: "1.91:1" },
+    { label: "Story / Reel 9:16", value: "story", w: 1080, h: 1920, ratio: "9:16" },
+  ];
+
+  const handleRegenerateCopy = async () => {
+    setRegeneratingCopy(true);
+    try {
+      const platformName = platforms[0] || "instagram";
+      const prompt = `Mejora este copy para ${platformName} (${postType}). 
+Copy actual: "${body}"
+Título: "${title}"
+
+Genera el MEJOR copy vendedor posible. Gancho irresistible, emojis estratégicos, CTA claro.
+Responde SOLO en JSON: {"title":"...","body":"...","hashtags":"#h1 #h2...","firstComment":"..."}`;
+
+      const { data, error } = await supabase.functions.invoke("ai-generate-content", {
+        body: { prompt, tone: "Profesional", platform: platformName, type: "copy" },
+      });
+      if (error) throw error;
+      const text = data?.content || "";
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.title) setTitle(parsed.title);
+        if (parsed.body) setBody(parsed.body);
+        if (parsed.hashtags) setHashtags(parsed.hashtags);
+        if (parsed.firstComment) setFirstComment(parsed.firstComment);
+        toast.success("✨ Copy regenerado con IA");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error regenerando copy");
+    } finally {
+      setRegeneratingCopy(false);
+    }
+  };
+
+  const handleRegenerateImage = async () => {
+    if (!imagePrompt.trim()) { toast.error("Escribe un prompt para la imagen"); return; }
+    setRegeneratingImage(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-generate-content", {
+        body: { prompt: imagePrompt, tone: "Profesional", platform: platforms[0] || "Instagram", type: "image" },
+      });
+      if (error) throw error;
+      if (data?.imageUrl) {
+        setMediaPreview(data.imageUrl);
+        toast.success("✅ Imagen regenerada");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error regenerando imagen");
+    } finally {
+      setRegeneratingImage(false);
+    }
+  };
+
+  const handleResize = async () => {
+    const selected = sizesForResize.find(s => s.value === resizeSize);
+    if (!selected || !mediaPreview) return;
+    setResizing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-generate-content", {
+        body: {
+          prompt: `Redimensiona esta imagen al formato ${selected.label} (${selected.w}x${selected.h}, ratio ${selected.ratio}). Mantén la composición y elementos visuales.`,
+          platform: platforms[0] || "Instagram",
+          type: "image",
+          width: selected.w,
+          height: selected.h,
+          sizeLabel: selected.label,
+          imageModel: "pro",
+          referenceImageUrl: mediaPreview,
+          action_label: `Redimensionar a ${selected.label}`,
+        },
+      });
+      if (error) throw error;
+      if (data?.imageUrl) {
+        setMediaPreview(data.imageUrl);
+        toast.success(`✅ Redimensionada a ${selected.label}`);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al redimensionar");
+    } finally {
+      setResizing(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const ext = file.name.split(".").pop();
+    const fileName = `${post.clinic_id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("content-media").upload(fileName, file, { contentType: file.type });
+    if (uploadError) { toast.error("Error subiendo archivo"); return; }
+    const { data: urlData } = supabase.storage.from("content-media").getPublicUrl(fileName);
+    setMediaPreview(urlData.publicUrl);
+    toast.success("Archivo subido");
+    e.target.value = "";
+  };
 
   const handleSave = async () => {
-    await content.updatePost(post.id, {
+    const updates: Partial<ContentPost> = {
       title, body,
       hashtags: hashtags.split(/\s+/).filter(Boolean),
-      status: status as any,
-    });
+      first_comment: firstComment || null,
+      platforms,
+      post_type: postType,
+      media_urls: mediaPreview ? [mediaPreview] : post.media_urls,
+    };
+    await content.updatePost(post.id, updates);
     toast.success("✅ Post actualizado");
     onClose();
   };
 
+  const handlePublishNow = async () => {
+    await handleSave();
+    const result = await publishNow(post.id);
+    if (result?.success) {
+      toast.success("🚀 Publicado en tus redes");
+      onClose();
+    }
+  };
+
   return (
     <Dialog open onOpenChange={o => !o && onClose()}>
-      <DialogContent className="bg-[#0d0d1a] border-white/10 text-foreground max-w-lg">
-        <DialogHeader><DialogTitle>Editar post</DialogTitle></DialogHeader>
-        <div className="space-y-3">
+      <DialogContent className="bg-[#0d0d1a] border-white/10 text-foreground max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="w-5 h-5 text-[#A78BFA]" /> Editar publicación
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          {/* Media section */}
+          {mediaPreview && (
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground font-medium">📷 Imagen / Media</Label>
+              <div className="rounded-lg overflow-hidden border border-white/10 relative group">
+                <img src={mediaPreview} alt="" className="w-full max-h-[250px] object-contain bg-black/20" />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <Button size="sm" variant="secondary" className="text-xs gap-1" onClick={() => fileInputRef.current?.click()}>
+                    <Upload className="w-3.5 h-3.5" /> Cambiar
+                  </Button>
+                  <Button size="sm" variant="secondary" className="text-xs gap-1" onClick={() => setShowImageTools(!showImageTools)}>
+                    <Maximize2 className="w-3.5 h-3.5" /> Herramientas IA
+                  </Button>
+                </div>
+              </div>
+              <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleFileChange} />
+            </div>
+          )}
+
+          {/* Image AI tools */}
+          {showImageTools && (
+            <div className="border border-white/10 rounded-lg p-3 space-y-3 bg-white/5">
+              <p className="text-xs font-medium text-[#A78BFA]">🤖 Herramientas de imagen con IA</p>
+              
+              {/* Regenerate */}
+              <div className="space-y-1.5">
+                <Label className="text-[10px] text-muted-foreground">Regenerar imagen con nuevo prompt</Label>
+                <div className="flex gap-2">
+                  <Textarea value={imagePrompt} onChange={e => setImagePrompt(e.target.value)} 
+                    placeholder="Describe la nueva imagen..." className="min-h-[50px] text-xs bg-white/5 border-white/10 flex-1" />
+                  <Button size="sm" onClick={handleRegenerateImage} disabled={regeneratingImage} className="gap-1 bg-[#8B5CF6] text-white shrink-0">
+                    {regeneratingImage ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Resize */}
+              <div className="space-y-1.5">
+                <Label className="text-[10px] text-muted-foreground">Redimensionar para plataforma</Label>
+                <div className="flex gap-2">
+                  <Select value={resizeSize} onValueChange={setResizeSize}>
+                    <SelectTrigger className="bg-white/5 border-white/10 text-xs flex-1"><SelectValue placeholder="Elegir tamaño" /></SelectTrigger>
+                    <SelectContent>
+                      {sizesForResize.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Button size="sm" onClick={handleResize} disabled={resizing || !resizeSize} className="gap-1 bg-[#8B5CF6] text-white shrink-0">
+                    {resizing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Format & platforms */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">Formato</Label>
+              <Select value={postType} onValueChange={setPostType}>
+                <SelectTrigger className="mt-1 bg-white/5 border-white/10"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {postFormats.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Plataformas</Label>
+              <div className="flex gap-2 mt-1.5">
+                {[{ value: "instagram", label: "📸 IG" }, { value: "facebook", label: "📘 FB" }].map(p => (
+                  <button key={p.value} onClick={() => togglePlatform(p.value)}
+                    className={cn("px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
+                      platforms.includes(p.value) ? "border-[#8B5CF6] bg-[#8B5CF6]/20 text-[#A78BFA]" : "border-white/10 bg-white/5 text-muted-foreground"
+                    )}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Title */}
           <div>
-            <Label className="text-xs text-muted-foreground">Título</Label>
+            <Label className="text-xs text-muted-foreground">Título (interno)</Label>
             <Input value={title} onChange={e => setTitle(e.target.value)} className="mt-1 bg-white/5 border-white/10" />
           </div>
+
+          {/* Copy with AI regenerate */}
           <div>
-            <Label className="text-xs text-muted-foreground">Texto</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-muted-foreground">Copy / Texto</Label>
+              <Button size="sm" variant="ghost" className="text-[10px] gap-1 text-[#A78BFA] h-6" onClick={handleRegenerateCopy} disabled={regeneratingCopy}>
+                {regeneratingCopy ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                Regenerar con IA
+              </Button>
+            </div>
             <Textarea value={body} onChange={e => setBody(e.target.value)} className="mt-1 bg-white/5 border-white/10 min-h-[120px]" />
+            <p className="text-[10px] text-muted-foreground mt-1">{body.length} caracteres</p>
           </div>
+
+          {/* Hashtags */}
           <div>
             <Label className="text-xs text-muted-foreground">Hashtags</Label>
-            <Input value={hashtags} onChange={e => setHashtags(e.target.value)} className="mt-1 bg-white/5 border-white/10" />
+            <Input value={hashtags} onChange={e => setHashtags(e.target.value)} className="mt-1 bg-white/5 border-white/10" placeholder="#hashtag1 #hashtag2" />
           </div>
+
+          {/* First comment */}
           <div>
-            <Label className="text-xs text-muted-foreground">Estado</Label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="mt-1 bg-white/5 border-white/10"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="draft">Borrador</SelectItem>
-                <SelectItem value="scheduled">Programado</SelectItem>
-                <SelectItem value="published">Publicado</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label className="text-xs text-muted-foreground">Primer comentario (opcional, para engagement)</Label>
+            <Input value={firstComment} onChange={e => setFirstComment(e.target.value)} className="mt-1 bg-white/5 border-white/10" placeholder="Comentario estratégico..." />
           </div>
-          <Button onClick={handleSave} className="w-full bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white">
-            Guardar cambios
-          </Button>
+
+          {/* Actions */}
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-white/10">
+            <Button onClick={handleSave} variant="outline" className="flex-1 border-white/10 hover:bg-white/5 gap-2 text-sm">
+              <Save className="w-4 h-4" /> Guardar cambios
+            </Button>
+            {post.status !== "published" && (
+              <Button onClick={handlePublishNow} disabled={publishing} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white gap-2 text-sm">
+                {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                Publicar ahora
+              </Button>
+            )}
+            <Button onClick={async () => {
+              if (window.confirm("¿Eliminar esta publicación?")) {
+                await content.deletePost(post.id);
+                onClose();
+              }
+            }} variant="outline" className="text-xs gap-1 border-white/10 hover:bg-red-500/10 text-red-400">
+              <Trash2 className="w-3.5 h-3.5" /> Eliminar
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
