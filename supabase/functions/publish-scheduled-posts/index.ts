@@ -138,6 +138,47 @@ async function publishToInstagram(post: any, creds: Record<string, string>): Pro
   }
 }
 
+async function getCredentials(supabase: any, clinicId: string): Promise<Record<string, string>> {
+  let creds: Record<string, string> = {};
+
+  // Try social_media_connections first
+  const { data: socialConn } = await supabase
+    .from("social_media_connections")
+    .select("access_token, platform_account_id, platform")
+    .eq("clinic_id", clinicId)
+    .eq("token_status", "active")
+    .in("platform", ["facebook", "instagram"]);
+
+  if (socialConn && socialConn.length > 0) {
+    const fbConn = socialConn.find((c: any) => c.platform === "facebook");
+    const igConn = socialConn.find((c: any) => c.platform === "instagram");
+    if (fbConn) {
+      creds.access_token = fbConn.access_token;
+      creds.page_id = fbConn.platform_account_id;
+    }
+    if (igConn) {
+      creds.ig_account_id = igConn.platform_account_id;
+      if (!creds.access_token) creds.access_token = igConn.access_token;
+    }
+  }
+
+  // Fallback to ads_accounts
+  if (!creds.access_token) {
+    const { data: metaAccount } = await supabase
+      .from("ads_accounts")
+      .select("credentials")
+      .eq("clinic_id", clinicId)
+      .eq("platform", "meta")
+      .eq("status", "connected")
+      .single();
+    if (metaAccount?.credentials) {
+      creds = metaAccount.credentials as Record<string, string>;
+    }
+  }
+
+  return creds;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -169,16 +210,7 @@ serve(async (req) => {
       const platformResults: Record<string, any> = {};
       const externalIds: Record<string, string> = {};
 
-      // Get Meta credentials from ads_accounts
-      const { data: metaAccount } = await supabase
-        .from("ads_accounts")
-        .select("credentials")
-        .eq("clinic_id", post.clinic_id)
-        .eq("platform", "meta")
-        .eq("status", "connected")
-        .single();
-
-      const creds = (metaAccount?.credentials || {}) as Record<string, string>;
+      const creds = await getCredentials(supabase, post.clinic_id);
 
       for (const platform of (post.platforms || [])) {
         let result;
