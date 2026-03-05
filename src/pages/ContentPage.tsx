@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
-import { Palette, Sparkles, FileCheck, CalendarDays, List, Loader2, CheckCircle, XCircle, RefreshCw, Pencil, Instagram, Facebook, Music, Linkedin, Globe, Megaphone, Lightbulb, Star, Image, Heart, PartyPopper, Brain, ChevronRight, ChevronLeft, Wand2, Save, Clock } from "lucide-react";
+import { Palette, Sparkles, FileCheck, CalendarDays, List, Loader2, CheckCircle, XCircle, RefreshCw, Pencil, Instagram, Facebook, Music, Linkedin, Globe, Megaphone, Lightbulb, Star, Image, Heart, PartyPopper, Brain, ChevronRight, ChevronLeft, Wand2, Save, Clock, Upload } from "lucide-react";
 import ContentAIGenerator from "@/components/content/ContentAIGenerator";
+import UploadContentDialog from "@/components/content/UploadContentDialog";
 import AppLayout from "@/components/AppLayout";
 import { useContentPosts, type ContentPost } from "@/hooks/useContentPosts";
 import { cn } from "@/lib/utils";
@@ -64,6 +65,7 @@ const ContentPage = () => {
   const content = useContentPosts();
   const { clinicId } = useClinic();
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [editPost, setEditPost] = useState<ContentPost | null>(null);
 
   const pendingPosts = useMemo(() =>
@@ -109,6 +111,9 @@ const ContentPage = () => {
             <Badge variant="outline" className="text-xs px-3 py-1.5 border-white/10 bg-white/5">
               Esta semana: {weekPosts.length} creados · {pendingPosts.length} pendientes · {content.published.length} publicados
             </Badge>
+            <Button onClick={() => setUploadOpen(true)} variant="outline" className="gap-2 border-white/10 hover:bg-white/5">
+              <Upload className="w-4 h-4" /> Subir contenido
+            </Button>
             <Button onClick={() => setWizardOpen(true)} className="bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white gap-2 hover:opacity-90">
               <Sparkles className="w-4 h-4" /> Crear con IA
             </Button>
@@ -167,6 +172,9 @@ const ContentPage = () => {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Upload Dialog */}
+      <UploadContentDialog open={uploadOpen} onOpenChange={setUploadOpen} content={content} />
 
       {/* Edit Modal */}
       {editPost && <EditPostModal post={editPost} onClose={() => setEditPost(null)} content={content} />}
