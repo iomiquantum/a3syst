@@ -215,50 +215,46 @@ const ChatView = ({ conversation, messages, sending, onSend, onToggleChatbot }: 
 
       {/* Composer */}
       <div className="border-t border-border bg-card p-3 shrink-0">
-        {conversation.chatbot_active ? (
-          <div className="flex items-center justify-center gap-2 py-3 text-muted-foreground">
-            <Bot className="w-4 h-4" />
-            <span className="text-xs">Autopilot activo — desactívalo para escribir manualmente</span>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-xs text-muted-foreground flex items-center gap-1">
+            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-emerald-500"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
+            {conversation.contact?.phone}
+          </span>
+          {conversation.chatbot_active && (
+            <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full font-medium">
+              🤖 Autopilot ON
+            </span>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs ml-auto"
+            onClick={handleAIReply}
+            disabled={aiLoading}
+          >
+            {aiLoading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Bot className="w-3 h-3 mr-1" />}
+            {aiLoading ? "Pensando..." : "Respuesta IA"}
+          </Button>
+        </div>
+        <div className="flex items-end gap-2">
+          <div className="flex-1 relative">
+            <textarea
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={conversation.chatbot_active ? "Escribe para intervenir manualmente..." : "Escribe un mensaje..."}
+              rows={1}
+              className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
           </div>
-        ) : (
-          <>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-emerald-500"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
-                {conversation.contact?.phone}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs ml-auto"
-                onClick={handleAIReply}
-                disabled={aiLoading}
-              >
-                {aiLoading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Bot className="w-3 h-3 mr-1" />}
-                {aiLoading ? "Pensando..." : "Respuesta IA"}
-              </Button>
-            </div>
-            <div className="flex items-end gap-2">
-              <div className="flex-1 relative">
-                <textarea
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Escribe un mensaje..."
-                  rows={1}
-                  className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                />
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button className="p-2 rounded-lg hover:bg-muted"><Smile className="w-4 h-4 text-muted-foreground" /></button>
-                <button className="p-2 rounded-lg hover:bg-muted"><Paperclip className="w-4 h-4 text-muted-foreground" /></button>
-                <Button size="sm" onClick={handleSend} disabled={!input.trim() || sending} className="gradient-primary text-primary-foreground h-9 px-4">
-                  Enviar <Send className="w-3.5 h-3.5 ml-1" />
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
+          <div className="flex items-center gap-1 shrink-0">
+            <button className="p-2 rounded-lg hover:bg-muted"><Smile className="w-4 h-4 text-muted-foreground" /></button>
+            <button className="p-2 rounded-lg hover:bg-muted"><Paperclip className="w-4 h-4 text-muted-foreground" /></button>
+            <Button size="sm" onClick={handleSend} disabled={!input.trim() || sending} className="gradient-primary text-primary-foreground h-9 px-4">
+              Enviar <Send className="w-3.5 h-3.5 ml-1" />
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
