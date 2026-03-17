@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 export interface Contact {
@@ -63,6 +64,7 @@ export { FUNNEL_STAGES };
 
 export const useMessaging = () => {
   const { clinicId } = useClinic();
+  const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
@@ -153,6 +155,7 @@ export const useMessaging = () => {
           content: content.trim(),
           message_type: "text",
           status: "sent",
+          sent_by: user?.id || null,
           whatsapp_message_id: data?.wa_message_id || null,
         }).select().single();
 
@@ -182,6 +185,7 @@ export const useMessaging = () => {
       content: content.trim(),
       message_type: "text",
       status: "sent",
+      sent_by: user?.id || null,
     };
 
     const { data, error } = await supabase.from("messages").insert(newMsg).select().single();
@@ -264,12 +268,23 @@ export const useMessaging = () => {
         const currentConv = selectedConvRef.current;
         if (currentConv && newMsg.conversation_id === currentConv.id) {
           setMessages(prev => {
-            // Avoid duplicates
             if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
         }
         fetchConversations();
+      })
+      .on("postgres_changes", {
+        event: "UPDATE",
+        schema: "public",
+        table: "messages",
+        filter: `clinic_id=eq.${clinicId}`,
+      }, (payload) => {
+        const updated = payload.new as Message;
+        const currentConv = selectedConvRef.current;
+        if (currentConv && updated.conversation_id === currentConv.id) {
+          setMessages(prev => prev.map(m => m.id === updated.id ? { ...m, status: updated.status } : m));
+        }
       })
       .subscribe();
 

@@ -61,6 +61,40 @@ Deno.serve(async (req) => {
       const phoneNumberId = metadata?.phone_number_id;
       const displayPhoneNumber = metadata?.display_phone_number;
       const incomingMessages = value.messages;
+      const statusUpdates = value.statuses;
+
+      // Handle status updates (sent, delivered, read, failed)
+      if (statusUpdates && statusUpdates.length > 0) {
+        for (const statusUpdate of statusUpdates) {
+          const waMessageId = statusUpdate.id;
+          const newStatus = statusUpdate.status; // sent, delivered, read, failed
+          
+          if (waMessageId && newStatus) {
+            const mappedStatus = newStatus === "failed" ? "failed" : newStatus;
+            const { error: updateError } = await supabase
+              .from("messages")
+              .update({ status: mappedStatus })
+              .eq("whatsapp_message_id", waMessageId);
+            
+            if (updateError) {
+              console.error("Error updating message status:", updateError);
+            }
+
+            // Also update whatsapp_messages table
+            await supabase
+              .from("whatsapp_messages")
+              .update({ status: mappedStatus })
+              .eq("wa_message_id", waMessageId);
+          }
+        }
+
+        if (!incomingMessages || incomingMessages.length === 0) {
+          return new Response(JSON.stringify({ status: "ok", note: "status update processed" }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
 
       if (!incomingMessages || incomingMessages.length === 0) {
         return new Response(JSON.stringify({ status: "ok", note: "no messages" }), {
