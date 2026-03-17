@@ -32,7 +32,7 @@ const AdminClinicasTab = ({ clinics, roles, onRefresh }: AdminClinicasTabProps) 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error } = await supabase.from("clinics").insert({
+    const { error } = await (supabase as any).from("clinics").insert({
       name: clinicForm.name.trim(),
       description: clinicForm.description.trim(),
       address: clinicForm.address.trim(),
