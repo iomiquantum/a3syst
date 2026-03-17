@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Smile, Paperclip, Bot, Loader2, User, AlertTriangle } from "lucide-react";
+import { Send, Smile, Paperclip, Bot, Loader2, User, AlertTriangle, Check, CheckCheck, Clock, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Conversation, Message } from "@/hooks/useMessaging";
 import ChannelIcon from "@/components/messaging/ChannelIcon";
@@ -8,8 +8,10 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 interface Props {
   conversation: Conversation;
@@ -19,16 +21,81 @@ interface Props {
   onToggleChatbot?: (conversationId: string, active: boolean) => void;
 }
 
+// Cache for sender profile lookups
+interface SenderProfile {
+  name: string;
+  role: string;
+}
+
+const STATUS_CONFIG: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
+  pending: { icon: <Clock className="w-3 h-3" />, label: "Pendiente", color: "text-muted-foreground/50" },
+  sent: { icon: <Check className="w-3 h-3" />, label: "Enviado", color: "text-muted-foreground/70" },
+  delivered: { icon: <CheckCheck className="w-3 h-3" />, label: "Entregado", color: "text-muted-foreground/70" },
+  read: { icon: <CheckCheck className="w-3 h-3" />, label: "Leído", color: "text-blue-400" },
+  received: { icon: <CheckCheck className="w-3 h-3" />, label: "Recibido", color: "text-muted-foreground/70" },
+  failed: { icon: <AlertTriangle className="w-3 h-3" />, label: "Error al enviar", color: "text-destructive" },
+  error: { icon: <XCircle className="w-3 h-3" />, label: "Error", color: "text-destructive" },
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  super_admin: "Super Admin",
+  admin: "Administrador",
+  manager: "Gerente",
+  secretary: "Secretaria",
+  professional: "Profesional",
+  empleado: "Empleado",
+  vendedor: "Vendedor",
+};
+
 const ChatView = ({ conversation, messages, sending, onSend, onToggleChatbot }: Props) => {
   const [input, setInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [senderProfiles, setSenderProfiles] = useState<Record<string, SenderProfile>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const { clinicId } = useClinic();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
+  }, [messages]);
+
+  // Fetch sender profiles for outbound messages with sent_by
+  useEffect(() => {
+    const senderIds = [...new Set(
+      messages
+        .filter(m => m.direction === "outbound" && m.sent_by)
+        .map(m => m.sent_by!)
+    )].filter(id => !senderProfiles[id]);
+
+    if (senderIds.length === 0) return;
+
+    const fetchProfiles = async () => {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", senderIds);
+
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .in("user_id", senderIds);
+
+      const newProfiles: Record<string, SenderProfile> = {};
+      senderIds.forEach(id => {
+        const profile = profiles?.find(p => p.user_id === id);
+        const userRole = roles?.find(r => r.user_id === id);
+        newProfiles[id] = {
+          name: profile?.full_name || "Usuario",
+          role: userRole?.role || "empleado",
+        };
+      });
+
+      setSenderProfiles(prev => ({ ...prev, ...newProfiles }));
+    };
+
+    fetchProfiles();
   }, [messages]);
 
   const handleSend = () => {
@@ -78,12 +145,43 @@ const ChatView = ({ conversation, messages, sending, onSend, onToggleChatbot }: 
     try { return format(new Date(date), "d 'de' MMMM, yyyy", { locale: es }); } catch { return ""; }
   };
 
-  // Determine if an outbound message was sent by AI or human
-  const getMessageSender = (msg: Message): "ai" | "human" | "contact" => {
-    if (msg.direction === "inbound") return "contact";
-    // If sent_by is null and it's outbound, likely AI
-    if (!msg.sent_by) return "ai";
-    return "human";
+  const getMessageSender = (msg: Message): { type: "ai" | "human" | "contact"; label: string; role?: string } => {
+    if (msg.direction === "inbound") {
+      return { type: "contact", label: conversation.contact?.name || "Cliente" };
+    }
+    if (!msg.sent_by) {
+      return { type: "ai", label: "Asistente IA" };
+    }
+    const profile = senderProfiles[msg.sent_by];
+    if (profile) {
+      const roleLabel = ROLE_LABELS[profile.role] || "Ejecutivo";
+      return { type: "human", label: profile.name, role: roleLabel };
+    }
+    // If it's the current user
+    if (user && msg.sent_by === user.id) {
+      return { type: "human", label: "Tú" };
+    }
+    return { type: "human", label: "Ejecutivo" };
+  };
+
+  const getStatusIndicator = (msg: Message) => {
+    if (msg.direction === "inbound") return null;
+    const status = msg.status || "sent";
+    const config = STATUS_CONFIG[status] || STATUS_CONFIG.sent;
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className={cn("inline-flex items-center", config.color)}>
+              {config.icon}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="left" className="text-xs">
+            {config.label}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
   };
 
   // Group messages by date
@@ -161,44 +259,47 @@ const ChatView = ({ conversation, messages, sending, onSend, onToggleChatbot }: 
                     <div className={cn(
                       "max-w-[75%] min-w-[80px] px-3 py-2 rounded-2xl text-sm leading-relaxed shadow-sm",
                       msg.direction === "outbound"
-                        ? sender === "ai"
+                        ? sender.type === "ai"
                           ? "bg-violet-600 text-white rounded-br-sm"
                           : "bg-primary text-primary-foreground rounded-br-sm"
                         : "bg-card border border-border text-foreground rounded-bl-sm"
                     )}>
-                      {/* Sender badge for outbound */}
+                      {/* Sender badge */}
                       {msg.direction === "outbound" && (
                         <div className={cn(
                           "flex items-center gap-1 mb-1 text-[10px] font-medium",
-                          sender === "ai" ? "text-violet-200" : "text-primary-foreground/70"
+                          sender.type === "ai" ? "text-violet-200" : "text-primary-foreground/70"
                         )}>
-                          {sender === "ai" ? (
-                            <><Bot className="w-3 h-3" /> Asistente IA</>
+                          {sender.type === "ai" ? (
+                            <><Bot className="w-3 h-3" /> {sender.label}</>
                           ) : (
-                            <><User className="w-3 h-3" /> Tú</>
+                            <><User className="w-3 h-3" /> {sender.label}{sender.role && <span className="opacity-60 ml-1">· {sender.role}</span>}</>
                           )}
+                        </div>
+                      )}
+                      {msg.direction === "inbound" && (
+                        <div className="flex items-center gap-1 mb-1 text-[10px] font-medium text-muted-foreground">
+                          <User className="w-3 h-3" /> {sender.label}
                         </div>
                       )}
                       <p className="whitespace-pre-wrap break-words overflow-hidden">{msg.content}</p>
                       <div className={cn(
                         "flex items-center justify-end gap-1 mt-1",
                         msg.direction === "outbound"
-                          ? sender === "ai" ? "text-violet-200/70" : "text-primary-foreground/70"
+                          ? sender.type === "ai" ? "text-violet-200/70" : "text-primary-foreground/70"
                           : "text-muted-foreground"
                       )}>
                         <span className="text-[10px]">{formatTime(msg.created_at)}</span>
-                        {msg.direction === "outbound" && (
-                          <span className="text-[10px]">{msg.status === "read" ? "✓✓" : msg.status === "delivered" ? "✓✓" : "✓"}</span>
-                        )}
+                        {getStatusIndicator(msg)}
                       </div>
                     </div>
                     {/* Sender icon for outbound */}
                     {msg.direction === "outbound" && (
                       <div className={cn(
                         "w-6 h-6 rounded-full flex items-center justify-center ml-2 mt-1 shrink-0",
-                        sender === "ai" ? "bg-violet-500/20" : "bg-primary/20"
+                        sender.type === "ai" ? "bg-violet-500/20" : "bg-primary/20"
                       )}>
-                        {sender === "ai" ? (
+                        {sender.type === "ai" ? (
                           <Bot className="w-3 h-3 text-violet-500" />
                         ) : (
                           <User className="w-3 h-3 text-primary" />
