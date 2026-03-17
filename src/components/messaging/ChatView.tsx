@@ -49,11 +49,19 @@ const ChatView = ({ conversation, messages, sending, onSend, onToggleChatbot }: 
     setAiLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("ai-agent-reply", {
-        body: { conversation_id: conversation.id, clinic_id: clinicId },
+        body: {
+          conversation_id: conversation.id,
+          clinic_id: clinicId,
+          triggered_by: "manual",
+        },
       });
       if (error) throw error;
       if (data?.error) {
         toast.error(data.error);
+      } else if (data?.skipped) {
+        toast.message("La IA no respondió", { description: data.reason || "Esta conversación no pudo procesarse." });
+      } else {
+        toast.success("Respuesta IA enviada");
       }
     } catch (e: any) {
       toast.error(e.message || "Error al generar respuesta IA");
