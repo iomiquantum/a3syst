@@ -116,7 +116,7 @@ export const useTokenUsage = () => {
     const totalClinicCost = (monthRecords || []).reduce((sum, r) => sum + (Number(r.cost_usd) || 0), 0);
 
     // Check clinic budget
-    const { data: clinic } = await supabase
+    const { data: clinic } = await (supabase as any)
       .from("clinics")
       .select("monthly_token_budget_usd")
       .eq("id", clinicId)

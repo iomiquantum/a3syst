@@ -47,7 +47,7 @@ const AdminClinicasTab = ({ clinics, roles, onRefresh }: AdminClinicasTabProps) 
   };
 
   const handleDeleteClinic = async (id: string) => {
-    const { error } = await supabase.from("clinics").delete().eq("id", id);
+    const { error } = await (supabase as any).from("clinics").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success("Negocio eliminado");
     onRefresh();

@@ -25,7 +25,7 @@ const CreateEmpresaModal = ({ open, onOpenChange }: CreateEmpresaModalProps) => 
       const userId = session.session?.user?.id;
       if (!userId) throw new Error("No autenticado");
 
-      const { error } = await supabase.from("clinics").insert({
+      const { error } = await (supabase as any).from("clinics").insert({
         name: form.nombre.trim(),
         owner_id: userId,
         description: "",

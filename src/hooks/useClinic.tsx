@@ -54,7 +54,7 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
     }
 
     // Regular user: check owned clinic
-    const { data: ownedClinic } = await supabase
+    const { data: ownedClinic } = await (supabase as any)
       .from("clinics")
       .select("id, name, business_type, onboarding_completed")
       .eq("owner_id", user.id)

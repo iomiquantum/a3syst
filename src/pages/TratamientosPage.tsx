@@ -114,7 +114,7 @@ const TratamientosPage = () => {
   const generateWithAI = async () => {
     if (!clinicId) return;
     // Get clinic business_type
-    const { data: clinic } = await supabase.from("clinics").select("business_type").eq("id", clinicId).single();
+    const { data: clinic } = await (supabase as any).from("clinics").select("business_type").eq("id", clinicId).single();
     const type = clinic?.business_type || "general";
     const templates = AI_TEMPLATES[type] || AI_TEMPLATES.general;
     
