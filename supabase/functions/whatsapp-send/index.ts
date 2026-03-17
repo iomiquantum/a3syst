@@ -50,12 +50,16 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Sanitize phone number: remove +, spaces, dashes — keep only digits
+    const cleanNumber = to_number.replace(/[^0-9]/g, "");
+    console.log("Sending to:", cleanNumber, "original:", to_number);
+
     // Build the message payload for Meta WhatsApp Cloud API
     const type = message_type || "text";
     let messagePayload: Record<string, unknown> = {
       messaging_product: "whatsapp",
       recipient_type: "individual",
-      to: to_number,
+      to: cleanNumber,
       type,
     };
 
