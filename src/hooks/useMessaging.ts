@@ -184,6 +184,7 @@ export const useMessaging = () => {
       content: content.trim(),
       message_type: "text",
       status: "sent",
+      sent_by: user?.id || null,
     };
 
     const { data, error } = await supabase.from("messages").insert(newMsg).select().single();
