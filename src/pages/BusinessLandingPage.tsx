@@ -66,7 +66,7 @@ const BusinessLandingPage = () => {
   const { data: clinic, isLoading, error } = useQuery({
     queryKey: ["business-landing", slug],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("clinics")
         .select("*")
         .eq("slug", slug!)

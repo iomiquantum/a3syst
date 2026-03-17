@@ -85,7 +85,7 @@ export function useUsuariosAdmin() {
   const { data: clinics = [] } = useQuery({
     queryKey: ["admin-clinics"],
     queryFn: async () => {
-      const { data } = await supabase.from("clinics").select("id, name, slug").order("name");
+      const { data } = await (supabase as any).from("clinics").select("id, name, slug").order("name");
       return data || [];
     },
   });

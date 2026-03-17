@@ -22,9 +22,9 @@ const AdminPage = () => {
 
   const fetchData = async () => {
     const [{ data: c }, { data: p }, { data: rolesData }] = await Promise.all([
-      supabase.from("clinics").select("*").order("created_at"),
+      (supabase as any).from("clinics").select("*").order("created_at"),
       supabase.from("profiles").select("*").order("full_name"),
-      supabase.from("user_roles").select("*, clinics(name)").order("created_at"),
+      (supabase as any).from("user_roles").select("*, clinics(name)").order("created_at"),
     ]);
 
     const profilesMap: Record<string, any> = {};

@@ -64,9 +64,9 @@ const AdminTokenBudgets = ({ clinics, profiles, roles, onRefresh }: AdminTokenBu
   const handleSaveClinicBudget = async (clinicId: string) => {
     setSaving(true);
     const budget = clinicBudgets[clinicId];
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("clinics")
-      .update({ monthly_token_budget_usd: budget } as any)
+      .update({ monthly_token_budget_usd: budget })
       .eq("id", clinicId);
     setSaving(false);
     if (error) { toast.error(error.message); return; }

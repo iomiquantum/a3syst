@@ -451,7 +451,7 @@ const OnboardingPage = () => {
     });
     const slug = slugData || collectedData.business_name?.toLowerCase().replace(/\s+/g, "-") || "mi-negocio";
 
-    await supabase.from("clinics").update({
+    await (supabase as any).from("clinics").update({
       name: collectedData.business_name || "Mi Negocio",
       business_type: collectedData.business_type || "general",
       description: collectedData.description || "",
@@ -508,7 +508,7 @@ const OnboardingPage = () => {
     await new Promise(r => setTimeout(r, 600));
 
     // Mark completed
-    await supabase.from("clinics").update({ onboarding_completed: true } as any).eq("id", clinicId);
+    await (supabase as any).from("clinics").update({ onboarding_completed: true }).eq("id", clinicId);
 
     dispatch({ type: "SET_SLUG", slug });
     dispatch({ type: "SET_PHASE", phase: "done" });
