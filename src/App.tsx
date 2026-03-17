@@ -63,8 +63,8 @@ const App = () => (
         <CookieBanner />
         <AppContent />
         <AuthProvider>
-          <ClinicProvider>
-          <BusinessLabelsProvider>
+            <ClinicProvider>
+              <BusinessLabelsProvider>
             <Routes>
               <Route path="/" element={<PreLaunchPage />} />
               <Route path="/landing" element={<LandingPage />} />
