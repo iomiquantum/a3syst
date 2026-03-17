@@ -451,7 +451,7 @@ const OnboardingPage = () => {
     });
     const slug = slugData || collectedData.business_name?.toLowerCase().replace(/\s+/g, "-") || "mi-negocio";
 
-    await supabase.from("clinics").update({
+    await (supabase as any).from("clinics").update({
       name: collectedData.business_name || "Mi Negocio",
       business_type: collectedData.business_type || "general",
       description: collectedData.description || "",
