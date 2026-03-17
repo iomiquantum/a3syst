@@ -86,13 +86,16 @@ serve(async (req) => {
       }
     }
 
-    // Fetch recent messages for context (last 20)
+    // Fetch recent messages for context (last 6 to save tokens)
     const { data: recentMessages } = await supabase
       .from("messages")
       .select("direction, content")
       .eq("conversation_id", conversation_id)
-      .order("created_at", { ascending: true })
-      .limit(20);
+      .order("created_at", { ascending: false })
+      .limit(6);
+
+    // Reverse to chronological order
+    if (recentMessages) recentMessages.reverse();
 
     // Build system prompt from agent config
     const services = (agentConfig.services || []) as { name: string; price: string; description: string }[];
