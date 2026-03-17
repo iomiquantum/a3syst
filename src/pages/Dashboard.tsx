@@ -516,6 +516,16 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </section>
+
+        {/* ═══ 5: WHATSAPP CARD ═══ */}
+        <section>
+          <h2 className="flex items-center gap-2 text-lg font-bold text-foreground mb-4">
+            📱 Canales
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <WhatsAppDashboardCard />
+          </div>
+        </section>
       </div>
     </AppLayout>
   );
