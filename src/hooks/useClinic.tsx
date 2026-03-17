@@ -39,7 +39,7 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
     setIsSuperAdmin(isSuper);
 
     if (isSuper) {
-      const { data: clinics } = await supabase
+      const { data: clinics } = await (supabase as any)
         .from("clinics")
         .select("id, name, business_type")
         .order("created_at");
