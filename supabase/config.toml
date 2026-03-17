@@ -29,3 +29,9 @@ verify_jwt = false
 
 [functions.exchange-facebook-token]
 verify_jwt = false
+
+[functions.whatsapp-webhook]
+verify_jwt = false
+
+[functions.whatsapp-send]
+verify_jwt = false
