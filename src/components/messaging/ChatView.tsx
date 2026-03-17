@@ -32,7 +32,7 @@ const ChatView = ({ conversation, messages, sending, onSend, onToggleChatbot }: 
   }, [messages]);
 
   const handleSend = () => {
-    if (!input.trim() || sending || conversation.chatbot_active) return;
+    if (!input.trim() || sending) return;
     onSend(input);
     setInput("");
   };
