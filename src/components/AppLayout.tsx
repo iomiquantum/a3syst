@@ -4,6 +4,7 @@ import {
   LayoutDashboard, MessageSquare, Calendar, BarChart3, Megaphone, Palette,
   Rocket, DollarSign, Brain, Users, Briefcase, Stethoscope, Building2,
   Bot, TrendingUp, User, LogOut, ChevronLeft, Menu, Sun, Moon, ShieldCheck,
+  Store, Globe, ClipboardList,
 } from "lucide-react";
 import HelpButton from "@/components/help/HelpButton";
 import HelpPanel from "@/components/help/HelpPanel";
@@ -72,6 +73,17 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       items: [{ icon: LayoutDashboard, label: "Command Center", path: "/dashboard" }],
     },
     {
+      label: "MI EMPRESA",
+      items: [
+        { icon: Store, label: "Mi Negocio", path: "/mi-negocio" },
+        { icon: Stethoscope, label: labels.treatments, path: "/configuracion/tratamientos" },
+        { icon: Briefcase, label: labels.professionals, path: "/configuracion/profesionales" },
+        { icon: Building2, label: labels.branches, path: "/configuracion/sucursales" },
+        { icon: Users, label: labels.patients, path: "/pacientes" },
+        { icon: Globe, label: "Mi Landing", path: "/mi-negocio", queryTab: "landing" },
+      ],
+    },
+    {
       label: "AUTOPILOTOS",
       items: [
         { icon: MessageSquare, label: "Mensajes", path: "/mensajes", badge: unreadMessages },
@@ -83,15 +95,6 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         { icon: Rocket, label: "Ads", path: "/ads" },
         { icon: DollarSign, label: "Ventas", path: "/ventas" },
         { icon: Brain, label: "Psycho-Matrix", path: "/psycho-matrix" },
-      ],
-    },
-    {
-      label: "GESTIÓN",
-      items: [
-        { icon: Users, label: labels.patients, path: "/pacientes" },
-        { icon: Briefcase, label: labels.professionals, path: "/configuracion/profesionales" },
-        { icon: Stethoscope, label: labels.treatments, path: "/configuracion/tratamientos" },
-        { icon: Building2, label: labels.branches, path: "/configuracion/sucursales" },
       ],
     },
     {
