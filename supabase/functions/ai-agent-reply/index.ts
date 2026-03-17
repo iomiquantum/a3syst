@@ -10,7 +10,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { conversation_id, clinic_id, triggered_by } = await req.json();
+    const { conversation_id, clinic_id, triggered_by = "manual" } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
@@ -18,6 +18,7 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+    const isManualTrigger = triggered_by === "manual";
 
     // Fetch AI agent config for this clinic
     const { data: agentConfig } = await supabase
@@ -33,46 +34,55 @@ serve(async (req) => {
       });
     }
 
-    // Dedup: atomically check if the latest inbound message is still the one we should reply to
-    // by using an atomic update on conversations to claim the reply slot
-    const { data: claimed, error: claimError } = await supabase
+    const { data: conversationData, error: conversationError } = await supabase
       .from("conversations")
-      .update({ last_message_at: new Date().toISOString() })
+      .select("id, channel, visitor_contact, contact_id, chatbot_active")
       .eq("id", conversation_id)
-      .eq("chatbot_active", true)
-      .select("id")
+      .eq("clinic_id", clinic_id)
       .single();
 
-    if (claimError || !claimed) {
-      return new Response(JSON.stringify({ skipped: true, reason: "claim failed or chatbot inactive" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (conversationError || !conversationData) throw conversationError || new Error("Conversation not found");
 
-    // Additional dedup: check if there's already an outbound message newer than the latest inbound
-    const { data: latestInbound } = await supabase
-      .from("messages")
-      .select("created_at")
-      .eq("conversation_id", conversation_id)
-      .eq("direction", "inbound")
-      .order("created_at", { ascending: false })
-      .limit(1);
+    if (!isManualTrigger) {
+      const { data: claimed, error: claimError } = await supabase
+        .from("conversations")
+        .update({ last_message_at: new Date().toISOString() })
+        .eq("id", conversation_id)
+        .eq("clinic_id", clinic_id)
+        .eq("chatbot_active", true)
+        .select("id")
+        .single();
 
-    const { data: latestOutbound } = await supabase
-      .from("messages")
-      .select("created_at")
-      .eq("conversation_id", conversation_id)
-      .eq("direction", "outbound")
-      .order("created_at", { ascending: false })
-      .limit(1);
-
-    if (latestInbound?.[0] && latestOutbound?.[0]) {
-      const inboundTime = new Date(latestInbound[0].created_at).getTime();
-      const outboundTime = new Date(latestOutbound[0].created_at).getTime();
-      if (outboundTime > inboundTime) {
-        return new Response(JSON.stringify({ skipped: true, reason: "already replied" }), {
+      if (claimError || !claimed) {
+        return new Response(JSON.stringify({ skipped: true, reason: "claim failed or chatbot inactive" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
+      }
+
+      const { data: latestInbound } = await supabase
+        .from("messages")
+        .select("created_at")
+        .eq("conversation_id", conversation_id)
+        .eq("direction", "inbound")
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      const { data: latestOutbound } = await supabase
+        .from("messages")
+        .select("created_at")
+        .eq("conversation_id", conversation_id)
+        .eq("direction", "outbound")
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (latestInbound?.[0] && latestOutbound?.[0]) {
+        const inboundTime = new Date(latestInbound[0].created_at).getTime();
+        const outboundTime = new Date(latestOutbound[0].created_at).getTime();
+        if (outboundTime > inboundTime) {
+          return new Response(JSON.stringify({ skipped: true, reason: "already replied" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
       }
     }
 
@@ -107,16 +117,14 @@ IMPORTANTE:
 - Si no sabes algo, sugiere contactar a la clínica directamente.
 - Nunca inventes información sobre servicios o precios que no estén listados arriba.`;
 
-    // Build messages array for the AI
     const aiMessages = [
       { role: "system", content: systemPrompt },
-      ...(recentMessages || []).map(m => ({
+      ...(recentMessages || []).map((m) => ({
         role: m.direction === "inbound" ? "user" : "assistant",
         content: m.content,
       })),
     ];
 
-    // Call Lovable AI Gateway (non-streaming for simplicity)
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -155,15 +163,6 @@ IMPORTANTE:
     const tokensInput = usage.prompt_tokens || 0;
     const tokensOutput = usage.completion_tokens || 0;
     const modelUsed = aiData.model || "google/gemini-3-flash-preview";
-
-    // Send the AI reply through the real channel when possible
-    const { data: conversationData, error: conversationError } = await supabase
-      .from("conversations")
-      .select("channel, visitor_contact, contact_id")
-      .eq("id", conversation_id)
-      .single();
-
-    if (conversationError) throw conversationError;
 
     let savedMsg: unknown = null;
 
