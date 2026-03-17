@@ -154,6 +154,7 @@ export const useMessaging = () => {
           content: content.trim(),
           message_type: "text",
           status: "sent",
+          sent_by: user?.id || null,
           whatsapp_message_id: data?.wa_message_id || null,
         }).select().single();
 
