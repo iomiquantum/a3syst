@@ -44,22 +44,6 @@ Deno.serve(async (req) => {
 
     const { phone_number_id, phone_number } = connection;
 
-    // Prioritize env var token (always fresh), fallback to DB token
-    const envToken = Deno.env.get("META_ACCESS_TOKEN");
-    const dbToken = connection.access_token;
-    const accessToken = envToken || dbToken;
-    const tokenSource = envToken ? "env" : "db";
-
-    console.log("Token source:", tokenSource, "| phone_number_id:", phone_number_id);
-
-    if (!accessToken) {
-      console.error("No access token available from env or database");
-      return new Response(
-        JSON.stringify({ error: "Missing access token — set META_ACCESS_TOKEN secret or update whatsapp_connections" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     // Sanitize phone number: remove +, spaces, dashes — keep only digits
     const cleanNumber = to_number.replace(/[^0-9]/g, "");
     console.log("Sending to:", cleanNumber, "original:", to_number);
@@ -87,29 +71,91 @@ Deno.serve(async (req) => {
       messagePayload[type] = content;
     }
 
-    // Send via Meta Graph API
     const graphUrl = `https://graph.facebook.com/v22.0/${phone_number_id}/messages`;
     console.log("Meta API URL:", graphUrl);
     console.log("Payload:", JSON.stringify(messagePayload));
 
-    const metaResponse = await fetch(graphUrl, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(messagePayload),
-    });
+    const dbToken = typeof connection.access_token === "string" ? connection.access_token.trim() : "";
+    const envToken = Deno.env.get("META_ACCESS_TOKEN")?.trim() || "";
 
-    const metaResult = await metaResponse.json();
+    if (!dbToken && !envToken) {
+      console.error("No access token available from database or META_ACCESS_TOKEN secret");
+      return new Response(
+        JSON.stringify({ error: "Missing access token — update whatsapp_connections or META_ACCESS_TOKEN" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-    // Log FULL response for debugging
-    console.log("Meta API Response:", JSON.stringify({
-      status: metaResponse.status,
-      ok: metaResponse.ok,
-      body: metaResult,
-      tokenSource,
-    }));
+    const parseMetaResponse = async (response: Response) => {
+      const rawBody = await response.text();
+      try {
+        return rawBody ? JSON.parse(rawBody) : null;
+      } catch {
+        return { raw: rawBody };
+      }
+    };
+
+    const isTokenExpiredOrInvalid = (result: any) => {
+      const error = result?.error;
+      const message = typeof error?.message === "string" ? error.message.toLowerCase() : "";
+      return error?.code === 190 || error?.error_subcode === 463 || message.includes("access token");
+    };
+
+    const sendWithToken = async (accessToken: string, source: "db" | "env") => {
+      const response = await fetch(graphUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(messagePayload),
+      });
+
+      const result = await parseMetaResponse(response);
+
+      console.log("Meta API Response:", JSON.stringify({
+        status: response.status,
+        ok: response.ok,
+        body: result,
+        tokenSource: source,
+      }));
+
+      return { response, result, tokenSource: source };
+    };
+
+    const tokensToTry: Array<{ value: string; source: "db" | "env" }> = [];
+    if (dbToken) tokensToTry.push({ value: dbToken, source: "db" });
+    if (envToken && envToken !== dbToken) tokensToTry.push({ value: envToken, source: "env" });
+
+    let metaResponse: Response | null = null;
+    let metaResult: any = null;
+    let tokenSource: "db" | "env" | null = null;
+
+    for (const candidate of tokensToTry) {
+      const attempt = await sendWithToken(candidate.value, candidate.source);
+      metaResponse = attempt.response;
+      metaResult = attempt.result;
+      tokenSource = attempt.tokenSource;
+
+      if (metaResponse.ok) break;
+
+      const shouldFallbackToEnv =
+        candidate.source === "db" &&
+        !!envToken &&
+        envToken !== dbToken &&
+        isTokenExpiredOrInvalid(metaResult);
+
+      if (!shouldFallbackToEnv) break;
+
+      console.warn("Database token rejected by Meta, retrying with META_ACCESS_TOKEN fallback");
+    }
+
+    if (!metaResponse || !tokenSource) {
+      return new Response(
+        JSON.stringify({ error: "Failed to initialize Meta API request" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!metaResponse.ok) {
       console.error("Meta API error:", JSON.stringify(metaResult));

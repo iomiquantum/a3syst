@@ -156,23 +156,75 @@ IMPORTANTE:
     const tokensOutput = usage.completion_tokens || 0;
     const modelUsed = aiData.model || "google/gemini-3-flash-preview";
 
-    // Save the AI reply as an outbound message
-    const { data: savedMsg, error: msgError } = await supabase.from("messages").insert({
-      conversation_id,
-      clinic_id,
-      direction: "outbound",
-      content: reply,
-      message_type: "text",
-      status: "sent",
-    }).select().single();
+    // Send the AI reply through the real channel when possible
+    const { data: conversationData, error: conversationError } = await supabase
+      .from("conversations")
+      .select("channel, visitor_contact, contact_id")
+      .eq("id", conversation_id)
+      .single();
 
-    if (msgError) throw msgError;
+    if (conversationError) throw conversationError;
 
-    // Update conversation preview
-    await supabase.from("conversations").update({
-      last_message_at: new Date().toISOString(),
-      last_message_preview: reply.substring(0, 100),
-    }).eq("id", conversation_id);
+    let savedMsg: unknown = null;
+
+    if (conversationData.channel === "whatsapp") {
+      let toNumber = conversationData.visitor_contact;
+
+      if (!toNumber && conversationData.contact_id) {
+        const { data: contactData } = await supabase
+          .from("contacts")
+          .select("phone")
+          .eq("id", conversationData.contact_id)
+          .maybeSingle();
+
+        toNumber = contactData?.phone || null;
+      }
+
+      if (!toNumber) {
+        throw new Error("WhatsApp conversation has no destination phone number");
+      }
+
+      const sendResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${supabaseKey}`,
+          apikey: supabaseKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          clinic_id,
+          to_number: toNumber,
+          message_type: "text",
+          content: reply,
+        }),
+      });
+
+      const sendPayload = await sendResponse.json().catch(() => null);
+      console.log("AI reply delivery response:", JSON.stringify(sendPayload));
+
+      if (!sendResponse.ok || sendPayload?.error) {
+        throw new Error(`WhatsApp send failed: ${JSON.stringify(sendPayload || { status: sendResponse.status })}`);
+      }
+
+      savedMsg = sendPayload;
+    } else {
+      const { data: insertedMessage, error: msgError } = await supabase.from("messages").insert({
+        conversation_id,
+        clinic_id,
+        direction: "outbound",
+        content: reply,
+        message_type: "text",
+        status: "sent",
+      }).select().single();
+
+      if (msgError) throw msgError;
+      savedMsg = insertedMessage;
+
+      await supabase.from("conversations").update({
+        last_message_at: new Date().toISOString(),
+        last_message_preview: reply.substring(0, 100),
+      }).eq("id", conversation_id);
+    }
 
     // Log usage to ai_agent_usage
     await supabase.from("ai_agent_usage").insert({
