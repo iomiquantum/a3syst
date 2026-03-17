@@ -151,7 +151,7 @@ const BusinessLandingPage = () => {
 
     try {
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const resp = await fetch(`https://${projectId}.supabase.co/functions/v1/widget-messages`, {
+      const resp = await fetch(`https://${projectId}.supabase.co/functions/v1/widget-message`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
