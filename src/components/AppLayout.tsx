@@ -4,6 +4,7 @@ import {
   LayoutDashboard, MessageSquare, Calendar, BarChart3, Megaphone, Palette,
   Rocket, DollarSign, Brain, Users, Briefcase, Stethoscope, Building2,
   Bot, TrendingUp, User, LogOut, ChevronLeft, Menu, Sun, Moon, ShieldCheck,
+  Store, Globe, ClipboardList,
 } from "lucide-react";
 import HelpButton from "@/components/help/HelpButton";
 import HelpPanel from "@/components/help/HelpPanel";
