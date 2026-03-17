@@ -63,6 +63,7 @@ const FUNNEL_STAGES = [
 export { FUNNEL_STAGES };
 
 export const useMessaging = () => {
+  const { clinicId } = useClinic();
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
