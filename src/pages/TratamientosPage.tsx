@@ -8,14 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import { useBusinessLabels } from "@/hooks/useBusinessLabels";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { treatmentSchema, specialtySchema, getValidationError } from "@/lib/validations";
 
 const TratamientosPage = () => {
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   const { labels } = useBusinessLabels();
   const [treatments, setTreatments] = useState<any[]>([]);
   const [specialties, setSpecialties] = useState<any[]>([]);
@@ -25,19 +25,19 @@ const TratamientosPage = () => {
   const [specialtyName, setSpecialtyName] = useState("");
 
   const fetchData = async () => {
-    if (!clinicId) return;
+    if (!businessId) return;
     const [{ data: t }, { data: s }] = await Promise.all([
-      supabase.from("treatments").select("*").eq("clinic_id", clinicId).order("created_at"),
-      supabase.from("specialties").select("*").eq("clinic_id", clinicId).order("created_at"),
+      supabase.from("treatments").select("*").eq("clinic_id", businessId).order("created_at"),
+      supabase.from("specialties").select("*").eq("clinic_id", businessId).order("created_at"),
     ]);
     setTreatments(t || []);
     setSpecialties(s || []);
   };
 
-  useEffect(() => { fetchData(); }, [clinicId]);
+  useEffect(() => { fetchData(); }, [businessId]);
 
   const handleSaveTreatment = async () => {
-    if (!clinicId) return;
+    if (!businessId) return;
     try {
       const validated = treatmentSchema.parse({
         name: treatmentForm.name,
@@ -46,7 +46,7 @@ const TratamientosPage = () => {
         description: treatmentForm.description,
       });
       const { error } = await supabase.from("treatments").insert({
-        clinic_id: clinicId, name: validated.name, duration: validated.duration,
+        clinic_id: businessId, name: validated.name, duration: validated.duration,
         description: validated.description || "", price: validated.price,
       });
       if (error) { toast.error(error.message); return; }
@@ -59,10 +59,10 @@ const TratamientosPage = () => {
   };
 
   const handleSaveSpecialty = async () => {
-    if (!clinicId) return;
+    if (!businessId) return;
     try {
       const validated = specialtySchema.parse({ name: specialtyName });
-      const { error } = await supabase.from("specialties").insert({ clinic_id: clinicId, name: validated.name });
+      const { error } = await supabase.from("specialties").insert({ clinic_id: businessId, name: validated.name });
       if (error) { toast.error(error.message); return; }
       toast.success("Categoría creada");
       setOpenSpecialty(false); setSpecialtyName("");
@@ -112,9 +112,9 @@ const TratamientosPage = () => {
   };
 
   const generateWithAI = async () => {
-    if (!clinicId) return;
+    if (!businessId) return;
     // Get clinic business_type
-    const { data: clinic } = await supabase.from("clinics").select("business_type").eq("id", clinicId).single();
+    const { data: clinic } = await supabase.from("businesses").select("business_type").eq("id", businessId).single();
     const type = clinic?.business_type || "general";
     const templates = AI_TEMPLATES[type] || AI_TEMPLATES.general;
     
@@ -123,7 +123,7 @@ const TratamientosPage = () => {
       const exists = treatments.some(ex => ex.name.toLowerCase() === t.name.toLowerCase());
       if (!exists) {
         await supabase.from("treatments").insert({
-          clinic_id: clinicId, name: t.name, duration: t.duration, price: t.price, description: t.description,
+          clinic_id: businessId, name: t.name, duration: t.duration, price: t.price, description: t.description,
         });
         created++;
       }

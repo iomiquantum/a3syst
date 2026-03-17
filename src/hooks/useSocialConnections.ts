@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
@@ -39,25 +39,25 @@ export interface PostLog {
 }
 
 export const useSocialConnections = () => {
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   const { user } = useAuth();
   const [connections, setConnections] = useState<SocialConnection[]>([]);
   const [postLogs, setPostLogs] = useState<PostLog[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchConnections = useCallback(async () => {
-    if (!clinicId) return;
+    if (!businessId) return;
     setLoading(true);
     const [connRes, logRes] = await Promise.all([
       supabase
         .from("social_media_connections")
         .select("*")
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", businessId)
         .order("connected_at", { ascending: false }),
       supabase
         .from("social_media_posts_log")
         .select("*")
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", businessId)
         .order("created_at", { ascending: false })
         .limit(50),
     ]);
@@ -66,7 +66,7 @@ export const useSocialConnections = () => {
     setConnections((connRes.data || []) as unknown as SocialConnection[]);
     setPostLogs((logRes.data || []) as unknown as PostLog[]);
     setLoading(false);
-  }, [clinicId]);
+  }, [businessId]);
 
   useEffect(() => { fetchConnections(); }, [fetchConnections]);
 
@@ -81,7 +81,7 @@ export const useSocialConnections = () => {
     access_token: string;
     metadata?: Record<string, any>;
   }) => {
-    if (!clinicId) return false;
+    if (!businessId) return false;
     const existing = connections.find(
       c => c.platform === data.platform && c.platform_account_id === data.platform_account_id
     );
@@ -103,7 +103,7 @@ export const useSocialConnections = () => {
       const { error } = await supabase
         .from("social_media_connections")
         .insert({
-          clinic_id: clinicId,
+          clinic_id: businessId,
           platform: data.platform,
           platform_name: data.platform_name,
           platform_account_id: data.platform_account_id,
@@ -215,7 +215,7 @@ export const useSocialConnections = () => {
       if (result?.error) {
         // Log failed attempt
         await supabase.from("social_media_posts_log").insert({
-          clinic_id: clinicId,
+          clinic_id: businessId,
           connection_id: connectionId,
           platform: conn.platform,
           post_type: imageUrl ? "image" : "text",
@@ -231,7 +231,7 @@ export const useSocialConnections = () => {
       // Log success
       const postId = result?.id || result?.post_id;
       await supabase.from("social_media_posts_log").insert({
-        clinic_id: clinicId,
+        clinic_id: businessId,
         connection_id: connectionId,
         platform: conn.platform,
         post_type: imageUrl ? "image" : "text",

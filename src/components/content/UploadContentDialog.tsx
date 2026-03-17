@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import { usePublishToMeta } from "@/hooks/usePublishToMeta";
 import type { ContentPost } from "@/hooks/useContentPosts";
 import { cn } from "@/lib/utils";
@@ -92,7 +92,7 @@ const STEPS = [
 ];
 
 const UploadContentDialog = ({ open, onOpenChange, content }: Props) => {
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   const { publishNow, publishing: publishingNow } = usePublishToMeta();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const platformFileInputRef = useRef<HTMLInputElement>(null);
@@ -388,7 +388,7 @@ Responde SOLO en JSON:
     const urls: string[] = [];
     for (const file of filesToUpload) {
       const ext = file.name.split(".").pop();
-      const fileName = `${clinicId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const fileName = `${businessId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const { error: uploadError } = await supabase.storage.from("content-media").upload(fileName, file, { contentType: file.type });
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from("content-media").getPublicUrl(fileName);
@@ -398,7 +398,7 @@ Responde SOLO en JSON:
   };
 
   const handleSubmit = async (action: "draft" | "scheduled" | "publish_now") => {
-    if (!clinicId) return;
+    if (!businessId) return;
     const hasFiles = files.length > 0 || (customPerPlatform && Object.values(platformFiles).some(f => f.length > 0));
     if (!hasFiles) { toast.error("Sube al menos un archivo"); return; }
     if (action === "scheduled" && !scheduledDate) { toast.error("Selecciona fecha"); return; }

@@ -2,27 +2,27 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
-interface ClinicContextType {
-  clinicId: string | null;
-  clinicName: string;
+interface BusinessContextType {
+  businessId: string | null;
+  businessName: string;
   loading: boolean;
   isSuperAdmin: boolean;
   needsOnboarding: boolean;
-  allClinics: { id: string; name: string }[];
-  selectClinic: (id: string, name: string) => void;
-  refreshClinic: () => void;
+  allBusinesses: { id: string; name: string }[];
+  selectBusiness: (id: string, name: string) => void;
+  refreshBusiness: () => void;
 }
 
-const ClinicContext = createContext<ClinicContextType | undefined>(undefined);
+const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
 
-export const ClinicProvider = ({ children }: { children: ReactNode }) => {
+export const BusinessProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  const [clinicId, setClinicId] = useState<string | null>(null);
-  const [clinicName, setClinicName] = useState("Mi Negocio");
+  const [businessId, setClinicId] = useState<string | null>(null);
+  const [businessName, setClinicName] = useState("Mi Negocio");
   const [loading, setLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
-  const [allClinics, setAllClinics] = useState<{ id: string; name: string }[]>([]);
+  const [allBusinesses, setAllClinics] = useState<{ id: string; name: string }[]>([]);
 
   const fetchClinic = async () => {
     if (!user) {
@@ -40,11 +40,11 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
 
     if (isSuper) {
       const { data: clinics } = await supabase
-        .from("clinics")
+        .from("businesses")
         .select("id, name, business_type")
         .order("created_at");
       setAllClinics((clinics || []).map(c => ({ id: c.id, name: c.name })));
-      if (clinics && clinics.length > 0 && !clinicId) {
+      if (clinics && clinics.length > 0 && !businessId) {
         setClinicId(clinics[0].id);
         setClinicName(clinics[0].name);
       }
@@ -55,7 +55,7 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
 
     // Regular user: check owned clinic
     const { data: ownedClinic } = await supabase
-      .from("clinics")
+      .from("businesses")
       .select("id, name, business_type, onboarding_completed")
       .eq("owner_id", user.id)
       .limit(1)
@@ -90,25 +90,25 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
     fetchClinic();
   }, [user]);
 
-  const selectClinic = (id: string, name: string) => {
+  const selectBusiness = (id: string, name: string) => {
     setClinicId(id);
     setClinicName(name);
   };
 
-  const refreshClinic = () => {
+  const refreshBusiness = () => {
     setLoading(true);
     fetchClinic();
   };
 
   return (
-    <ClinicContext.Provider value={{ clinicId, clinicName, loading, isSuperAdmin, needsOnboarding, allClinics, selectClinic, refreshClinic }}>
+    <BusinessContext.Provider value={{ businessId, businessName, loading, isSuperAdmin, needsOnboarding, allBusinesses, selectBusiness, refreshBusiness }}>
       {children}
-    </ClinicContext.Provider>
+    </BusinessContext.Provider>
   );
 };
 
-export const useClinic = () => {
-  const context = useContext(ClinicContext);
-  if (!context) throw new Error("useClinic must be used within ClinicProvider");
+export const useBusiness = () => {
+  const context = useContext(BusinessContext);
+  if (!context) throw new Error("useBusiness must be used within BusinessProvider");
   return context;
 };

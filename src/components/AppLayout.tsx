@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import { useBusinessLabels } from "@/hooks/useBusinessLabels";
 import { useTheme } from "@/hooks/useTheme";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,7 +26,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, signOut } = useAuth();
-  const { clinicName, isSuperAdmin, allClinics, selectClinic, clinicId } = useClinic();
+  const { businessName, isSuperAdmin, allBusinesses, selectBusiness, businessId } = useBusiness();
   const { labels } = useBusinessLabels();
   const { theme, toggleTheme } = useTheme();
 
@@ -40,16 +40,16 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   const helpContent = getHelpForRoute(location.pathname);
 
   useEffect(() => {
-    if (!clinicId) return;
+    if (!businessId) return;
     const today = new Date().toISOString().split("T")[0];
     Promise.all([
-      supabase.from("conversations").select("unread_count").eq("clinic_id", clinicId).gt("unread_count", 0),
-      supabase.from("appointments").select("id", { count: "exact", head: true }).eq("clinic_id", clinicId).eq("date", today),
+      supabase.from("conversations").select("unread_count").eq("clinic_id", businessId).gt("unread_count", 0),
+      supabase.from("appointments").select("id", { count: "exact", head: true }).eq("clinic_id", businessId).eq("date", today),
     ]).then(([{ data: convs }, { count }]) => {
       setUnreadMessages((convs || []).reduce((s, c) => s + (c.unread_count || 0), 0));
       setTodayAppointments(count || 0);
     });
-  }, [clinicId]);
+  }, [businessId]);
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + "/");
 
@@ -127,7 +127,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       {/* Clinic name + autopilot badge */}
       {!collapsed && (
         <div className="px-4 py-3 border-b border-sidebar-border shrink-0">
-          <p className="text-xs text-sidebar-foreground/50 truncate">{clinicName}</p>
+          <p className="text-xs text-sidebar-foreground/50 truncate">{businessName}</p>
           <div className="mt-1.5 flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
             <span className="text-[10px] text-success font-medium">Autopilotos: ON</span>
@@ -136,17 +136,17 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       )}
 
       {/* Super admin clinic selector */}
-      {isSuperAdmin && allClinics.length > 0 && !collapsed && (
+      {isSuperAdmin && allBusinesses.length > 0 && !collapsed && (
         <div className="px-3 py-2 border-b border-sidebar-border shrink-0">
-          <Select value={clinicId || ""} onValueChange={(v) => {
-            const clinic = allClinics.find(c => c.id === v);
-            if (clinic) selectClinic(clinic.id, clinic.name);
+          <Select value={businessId || ""} onValueChange={(v) => {
+            const clinic = allBusinesses.find(c => c.id === v);
+            if (clinic) selectBusiness(clinic.id, clinic.name);
           }}>
             <SelectTrigger className="h-8 text-xs bg-sidebar-accent border-sidebar-border text-sidebar-foreground">
               <SelectValue placeholder="Seleccionar negocio" />
             </SelectTrigger>
             <SelectContent>
-              {allClinics.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              {allBusinesses.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { shortLivedToken, clinicId } = await req.json();
+    const { shortLivedToken, businessId } = await req.json();
 
     if (!shortLivedToken) {
       return new Response(
@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
     let appId = Deno.env.get("FACEBOOK_APP_ID") || "";
     let appSecret = Deno.env.get("FACEBOOK_APP_SECRET") || "";
 
-    if (clinicId) {
+    if (businessId) {
       const supabase = createClient(
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
       const { data: metaConfig } = await supabase
         .from("meta_app_configurations")
         .select("app_mode, custom_app_id, custom_app_secret_encrypted")
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", businessId)
         .maybeSingle();
 
       if (metaConfig?.app_mode === "custom" && metaConfig.custom_app_id && metaConfig.custom_app_secret_encrypted) {

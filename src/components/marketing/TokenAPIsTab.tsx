@@ -28,7 +28,7 @@ const TokenAPIsTab = () => {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Conecta los canales de comunicación de tu clínica. Te guiaremos paso a paso en cada integración.
+        Conecta los canales de comunicación de tu negocio. Te guiaremos paso a paso en cada integración.
       </p>
 
       <div className="grid gap-3">

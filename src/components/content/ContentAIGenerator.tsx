@@ -17,7 +17,7 @@ import { useVoiceInput } from "@/hooks/useVoiceInput";
 import BrandStyleManager from "./BrandStyleManager";
 import type { BrandStyle } from "@/hooks/useBrandStyles";
 import { useActivePromptTemplate } from "@/hooks/usePromptTemplates";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import {
   arquetiposDigitales, arquetiposMarca, disparadoresPersuasion,
   codigosGeneracionales, psicologiaAvanzada, canalsPNL,
@@ -195,7 +195,7 @@ const ContentAIGenerator = ({ content }: Props) => {
   const { data: strategies = [] } = usePsychoStrategies();
   const { data: products = [] } = usePsychoServices();
   const createService = useCreateService();
-  const { isSuperAdmin } = useClinic();
+  const { isSuperAdmin } = useBusiness();
   const { data: imagePromptTemplate } = useActivePromptTemplate("image");
   const { data: copyPromptTemplate } = useActivePromptTemplate("copy");
 
@@ -1041,7 +1041,7 @@ function buildBrandStyleContext(brandStyle: any): string {
   return `\n\nESTILO DE MARCA (OBLIGATORIO - seguir fielmente):
 ${paletteStr ? `- PALETA DE COLORES: Usa EXCLUSIVAMENTE estos colores: ${paletteStr}` : ""}
 ${brandStyle.style_description ? `- ESTILO VISUAL: ${brandStyle.style_description}` : ""}
-- Mantén coherencia visual con la identidad de marca de la clínica. Los colores, tipografías y composición deben reflejar este estilo.`;
+- Mantén coherencia visual con la identidad de marca de la negocio. Los colores, tipografías y composición deben reflejar este estilo.`;
 }
 
 function buildCopyPrompt(

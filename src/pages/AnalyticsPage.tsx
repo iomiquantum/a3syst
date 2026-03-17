@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import {
@@ -24,7 +24,7 @@ const COLORS = [
 ];
 
 const AnalyticsPage = () => {
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>({
@@ -41,7 +41,7 @@ const AnalyticsPage = () => {
   });
 
   useEffect(() => {
-    if (!clinicId) return;
+    if (!businessId) return;
     const fetchAll = async () => {
       setLoading(true);
       const now = new Date();
@@ -58,17 +58,17 @@ const AnalyticsPage = () => {
         contacts, patients, lastAppts,
         botMsgCount, postsMonth, activeCamps,
       ] = await Promise.all([
-        supabase.from("sales").select("amount, discount, created_at").eq("clinic_id", clinicId).gte("created_at", firstOfMonth),
-        supabase.from("sales").select("amount, discount").eq("clinic_id", clinicId).gte("created_at", firstOfLastMonth).lte("created_at", endOfLastMonth),
-        supabase.from("sales").select("amount, discount, created_at").eq("clinic_id", clinicId).gte("created_at", sixMonthsAgo),
-        supabase.from("appointments").select("id, date, status").eq("clinic_id", clinicId).gte("date", firstOfMonth.split("T")[0]),
-        supabase.from("appointments").select("id, date").eq("clinic_id", clinicId).gte("date", thirtyDaysAgo.split("T")[0]),
-        supabase.from("contacts").select("source, funnel_stage").eq("clinic_id", clinicId),
-        supabase.from("patients").select("id").eq("clinic_id", clinicId),
-        supabase.from("appointments").select("patient_id, date").eq("clinic_id", clinicId).order("date", { ascending: false }),
-        supabase.from("messages").select("*", { count: "exact", head: true }).eq("clinic_id", clinicId).eq("direction", "outbound").gte("created_at", firstOfMonth),
-        supabase.from("content_posts").select("*", { count: "exact", head: true }).eq("clinic_id", clinicId).gte("created_at", firstOfMonth),
-        supabase.from("ads_campaigns").select("*", { count: "exact", head: true }).eq("clinic_id", clinicId).eq("status", "active"),
+        supabase.from("sales").select("amount, discount, created_at").eq("clinic_id", businessId).gte("created_at", firstOfMonth),
+        supabase.from("sales").select("amount, discount").eq("clinic_id", businessId).gte("created_at", firstOfLastMonth).lte("created_at", endOfLastMonth),
+        supabase.from("sales").select("amount, discount, created_at").eq("clinic_id", businessId).gte("created_at", sixMonthsAgo),
+        supabase.from("appointments").select("id, date, status").eq("clinic_id", businessId).gte("date", firstOfMonth.split("T")[0]),
+        supabase.from("appointments").select("id, date").eq("clinic_id", businessId).gte("date", thirtyDaysAgo.split("T")[0]),
+        supabase.from("contacts").select("source, funnel_stage").eq("clinic_id", businessId),
+        supabase.from("patients").select("id").eq("clinic_id", businessId),
+        supabase.from("appointments").select("patient_id, date").eq("clinic_id", businessId).order("date", { ascending: false }),
+        supabase.from("messages").select("*", { count: "exact", head: true }).eq("clinic_id", businessId).eq("direction", "outbound").gte("created_at", firstOfMonth),
+        supabase.from("content_posts").select("*", { count: "exact", head: true }).eq("clinic_id", businessId).gte("created_at", firstOfMonth),
+        supabase.from("ads_campaigns").select("*", { count: "exact", head: true }).eq("clinic_id", businessId).eq("status", "active"),
       ]);
 
       // Revenue
@@ -151,7 +151,7 @@ const AnalyticsPage = () => {
       setLoading(false);
     };
     fetchAll();
-  }, [clinicId]);
+  }, [businessId]);
 
   const revChange = data.revenueLastMonth > 0
     ? Math.round(((data.revenueThisMonth - data.revenueLastMonth) / data.revenueLastMonth) * 100)

@@ -25,7 +25,7 @@ interface UserLimit {
 }
 
 const AdminTokenBudgets = ({ clinics, profiles, roles, onRefresh }: AdminTokenBudgetsProps) => {
-  const [clinicBudgets, setClinicBudgets] = useState<Record<string, number | null>>({});
+  const [businessBudgets, setClinicBudgets] = useState<Record<string, number | null>>({});
   const [userLimits, setUserLimits] = useState<UserLimit[]>([]);
   const [selectedClinic, setSelectedClinic] = useState<string>("");
   const [saving, setSaving] = useState(false);
@@ -61,16 +61,16 @@ const AdminTokenBudgets = ({ clinics, profiles, roles, onRefresh }: AdminTokenBu
     return found ? found.monthly_budget_usd : null;
   };
 
-  const handleSaveClinicBudget = async (clinicId: string) => {
+  const handleSaveClinicBudget = async (businessId: string) => {
     setSaving(true);
-    const budget = clinicBudgets[clinicId];
+    const budget = businessBudgets[businessId];
     const { error } = await supabase
-      .from("clinics")
+      .from("businesses")
       .update({ monthly_token_budget_usd: budget } as any)
-      .eq("id", clinicId);
+      .eq("id", businessId);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("Presupuesto de clínica actualizado");
+    toast.success("Presupuesto de negocio actualizado");
     onRefresh();
   };
 
@@ -107,13 +107,13 @@ const AdminTokenBudgets = ({ clinics, profiles, roles, onRefresh }: AdminTokenBu
       <Card className="shadow-card">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-primary" /> Presupuesto mensual por clínica
+            <Building2 className="w-4 h-4 text-primary" /> Presupuesto mensual por negocio
           </CardTitle>
-          <CardDescription>Define el límite de gasto mensual en USD para cada clínica. Deja en "Abierto" para sin límite.</CardDescription>
+          <CardDescription>Define el límite de gasto mensual en USD para cada negocio. Deja en "Abierto" para sin límite.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {clinics.map(c => {
-            const budget = clinicBudgets[c.id];
+            const budget = businessBudgets[c.id];
             const isOpen = budget === null || budget === undefined;
             return (
               <div key={c.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background">
@@ -178,14 +178,14 @@ const AdminTokenBudgets = ({ clinics, profiles, roles, onRefresh }: AdminTokenBu
           <CardTitle className="text-base flex items-center gap-2">
             <Users className="w-4 h-4 text-primary" /> Límite mensual por usuario
           </CardTitle>
-          <CardDescription>Configura límites individuales de gasto por usuario dentro de cada clínica.</CardDescription>
+          <CardDescription>Configura límites individuales de gasto por usuario dentro de cada negocio.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label className="text-xs text-muted-foreground">Seleccionar clínica</Label>
+            <Label className="text-xs text-muted-foreground">Seleccionar negocio</Label>
             <Select value={selectedClinic} onValueChange={setSelectedClinic}>
               <SelectTrigger className="w-full max-w-xs">
-                <SelectValue placeholder="Seleccionar clínica" />
+                <SelectValue placeholder="Seleccionar negocio" />
               </SelectTrigger>
               <SelectContent>
                 {clinics.map(c => (
@@ -196,7 +196,7 @@ const AdminTokenBudgets = ({ clinics, profiles, roles, onRefresh }: AdminTokenBu
           </div>
 
           {clinicUsers.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">No hay usuarios asignados a esta clínica.</p>
+            <p className="text-sm text-muted-foreground py-4 text-center">No hay usuarios asignados a esta negocio.</p>
           ) : (
             <div className="space-y-2">
               {clinicUsers.map(r => {

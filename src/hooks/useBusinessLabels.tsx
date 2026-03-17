@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 
 export interface BusinessLabels {
   patients: string;
@@ -43,12 +43,12 @@ interface BusinessLabelsContextType {
 const BusinessLabelsContext = createContext<BusinessLabelsContextType | undefined>(undefined);
 
 export const BusinessLabelsProvider = ({ children }: { children: ReactNode }) => {
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   const [labels, setLabels] = useState<BusinessLabels>(DEFAULT_LABELS);
   const [loading, setLoading] = useState(true);
 
   const fetchLabels = async () => {
-    if (!clinicId) {
+    if (!businessId) {
       setLabels(DEFAULT_LABELS);
       setLoading(false);
       return;
@@ -57,7 +57,7 @@ export const BusinessLabelsProvider = ({ children }: { children: ReactNode }) =>
     const { data } = await supabase
       .from("business_labels")
       .select("labels")
-      .eq("clinic_id", clinicId)
+      .eq("clinic_id", businessId)
       .maybeSingle();
 
     if (data?.labels) {
@@ -74,7 +74,7 @@ export const BusinessLabelsProvider = ({ children }: { children: ReactNode }) =>
 
   useEffect(() => {
     fetchLabels();
-  }, [clinicId]);
+  }, [businessId]);
 
   return (
     <BusinessLabelsContext.Provider value={{ labels, loading, refresh: fetchLabels }}>

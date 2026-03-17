@@ -1,14 +1,14 @@
 import { ReactNode } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import { Navigate, useLocation } from "react-router-dom";
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
-  const { clinicId, loading: clinicLoading, needsOnboarding } = useClinic();
+  const { businessId, loading: businessLoading, needsOnboarding } = useBusiness();
   const location = useLocation();
 
-  if (authLoading || clinicLoading) {
+  if (authLoading || businessLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#060611]">
         <div className="flex flex-col items-center gap-4">

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import { toast } from "sonner";
 
 export interface BrandStyle {
@@ -17,28 +17,28 @@ export interface BrandStyle {
 const MAX_STYLES = 3;
 
 export const useBrandStyles = () => {
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   const [styles, setStyles] = useState<BrandStyle[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchStyles = useCallback(async () => {
-    if (!clinicId) return;
+    if (!businessId) return;
     const { data, error } = await supabase
       .from("clinic_brand_styles")
       .select("*")
-      .eq("clinic_id", clinicId)
+      .eq("clinic_id", businessId)
       .order("created_at", { ascending: true });
     if (error) console.error(error);
     setStyles((data || []) as unknown as BrandStyle[]);
     setLoading(false);
-  }, [clinicId]);
+  }, [businessId]);
 
   useEffect(() => { fetchStyles(); }, [fetchStyles]);
 
   const uploadImage = async (file: File): Promise<string | null> => {
-    if (!clinicId) return null;
+    if (!businessId) return null;
     const ext = file.name.split(".").pop();
-    const path = `${clinicId}/${crypto.randomUUID()}.${ext}`;
+    const path = `${businessId}/${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage.from("brand-references").upload(path, file);
     if (error) { toast.error("Error subiendo imagen"); return null; }
     const { data: { publicUrl } } = supabase.storage.from("brand-references").getPublicUrl(path);
@@ -46,14 +46,14 @@ export const useBrandStyles = () => {
   };
 
   const createStyle = async (name: string, imageUrls: string[]): Promise<BrandStyle | null> => {
-    if (!clinicId) return null;
+    if (!businessId) return null;
     if (styles.length >= MAX_STYLES) {
       toast.error(`Máximo ${MAX_STYLES} estilos permitidos`);
       return null;
     }
     const { data, error } = await supabase
       .from("clinic_brand_styles")
-      .insert({ clinic_id: clinicId, name, reference_images: imageUrls } as any)
+      .insert({ clinic_id: businessId, name, reference_images: imageUrls } as any)
       .select()
       .single();
     if (error) { toast.error(error.message); return null; }

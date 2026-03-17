@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 
 export interface MarketingKPIData {
   totalContacts: number;
@@ -14,7 +14,7 @@ export interface MarketingKPIData {
 }
 
 export const useMarketingKPIs = (): MarketingKPIData => {
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   const [data, setData] = useState<Omit<MarketingKPIData, "loading">>({
     totalContacts: 0,
     newContactsThisMonth: 0,
@@ -27,7 +27,7 @@ export const useMarketingKPIs = (): MarketingKPIData => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!clinicId) return;
+    if (!businessId) return;
 
     const fetchKPIs = async () => {
       setLoading(true);
@@ -46,13 +46,13 @@ export const useMarketingKPIs = (): MarketingKPIData => {
         convertedLastRes,
         allContactsRes,
       ] = await Promise.all([
-        supabase.from("contacts").select("id", { count: "exact", head: true }).eq("clinic_id", clinicId),
-        supabase.from("contacts").select("id", { count: "exact", head: true }).eq("clinic_id", clinicId).gte("created_at", startOfMonth),
-        supabase.from("contacts").select("id", { count: "exact", head: true }).eq("clinic_id", clinicId).gte("created_at", startOfLastMonth).lte("created_at", endOfLastMonth),
-        supabase.from("conversations").select("id", { count: "exact", head: true }).eq("clinic_id", clinicId).gte("created_at", startOfMonth),
-        supabase.from("contacts").select("id", { count: "exact", head: true }).eq("clinic_id", clinicId).eq("funnel_stage", "convertido").gte("updated_at", startOfMonth),
-        supabase.from("contacts").select("id", { count: "exact", head: true }).eq("clinic_id", clinicId).eq("funnel_stage", "convertido").gte("updated_at", startOfLastMonth).lte("updated_at", endOfLastMonth),
-        supabase.from("contacts").select("funnel_stage").eq("clinic_id", clinicId),
+        supabase.from("contacts").select("id", { count: "exact", head: true }).eq("clinic_id", businessId),
+        supabase.from("contacts").select("id", { count: "exact", head: true }).eq("clinic_id", businessId).gte("created_at", startOfMonth),
+        supabase.from("contacts").select("id", { count: "exact", head: true }).eq("clinic_id", businessId).gte("created_at", startOfLastMonth).lte("created_at", endOfLastMonth),
+        supabase.from("conversations").select("id", { count: "exact", head: true }).eq("clinic_id", businessId).gte("created_at", startOfMonth),
+        supabase.from("contacts").select("id", { count: "exact", head: true }).eq("clinic_id", businessId).eq("funnel_stage", "convertido").gte("updated_at", startOfMonth),
+        supabase.from("contacts").select("id", { count: "exact", head: true }).eq("clinic_id", businessId).eq("funnel_stage", "convertido").gte("updated_at", startOfLastMonth).lte("updated_at", endOfLastMonth),
+        supabase.from("contacts").select("funnel_stage").eq("clinic_id", businessId),
       ]);
 
       // Compute funnel counts
@@ -81,7 +81,7 @@ export const useMarketingKPIs = (): MarketingKPIData => {
     };
 
     fetchKPIs();
-  }, [clinicId]);
+  }, [businessId]);
 
   return { ...data, loading };
 };

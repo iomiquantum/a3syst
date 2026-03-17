@@ -19,7 +19,7 @@ export const arquetiposDigitales: MatrixOption[] = [
 export const arquetiposMarca: MatrixOption[] = [
   { id: "creador", label: "Creador", description: "Innovador, visionario. Crea cosas nuevas y únicas.", example: "\"Somos pioneros en esta técnica exclusiva\"" },
   { id: "cuidador", label: "Cuidador", description: "Protector, compasivo. Cuida y nutre a los demás.", example: "\"Tu bienestar es nuestra prioridad número uno\"" },
-  { id: "gobernante", label: "Gobernante", description: "Líder, autoritario. Proyecta control y exclusividad.", example: "\"La clínica #1 elegida por ejecutivos\"" },
+  { id: "gobernante", label: "Gobernante", description: "Líder, autoritario. Proyecta control y exclusividad.", example: "\"La negocio #1 elegida por ejecutivos\"" },
   { id: "amante", label: "Amante", description: "Pasional, sensorial. Apela a la belleza y el placer.", example: "\"Redescubre la versión más bella de ti\"" },
   { id: "bufon", label: "Bufón", description: "Divertido, irreverente. Usa el humor para conectar.", example: "\"Tu sonrisa perfecta sin drama 😄\"" },
   { id: "ciudadano", label: "Ciudadano", description: "Accesible, igualitario. Pertenencia y comunidad.", example: "\"Salud dental de calidad para todas las familias\"" },
@@ -36,7 +36,7 @@ export const disparadoresPersuasion: MatrixOption[] = [
   { id: "autoridad", label: "Autoridad", description: "Posiciona al experto. Credenciales, certificaciones, años de experiencia.", example: "\"15 años de experiencia y +3,000 casos exitosos\"" },
   { id: "prueba_social", label: "Prueba Social", description: "Testimonios, casos de éxito, números de clientes satisfechos.", example: "\"Mira el antes/después de Ana – caso real\"" },
   { id: "reciprocidad", label: "Reciprocidad", description: "Da valor primero. Contenido gratuito que genera obligación de devolver.", example: "\"Descarga gratis nuestra guía de cuidado dental\"" },
-  { id: "enemigo_comun", label: "Enemigo Común", description: "'Nosotros vs Ellos'. Crea un enemigo común (industria, ignorancia, etc.).", example: "\"Las clínicas low-cost no te dicen esto...\"" },
+  { id: "enemigo_comun", label: "Enemigo Común", description: "'Nosotros vs Ellos'. Crea un enemigo común (industria, ignorancia, etc.).", example: "\"Las negocios low-cost no te dicen esto...\"" },
   { id: "zeigarnik", label: "Efecto Zeigarnik", description: "Bucles abiertos. Deja historias incompletas que obligan a seguir leyendo.", example: "\"Lo que pasó después de su tratamiento te sorprenderá...\"" },
 ];
 

@@ -11,7 +11,7 @@ import { Calendar, Clock, Image, Send, Save, Upload, X, Eye, Loader2, Zap } from
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import type { ContentPost } from "@/hooks/useContentPosts";
 import PostPreview from "./PostPreview";
 import { usePublishToMeta } from "@/hooks/usePublishToMeta";
@@ -31,7 +31,7 @@ const platformOptions = [
 ];
 
 const CreatePostDialog = ({ open, onOpenChange, content }: Props) => {
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   const { publishNow, publishing: publishingNow } = usePublishToMeta();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState("");
@@ -80,7 +80,7 @@ const CreatePostDialog = ({ open, onOpenChange, content }: Props) => {
     const urls: string[] = [];
     for (const file of mediaFiles) {
       const ext = file.name.split(".").pop();
-      const path = `${clinicId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const path = `${businessId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const { error } = await supabase.storage.from("content-media").upload(path, file);
       if (error) { toast.error(`Error subiendo ${file.name}`); continue; }
       const { data: urlData } = supabase.storage.from("content-media").getPublicUrl(path);

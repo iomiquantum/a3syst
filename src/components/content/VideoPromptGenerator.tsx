@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { usePsychoStrategies, usePsychoServices } from "@/hooks/usePsychoMatrix";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import { useActivePromptTemplate, usePromptTemplates, useSavePromptTemplate } from "@/hooks/usePromptTemplates";
 import {
   arquetiposDigitales, arquetiposMarca, disparadoresPersuasion,
@@ -262,7 +262,7 @@ const VideoPromptGenerator = ({ content }: Props) => {
 
   const { data: strategies = [] } = usePsychoStrategies();
   const { data: services = [] } = usePsychoServices();
-  const { isSuperAdmin } = useClinic();
+  const { isSuperAdmin } = useBusiness();
   const { data: videoPromptTemplate } = useActivePromptTemplate("video");
 
   // Filter strategies by selected service

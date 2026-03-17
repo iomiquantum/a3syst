@@ -44,7 +44,7 @@ serve(async (req) => {
     const content: any[] = [
       {
         type: "text",
-        text: `Eres un director de arte y experto en branding. Analiza las siguientes ${imageUrls.length} imágenes de referencia de una marca/clínica y extrae:
+        text: `Eres un director de arte y experto en branding. Analiza las siguientes ${imageUrls.length} imágenes de referencia de una marca/negocio y extrae:
 
 1. PALETA DE COLORES: Identifica los 5-8 colores dominantes usados en las imágenes. Para cada color devuelve su código HEX y un nombre descriptivo corto en español (ej: "Azul marino", "Rosa pastel", "Dorado").
 

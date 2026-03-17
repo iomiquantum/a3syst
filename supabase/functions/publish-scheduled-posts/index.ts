@@ -197,13 +197,13 @@ async function publishToInstagram(post: any, creds: Record<string, string>): Pro
   }
 }
 
-async function getCredentials(supabase: any, clinicId: string): Promise<Record<string, string>> {
+async function getCredentials(supabase: any, businessId: string): Promise<Record<string, string>> {
   let creds: Record<string, string> = {};
 
   const { data: socialConn } = await supabase
     .from("social_media_connections")
     .select("access_token, platform_account_id, platform")
-    .eq("clinic_id", clinicId)
+    .eq("clinic_id", businessId)
     .eq("token_status", "active")
     .in("platform", ["facebook", "instagram"]);
 
@@ -224,7 +224,7 @@ async function getCredentials(supabase: any, clinicId: string): Promise<Record<s
     const { data: metaAccount } = await supabase
       .from("ads_accounts")
       .select("credentials")
-      .eq("clinic_id", clinicId)
+      .eq("clinic_id", businessId)
       .eq("platform", "meta")
       .eq("status", "connected")
       .single();

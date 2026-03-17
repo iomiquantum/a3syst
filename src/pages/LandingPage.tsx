@@ -75,8 +75,8 @@ const TIMELINE = [
 ];
 
 const BUSINESSES = [
-  { icon: SmilePlus, name: 'Clínicas dentales' },
-  { icon: Sparkles, name: 'Clínicas estéticas' },
+  { icon: SmilePlus, name: 'Negocios dentales' },
+  { icon: Sparkles, name: 'Negocios estéticas' },
   { icon: Heart, name: 'Spas' },
   { icon: Scissors, name: 'Salones de belleza' },
   { icon: Scissors, name: 'Barberías' },
