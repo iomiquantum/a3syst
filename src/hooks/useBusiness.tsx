@@ -17,19 +17,19 @@ const BusinessContext = createContext<BusinessContextType | undefined>(undefined
 
 export const BusinessProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  const [businessId, setClinicId] = useState<string | null>(null);
-  const [businessName, setClinicName] = useState("Mi Negocio");
+  const [businessId, setBusinessId] = useState<string | null>(null);
+  const [businessName, setBusinessName] = useState("Mi Negocio");
   const [loading, setLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
-  const [allBusinesses, setAllClinics] = useState<{ id: string; name: string }[]>([]);
+  const [allBusinesses, setAllBusinesses] = useState<{ id: string; name: string }[]>([]);
 
-  const fetchClinic = async () => {
+  const fetchBusiness = async () => {
     if (!user) {
-      setClinicId(null);
+      setBusinessId(null);
       setIsSuperAdmin(false);
       setNeedsOnboarding(false);
-      setAllClinics([]);
+      setAllBusinesses([]);
       setLoading(false);
       return;
     }
@@ -39,33 +39,32 @@ export const BusinessProvider = ({ children }: { children: ReactNode }) => {
     setIsSuperAdmin(isSuper);
 
     if (isSuper) {
-      const { data: clinics } = await supabase
+      const { data: businesses } = await supabase
         .from("businesses")
         .select("id, name, business_type")
         .order("created_at");
-      setAllClinics((clinics || []).map(c => ({ id: c.id, name: c.name })));
-      if (clinics && clinics.length > 0 && !businessId) {
-        setClinicId(clinics[0].id);
-        setClinicName(clinics[0].name);
+      setAllBusinesses((businesses || []).map(c => ({ id: c.id, name: c.name })));
+      if (businesses && businesses.length > 0 && !businessId) {
+        setBusinessId(businesses[0].id);
+        setBusinessName(businesses[0].name);
       }
       setNeedsOnboarding(false);
       setLoading(false);
       return;
     }
 
-    // Regular user: check owned clinic
-    const { data: ownedClinic } = await supabase
+    // Regular user: check owned business
+    const { data: ownedBusiness } = await supabase
       .from("businesses")
       .select("id, name, business_type, onboarding_completed")
       .eq("owner_id", user.id)
       .limit(1)
       .maybeSingle();
 
-    if (ownedClinic) {
-      setClinicId(ownedClinic.id);
-      setClinicName(ownedClinic.name);
-      // Needs onboarding if not completed
-      setNeedsOnboarding(!(ownedClinic as any).onboarding_completed);
+    if (ownedBusiness) {
+      setBusinessId(ownedBusiness.id);
+      setBusinessName(ownedBusiness.name);
+      setNeedsOnboarding(!(ownedBusiness as any).onboarding_completed);
       setLoading(false);
       return;
     }
@@ -79,25 +78,25 @@ export const BusinessProvider = ({ children }: { children: ReactNode }) => {
       .maybeSingle();
 
     if (roleData) {
-      setClinicId(roleData.clinic_id);
-      setClinicName((roleData as any).clinics?.name ?? "Mi Negocio");
+      setBusinessId(roleData.clinic_id);
+      setBusinessName((roleData as any).clinics?.name ?? "Mi Negocio");
       setNeedsOnboarding(false);
     }
     setLoading(false);
   };
 
   useEffect(() => {
-    fetchClinic();
+    fetchBusiness();
   }, [user]);
 
   const selectBusiness = (id: string, name: string) => {
-    setClinicId(id);
-    setClinicName(name);
+    setBusinessId(id);
+    setBusinessName(name);
   };
 
   const refreshBusiness = () => {
     setLoading(true);
-    fetchClinic();
+    fetchBusiness();
   };
 
   return (
