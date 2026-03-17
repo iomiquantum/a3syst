@@ -27,6 +27,7 @@ export interface Conversation {
   unread_count: number;
   chatbot_active: boolean;
   archived: boolean;
+  visitor_contact: string | null;
   contact?: Contact;
 }
 
