@@ -39,6 +39,7 @@ import OnboardingPage from "./pages/OnboardingPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import MiCuentaPage from "./pages/MiCuentaPage";
 import BusinessLandingPage from "./pages/BusinessLandingPage";
+import MiNegocioPage from "./pages/MiNegocioPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import TermsPage from "./pages/TermsPage";
 import DataDeletionPage from "./pages/DataDeletionPage";
