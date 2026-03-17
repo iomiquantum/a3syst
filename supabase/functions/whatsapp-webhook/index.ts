@@ -33,6 +33,7 @@ Deno.serve(async (req) => {
   if (req.method === "POST") {
     try {
       const body = await req.json();
+      console.log("Webhook POST received:", JSON.stringify(body).substring(0, 500));
 
       const supabase = createClient(
         Deno.env.get("SUPABASE_URL")!,
@@ -59,10 +60,9 @@ Deno.serve(async (req) => {
       const metadata = value.metadata;
       const phoneNumberId = metadata?.phone_number_id;
       const displayPhoneNumber = metadata?.display_phone_number;
-      const messages = value.messages;
+      const incomingMessages = value.messages;
 
-      if (!messages || messages.length === 0) {
-        // Could be a status update (delivery, read receipt, etc.)
+      if (!incomingMessages || incomingMessages.length === 0) {
         return new Response(JSON.stringify({ status: "ok", note: "no messages" }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -81,16 +81,27 @@ Deno.serve(async (req) => {
       }
 
       const clinicId = connection?.clinic_id;
+      if (!clinicId) {
+        console.error("No clinic found for phone_number_id:", phoneNumberId);
+        return new Response(JSON.stringify({ status: "ok", note: "no clinic" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
       // Insert each message
-      for (const msg of messages) {
+      for (const msg of incomingMessages) {
+        const fromNumber = msg.from;
+        const messageText = msg.text?.body || msg.caption || `[${msg.type || "message"}]`;
+
+        // 1. Insert into whatsapp_messages (raw storage)
         const { error: insertError } = await supabase
           .from("whatsapp_messages")
           .insert({
             clinic_id: clinicId,
             phone_number_id: phoneNumberId,
             direction: "inbound",
-            from_number: msg.from,
+            from_number: fromNumber,
             to_number: displayPhoneNumber || phoneNumberId,
             message_type: msg.type || "text",
             content: msg,
@@ -99,8 +110,145 @@ Deno.serve(async (req) => {
           });
 
         if (insertError) {
-          console.error("Error inserting message:", insertError);
+          console.error("Error inserting whatsapp_message:", insertError);
         }
+
+        // 2. Find or create contact
+        let contactId: string | null = null;
+        const { data: existingContact } = await supabase
+          .from("contacts")
+          .select("id")
+          .eq("clinic_id", clinicId)
+          .eq("phone", fromNumber)
+          .maybeSingle();
+
+        if (existingContact) {
+          contactId = existingContact.id;
+        } else {
+          // Also try with + prefix
+          const { data: existingContact2 } = await supabase
+            .from("contacts")
+            .select("id")
+            .eq("clinic_id", clinicId)
+            .eq("phone", `+${fromNumber}`)
+            .maybeSingle();
+
+          if (existingContact2) {
+            contactId = existingContact2.id;
+          } else {
+            // Get contact name from WhatsApp profile if available
+            const contactProfile = value.contacts?.[0];
+            const contactName = contactProfile?.profile?.name || fromNumber;
+
+            const { data: newContact, error: contactError } = await supabase
+              .from("contacts")
+              .insert({
+                clinic_id: clinicId,
+                name: contactName,
+                phone: fromNumber,
+                source: "whatsapp",
+                funnel_stage: "nuevos",
+              })
+              .select("id")
+              .single();
+
+            if (contactError) {
+              console.error("Error creating contact:", contactError);
+            } else {
+              contactId = newContact.id;
+            }
+          }
+        }
+
+        if (!contactId) {
+          console.error("Could not find or create contact for:", fromNumber);
+          continue;
+        }
+
+        // 3. Find or create conversation
+        let conversationId: string | null = null;
+        const { data: existingConv } = await supabase
+          .from("conversations")
+          .select("id")
+          .eq("clinic_id", clinicId)
+          .eq("contact_id", contactId)
+          .eq("channel", "whatsapp")
+          .maybeSingle();
+
+        if (existingConv) {
+          conversationId = existingConv.id;
+          // Update conversation metadata
+          await supabase
+            .from("conversations")
+            .update({
+              last_message_at: new Date().toISOString(),
+              last_message_preview: messageText.substring(0, 100),
+              unread_count: supabase.rpc ? 1 : 1, // Will increment below
+              status: "open",
+            })
+            .eq("id", conversationId);
+
+          // Increment unread count
+          const { data: convData } = await supabase
+            .from("conversations")
+            .select("unread_count")
+            .eq("id", conversationId)
+            .single();
+
+          if (convData) {
+            await supabase
+              .from("conversations")
+              .update({ unread_count: (convData.unread_count || 0) + 1 })
+              .eq("id", conversationId);
+          }
+        } else {
+          const { data: newConv, error: convError } = await supabase
+            .from("conversations")
+            .insert({
+              clinic_id: clinicId,
+              contact_id: contactId,
+              channel: "whatsapp",
+              status: "open",
+              last_message_at: new Date().toISOString(),
+              last_message_preview: messageText.substring(0, 100),
+              unread_count: 1,
+              chatbot_active: false,
+              visitor_contact: fromNumber,
+            })
+            .select("id")
+            .single();
+
+          if (convError) {
+            console.error("Error creating conversation:", convError);
+          } else {
+            conversationId = newConv.id;
+          }
+        }
+
+        if (!conversationId) {
+          console.error("Could not find or create conversation");
+          continue;
+        }
+
+        // 4. Insert into messages table (for Mensajes panel)
+        const { error: msgError } = await supabase
+          .from("messages")
+          .insert({
+            conversation_id: conversationId,
+            clinic_id: clinicId,
+            direction: "inbound",
+            content: messageText,
+            message_type: msg.type || "text",
+            media_url: msg.image?.link || msg.document?.link || msg.video?.link || msg.audio?.link || null,
+            whatsapp_message_id: msg.id,
+            status: "received",
+          });
+
+        if (msgError) {
+          console.error("Error inserting message:", msgError);
+        }
+
+        console.log("Message processed:", { fromNumber, conversationId, contactId });
       }
 
       return new Response(JSON.stringify({ status: "ok" }), {
@@ -109,7 +257,6 @@ Deno.serve(async (req) => {
       });
     } catch (err) {
       console.error("Webhook error:", err);
-      // Always return 200 to Meta so they don't retry excessively
       return new Response(JSON.stringify({ status: "ok", error: String(err) }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
