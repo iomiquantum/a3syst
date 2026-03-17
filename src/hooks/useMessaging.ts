@@ -268,12 +268,23 @@ export const useMessaging = () => {
         const currentConv = selectedConvRef.current;
         if (currentConv && newMsg.conversation_id === currentConv.id) {
           setMessages(prev => {
-            // Avoid duplicates
             if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
         }
         fetchConversations();
+      })
+      .on("postgres_changes", {
+        event: "UPDATE",
+        schema: "public",
+        table: "messages",
+        filter: `clinic_id=eq.${clinicId}`,
+      }, (payload) => {
+        const updated = payload.new as Message;
+        const currentConv = selectedConvRef.current;
+        if (currentConv && updated.conversation_id === currentConv.id) {
+          setMessages(prev => prev.map(m => m.id === updated.id ? { ...m, status: updated.status } : m));
+        }
       })
       .subscribe();
 
