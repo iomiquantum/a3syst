@@ -1,12 +1,16 @@
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, Lock, Settings, ArrowUpCircle, Sparkles, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { FUNNEL_STAGES, Conversation } from "@/hooks/useMessaging";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import ChannelIcon, { CHANNEL_LIST } from "@/components/messaging/ChannelIcon";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useClinic } from "@/hooks/useClinic";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   conversations: Conversation[];
@@ -19,9 +23,70 @@ interface Props {
   onChannelFilterChange: (channel: string) => void;
 }
 
+// Channels that are always active (don't require setup)
+const ALWAYS_ACTIVE = ["web_widget"];
+
+// Free plan channels
+const FREE_CHANNELS = ["web_widget", "whatsapp"];
+
+// Channels requiring paid plan
+const PAID_CHANNELS = ["instagram", "facebook", "tiktok"];
+
+// Default first 3 funnel stages for guided setup
+const STARTER_FUNNELS = [
+  { key: "nuevos", label: "Nuevos", desc: "Personas que acaban de contactarte por primera vez", emoji: "👋" },
+  { key: "interesada", label: "Interesados", desc: "Ya mostraron interés en tus servicios", emoji: "💬" },
+  { key: "agendado", label: "Agendados", desc: "Ya tienen una cita programada contigo", emoji: "📅" },
+];
+
 const InboxSidebar = ({ conversations, allConversations, selected, funnelFilter, channelFilter, onSelect, onFilterChange, onChannelFilterChange }: Props) => {
   const [search, setSearch] = useState("");
   const [showFunnel, setShowFunnel] = useState(true);
+  const [activeChannels, setActiveChannels] = useState<string[]>(["web_widget"]);
+  const [funnelConfigured, setFunnelConfigured] = useState(false);
+  const { clinicId } = useClinic();
+  const navigate = useNavigate();
+
+  // Check which channels are configured
+  useEffect(() => {
+    if (!clinicId) return;
+
+    const checkChannels = async () => {
+      const active = [...ALWAYS_ACTIVE];
+
+      // Check WhatsApp connections
+      const { data: waConns } = await (supabase as any)
+        .from("whatsapp_connections")
+        .select("status")
+        .eq("clinic_id", clinicId)
+        .eq("status", "active");
+
+      if (waConns && waConns.length > 0) active.push("whatsapp");
+
+      // Check channel_credentials for other channels
+      const { data: creds } = await supabase
+        .from("channel_credentials")
+        .select("channel, is_active")
+        .eq("clinic_id", clinicId)
+        .eq("is_active", true);
+
+      (creds || []).forEach((c: any) => {
+        if (!active.includes(c.channel)) active.push(c.channel);
+      });
+
+      setActiveChannels(active);
+    };
+
+    checkChannels();
+  }, [clinicId]);
+
+  // Check if funnel stages have been used (conversations with non-default stages)
+  useEffect(() => {
+    const hasCustomStages = allConversations.some(
+      c => c.contact?.funnel_stage && c.contact.funnel_stage !== "nuevos"
+    );
+    setFunnelConfigured(hasCustomStages || allConversations.length > 5);
+  }, [allConversations]);
 
   const filtered = search
     ? conversations.filter(c => c.contact?.name?.toLowerCase().includes(search.toLowerCase()) || c.contact?.phone?.includes(search))
@@ -32,7 +97,6 @@ const InboxSidebar = ({ conversations, allConversations, selected, funnelFilter,
     return acc;
   }, {} as Record<string, number>);
 
-  // Channel counts from all conversations
   const channelCounts: Record<string, number> = { todos: allConversations.length };
   allConversations.forEach(c => {
     const ch = c.channel || "whatsapp";
@@ -49,6 +113,23 @@ const InboxSidebar = ({ conversations, allConversations, selected, funnelFilter,
     try {
       return formatDistanceToNow(new Date(date), { addSuffix: false, locale: es });
     } catch { return ""; }
+  };
+
+  const isChannelActive = (channelKey: string) => activeChannels.includes(channelKey);
+  const isChannelFree = (channelKey: string) => FREE_CHANNELS.includes(channelKey);
+
+  const handleLockedChannelClick = (channelKey: string) => {
+    if (isChannelFree(channelKey)) {
+      // Free channel but not configured → go to config
+      if (channelKey === "whatsapp") {
+        navigate("/configuracion/whatsapp");
+      } else {
+        navigate("/configuracion/canales");
+      }
+    } else {
+      // Paid channel → upgrade plan
+      navigate("/mi-cuenta");
+    }
   };
 
   return (
@@ -76,49 +157,136 @@ const InboxSidebar = ({ conversations, allConversations, selected, funnelFilter,
                 <span className="truncate">Todos</span>
                 <span className="text-xs text-muted-foreground">{channelCounts.todos || 0}</span>
               </button>
-              {CHANNEL_LIST.map(ch => (
-                <button
-                  key={ch.key}
-                  onClick={() => onChannelFilterChange(ch.key)}
-                  className={cn(
-                    "w-full flex items-center justify-between px-3 py-1.5 text-sm transition-colors",
-                    channelFilter === ch.key ? "bg-primary/10 text-primary font-medium" : "text-foreground hover:bg-muted/50"
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <ChannelIcon channel={ch.key} size="sm" />
-                    <span className="truncate">{ch.label}</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{channelCounts[ch.key] || 0}</span>
-                </button>
-              ))}
+
+              {CHANNEL_LIST.map(ch => {
+                const active = isChannelActive(ch.key);
+                const isFree = isChannelFree(ch.key);
+
+                if (active) {
+                  return (
+                    <button
+                      key={ch.key}
+                      onClick={() => onChannelFilterChange(ch.key)}
+                      className={cn(
+                        "w-full flex items-center justify-between px-3 py-1.5 text-sm transition-colors",
+                        channelFilter === ch.key ? "bg-primary/10 text-primary font-medium" : "text-foreground hover:bg-muted/50"
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <ChannelIcon channel={ch.key} size="sm" />
+                        <span className="truncate">{ch.label}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{channelCounts[ch.key] || 0}</span>
+                    </button>
+                  );
+                }
+
+                // Locked channel
+                return (
+                  <button
+                    key={ch.key}
+                    onClick={() => handleLockedChannelClick(ch.key)}
+                    className="w-full flex items-center justify-between px-3 py-1.5 text-sm text-muted-foreground/60 hover:bg-muted/30 transition-colors group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="opacity-40">
+                        <ChannelIcon channel={ch.key} size="sm" />
+                      </span>
+                      <span className="truncate">{ch.label}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {isFree ? (
+                        <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                          Configurar
+                        </span>
+                      ) : (
+                        <span className="text-[9px] bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap flex items-center gap-0.5">
+                          <ArrowUpCircle className="w-2.5 h-2.5" /> PRO
+                        </span>
+                      )}
+                      <Lock className="w-3 h-3 opacity-50" />
+                    </div>
+                  </button>
+                );
+              })}
 
               <div className="border-t border-border my-2" />
 
-              {/* Funnel stages */}
+              {/* Funnel stages - show guided setup or regular list */}
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2">Etapas del embudo</p>
-              {FUNNEL_STAGES.map(s => (
-                <button
-                  key={s.key}
-                  onClick={() => onFilterChange(s.key)}
-                  className={cn(
-                    "w-full flex items-center justify-between px-3 py-1.5 text-sm transition-colors",
-                    funnelFilter === s.key ? "bg-primary/10 text-primary font-medium" : "text-foreground hover:bg-muted/50"
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className={cn("w-2 h-2 rounded-full", 
-                      s.key === "todos" ? "bg-primary" :
-                      s.key === "agendado" || s.key === "paciente_1ra" || s.key === "paciente_tratamiento" ? "bg-success" :
-                      s.key === "no_interesado" ? "bg-destructive" :
-                      s.key === "no_responden" ? "bg-muted-foreground" :
-                      "bg-accent"
-                    )} />
-                    <span className="truncate">{s.label}</span>
+
+              {!funnelConfigured && allConversations.length <= 5 ? (
+                /* Guided funnel setup panel */
+                <div className="px-3 py-2 space-y-3">
+                  <div className="bg-primary/5 border border-primary/10 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles className="w-4 h-4 text-primary" />
+                      <span className="text-xs font-semibold text-foreground">Tu primer embudo</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed mb-3">
+                      Los embudos te ayudan a organizar tus contactos según qué tan cerca están de convertirse en clientes.
+                    </p>
+
+                    {/* Show starter stages */}
+                    <div className="space-y-2 mb-3">
+                      {STARTER_FUNNELS.map((s, i) => (
+                        <div key={s.key} className="flex items-start gap-2">
+                          <div className="flex flex-col items-center">
+                            <span className="text-base">{s.emoji}</span>
+                            {i < STARTER_FUNNELS.length - 1 && (
+                              <div className="w-px h-3 bg-border mt-1" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-medium text-foreground">{s.label}</p>
+                            <p className="text-[10px] text-muted-foreground">{s.desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <p className="text-[10px] text-muted-foreground mb-2 italic">
+                      Estas etapas se activan automáticamente cuando empiezas a recibir mensajes. ¡Solo escribe a tus contactos!
+                    </p>
                   </div>
-                  <span className="text-xs text-muted-foreground">{stageCounts[s.key] || 0}</span>
-                </button>
-              ))}
+
+                  {/* Quick filter shortcuts anyway */}
+                  <button
+                    onClick={() => onFilterChange("todos")}
+                    className={cn(
+                      "w-full flex items-center justify-between px-2 py-1 text-xs rounded transition-colors",
+                      funnelFilter === "todos" ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-muted/50"
+                    )}
+                  >
+                    <span>Ver todos</span>
+                    <span className="text-[10px]">{stageCounts.todos || 0}</span>
+                  </button>
+                </div>
+              ) : (
+                /* Regular funnel stages list */
+                FUNNEL_STAGES.map(s => (
+                  <button
+                    key={s.key}
+                    onClick={() => onFilterChange(s.key)}
+                    className={cn(
+                      "w-full flex items-center justify-between px-3 py-1.5 text-sm transition-colors",
+                      funnelFilter === s.key ? "bg-primary/10 text-primary font-medium" : "text-foreground hover:bg-muted/50"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={cn("w-2 h-2 rounded-full", 
+                        s.key === "todos" ? "bg-primary" :
+                        s.key === "agendado" || s.key === "paciente_1ra" || s.key === "paciente_tratamiento" ? "bg-success" :
+                        s.key === "no_interesado" ? "bg-destructive" :
+                        s.key === "no_responden" ? "bg-muted-foreground" :
+                        "bg-accent"
+                      )} />
+                      <span className="truncate">{s.label}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">{stageCounts[s.key] || 0}</span>
+                  </button>
+                ))
+              )}
             </div>
           </ScrollArea>
         </div>
@@ -147,7 +315,24 @@ const InboxSidebar = ({ conversations, allConversations, selected, funnelFilter,
         </div>
         <ScrollArea className="flex-1">
           {filtered.length === 0 ? (
-            <p className="p-6 text-center text-sm text-muted-foreground">No hay conversaciones</p>
+            <div className="p-6 text-center space-y-3">
+              <div className="text-4xl">💬</div>
+              <p className="text-sm font-medium text-foreground">Aún no hay conversaciones</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Los mensajes aparecerán aquí cuando alguien te escriba por el chat de tu página web o por WhatsApp.
+              </p>
+              <div className="pt-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-xs"
+                  onClick={() => navigate("/configuracion/widget")}
+                >
+                  <Settings className="w-3 h-3 mr-1" />
+                  Configurar chat web
+                </Button>
+              </div>
+            </div>
           ) : (
             filtered.map(conv => (
               <button
