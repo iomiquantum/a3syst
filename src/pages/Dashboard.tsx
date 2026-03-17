@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   Check, X, Edit3, MessageSquare, Calendar, Users, DollarSign, FileText,
-  Bot, Clock, TrendingUp, Sparkles, PartyPopper, Palmtree, ArrowRight
+  Bot, Clock, TrendingUp, Sparkles, PartyPopper, Palmtree, ArrowRight,
 } from "lucide-react";
+import WhatsAppDashboardCard from "@/components/whatsapp/WhatsAppDashboardCard";
 import AppLayout from "@/components/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -514,6 +515,16 @@ const Dashboard = () => {
               )}
             </CardContent>
           </Card>
+        </section>
+
+        {/* ═══ 5: WHATSAPP CARD ═══ */}
+        <section>
+          <h2 className="flex items-center gap-2 text-lg font-bold text-foreground mb-4">
+            📱 Canales
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <WhatsAppDashboardCard />
+          </div>
         </section>
       </div>
     </AppLayout>

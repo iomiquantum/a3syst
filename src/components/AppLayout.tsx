@@ -75,6 +75,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       label: "AUTOPILOTOS",
       items: [
         { icon: MessageSquare, label: "Mensajes", path: "/mensajes", badge: unreadMessages },
+        { icon: MessageSquare, label: "WhatsApp", path: "/mensajes/whatsapp", color: "#25d366", isNew: true },
         { icon: Calendar, label: "Agenda", path: "/agenda", badge: todayAppointments },
         { icon: BarChart3, label: "CRM", path: "/crm" },
         { icon: Megaphone, label: "Marketing", path: "/marketing" },
@@ -164,6 +165,8 @@ const AppLayout = ({ children }: AppLayoutProps) => {
             {group.items.map(item => {
               const active = isActive(item.path);
               const badge = (item as any).badge;
+              const iconColor = (item as any).color;
+              const isNew = (item as any).isNew;
               return (
                 <button
                   key={item.path}
@@ -176,8 +179,17 @@ const AppLayout = ({ children }: AppLayoutProps) => {
                       : "text-sidebar-foreground/50 hover:text-sidebar-foreground/80 hover:bg-sidebar-accent/50 border-l-2 border-transparent"
                   )}
                 >
-                  <item.icon className={cn("w-[18px] h-[18px] shrink-0", active ? "text-sidebar-primary" : "text-sidebar-foreground/40")} />
+                  <item.icon
+                    className="w-[18px] h-[18px] shrink-0"
+                    style={iconColor ? { color: iconColor } : undefined}
+                    {...(!iconColor ? { className: cn("w-[18px] h-[18px] shrink-0", active ? "text-sidebar-primary" : "text-sidebar-foreground/40") } : {})}
+                  />
                   {!collapsed && <span className="truncate">{item.label}</span>}
+                  {isNew && !collapsed && (
+                    <span className="ml-auto text-[9px] font-bold bg-[#06b6d4] text-white rounded-full px-1.5 py-0.5">
+                      Nuevo
+                    </span>
+                  )}
                   {badge > 0 && !collapsed && (
                     <span className="ml-auto text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
                       {badge > 99 ? "99+" : badge}
