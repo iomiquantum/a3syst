@@ -34,7 +34,7 @@ const etiquetaPrecio: Record<string, string> = { low: "Ticket Bajo", mid: "Ticke
 
 const categoryDescriptions: Record<string, string> = {
   arquetipo: "🎯 ¿A quién le hablamos? Elige el perfil psicológico de tu paciente ideal. Cada persona consume contenido de forma diferente según su motivación interna.",
-  vozMarca: "🗣️ ¿Cómo hablamos? La voz de marca es la personalidad con la que tu clínica se comunica. Si tu marca fuera una persona, ¿cómo hablaría?",
+  vozMarca: "🗣️ ¿Cómo hablamos? La voz de marca es la personalidad con la que tu negocio se comunica. Si tu marca fuera una persona, ¿cómo hablaría?",
   disparador: "⚡ ¿Qué los mueve a actuar? Son principios psicológicos probados que impulsan a tomar decisiones. Elige el gatillo emocional que mejor active a tu audiencia.",
   generacion: "👥 ¿A qué generación pertenecen? Cada generación tiene valores y lenguaje distintos. Esto ajusta el mensaje para resonar con tu público.",
   tecAvanzada: "🧠 Técnica avanzada (opcional). Herramientas de influencia profunda basadas en PNL y psicología social. Úsalas con responsabilidad.",

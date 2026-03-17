@@ -86,7 +86,7 @@ const PromptTemplateEditor = () => {
       <CollapsibleContent className="mt-3 space-y-6 p-4 rounded-xl border border-border bg-card">
         <p className="text-xs text-muted-foreground">
           Configura la estructura base de los prompts para la generación de imágenes y copies.
-          Estos templates se aplicarán a todas las generaciones de contenido de esta clínica.
+          Estos templates se aplicarán a todas las generaciones de contenido de esta negocio.
         </p>
 
         {/* Image prompt template */}

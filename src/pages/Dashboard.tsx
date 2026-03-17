@@ -6,7 +6,7 @@ import {
 import AppLayout from "@/components/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import { useAuth } from "@/hooks/useAuth";
 import { useBusinessLabels } from "@/hooks/useBusinessLabels";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,7 +58,7 @@ interface ActivityItem {
 
 /* ─── Component ─── */
 const Dashboard = () => {
-  const { clinicId, clinicName } = useClinic();
+  const { businessId, businessName } = useBusiness();
   const { user } = useAuth();
   const { labels } = useBusinessLabels();
   const navigate = useNavigate();
@@ -74,7 +74,7 @@ const Dashboard = () => {
   const greeting = useMemo(() => timeGreeting(), []);
 
   useEffect(() => {
-    if (!clinicId || !user) return;
+    if (!businessId || !user) return;
 
     const fetchAll = async () => {
       setLoading(true);
@@ -94,7 +94,7 @@ const Dashboard = () => {
       const pendingApptsPromise = supabase
         .from("appointments")
         .select("id, date, time, status, patients(first_name, last_name), treatments(name)")
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", businessId)
         .eq("date", todayDate)
         .eq("status", "pendiente")
         .order("time")
@@ -104,7 +104,7 @@ const Dashboard = () => {
       const draftPostsPromise = supabase
         .from("content_posts")
         .select("id, title, body, status")
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", businessId)
         .in("status", ["draft", "scheduled"])
         .order("created_at", { ascending: false })
         .limit(5);
@@ -113,7 +113,7 @@ const Dashboard = () => {
       const recentLeadsPromise = supabase
         .from("contacts")
         .select("id, name, source, created_at")
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", businessId)
         .gte("created_at", threeDaysAgo)
         .order("created_at", { ascending: false })
         .limit(5);
@@ -122,7 +122,7 @@ const Dashboard = () => {
       const botMessagesPromise = supabase
         .from("messages")
         .select("id, content, created_at, conversation_id, direction")
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", businessId)
         .eq("direction", "outbound")
         .gte("created_at", todayISO)
         .order("created_at", { ascending: false })
@@ -132,7 +132,7 @@ const Dashboard = () => {
       const confirmedApptsPromise = supabase
         .from("appointments")
         .select("id, time, status, patients(first_name, last_name)")
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", businessId)
         .eq("date", todayDate)
         .eq("status", "confirmado")
         .order("time")
@@ -142,48 +142,48 @@ const Dashboard = () => {
       const msgCountPromise = supabase
         .from("messages")
         .select("*", { count: "exact", head: true })
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", businessId)
         .gte("created_at", todayISO);
 
       // Stats: appointments today
       const apptCountPromise = supabase
         .from("appointments")
         .select("*", { count: "exact", head: true })
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", businessId)
         .eq("date", todayDate);
 
       // Stats: leads today
       const leadCountPromise = supabase
         .from("contacts")
         .select("*", { count: "exact", head: true })
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", businessId)
         .gte("created_at", todayISO);
 
       // Stats: revenue today
       const revenuePromise = supabase
         .from("sales")
         .select("amount, discount")
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", businessId)
         .gte("created_at", todayISO);
 
       // Stats: posts today
       const postCountPromise = supabase
         .from("content_posts")
         .select("*", { count: "exact", head: true })
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", businessId)
         .gte("created_at", todayISO);
 
       // Tomorrow
       const tomorrowApptsPromise = supabase
         .from("appointments")
         .select("*", { count: "exact", head: true })
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", businessId)
         .eq("date", tomorrowDate);
 
       const tomorrowPostsPromise = supabase
         .from("content_posts")
         .select("*", { count: "exact", head: true })
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", businessId)
         .eq("status", "scheduled");
 
       const [
@@ -286,7 +286,7 @@ const Dashboard = () => {
     };
 
     fetchAll();
-  }, [clinicId, user]);
+  }, [businessId, user]);
 
   /* ─── Actions ─── */
   const handleApprove = async (item: ApprovalItem) => {
@@ -349,7 +349,7 @@ const Dashboard = () => {
                 {greeting.text}, {userName} {greeting.emoji}
               </h1>
             )}
-            <p className="text-muted-foreground mt-1">{clinicName}</p>
+            <p className="text-muted-foreground mt-1">{businessName}</p>
           </div>
           <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import { useToast } from "@/hooks/use-toast";
 
 export interface ServiceItem {
@@ -26,7 +26,7 @@ const defaultConfig: AIAgentConfig = {
   agent_name: "Asistente Virtual",
   language: "es",
   tone: "profesional",
-  greeting: "¡Hola! 👋 Soy el asistente virtual de la clínica. ¿En qué puedo ayudarte hoy?",
+  greeting: "¡Hola! 👋 Soy el asistente virtual de la negocio. ¿En qué puedo ayudarte hoy?",
   objective: "Atender consultas de pacientes, agendar citas y proporcionar información sobre tratamientos disponibles.",
   special_instructions: "- Siempre preguntar nombre y teléfono antes de agendar.\n- No dar diagnósticos médicos.\n- Derivar urgencias al número de emergencia.",
   services: [],
@@ -34,21 +34,21 @@ const defaultConfig: AIAgentConfig = {
 };
 
 export const useAIAgentConfig = () => {
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   const { toast } = useToast();
   const [config, setConfig] = useState<AIAgentConfig>(defaultConfig);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!clinicId) return;
+    if (!businessId) return;
     setLoading(true);
 
     const fetch = async () => {
       const { data, error } = await supabase
         .from("ai_agent_config")
         .select("*")
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", businessId)
         .maybeSingle();
 
       if (data) {
@@ -70,14 +70,14 @@ export const useAIAgentConfig = () => {
     };
 
     fetch();
-  }, [clinicId]);
+  }, [businessId]);
 
   const save = useCallback(async (updated: AIAgentConfig) => {
-    if (!clinicId) return;
+    if (!businessId) return;
     setSaving(true);
 
     const payload = {
-      clinic_id: clinicId,
+      clinic_id: businessId,
       agent_name: updated.agent_name,
       language: updated.language,
       tone: updated.tone,
@@ -102,7 +102,7 @@ export const useAIAgentConfig = () => {
       setConfig({ ...updated, id: data.id });
       toast({ title: "Guardado", description: "Configuración del agente IA actualizada." });
     }
-  }, [clinicId, toast]);
+  }, [businessId, toast]);
 
   return { config, setConfig, loading, saving, save };
 };

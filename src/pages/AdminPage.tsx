@@ -3,8 +3,8 @@ import AppLayout from "@/components/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building2, Users, DollarSign, Key, Rocket, BarChart3, Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useClinic } from "@/hooks/useClinic";
-import AdminClinicasTab from "@/components/admin/AdminClinicasTab";
+import { useBusiness } from "@/hooks/useBusiness";
+import AdminBusinessesTab from "@/components/admin/AdminBusinessesTab";
 import AdminUsuariosTab from "@/components/admin/AdminUsuariosTab";
 import AdminTokenBudgets from "@/components/admin/AdminTokenBudgets";
 import AdminAPIKeysTab from "@/components/admin/AdminAPIKeysTab";
@@ -14,7 +14,7 @@ import AdminSocialStatus from "@/components/admin/AdminSocialStatus";
 import AdminMetaURLs from "@/components/admin/AdminMetaURLs";
 
 const AdminPage = () => {
-  const { isSuperAdmin } = useClinic();
+  const { isSuperAdmin } = useBusiness();
   const [clinics, setClinics] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
@@ -22,7 +22,7 @@ const AdminPage = () => {
 
   const fetchData = async () => {
     const [{ data: c }, { data: p }, { data: rolesData }] = await Promise.all([
-      supabase.from("clinics").select("*").order("created_at"),
+      supabase.from("businesses").select("*").order("created_at"),
       supabase.from("profiles").select("*").order("full_name"),
       supabase.from("user_roles").select("*, clinics(name)").order("created_at"),
     ]);
@@ -88,7 +88,7 @@ const AdminPage = () => {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="clinicas" className="mt-6">
-              <AdminClinicasTab clinics={clinics} roles={roles} onRefresh={fetchData} />
+              <AdminBusinessesTab clinics={clinics} roles={roles} onRefresh={fetchData} />
             </TabsContent>
             <TabsContent value="usuarios" className="mt-6">
               <AdminUsuariosTab clinics={clinics} profiles={profiles} roles={roles} onRefresh={fetchData} />

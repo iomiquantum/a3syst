@@ -88,7 +88,7 @@ serve(async (req) => {
     const services = (agentConfig.services || []) as { name: string; price: string; description: string }[];
     const langLabel = agentConfig.language === "es" ? "Español" : agentConfig.language === "en" ? "English" : "Português";
 
-    const systemPrompt = `Eres "${agentConfig.agent_name}", un asistente virtual de una clínica dental.
+    const systemPrompt = `Eres "${agentConfig.agent_name}", un asistente virtual de una negocio dental.
 Idioma: ${langLabel}
 Tono: ${agentConfig.tone}
 
@@ -104,7 +104,7 @@ ${agentConfig.special_instructions}
 IMPORTANTE:
 - Responde de forma breve y directa (máximo 2-3 oraciones).
 - Usa emojis con moderación.
-- Si no sabes algo, sugiere contactar a la clínica directamente.
+- Si no sabes algo, sugiere contactar a la negocio directamente.
 - Nunca inventes información sobre servicios o precios que no estén listados arriba.`;
 
     // Build messages array for the AI

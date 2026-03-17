@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
@@ -22,30 +22,30 @@ export interface MetaAppConfig {
 }
 
 export const useMetaAppConfig = () => {
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   const { user } = useAuth();
   const [config, setConfig] = useState<MetaAppConfig | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchConfig = useCallback(async () => {
-    if (!clinicId) return;
+    if (!businessId) return;
     setLoading(true);
     const { data, error } = await supabase
       .from("meta_app_configurations")
       .select("*")
-      .eq("clinic_id", clinicId)
+      .eq("clinic_id", businessId)
       .maybeSingle();
     if (error) console.error(error);
     setConfig(data as unknown as MetaAppConfig | null);
     setLoading(false);
-  }, [clinicId]);
+  }, [businessId]);
 
   useEffect(() => { fetchConfig(); }, [fetchConfig]);
 
   const currentMode = config?.app_mode || "shared";
 
   const saveConfig = async (updates: Partial<MetaAppConfig>) => {
-    if (!clinicId) return false;
+    if (!businessId) return false;
 
     if (config) {
       const { error } = await supabase
@@ -57,7 +57,7 @@ export const useMetaAppConfig = () => {
       const { error } = await supabase
         .from("meta_app_configurations")
         .insert({
-          clinic_id: clinicId,
+          clinic_id: businessId,
           configured_by: user?.id,
           ...updates,
         } as any);

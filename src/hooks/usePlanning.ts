@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 
@@ -66,15 +66,15 @@ export interface PlanningScreenshot {
 
 // ─── Projects ────────────────────────────────
 export function usePlanningProjects() {
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   return useQuery({
-    queryKey: ["planning-projects", clinicId],
-    enabled: !!clinicId,
+    queryKey: ["planning-projects", businessId],
+    enabled: !!businessId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("planning_projects")
         .select("*")
-        .eq("clinic_id", clinicId!)
+        .eq("clinic_id", businessId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as PlanningProject[];
@@ -84,14 +84,14 @@ export function usePlanningProjects() {
 
 export function useCreateProject() {
   const qc = useQueryClient();
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   const { user } = useAuth();
   return useMutation({
     mutationFn: async (input: { name: string; description?: string; color?: string }) => {
       const { data, error } = await supabase
         .from("planning_projects")
         .insert({
-          clinic_id: clinicId!,
+          clinic_id: businessId!,
           created_by: user!.id,
           name: input.name,
           description: input.description || "",
@@ -108,7 +108,7 @@ export function useCreateProject() {
         { name: "Hecho", color: "#22c55e", position: 3 },
       ];
       await supabase.from("planning_columns").insert(
-        defaultCols.map((c) => ({ ...c, project_id: data.id, clinic_id: clinicId! }))
+        defaultCols.map((c) => ({ ...c, project_id: data.id, clinic_id: businessId! }))
       );
       return data;
     },
@@ -136,10 +136,10 @@ export function useDeleteProject() {
 
 // ─── Columns ─────────────────────────────────
 export function usePlanningColumns(projectId: string | null) {
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   return useQuery({
     queryKey: ["planning-columns", projectId],
-    enabled: !!projectId && !!clinicId,
+    enabled: !!projectId && !!businessId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("planning_columns")
@@ -154,12 +154,12 @@ export function usePlanningColumns(projectId: string | null) {
 
 export function useCreateColumn() {
   const qc = useQueryClient();
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   return useMutation({
     mutationFn: async (input: { project_id: string; name: string; color?: string; position: number }) => {
       const { data, error } = await supabase
         .from("planning_columns")
-        .insert({ ...input, clinic_id: clinicId!, color: input.color || "#94a3b8" })
+        .insert({ ...input, clinic_id: businessId!, color: input.color || "#94a3b8" })
         .select()
         .single();
       if (error) throw error;
@@ -185,10 +185,10 @@ export function useDeleteColumn() {
 
 // ─── Tasks ───────────────────────────────────
 export function usePlanningTasks(projectId: string | null) {
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   return useQuery({
     queryKey: ["planning-tasks", projectId],
-    enabled: !!projectId && !!clinicId,
+    enabled: !!projectId && !!businessId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("planning_tasks")
@@ -203,7 +203,7 @@ export function usePlanningTasks(projectId: string | null) {
 
 export function useCreateTask() {
   const qc = useQueryClient();
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   const { user } = useAuth();
   return useMutation({
     mutationFn: async (input: {
@@ -220,7 +220,7 @@ export function useCreateTask() {
         .from("planning_tasks")
         .insert({
           ...input,
-          clinic_id: clinicId!,
+          clinic_id: businessId!,
           created_by: user!.id,
           priority: input.priority || "medium",
           position: input.position || 0,
@@ -258,15 +258,15 @@ export function useDeleteTask() {
 
 // ─── Time Entries ────────────────────────────
 export function useTimeEntries(taskId?: string) {
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   return useQuery({
     queryKey: ["planning-time-entries", taskId || "all"],
-    enabled: !!clinicId,
+    enabled: !!businessId,
     queryFn: async () => {
       let q = supabase
         .from("planning_time_entries")
         .select("*")
-        .eq("clinic_id", clinicId!)
+        .eq("clinic_id", businessId!)
         .order("started_at", { ascending: false });
       if (taskId) q = q.eq("task_id", taskId);
       const { data, error } = await q;
@@ -278,13 +278,13 @@ export function useTimeEntries(taskId?: string) {
 
 export function useStartTimeEntry() {
   const qc = useQueryClient();
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   const { user } = useAuth();
   return useMutation({
     mutationFn: async (taskId: string) => {
       const { data, error } = await supabase
         .from("planning_time_entries")
-        .insert({ task_id: taskId, clinic_id: clinicId!, user_id: user!.id })
+        .insert({ task_id: taskId, clinic_id: businessId!, user_id: user!.id })
         .select()
         .single();
       if (error) throw error;
@@ -311,7 +311,7 @@ export function useStopTimeEntry() {
 // ─── Screenshots ─────────────────────────────
 export function useSaveScreenshot() {
   const qc = useQueryClient();
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   const { user } = useAuth();
   return useMutation({
     mutationFn: async ({ timeEntryId, blob, captureType }: { timeEntryId: string; blob: Blob; captureType: string }) => {
@@ -323,7 +323,7 @@ export function useSaveScreenshot() {
       const { data: urlData } = supabase.storage.from("planning-screenshots").getPublicUrl(fileName);
       const { error } = await supabase.from("planning_screenshots").insert({
         time_entry_id: timeEntryId,
-        clinic_id: clinicId!,
+        clinic_id: businessId!,
         user_id: user!.id,
         image_url: urlData.publicUrl,
         capture_type: captureType,
@@ -335,10 +335,10 @@ export function useSaveScreenshot() {
 }
 
 export function useScreenshots(timeEntryId?: string) {
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   return useQuery({
     queryKey: ["planning-screenshots", timeEntryId || "all"],
-    enabled: !!clinicId && !!timeEntryId,
+    enabled: !!businessId && !!timeEntryId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("planning_screenshots")
@@ -352,16 +352,16 @@ export function useScreenshots(timeEntryId?: string) {
 }
 
 // ─── Profiles for assignment ─────────────────
-export function useClinicProfiles() {
-  const { clinicId } = useClinic();
+export function useBusinessProfiles() {
+  const { businessId } = useBusiness();
   return useQuery({
-    queryKey: ["clinic-profiles", clinicId],
-    enabled: !!clinicId,
+    queryKey: ["business-profiles", businessId],
+    enabled: !!businessId,
     queryFn: async () => {
       const { data: roles, error: rolesErr } = await supabase
         .from("user_roles")
         .select("user_id")
-        .eq("clinic_id", clinicId!);
+        .eq("clinic_id", businessId!);
       if (rolesErr) throw rolesErr;
       const userIds = roles?.map((r) => r.user_id) || [];
       if (userIds.length === 0) return [];

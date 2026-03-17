@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePsychoStrategies } from "@/hooks/usePsychoMatrix";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { useActivePromptTemplate } from "@/hooks/usePromptTemplates";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import {
   arquetiposDigitales, arquetiposMarca, disparadoresPersuasion,
   codigosGeneracionales, psicologiaAvanzada, canalsPNL,
@@ -64,7 +64,7 @@ const CopyAIGenerator = ({ content }: Props) => {
   const [copiedIds, setCopiedIds] = useState<Set<number>>(new Set());
 
   const { data: strategies = [] } = usePsychoStrategies();
-  const { isSuperAdmin } = useClinic();
+  const { isSuperAdmin } = useBusiness();
   const { data: copyPromptTemplate } = useActivePromptTemplate("copy");
 
   const handleVoiceResult = useCallback((transcript: string) => {

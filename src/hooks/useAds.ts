@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import { toast } from "sonner";
 
 export interface AdsAccount {
@@ -63,7 +63,7 @@ export interface AdsCampaign {
 }
 
 export const useAds = () => {
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   const [accounts, setAccounts] = useState<AdsAccount[]>([]);
   const [briefs, setBriefs] = useState<AdsBusinessBrief[]>([]);
   const [templates, setTemplates] = useState<AdsStrategyTemplate[]>([]);
@@ -71,32 +71,32 @@ export const useAds = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchAll = useCallback(async () => {
-    if (!clinicId) return;
+    if (!businessId) return;
     setLoading(true);
     const [accs, brfs, tmps, cmps] = await Promise.all([
-      supabase.from("ads_accounts").select("*").eq("clinic_id", clinicId),
-      supabase.from("ads_business_briefs").select("*").eq("clinic_id", clinicId).order("created_at", { ascending: false }),
-      supabase.from("ads_strategy_templates").select("*").or(`is_global.eq.true,clinic_id.eq.${clinicId}`).order("name"),
-      supabase.from("ads_campaigns").select("*").eq("clinic_id", clinicId).order("created_at", { ascending: false }),
+      supabase.from("ads_accounts").select("*").eq("clinic_id", businessId),
+      supabase.from("ads_business_briefs").select("*").eq("clinic_id", businessId).order("created_at", { ascending: false }),
+      supabase.from("ads_strategy_templates").select("*").or(`is_global.eq.true,clinic_id.eq.${businessId}`).order("name"),
+      supabase.from("ads_campaigns").select("*").eq("clinic_id", businessId).order("created_at", { ascending: false }),
     ]);
     setAccounts((accs.data || []) as unknown as AdsAccount[]);
     setBriefs((brfs.data || []) as unknown as AdsBusinessBrief[]);
     setTemplates((tmps.data || []) as unknown as AdsStrategyTemplate[]);
     setCampaigns((cmps.data || []) as unknown as AdsCampaign[]);
     setLoading(false);
-  }, [clinicId]);
+  }, [businessId]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   // Accounts
   const upsertAccount = async (platform: string, data: Partial<AdsAccount>) => {
-    if (!clinicId) return false;
+    if (!businessId) return false;
     const existing = accounts.find(a => a.platform === platform);
     if (existing) {
       const { error } = await supabase.from("ads_accounts").update(data as any).eq("id", existing.id);
       if (error) { toast.error(error.message); return false; }
     } else {
-      const { error } = await supabase.from("ads_accounts").insert({ clinic_id: clinicId, platform, ...data } as any);
+      const { error } = await supabase.from("ads_accounts").insert({ clinic_id: businessId, platform, ...data } as any);
       if (error) { toast.error(error.message); return false; }
     }
     toast.success("Cuenta publicitaria actualizada");
@@ -113,12 +113,12 @@ export const useAds = () => {
 
   // Briefs
   const saveBrief = async (data: Partial<AdsBusinessBrief>, briefId?: string) => {
-    if (!clinicId) return false;
+    if (!businessId) return false;
     if (briefId) {
       const { error } = await supabase.from("ads_business_briefs").update(data as any).eq("id", briefId);
       if (error) { toast.error(error.message); return false; }
     } else {
-      const { error } = await supabase.from("ads_business_briefs").insert({ clinic_id: clinicId, ...data } as any);
+      const { error } = await supabase.from("ads_business_briefs").insert({ clinic_id: businessId, ...data } as any);
       if (error) { toast.error(error.message); return false; }
     }
     toast.success("Brief guardado correctamente");
@@ -128,8 +128,8 @@ export const useAds = () => {
 
   // Campaigns
   const createCampaign = async (data: Partial<AdsCampaign>) => {
-    if (!clinicId) return false;
-    const { error } = await supabase.from("ads_campaigns").insert({ clinic_id: clinicId, ...data } as any);
+    if (!businessId) return false;
+    const { error } = await supabase.from("ads_campaigns").insert({ clinic_id: businessId, ...data } as any);
     if (error) { toast.error(error.message); return false; }
     toast.success("Campaña creada correctamente");
     await fetchAll();

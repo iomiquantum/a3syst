@@ -9,35 +9,35 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import { useBusinessLabels } from "@/hooks/useBusinessLabels";
 import BusinessTypeSelector, { BUSINESS_CATEGORIES } from "./BusinessTypeSelector";
 
-interface AdminClinicasTabProps {
+interface AdminBusinessesTabProps {
   clinics: any[];
   roles: any[];
   onRefresh: () => void;
 }
 
-const AdminClinicasTab = ({ clinics, roles, onRefresh }: AdminClinicasTabProps) => {
-  const { selectClinic } = useClinic();
+const AdminBusinessesTab = ({ clinics, roles, onRefresh }: AdminBusinessesTabProps) => {
+  const { selectBusiness } = useBusiness();
   const { refresh: refreshLabels } = useBusinessLabels();
-  const [clinicOpen, setClinicOpen] = useState(false);
-  const [clinicForm, setClinicForm] = useState({ name: "", description: "", address: "", business_type: "" });
+  const [businessOpen, setClinicOpen] = useState(false);
+  const [businessForm, setClinicForm] = useState({ name: "", description: "", address: "", business_type: "" });
   const [personalizing, setPersonalizing] = useState<string | null>(null);
 
   const handleCreateClinic = async () => {
-    if (!clinicForm.name.trim()) { toast.error("El nombre es requerido"); return; }
-    if (!clinicForm.business_type) { toast.error("Selecciona un tipo de negocio"); return; }
+    if (!businessForm.name.trim()) { toast.error("El nombre es requerido"); return; }
+    if (!businessForm.business_type) { toast.error("Selecciona un tipo de negocio"); return; }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error } = await supabase.from("clinics").insert({
-      name: clinicForm.name.trim(),
-      description: clinicForm.description.trim(),
-      address: clinicForm.address.trim(),
+    const { error } = await supabase.from("businesses").insert({
+      name: businessForm.name.trim(),
+      description: businessForm.description.trim(),
+      address: businessForm.address.trim(),
       owner_id: user.id,
-      business_type: clinicForm.business_type,
+      business_type: businessForm.business_type,
     });
     if (error) { toast.error(error.message); return; }
     toast.success("Negocio creado");
@@ -47,7 +47,7 @@ const AdminClinicasTab = ({ clinics, roles, onRefresh }: AdminClinicasTabProps) 
   };
 
   const handleDeleteClinic = async (id: string) => {
-    const { error } = await supabase.from("clinics").delete().eq("id", id);
+    const { error } = await supabase.from("businesses").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success("Negocio eliminado");
     onRefresh();
@@ -108,7 +108,7 @@ const AdminClinicasTab = ({ clinics, roles, onRefresh }: AdminClinicasTabProps) 
         <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
           <Building2 className="w-5 h-5" /> Negocios
         </h2>
-        <Dialog open={clinicOpen} onOpenChange={setClinicOpen}>
+        <Dialog open={businessOpen} onOpenChange={setClinicOpen}>
           <DialogTrigger asChild>
             <Button className="gradient-primary text-primary-foreground hover:opacity-90">
               <Plus className="w-4 h-4 mr-2" /> Nuevo Negocio
@@ -117,11 +117,11 @@ const AdminClinicasTab = ({ clinics, roles, onRefresh }: AdminClinicasTabProps) 
           <DialogContent>
             <DialogHeader><DialogTitle>Nuevo Negocio</DialogTitle></DialogHeader>
             <div className="space-y-4 pt-2">
-              <div><Label>Nombre *</Label><Input value={clinicForm.name} onChange={e => setClinicForm({ ...clinicForm, name: e.target.value })} maxLength={100} placeholder="Nombre del negocio" /></div>
-              <BusinessTypeSelector value={clinicForm.business_type} onChange={v => setClinicForm({ ...clinicForm, business_type: v })} />
-              <div><Label>Dirección</Label><Input value={clinicForm.address} onChange={e => setClinicForm({ ...clinicForm, address: e.target.value })} maxLength={300} /></div>
-              <div><Label>Descripción</Label><Textarea value={clinicForm.description} onChange={e => setClinicForm({ ...clinicForm, description: e.target.value })} maxLength={500} /></div>
-              <Button onClick={handleCreateClinic} className="w-full gradient-primary text-primary-foreground" disabled={!clinicForm.name.trim() || !clinicForm.business_type}>Crear Negocio</Button>
+              <div><Label>Nombre *</Label><Input value={businessForm.name} onChange={e => setClinicForm({ ...businessForm, name: e.target.value })} maxLength={100} placeholder="Nombre del negocio" /></div>
+              <BusinessTypeSelector value={businessForm.business_type} onChange={v => setClinicForm({ ...businessForm, business_type: v })} />
+              <div><Label>Dirección</Label><Input value={businessForm.address} onChange={e => setClinicForm({ ...businessForm, address: e.target.value })} maxLength={300} /></div>
+              <div><Label>Descripción</Label><Textarea value={businessForm.description} onChange={e => setClinicForm({ ...businessForm, description: e.target.value })} maxLength={500} /></div>
+              <Button onClick={handleCreateClinic} className="w-full gradient-primary text-primary-foreground" disabled={!businessForm.name.trim() || !businessForm.business_type}>Crear Negocio</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -129,7 +129,7 @@ const AdminClinicasTab = ({ clinics, roles, onRefresh }: AdminClinicasTabProps) 
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {clinics.map(c => (
-          <Card key={c.id} className="shadow-card hover:shadow-card-hover transition-shadow cursor-pointer" onClick={() => selectClinic(c.id, c.name)}>
+          <Card key={c.id} className="shadow-card hover:shadow-card-hover transition-shadow cursor-pointer" onClick={() => selectBusiness(c.id, c.name)}>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -171,4 +171,4 @@ const AdminClinicasTab = ({ clinics, roles, onRefresh }: AdminClinicasTabProps) 
   );
 };
 
-export default AdminClinicasTab;
+export default AdminBusinessesTab;

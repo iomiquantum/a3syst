@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { DatePreset, DateRange, AgentOption, getDateRangeFromPreset } from "@/components/crm/CRMFilters";
@@ -49,7 +49,7 @@ export const CALL_OUTCOMES = [
 ];
 
 export const useCRM = () => {
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   const { user } = useAuth();
   const { toast } = useToast();
   const [contacts, setContacts] = useState<CRMContact[]>([]);
@@ -67,27 +67,27 @@ export const useCRM = () => {
   // Check if user is admin/super_admin
   useEffect(() => {
     const checkAdmin = async () => {
-      if (!user || !clinicId) return;
+      if (!user || !businessId) return;
       const { data: isSuperAdmin } = await supabase.rpc("is_super_admin");
       if (isSuperAdmin) { setIsAdmin(true); return; }
       const { data: roles } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
-        .eq("clinic_id", clinicId);
+        .eq("clinic_id", businessId);
       setIsAdmin(roles?.some(r => r.role === "admin") || false);
     };
     checkAdmin();
-  }, [user, clinicId]);
+  }, [user, businessId]);
 
   // Fetch agents (profiles with roles in this clinic)
   useEffect(() => {
-    if (!clinicId || !isAdmin) return;
+    if (!businessId || !isAdmin) return;
     const fetchAgents = async () => {
       const { data: roleUsers } = await supabase
         .from("user_roles")
         .select("user_id")
-        .eq("clinic_id", clinicId);
+        .eq("clinic_id", businessId);
       if (!roleUsers || roleUsers.length === 0) return;
       const userIds = roleUsers.map(r => r.user_id);
       const { data: profiles } = await supabase
@@ -97,10 +97,10 @@ export const useCRM = () => {
       setAgents((profiles || []).map(p => ({ id: p.user_id, name: p.full_name || p.user_id })));
     };
     fetchAgents();
-  }, [clinicId, isAdmin]);
+  }, [businessId, isAdmin]);
 
   const fetchContacts = useCallback(async () => {
-    if (!clinicId) return;
+    if (!businessId) return;
     setLoading(true);
 
     // If agent filter is active, we need to find contact IDs from call_logs by that agent
@@ -109,7 +109,7 @@ export const useCRM = () => {
       const { data: agentLogs } = await supabase
         .from("call_logs")
         .select("contact_id")
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", businessId)
         .eq("logged_by", agentFilter);
       agentContactIds = [...new Set((agentLogs || []).map(l => l.contact_id))];
       if (agentContactIds.length === 0) {
@@ -122,7 +122,7 @@ export const useCRM = () => {
     let query = supabase
       .from("contacts")
       .select("*")
-      .eq("clinic_id", clinicId)
+      .eq("clinic_id", businessId)
       .order("updated_at", { ascending: false });
 
     if (stageFilter !== "todos") {
@@ -144,18 +144,18 @@ export const useCRM = () => {
     const { data, error } = await query;
     if (!error) setContacts(data || []);
     setLoading(false);
-  }, [clinicId, stageFilter, searchQuery, dateRange, agentFilter]);
+  }, [businessId, stageFilter, searchQuery, dateRange, agentFilter]);
 
   const fetchCallLogs = useCallback(async (contactId: string) => {
-    if (!clinicId) return;
+    if (!businessId) return;
     const { data } = await supabase
       .from("call_logs")
       .select("*")
       .eq("contact_id", contactId)
-      .eq("clinic_id", clinicId)
+      .eq("clinic_id", businessId)
       .order("created_at", { ascending: false });
     setCallLogs(data || []);
-  }, [clinicId]);
+  }, [businessId]);
 
   useEffect(() => { fetchContacts(); }, [fetchContacts]);
 
@@ -165,9 +165,9 @@ export const useCRM = () => {
   }, [selectedContact, fetchCallLogs]);
 
   const createContact = async (data: { name: string; phone: string; email?: string; notes?: string; source?: string }) => {
-    if (!clinicId) return;
+    if (!businessId) return;
     const { error } = await supabase.from("contacts").insert({
-      clinic_id: clinicId,
+      clinic_id: businessId,
       name: data.name,
       phone: data.phone,
       email: data.email || "",
@@ -196,9 +196,9 @@ export const useCRM = () => {
   };
 
   const logCall = async (contactId: string, data: { call_type: string; outcome: string; notes: string; duration_seconds: number }) => {
-    if (!clinicId) return;
+    if (!businessId) return;
     const { error } = await supabase.from("call_logs").insert({
-      clinic_id: clinicId,
+      clinic_id: businessId,
       contact_id: contactId,
       logged_by: user?.id,
       ...data,
@@ -212,13 +212,13 @@ export const useCRM = () => {
   };
 
   const convertToPatient = async (contact: CRMContact) => {
-    if (!clinicId) return;
+    if (!businessId) return;
     const names = contact.name.trim().split(" ");
     const firstName = names[0] || contact.name;
     const lastName = names.slice(1).join(" ") || "";
 
     const { data: patient, error } = await supabase.from("patients").insert({
-      clinic_id: clinicId,
+      clinic_id: businessId,
       first_name: firstName,
       last_name: lastName,
       email: contact.email || "",
@@ -236,7 +236,7 @@ export const useCRM = () => {
       funnel_stage: "convertido",
     }).eq("id", contact.id);
 
-    toast({ title: "¡Contacto convertido a paciente!", description: `${contact.name} ahora es paciente de la clínica.` });
+    toast({ title: "¡Contacto convertido a paciente!", description: `${contact.name} ahora es paciente de la negocio.` });
     fetchContacts();
     if (selectedContact?.id === contact.id) {
       setSelectedContact(prev => prev ? { ...prev, patient_id: patient.id, funnel_stage: "convertido" } : null);

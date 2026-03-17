@@ -2,9 +2,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 
 export const BUSINESS_CATEGORIES = [
-  { value: "clinica_medica", label: "Clínica Médica", icon: "🏥" },
-  { value: "clinica_dental", label: "Clínica Dental", icon: "🦷" },
-  { value: "clinica_estetica", label: "Clínica Estética", icon: "💆" },
+  { value: "clinica_medica", label: "Negocio Médica", icon: "🏥" },
+  { value: "clinica_dental", label: "Negocio Dental", icon: "🦷" },
+  { value: "clinica_estetica", label: "Negocio Estética", icon: "💆" },
   { value: "salon_belleza", label: "Salón de Belleza / Spa", icon: "💅" },
   { value: "gimnasio", label: "Gimnasio / Centro Fitness", icon: "🏋️" },
   { value: "consultoria", label: "Consultoría / Asesoría", icon: "📋" },

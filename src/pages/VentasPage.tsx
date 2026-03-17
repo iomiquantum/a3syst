@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import { useBusinessLabels } from "@/hooks/useBusinessLabels";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -33,7 +33,7 @@ const statusStyle = (s: string) => {
 };
 
 const VentasPage = () => {
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   const { labels } = useBusinessLabels();
 
   const [sales, setSales] = useState<any[]>([]);
@@ -67,16 +67,16 @@ const VentasPage = () => {
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
 
   const fetchData = useCallback(async () => {
-    if (!clinicId) return;
+    if (!businessId) return;
     setLoading(true);
 
     const [{ data: s }, { data: p }, { data: t }, { data: pm }] = await Promise.all([
       supabase.from("sales")
         .select("*, patients(first_name, last_name), treatments(name), payment_methods(name)")
-        .eq("clinic_id", clinicId).order("created_at", { ascending: false }),
-      supabase.from("patients").select("id, first_name, last_name").eq("clinic_id", clinicId).order("first_name"),
-      supabase.from("treatments").select("id, name, price, duration").eq("clinic_id", clinicId),
-      supabase.from("payment_methods").select("id, name").eq("clinic_id", clinicId),
+        .eq("clinic_id", businessId).order("created_at", { ascending: false }),
+      supabase.from("patients").select("id, first_name, last_name").eq("clinic_id", businessId).order("first_name"),
+      supabase.from("treatments").select("id, name, price, duration").eq("clinic_id", businessId),
+      supabase.from("payment_methods").select("id, name").eq("clinic_id", businessId),
     ]);
     setSales(s || []);
     setPatients(p || []);
@@ -87,7 +87,7 @@ const VentasPage = () => {
     const { data: completedToday } = await supabase
       .from("appointments")
       .select("id, patient_id, treatment_id, patients(first_name, last_name), treatments(name, price)")
-      .eq("clinic_id", clinicId)
+      .eq("clinic_id", businessId)
       .eq("date", todayStr)
       .eq("status", "completado");
 
@@ -99,7 +99,7 @@ const VentasPage = () => {
     setOldPending((s || []).filter(x => x.status === "pendiente" && x.created_at < sevenDaysAgo));
 
     setLoading(false);
-  }, [clinicId]);
+  }, [businessId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -133,7 +133,7 @@ const VentasPage = () => {
 
   // Save
   const handleSave = async () => {
-    if (!clinicId) return;
+    if (!businessId) return;
     try {
       const validated = saleSchema.parse({
         ...form,
@@ -141,7 +141,7 @@ const VentasPage = () => {
         discount: parseFloat(form.discount) || 0,
       });
       const { error } = await supabase.from("sales").insert({
-        clinic_id: clinicId,
+        clinic_id: businessId,
         patient_id: validated.patient_id,
         treatment_id: validated.treatment_id || null,
         amount: validated.amount,
@@ -183,12 +183,12 @@ const VentasPage = () => {
 
   // Payment methods
   const addPaymentMethod = async () => {
-    if (!clinicId || !newPmName.trim()) return;
-    const { error } = await supabase.from("payment_methods").insert({ clinic_id: clinicId, name: newPmName.trim() });
+    if (!businessId || !newPmName.trim()) return;
+    const { error } = await supabase.from("payment_methods").insert({ clinic_id: businessId, name: newPmName.trim() });
     if (error) { toast.error(error.message); return; }
     toast.success("Método agregado");
     setNewPmName("");
-    const { data } = await supabase.from("payment_methods").select("id, name").eq("clinic_id", clinicId);
+    const { data } = await supabase.from("payment_methods").select("id, name").eq("clinic_id", businessId);
     setPaymentMethods(data || []);
   };
 

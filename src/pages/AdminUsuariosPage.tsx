@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Plus, Building2, Users } from "lucide-react";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import { useUsuariosAdmin, UsuarioCompleto } from "@/hooks/useUsuariosAdmin";
 import UserFilters from "@/components/admin/usuarios/UserFilters";
 import UsersTable from "@/components/admin/usuarios/UsersTable";
@@ -13,7 +13,7 @@ import ChangeRoleModal from "@/components/admin/usuarios/ChangeRoleModal";
 import ActivityModal from "@/components/admin/usuarios/ActivityModal";
 
 const AdminUsuariosPage = () => {
-  const { isSuperAdmin } = useClinic();
+  const { isSuperAdmin } = useBusiness();
   const { usuarios, clinics, isLoading, createUser, changeRole, changeEstado, updateNotas, resetPassword } = useUsuariosAdmin();
 
   // Filters

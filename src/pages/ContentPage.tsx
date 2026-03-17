@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isToday, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import { usePsychoStrategies } from "@/hooks/usePsychoMatrix";
 
 // ─── Platform config ───
@@ -64,7 +64,7 @@ const platformEmoji: Record<string, string> = {
 // ─── Main Page ───
 const ContentPage = () => {
   const content = useContentPosts();
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   const [wizardOpen, setWizardOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [editPost, setEditPost] = useState<ContentPost | null>(null);
@@ -475,7 +475,7 @@ const ContentWizard = ({ open, onOpenChange, content }: {
   onOpenChange: (o: boolean) => void;
   content: ReturnType<typeof useContentPosts>;
 }) => {
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   const [step, setStep] = useState(1);
   const [platform, setPlatform] = useState("");
   const [contentType, setContentType] = useState("");
@@ -495,10 +495,10 @@ const ContentWizard = ({ open, onOpenChange, content }: {
 
   // Load treatments
   useEffect(() => {
-    if (clinicId) {
-      supabase.from("treatments").select("id, name, price").eq("clinic_id", clinicId).then(({ data }) => setTreatments(data || []));
+    if (businessId) {
+      supabase.from("treatments").select("id, name, price").eq("clinic_id", businessId).then(({ data }) => setTreatments(data || []));
     }
-  }, [clinicId]);
+  }, [businessId]);
 
   const selectedType = contentTypes.find(t => t.id === contentType);
 
@@ -557,7 +557,7 @@ const ContentWizard = ({ open, onOpenChange, content }: {
   };
 
   const handleSave = async (status: string) => {
-    if (!result || !clinicId) return;
+    if (!result || !businessId) return;
     const platforms = platform === "all" ? ["instagram", "facebook", "tiktok", "linkedin"] : [platform];
     await content.createPost({
       title: result.title,

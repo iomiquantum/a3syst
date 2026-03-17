@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { useClinic } from "@/hooks/useClinic";
+import { useBusiness } from "@/hooks/useBusiness";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -26,18 +26,18 @@ const roleLabels: Record<string, string> = {
 };
 
 const UsuariosPage = () => {
-  const { clinicId } = useClinic();
+  const { businessId } = useBusiness();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [permissionsOpen, setPermissionsOpen] = useState<string | null>(null);
 
   const fetchUsers = async () => {
-    if (!clinicId) { setLoading(false); return; }
+    if (!businessId) { setLoading(false); return; }
     setLoading(true);
     const { data: roles, error } = await supabase
       .from("user_roles")
       .select("*")
-      .eq("clinic_id", clinicId);
+      .eq("clinic_id", businessId);
     if (error) { toast.error(error.message); setLoading(false); return; }
 
     // Fetch profiles separately to avoid missing relationship
@@ -59,7 +59,7 @@ const UsuariosPage = () => {
     setLoading(false);
   };
 
-  useEffect(() => { fetchUsers(); }, [clinicId]);
+  useEffect(() => { fetchUsers(); }, [businessId]);
 
   const togglePermission = async (roleId: string, key: string) => {
     const user = users.find(u => u.id === roleId);
