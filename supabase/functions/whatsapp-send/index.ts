@@ -35,17 +35,27 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (connError || !connection) {
+      console.error("Connection lookup error:", connError);
       return new Response(
         JSON.stringify({ error: "No active WhatsApp connection found for this clinic" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { phone_number_id, access_token, phone_number } = connection;
+    const { phone_number_id, phone_number } = connection;
 
-    if (!access_token) {
+    // Prioritize env var token (always fresh), fallback to DB token
+    const envToken = Deno.env.get("META_ACCESS_TOKEN");
+    const dbToken = connection.access_token;
+    const accessToken = envToken || dbToken;
+    const tokenSource = envToken ? "env" : "db";
+
+    console.log("Token source:", tokenSource, "| phone_number_id:", phone_number_id);
+
+    if (!accessToken) {
+      console.error("No access token available from env or database");
       return new Response(
-        JSON.stringify({ error: "Missing access token in WhatsApp connection" }),
+        JSON.stringify({ error: "Missing access token — set META_ACCESS_TOKEN secret or update whatsapp_connections" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -56,7 +66,7 @@ Deno.serve(async (req) => {
 
     // Build the message payload for Meta WhatsApp Cloud API
     const type = message_type || "text";
-    let messagePayload: Record<string, unknown> = {
+    const messagePayload: Record<string, unknown> = {
       messaging_product: "whatsapp",
       recipient_type: "individual",
       to: cleanNumber,
@@ -74,16 +84,18 @@ Deno.serve(async (req) => {
     } else if (type === "interactive") {
       messagePayload.interactive = content;
     } else {
-      // Default: send as-is
       messagePayload[type] = content;
     }
 
     // Send via Meta Graph API
     const graphUrl = `https://graph.facebook.com/v22.0/${phone_number_id}/messages`;
+    console.log("Meta API URL:", graphUrl);
+    console.log("Payload:", JSON.stringify(messagePayload));
+
     const metaResponse = await fetch(graphUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${access_token}`,
+        Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(messagePayload),
@@ -91,17 +103,25 @@ Deno.serve(async (req) => {
 
     const metaResult = await metaResponse.json();
 
+    // Log FULL response for debugging
+    console.log("Meta API Response:", JSON.stringify({
+      status: metaResponse.status,
+      ok: metaResponse.ok,
+      body: metaResult,
+      tokenSource,
+    }));
+
     if (!metaResponse.ok) {
-      console.error("Meta API error:", metaResult);
+      console.error("Meta API error:", JSON.stringify(metaResult));
       return new Response(
-        JSON.stringify({ error: "Failed to send message", details: metaResult }),
+        JSON.stringify({ error: "Failed to send message", details: metaResult, tokenSource }),
         { status: metaResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const waMessageId = metaResult?.messages?.[0]?.id;
 
-    // Log outbound message
+    // Log outbound message in whatsapp_messages
     const { error: insertError } = await supabase
       .from("whatsapp_messages")
       .insert({
@@ -109,7 +129,7 @@ Deno.serve(async (req) => {
         phone_number_id,
         direction: "outbound",
         from_number: phone_number || phone_number_id,
-        to_number,
+        to_number: cleanNumber,
         message_type: type,
         content: typeof content === "string" ? { body: content } : content,
         wa_message_id: waMessageId,
@@ -118,6 +138,35 @@ Deno.serve(async (req) => {
 
     if (insertError) {
       console.error("Error logging outbound message:", insertError);
+    }
+
+    // Also insert into unified messages table for the Mensajes panel
+    const messageText = typeof content === "string" ? content : (content?.body || JSON.stringify(content));
+
+    // Find conversation for this contact
+    const { data: conv } = await supabase
+      .from("conversations")
+      .select("id")
+      .eq("clinic_id", clinic_id)
+      .eq("channel", "whatsapp")
+      .eq("visitor_contact", cleanNumber)
+      .maybeSingle();
+
+    if (conv) {
+      await supabase.from("messages").insert({
+        conversation_id: conv.id,
+        clinic_id,
+        direction: "outbound",
+        content: messageText,
+        message_type: type,
+        whatsapp_message_id: waMessageId,
+        status: "sent",
+      });
+
+      await supabase.from("conversations").update({
+        last_message_at: new Date().toISOString(),
+        last_message_preview: messageText.substring(0, 100),
+      }).eq("id", conv.id);
     }
 
     return new Response(
