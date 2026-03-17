@@ -80,7 +80,7 @@ export type Database = {
             foreignKeyName: "ads_accounts_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -133,7 +133,7 @@ export type Database = {
             foreignKeyName: "ads_business_briefs_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -199,7 +199,7 @@ export type Database = {
             foreignKeyName: "ads_campaigns_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
           {
@@ -259,7 +259,7 @@ export type Database = {
             foreignKeyName: "ads_strategy_templates_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -312,7 +312,7 @@ export type Database = {
             foreignKeyName: "ai_agent_config_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: true
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -353,7 +353,7 @@ export type Database = {
             foreignKeyName: "ai_agent_usage_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
           {
@@ -407,7 +407,7 @@ export type Database = {
             foreignKeyName: "ai_token_usage_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -439,7 +439,7 @@ export type Database = {
             foreignKeyName: "ai_training_data_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -505,7 +505,7 @@ export type Database = {
             foreignKeyName: "appointments_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
           {
@@ -570,7 +570,7 @@ export type Database = {
             foreignKeyName: "branches_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -608,85 +608,10 @@ export type Database = {
             foreignKeyName: "business_labels_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: true
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
-      }
-      businesses: {
-        Row: {
-          additional_info: string | null
-          address: string | null
-          business_category: string
-          business_type: string
-          city: string | null
-          closing_hour: string | null
-          created_at: string
-          description: string | null
-          id: string
-          logo_url: string | null
-          monthly_token_budget_usd: number | null
-          name: string
-          onboarding_completed: boolean | null
-          onboarding_method: string | null
-          opening_hour: string | null
-          owner_id: string
-          primary_color: string | null
-          secondary_color: string | null
-          slug: string | null
-          updated_at: string
-          whatsapp: string | null
-          working_days: string[] | null
-        }
-        Insert: {
-          additional_info?: string | null
-          address?: string | null
-          business_category?: string
-          business_type?: string
-          city?: string | null
-          closing_hour?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          logo_url?: string | null
-          monthly_token_budget_usd?: number | null
-          name: string
-          onboarding_completed?: boolean | null
-          onboarding_method?: string | null
-          opening_hour?: string | null
-          owner_id: string
-          primary_color?: string | null
-          secondary_color?: string | null
-          slug?: string | null
-          updated_at?: string
-          whatsapp?: string | null
-          working_days?: string[] | null
-        }
-        Update: {
-          additional_info?: string | null
-          address?: string | null
-          business_category?: string
-          business_type?: string
-          city?: string | null
-          closing_hour?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          logo_url?: string | null
-          monthly_token_budget_usd?: number | null
-          name?: string
-          onboarding_completed?: boolean | null
-          onboarding_method?: string | null
-          opening_hour?: string | null
-          owner_id?: string
-          primary_color?: string | null
-          secondary_color?: string | null
-          slug?: string | null
-          updated_at?: string
-          whatsapp?: string | null
-          working_days?: string[] | null
-        }
-        Relationships: []
       }
       call_logs: {
         Row: {
@@ -727,7 +652,7 @@ export type Database = {
             foreignKeyName: "call_logs_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
           {
@@ -778,7 +703,7 @@ export type Database = {
             foreignKeyName: "channel_credentials_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -858,10 +783,85 @@ export type Database = {
             foreignKeyName: "clinic_brand_styles_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
+      }
+      clinics: {
+        Row: {
+          additional_info: string | null
+          address: string | null
+          business_category: string
+          business_type: string
+          city: string | null
+          closing_hour: string | null
+          created_at: string
+          description: string | null
+          id: string
+          logo_url: string | null
+          monthly_token_budget_usd: number | null
+          name: string
+          onboarding_completed: boolean | null
+          onboarding_method: string | null
+          opening_hour: string | null
+          owner_id: string
+          primary_color: string | null
+          secondary_color: string | null
+          slug: string | null
+          updated_at: string
+          whatsapp: string | null
+          working_days: string[] | null
+        }
+        Insert: {
+          additional_info?: string | null
+          address?: string | null
+          business_category?: string
+          business_type?: string
+          city?: string | null
+          closing_hour?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          monthly_token_budget_usd?: number | null
+          name: string
+          onboarding_completed?: boolean | null
+          onboarding_method?: string | null
+          opening_hour?: string | null
+          owner_id: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          slug?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+          working_days?: string[] | null
+        }
+        Update: {
+          additional_info?: string | null
+          address?: string | null
+          business_category?: string
+          business_type?: string
+          city?: string | null
+          closing_hour?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          monthly_token_budget_usd?: number | null
+          name?: string
+          onboarding_completed?: boolean | null
+          onboarding_method?: string | null
+          opening_hour?: string | null
+          owner_id?: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          slug?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+          working_days?: string[] | null
+        }
+        Relationships: []
       }
       contacts: {
         Row: {
@@ -927,7 +927,7 @@ export type Database = {
             foreignKeyName: "contacts_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
           {
@@ -1014,7 +1014,7 @@ export type Database = {
             foreignKeyName: "content_posts_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -1083,7 +1083,7 @@ export type Database = {
             foreignKeyName: "conversations_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
           {
@@ -1266,7 +1266,7 @@ export type Database = {
             foreignKeyName: "meeting_bots_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
           {
@@ -1320,7 +1320,7 @@ export type Database = {
             foreignKeyName: "meeting_summaries_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
           {
@@ -1365,7 +1365,7 @@ export type Database = {
             foreignKeyName: "meeting_transcripts_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
           {
@@ -1425,7 +1425,7 @@ export type Database = {
             foreignKeyName: "meetings_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -1475,7 +1475,7 @@ export type Database = {
             foreignKeyName: "messages_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
           {
@@ -1541,7 +1541,7 @@ export type Database = {
             foreignKeyName: "meta_app_configurations_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: true
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -1645,7 +1645,7 @@ export type Database = {
             foreignKeyName: "patients_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -1674,7 +1674,7 @@ export type Database = {
             foreignKeyName: "payment_methods_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -1712,7 +1712,7 @@ export type Database = {
             foreignKeyName: "planning_columns_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
           {
@@ -1763,7 +1763,7 @@ export type Database = {
             foreignKeyName: "planning_projects_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -1801,7 +1801,7 @@ export type Database = {
             foreignKeyName: "planning_screenshots_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
           {
@@ -1864,7 +1864,7 @@ export type Database = {
             foreignKeyName: "planning_tasks_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
           {
@@ -1922,7 +1922,7 @@ export type Database = {
             foreignKeyName: "planning_time_entries_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
           {
@@ -1986,7 +1986,7 @@ export type Database = {
             foreignKeyName: "professionals_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
           {
@@ -2079,7 +2079,7 @@ export type Database = {
             foreignKeyName: "prompt_templates_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -2126,7 +2126,7 @@ export type Database = {
             foreignKeyName: "psycho_matrix_services_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -2179,7 +2179,7 @@ export type Database = {
             foreignKeyName: "psycho_matrix_strategies_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
           {
@@ -2249,7 +2249,7 @@ export type Database = {
             foreignKeyName: "sales_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
           {
@@ -2338,7 +2338,7 @@ export type Database = {
             foreignKeyName: "social_media_connections_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -2403,7 +2403,7 @@ export type Database = {
             foreignKeyName: "social_media_posts_log_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
           {
@@ -2446,7 +2446,7 @@ export type Database = {
             foreignKeyName: "specialties_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -2490,7 +2490,7 @@ export type Database = {
             foreignKeyName: "treatments_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -2558,7 +2558,7 @@ export type Database = {
             foreignKeyName: "user_roles_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -2593,7 +2593,7 @@ export type Database = {
             foreignKeyName: "user_token_limits_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -2601,7 +2601,7 @@ export type Database = {
       whatsapp_connections: {
         Row: {
           access_token: string | null
-          business_id: string | null
+          clinic_id: string | null
           coexistence_enabled: boolean | null
           connected_at: string | null
           created_at: string | null
@@ -2617,7 +2617,7 @@ export type Database = {
         }
         Insert: {
           access_token?: string | null
-          business_id?: string | null
+          clinic_id?: string | null
           coexistence_enabled?: boolean | null
           connected_at?: string | null
           created_at?: string | null
@@ -2633,7 +2633,7 @@ export type Database = {
         }
         Update: {
           access_token?: string | null
-          business_id?: string | null
+          clinic_id?: string | null
           coexistence_enabled?: boolean | null
           connected_at?: string | null
           created_at?: string | null
@@ -2650,16 +2650,16 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "whatsapp_connections_clinic_id_fkey"
-            columns: ["business_id"]
+            columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
       }
       whatsapp_messages: {
         Row: {
-          business_id: string | null
+          clinic_id: string | null
           content: Json
           created_at: string | null
           direction: string
@@ -2672,7 +2672,7 @@ export type Database = {
           wa_message_id: string | null
         }
         Insert: {
-          business_id?: string | null
+          clinic_id?: string | null
           content?: Json
           created_at?: string | null
           direction: string
@@ -2685,7 +2685,7 @@ export type Database = {
           wa_message_id?: string | null
         }
         Update: {
-          business_id?: string | null
+          clinic_id?: string | null
           content?: Json
           created_at?: string | null
           direction?: string
@@ -2700,9 +2700,9 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "whatsapp_messages_clinic_id_fkey"
-            columns: ["business_id"]
+            columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
