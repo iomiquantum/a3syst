@@ -27,6 +27,7 @@ export interface Conversation {
   unread_count: number;
   chatbot_active: boolean;
   archived: boolean;
+  visitor_contact: string | null;
   contact?: Contact;
 }
 
@@ -126,6 +127,54 @@ export const useMessaging = () => {
     if (!selectedConversation || !clinicId || !content.trim()) return;
     setSendingMessage(true);
 
+    const channel = selectedConversation.channel || "whatsapp";
+    const toNumber = selectedConversation.contact?.phone || selectedConversation.visitor_contact || "";
+
+    // For WhatsApp conversations, send via the Edge Function (which handles Meta API + DB insert)
+    if (channel === "whatsapp" && toNumber) {
+      try {
+        const { data, error } = await supabase.functions.invoke("whatsapp-send", {
+          body: {
+            clinic_id: clinicId,
+            to_number: toNumber,
+            message_type: "text",
+            content: content.trim(),
+          },
+        });
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        // Insert into local messages table for immediate UI update
+        const { data: msgData } = await supabase.from("messages").insert({
+          conversation_id: selectedConversation.id,
+          clinic_id: clinicId,
+          direction: "outbound",
+          content: content.trim(),
+          message_type: "text",
+          status: "sent",
+          whatsapp_message_id: data?.wa_message_id || null,
+        }).select().single();
+
+        if (msgData) {
+          setMessages(prev => {
+            if (prev.some(m => m.id === msgData.id)) return prev;
+            return [...prev, msgData as Message];
+          });
+        }
+
+        await supabase.from("conversations").update({
+          last_message_at: new Date().toISOString(),
+          last_message_preview: content.trim().substring(0, 100),
+        }).eq("id", selectedConversation.id);
+      } catch (e: any) {
+        toast.error(e.message || "Error al enviar mensaje de WhatsApp");
+      }
+      setSendingMessage(false);
+      return;
+    }
+
+    // For non-WhatsApp channels, insert directly
     const newMsg = {
       conversation_id: selectedConversation.id,
       clinic_id: clinicId,
@@ -140,7 +189,6 @@ export const useMessaging = () => {
 
     setMessages(prev => [...prev, data as Message]);
 
-    // Update conversation preview
     await supabase.from("conversations").update({
       last_message_at: new Date().toISOString(),
       last_message_preview: content.trim().substring(0, 100),
