@@ -35,13 +35,13 @@ serve(async (req) => {
 Tu trabajo es personalizar los labels/nombres de las secciones de un sistema SaaS según el tipo de negocio.
 
 El sistema tiene estas secciones configurables:
-- patients: Sección de personas/clientes del negocio (ej: "Pacientes" para negocios, "Alumnos" para academias, "Clientes" para tiendas)
-- treatments: Sección de servicios/productos (ej: "Tratamientos" para negocios, "Cursos" para academias, "Productos" para ecommerce)
-- professionals: Sección de equipo/staff (ej: "Doctores" para negocios, "Profesores" para academias, "Vendedores" para retail)
+- patients: Sección de personas/clientes del negocio (ej: "Pacientes" para clínicas, "Alumnos" para academias, "Clientes" para tiendas)
+- treatments: Sección de servicios/productos (ej: "Tratamientos" para clínicas, "Cursos" para academias, "Productos" para ecommerce)
+- professionals: Sección de equipo/staff (ej: "Doctores" para clínicas, "Profesores" para academias, "Vendedores" para retail)
 - branches: Sección de ubicaciones (ej: "Sucursales", "Sedes", "Locales", "Consultorios")
 - appointments: Sección de citas/reservas (ej: "Citas", "Reservas", "Clases", "Sesiones")
 - sales: Sección de ventas/transacciones (ej: "Ventas", "Facturación", "Cobros")
-- business: Nombre genérico del negocio (ej: "Negocio", "Academia", "Tienda", "Agencia")
+- business: Nombre genérico del negocio (ej: "Clínica", "Academia", "Tienda", "Agencia")
 - specialties: Categorías internas (ej: "Especialidades", "Departamentos", "Áreas", "Categorías")
 
 También debes generar una lista de 5-8 servicios/productos iniciales sugeridos para el tipo de negocio.

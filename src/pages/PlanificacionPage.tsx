@@ -5,8 +5,8 @@ import ProjectSelector from "@/components/planning/ProjectSelector";
 import TaskListView from "@/components/planning/TaskListView";
 import KanbanBoardView from "@/components/planning/KanbanBoardView";
 import TimeTrackerView from "@/components/planning/TimeTrackerView";
-import { usePlanningProjects, usePlanningColumns, usePlanningTasks, useBusinessProfiles } from "@/hooks/usePlanning";
-import { useBusiness } from "@/hooks/useBusiness";
+import { usePlanningProjects, usePlanningColumns, usePlanningTasks, useClinicProfiles } from "@/hooks/usePlanning";
+import { useClinic } from "@/hooks/useClinic";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
@@ -22,12 +22,12 @@ const PlanificacionPage = () => {
   const [section, setSection] = useState<Section>("board");
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const { user } = useAuth();
-  const { businessId, isSuperAdmin } = useBusiness();
+  const { clinicId, isSuperAdmin } = useClinic();
 
   const { data: projects, isLoading: loadingProjects } = usePlanningProjects();
   const { data: columns } = usePlanningColumns(selectedProjectId);
   const { data: tasks } = usePlanningTasks(selectedProjectId);
-  const { data: profiles } = useBusinessProfiles();
+  const { data: profiles } = useClinicProfiles();
 
   // Auto-select first project
   if (projects && projects.length > 0 && !selectedProjectId) {

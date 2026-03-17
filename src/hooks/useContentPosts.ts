@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useBusiness } from "@/hooks/useBusiness";
+import { useClinic } from "@/hooks/useClinic";
 import { toast } from "sonner";
 
 export interface ContentPost {
@@ -28,17 +28,17 @@ export interface ContentPost {
 }
 
 export const useContentPosts = () => {
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
   const [posts, setPosts] = useState<ContentPost[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchPosts = useCallback(async (silent = false) => {
-    if (!businessId) return;
+    if (!clinicId) return;
     if (!silent) setLoading(true);
     const { data, error } = await supabase
       .from("content_posts")
       .select("*")
-      .eq("clinic_id", businessId)
+      .eq("clinic_id", clinicId)
       .order("created_at", { ascending: false });
     if (error) {
       toast.error("Error cargando contenido");
@@ -46,15 +46,15 @@ export const useContentPosts = () => {
     }
     setPosts((data || []) as unknown as ContentPost[]);
     if (!silent) setLoading(false);
-  }, [businessId]);
+  }, [clinicId]);
 
   useEffect(() => { fetchPosts(); }, [fetchPosts]);
 
   const createPost = async (data: Partial<ContentPost>) => {
-    if (!businessId) return null;
+    if (!clinicId) return null;
     const { data: created, error } = await supabase
       .from("content_posts")
-      .insert({ clinic_id: businessId, ...data } as any)
+      .insert({ clinic_id: clinicId, ...data } as any)
       .select()
       .single();
     if (error) { toast.error(error.message); return null; }

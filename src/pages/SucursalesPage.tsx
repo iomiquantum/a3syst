@@ -7,14 +7,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useBusiness } from "@/hooks/useBusiness";
+import { useClinic } from "@/hooks/useClinic";
 import { useBusinessLabels } from "@/hooks/useBusinessLabels";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { branchSchema, getValidationError } from "@/lib/validations";
 
 const SucursalesPage = () => {
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
   const { labels } = useBusinessLabels();
   const [branches, setBranches] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
@@ -23,16 +23,16 @@ const SucursalesPage = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchBranches = async () => {
-    if (!businessId) return;
-    const { data } = await supabase.from("branches").select("*").eq("clinic_id", businessId).order("created_at");
+    if (!clinicId) return;
+    const { data } = await supabase.from("branches").select("*").eq("clinic_id", clinicId).order("created_at");
     setBranches(data || []);
     setLoading(false);
   };
 
-  useEffect(() => { fetchBranches(); }, [businessId]);
+  useEffect(() => { fetchBranches(); }, [clinicId]);
 
   const handleSave = async () => {
-    if (!businessId) return;
+    if (!clinicId) return;
     try {
       const validated = branchSchema.parse(form);
       if (editingId) {
@@ -40,7 +40,7 @@ const SucursalesPage = () => {
         if (error) { toast.error(error.message); return; }
         toast.success(`${labels.branches_singular} actualizada`);
       } else {
-        const { error } = await supabase.from("branches").insert({ clinic_id: businessId, name: validated.name, address: validated.address, phone: validated.phone || "", description: validated.description || "" });
+        const { error } = await supabase.from("branches").insert({ clinic_id: clinicId, name: validated.name, address: validated.address, phone: validated.phone || "", description: validated.description || "" });
         if (error) { toast.error(error.message); return; }
         toast.success(`${labels.branches_singular} creada`);
       }

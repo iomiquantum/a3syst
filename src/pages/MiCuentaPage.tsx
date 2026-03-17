@@ -8,13 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
-import { useBusiness } from "@/hooks/useBusiness";
+import { useClinic } from "@/hooks/useClinic";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const MiCuentaPage = () => {
   const { user } = useAuth();
-  const { businessName, businessId } = useBusiness();
+  const { clinicName, clinicId } = useClinic();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [fullName, setFullName] = useState("");
@@ -80,7 +80,7 @@ const MiCuentaPage = () => {
                   </div>
                   <div>
                     <p className="font-semibold">Información personal</p>
-                    <p className="text-xs text-muted-foreground">Negocio: {businessName}</p>
+                    <p className="text-xs text-muted-foreground">Negocio: {clinicName}</p>
                   </div>
                 </div>
 

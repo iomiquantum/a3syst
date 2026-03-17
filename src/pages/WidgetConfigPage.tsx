@@ -4,23 +4,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useBusiness } from "@/hooks/useBusiness";
+import { useClinic } from "@/hooks/useClinic";
 import { Copy, Code, ExternalLink, Globe, Palette, CheckCircle2, AlertCircle, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 
 const WidgetConfigPage = () => {
-  const { businessId, businessName } = useBusiness();
+  const { clinicId, clinicName } = useClinic();
   const [primaryColor, setPrimaryColor] = useState("#6366f1");
   const [title, setTitle] = useState("Chat con nosotros");
   const [subtitle, setSubtitle] = useState("Te responderemos lo antes posible");
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 
-  const embedCode = `<!-- A3 SYS Chat Widget - ${businessName || "Mi Negocio"} -->
+  const embedCode = `<!-- A3 SYS Chat Widget - ${clinicName || "Mi Negocio"} -->
 <script>
   window.IOMI_WIDGET = {
-    businessId: "${businessId || 'TU_CLINIC_ID'}",
+    clinicId: "${clinicId || 'TU_CLINIC_ID'}",
     apiUrl: "${supabaseUrl}",
     primaryColor: "${primaryColor}",
     title: "${title}",
@@ -93,7 +93,7 @@ const WidgetConfigPage = () => {
           </div>
           <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-xs">
             <span className="w-2 h-2 rounded-full bg-success" />
-            Código único para: {businessName || "tu negocio"}
+            Código único para: {clinicName || "tu clínica"}
           </Badge>
         </div>
 
@@ -103,11 +103,11 @@ const WidgetConfigPage = () => {
             <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-medium text-foreground">
-                Este código es único para tu negocio <span className="font-bold">{businessName}</span>
+                Este código es único para tu clínica <span className="font-bold">{clinicName}</span>
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                ID de negocio: <code className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono">{businessId || "—"}</code>
-                &nbsp;· Los mensajes recibidos llegarán automáticamente al buzón de esta negocio.
+                ID de clínica: <code className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono">{clinicId || "—"}</code>
+                &nbsp;· Los mensajes recibidos llegarán automáticamente al buzón de esta clínica.
               </p>
             </div>
           </CardContent>
@@ -144,8 +144,8 @@ const WidgetConfigPage = () => {
                 <Input value={subtitle} onChange={e => setSubtitle(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>Negocio asignada</Label>
-                <Input value={businessName || ""} disabled className="bg-muted" />
+                <Label>Clínica asignada</Label>
+                <Input value={clinicName || ""} disabled className="bg-muted" />
               </div>
             </CardContent>
           </Card>
@@ -219,7 +219,7 @@ const WidgetConfigPage = () => {
               <Code className="w-5 h-5" /> Tu código de instalación
             </CardTitle>
             <CardDescription>
-              Este es el código único de tu negocio. Cópialo y pégalo antes de <code className="text-xs bg-muted px-1 py-0.5 rounded">&lt;/body&gt;</code> en tu sitio web.
+              Este es el código único de tu clínica. Cópialo y pégalo antes de <code className="text-xs bg-muted px-1 py-0.5 rounded">&lt;/body&gt;</code> en tu sitio web.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -239,7 +239,7 @@ const WidgetConfigPage = () => {
             <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/5 border border-destructive/20">
               <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
               <p className="text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">Importante:</span> No modifiques el valor de <code className="bg-muted px-1 py-0.5 rounded">businessId</code> ni <code className="bg-muted px-1 py-0.5 rounded">apiUrl</code>. Estos valores son únicos para tu negocio.
+                <span className="font-medium text-foreground">Importante:</span> No modifiques el valor de <code className="bg-muted px-1 py-0.5 rounded">clinicId</code> ni <code className="bg-muted px-1 py-0.5 rounded">apiUrl</code>. Estos valores son únicos para tu clínica.
               </p>
             </div>
 
@@ -250,7 +250,7 @@ const WidgetConfigPage = () => {
               <Button variant="outline" className="gap-2" onClick={() => {
                 const w = window.open("", "_blank");
                 if (w) {
-                  w.document.write(`<!DOCTYPE html><html><head><title>Prueba Widget - ${businessName}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#f1f5f9;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#334155;padding:40px}h1{font-size:24px;margin-bottom:8px}p{font-size:14px;color:#64748b;max-width:480px;text-align:center;line-height:1.6}.badge{background:#e0e7ff;color:#4338ca;font-size:11px;padding:4px 12px;border-radius:99px;margin-top:12px;display:inline-block}</style></head><body><h1>Página de prueba</h1><p>Esta es una simulación de tu sitio web. El widget de chat aparece en la esquina inferior derecha.</p><span class="badge">Widget activo para: ${businessName}</span><script>window.IOMI_WIDGET={businessId:"${businessId}",apiUrl:"${supabaseUrl}",primaryColor:"${primaryColor}",title:"${title}",subtitle:"${subtitle}"};</script><script src="${window.location.origin}/widget.js" defer></script></body></html>`);
+                  w.document.write(`<!DOCTYPE html><html><head><title>Prueba Widget - ${clinicName}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#f1f5f9;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#334155;padding:40px}h1{font-size:24px;margin-bottom:8px}p{font-size:14px;color:#64748b;max-width:480px;text-align:center;line-height:1.6}.badge{background:#e0e7ff;color:#4338ca;font-size:11px;padding:4px 12px;border-radius:99px;margin-top:12px;display:inline-block}</style></head><body><h1>Página de prueba</h1><p>Esta es una simulación de tu sitio web. El widget de chat aparece en la esquina inferior derecha.</p><span class="badge">Widget activo para: ${clinicName}</span><script>window.IOMI_WIDGET={clinicId:"${clinicId}",apiUrl:"${supabaseUrl}",primaryColor:"${primaryColor}",title:"${title}",subtitle:"${subtitle}"};</script><script src="${window.location.origin}/widget.js" defer></script></body></html>`);
                   w.document.close();
                 }
               }}>

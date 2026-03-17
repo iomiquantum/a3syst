@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMetaAppConfig } from "@/hooks/useMetaAppConfig";
-import { useBusiness } from "@/hooks/useBusiness";
+import { useClinic } from "@/hooks/useClinic";
 import { toast } from "sonner";
 
 declare global {
@@ -24,7 +24,7 @@ export interface FacebookPage {
 }
 
 export const useFacebookAuth = () => {
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
   const metaConfig = useMetaAppConfig();
   const [loading, setLoading] = useState(false);
   const [pages, setPages] = useState<FacebookPage[]>([]);
@@ -105,7 +105,7 @@ export const useFacebookAuth = () => {
       const { data, error: fnError } = await supabase.functions.invoke(
         "exchange-facebook-token",
         {
-          body: { shortLivedToken: accessToken, businessId },
+          body: { shortLivedToken: accessToken, clinicId },
         }
       );
 
@@ -132,7 +132,7 @@ export const useFacebookAuth = () => {
       toast.error(msg);
       return [];
     }
-  }, [loadFacebookSDK, businessId]);
+  }, [loadFacebookSDK, clinicId]);
 
   const reset = useCallback(() => {
     setPages([]);

@@ -83,9 +83,9 @@ export function useUsuariosAdmin() {
   });
 
   const { data: clinics = [] } = useQuery({
-    queryKey: ["admin-businesses"],
+    queryKey: ["admin-clinics"],
     queryFn: async () => {
-      const { data } = await supabase.from("businesses").select("id, name, slug").order("name");
+      const { data } = await supabase.from("clinics").select("id, name, slug").order("name");
       return data || [];
     },
   });
@@ -206,14 +206,14 @@ export function useUsuariosAdmin() {
   });
 
   const assignToClinic = useMutation({
-    mutationFn: async ({ userId, businessId, role }: { userId: string; businessId: string; role: string }) => {
+    mutationFn: async ({ userId, clinicId, role }: { userId: string; clinicId: string; role: string }) => {
       const defaultPerms = role === "admin"
         ? { agenda: true, pacientes: true, ventas: true, configuracion: true, reportes: true }
         : { agenda: true, pacientes: true, ventas: role === "vendedor", configuracion: false, reportes: false };
 
       const { error } = await supabase.from("user_roles").insert({
         user_id: userId,
-        clinic_id: businessId,
+        clinic_id: clinicId,
         role: role as any,
         permissions: defaultPerms,
       } as any);
@@ -223,7 +223,7 @@ export function useUsuariosAdmin() {
       await supabase.from("actividad_usuarios").insert({
         usuario_id: userId,
         accion: "asignado_empresa",
-        detalle: { clinic_id: businessId, rol: role },
+        detalle: { clinic_id: clinicId, rol: role },
         realizado_por: session.session?.user?.id,
       } as any);
     },

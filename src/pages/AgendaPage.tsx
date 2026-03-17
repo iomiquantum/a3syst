@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { useBusiness } from "@/hooks/useBusiness";
+import { useClinic } from "@/hooks/useClinic";
 import { useBusinessLabels } from "@/hooks/useBusinessLabels";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -49,7 +49,7 @@ const getWeekStart = (d: Date) => {
 const fmtDate = (d: Date) => d.toISOString().split("T")[0];
 
 const AgendaPage = () => {
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
   const { labels } = useBusinessLabels();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"dia" | "semana" | "mes">("semana");
@@ -89,7 +89,7 @@ const AgendaPage = () => {
   const todayStr = fmtDate(new Date());
 
   const fetchData = useCallback(async () => {
-    if (!businessId) return;
+    if (!clinicId) return;
     setLoading(true);
     const startDate = fmtDate(weekDates[0]);
     const endDate = fmtDate(weekDates[6]);
@@ -97,12 +97,12 @@ const AgendaPage = () => {
     const [{ data: a }, { data: p }, { data: t }, { data: pr }, { data: pm }] = await Promise.all([
       supabase.from("appointments")
         .select("*, patients(first_name, last_name), treatments(name, price), professionals(full_name)")
-        .eq("clinic_id", businessId).gte("date", startDate).lte("date", endDate)
+        .eq("clinic_id", clinicId).gte("date", startDate).lte("date", endDate)
         .order("date").order("time"),
-      supabase.from("patients").select("id, first_name, last_name").eq("clinic_id", businessId).order("first_name"),
-      supabase.from("treatments").select("id, name, duration, price").eq("clinic_id", businessId),
-      supabase.from("professionals").select("id, full_name").eq("clinic_id", businessId).eq("active", true),
-      supabase.from("payment_methods").select("id, name").eq("clinic_id", businessId),
+      supabase.from("patients").select("id, first_name, last_name").eq("clinic_id", clinicId).order("first_name"),
+      supabase.from("treatments").select("id, name, duration, price").eq("clinic_id", clinicId),
+      supabase.from("professionals").select("id, full_name").eq("clinic_id", clinicId).eq("active", true),
+      supabase.from("payment_methods").select("id, name").eq("clinic_id", clinicId),
     ]);
     setAppointments(a || []);
     setPatients(p || []);
@@ -110,7 +110,7 @@ const AgendaPage = () => {
     setProfessionals(pr || []);
     setPaymentMethods(pm || []);
     setLoading(false);
-  }, [businessId, weekDates]);
+  }, [clinicId, weekDates]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -162,9 +162,9 @@ const AgendaPage = () => {
   };
 
   const handleRegisterSale = async () => {
-    if (!businessId || !saleDialogApt) return;
+    if (!clinicId || !saleDialogApt) return;
     const { error } = await supabase.from("sales").insert({
-      clinic_id: businessId,
+      clinic_id: clinicId,
       patient_id: saleDialogApt.patient_id,
       treatment_id: saleDialogApt.treatment_id || null,
       amount: parseFloat(saleAmount) || 0,
@@ -177,11 +177,11 @@ const AgendaPage = () => {
   };
 
   const handleCreate = async () => {
-    if (!businessId) return;
+    if (!clinicId) return;
     try {
       const validated = appointmentSchema.parse({ ...form, duration: parseInt(form.duration) || 30 });
       const { error } = await supabase.from("appointments").insert({
-        clinic_id: businessId,
+        clinic_id: clinicId,
         patient_id: validated.patient_id,
         treatment_id: validated.treatment_id || null,
         professional_id: validated.professional_id || null,

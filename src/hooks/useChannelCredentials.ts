@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useBusiness } from "@/hooks/useBusiness";
+import { useClinic } from "@/hooks/useClinic";
 import { toast } from "sonner";
 
 export interface ChannelCredential {
@@ -69,7 +69,7 @@ export const CHANNELS = [
     ],
     steps: [
       { title: "Crear App en Meta", description: "Ve a developers.facebook.com y crea una nueva aplicación de tipo 'Negocios'.", link: "https://developers.facebook.com/apps/" },
-      { title: "Agregar Messenger", description: "En tu app, agrega el producto 'Messenger'. Vincula la Página de Facebook de tu negocio.", link: "https://developers.facebook.com/docs/messenger-platform/getting-started" },
+      { title: "Agregar Messenger", description: "En tu app, agrega el producto 'Messenger'. Vincula la Página de Facebook de tu clínica.", link: "https://developers.facebook.com/docs/messenger-platform/getting-started" },
       { title: "Generar Page Access Token", description: "En tu app → Messenger → Configuración → Token de acceso. Selecciona tu página y genera el token.", link: "https://developers.facebook.com/tools/explorer/" },
       { title: "Copiar App Secret", description: "Ve a tu app → Configuración → Información básica → App Secret. Cópialo." },
       { title: "Configurar Webhook", description: "En tu app → Messenger → Webhooks. Suscríbete a messages, messaging_postbacks. Usa la URL y verify token que te proporcionamos." },
@@ -99,24 +99,24 @@ export const CHANNELS = [
 export type ChannelKey = typeof CHANNELS[number]["key"];
 
 export const useChannelCredentials = () => {
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
   const [credentials, setCredentials] = useState<ChannelCredential[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchCredentials = useCallback(async () => {
-    if (!businessId) return;
+    if (!clinicId) return;
     setLoading(true);
     const { data, error } = await supabase
       .from("channel_credentials")
       .select("*")
-      .eq("clinic_id", businessId);
+      .eq("clinic_id", clinicId);
     if (error) { toast.error(error.message); setLoading(false); return; }
     setCredentials((data || []) as unknown as ChannelCredential[]);
     setLoading(false);
-  }, [businessId]);
+  }, [clinicId]);
 
   const saveCredentials = async (channel: string, fields: Record<string, string>) => {
-    if (!businessId) return false;
+    if (!clinicId) return false;
     const existing = credentials.find(c => c.channel === channel);
     if (existing) {
       const { error } = await supabase
@@ -127,7 +127,7 @@ export const useChannelCredentials = () => {
     } else {
       const { error } = await supabase
         .from("channel_credentials")
-        .insert({ clinic_id: businessId, channel, credentials: fields as any, setup_completed: true, is_active: true });
+        .insert({ clinic_id: clinicId, channel, credentials: fields as any, setup_completed: true, is_active: true });
       if (error) { toast.error(error.message); return false; }
     }
     toast.success("Credenciales guardadas correctamente");

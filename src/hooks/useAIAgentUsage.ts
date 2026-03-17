@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useBusiness } from "@/hooks/useBusiness";
+import { useClinic } from "@/hooks/useClinic";
 
 export interface UsageRecord {
   id: string;
@@ -23,19 +23,19 @@ export interface UsageSummary {
 }
 
 export const useAIAgentUsage = () => {
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
   const [records, setRecords] = useState<UsageRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!businessId) return;
+    if (!clinicId) return;
 
     const fetch = async () => {
       setLoading(true);
       const { data } = await supabase
         .from("ai_agent_usage")
         .select("*")
-        .eq("clinic_id", businessId)
+        .eq("clinic_id", clinicId)
         .order("created_at", { ascending: false })
         .limit(200);
 
@@ -44,7 +44,7 @@ export const useAIAgentUsage = () => {
     };
 
     fetch();
-  }, [businessId]);
+  }, [clinicId]);
 
   const now = new Date();
   const todayStr = now.toISOString().substring(0, 10);

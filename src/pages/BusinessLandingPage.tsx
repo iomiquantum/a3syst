@@ -67,7 +67,7 @@ const BusinessLandingPage = () => {
     queryKey: ["business-landing", slug],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("businesses")
+        .from("clinics")
         .select("*")
         .eq("slug", slug!)
         .eq("onboarding_completed", true)
@@ -416,7 +416,7 @@ const BusinessLandingPage = () => {
 };
 
 const BUSINESS_TYPES_LABELS: Record<string, string> = {
-  clinica: "Negocio / Consultorio",
+  clinica: "Clínica / Consultorio",
   spa: "Spa / Bienestar",
   estudio: "Estudio",
   dental: "Consultorio Dental",

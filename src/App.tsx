@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useSessionHeartbeat } from "@/hooks/useSessionHeartbeat";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
-import { BusinessProvider } from "@/hooks/useBusiness";
+import { ClinicProvider } from "@/hooks/useClinic";
 import { BusinessLabelsProvider } from "@/hooks/useBusinessLabels";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
@@ -63,7 +63,7 @@ const App = () => (
         <CookieBanner />
         <AppContent />
         <AuthProvider>
-          <BusinessProvider>
+          <ClinicProvider>
           <BusinessLabelsProvider>
             <Routes>
               <Route path="/" element={<PreLaunchPage />} />
@@ -108,7 +108,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
            </Routes>
           </BusinessLabelsProvider>
-          </BusinessProvider>
+          </ClinicProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

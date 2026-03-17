@@ -9,12 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { useAds } from "@/hooks/useAds";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useBusiness } from "@/hooks/useBusiness";
+import { useClinic } from "@/hooks/useClinic";
 
 interface Props { ads: ReturnType<typeof useAds>; }
 
 const AdsMetaConfig = ({ ads }: Props) => {
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
   const account = ads.accounts.find(a => a.platform === "meta");
   const cfg = (account?.config || {}) as Record<string, string>;
   const creds = (account?.credentials || {}) as Record<string, string>;

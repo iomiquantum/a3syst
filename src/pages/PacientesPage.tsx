@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useBusiness } from "@/hooks/useBusiness";
+import { useClinic } from "@/hooks/useClinic";
 import { useBusinessLabels } from "@/hooks/useBusinessLabels";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -52,7 +52,7 @@ const initials = (p: { first_name: string; last_name: string }) =>
   `${(p.first_name || "")[0] || ""}${(p.last_name || "")[0] || ""}`.toUpperCase();
 
 const PacientesPage = () => {
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
   const { labels } = useBusinessLabels();
 
   const [patients, setPatients] = useState<PatientWithActivity[]>([]);
@@ -73,12 +73,12 @@ const PacientesPage = () => {
   const [detailLoading, setDetailLoading] = useState(false);
 
   const fetchPatients = useCallback(async () => {
-    if (!businessId) return;
+    if (!clinicId) return;
     setLoading(true);
 
     const [{ data: pats }, { data: appts }] = await Promise.all([
-      supabase.from("patients").select("*").eq("clinic_id", businessId).order("created_at", { ascending: false }),
-      supabase.from("appointments").select("patient_id, date").eq("clinic_id", businessId).order("date", { ascending: false }),
+      supabase.from("patients").select("*").eq("clinic_id", clinicId).order("created_at", { ascending: false }),
+      supabase.from("appointments").select("patient_id, date").eq("clinic_id", clinicId).order("date", { ascending: false }),
     ]);
 
     // Build a map of latest appointment per patient
@@ -104,7 +104,7 @@ const PacientesPage = () => {
 
     setPatients(enriched);
     setLoading(false);
-  }, [businessId]);
+  }, [clinicId]);
 
   useEffect(() => { fetchPatients(); }, [fetchPatients]);
 
@@ -129,7 +129,7 @@ const PacientesPage = () => {
 
   // Save
   const handleSave = async () => {
-    if (!businessId) return;
+    if (!clinicId) return;
     try {
       const validated = patientSchema.parse(form);
       const payload = {
@@ -143,7 +143,7 @@ const PacientesPage = () => {
         if (error) { toast.error(error.message); return; }
         toast.success("✅ Paciente actualizado");
       } else {
-        const { error } = await supabase.from("patients").insert({ clinic_id: businessId, ...payload });
+        const { error } = await supabase.from("patients").insert({ clinic_id: clinicId, ...payload });
         if (error) { toast.error(error.message); return; }
         toast.success("✅ Paciente creado exitosamente");
       }

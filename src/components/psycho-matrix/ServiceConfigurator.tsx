@@ -126,7 +126,7 @@ const ServiceConfigurator = ({ onSelectService }: Props) => {
           <div className="space-y-2">
             <Label>Observaciones adicionales (opcional)</Label>
             <Textarea
-              placeholder='Ej: "Incluye 3 sesiones, ideal para pacientes post-cirugía, requiere evaluación previa, competencia: Negocio X cobra $500 por lo mismo"'
+              placeholder='Ej: "Incluye 3 sesiones, ideal para pacientes post-cirugía, requiere evaluación previa, competencia: Clínica X cobra $500 por lo mismo"'
               value={form.observations}
               onChange={(e) => setForm({ ...form, observations: e.target.value })}
               className="min-h-[80px]"

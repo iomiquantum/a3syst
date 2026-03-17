@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useBusiness } from "@/hooks/useBusiness";
+import { useClinic } from "@/hooks/useClinic";
 
 export interface TokenRecord {
   id: string;
@@ -53,22 +53,22 @@ export function estimateCost(model: string, tokensInput: number, tokensOutput: n
 }
 
 export const useTokenUsage = () => {
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
   const [records, setRecords] = useState<TokenRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchRecords = useCallback(async () => {
-    if (!businessId) return;
+    if (!clinicId) return;
     setLoading(true);
     const { data } = await supabase
       .from("ai_token_usage")
       .select("*")
-      .eq("clinic_id", businessId)
+      .eq("clinic_id", clinicId)
       .order("created_at", { ascending: false })
       .limit(1000);
     setRecords((data as TokenRecord[]) || []);
     setLoading(false);
-  }, [businessId]);
+  }, [clinicId]);
 
   useEffect(() => { fetchRecords(); }, [fetchRecords]);
 
@@ -79,12 +79,12 @@ export const useTokenUsage = () => {
     tokensOutput: number,
     actionLabel: string = "",
   ) => {
-    if (!businessId) return;
+    if (!clinicId) return;
     const { data: { user } } = await supabase.auth.getUser();
     const costUsd = estimateCost(model, tokensInput, tokensOutput, generatorType);
 
     await supabase.from("ai_token_usage").insert({
-      clinic_id: businessId,
+      clinic_id: clinicId,
       user_id: user?.id || null,
       generator_type: generatorType,
       model,
@@ -96,10 +96,10 @@ export const useTokenUsage = () => {
 
     // Check budget limits after logging
     await checkBudgetAlerts(user?.id || null, costUsd);
-  }, [businessId]);
+  }, [clinicId]);
 
   const checkBudgetAlerts = useCallback(async (userId: string | null, lastCost: number) => {
-    if (!businessId) return;
+    if (!clinicId) return;
 
     // Get current month's total for clinic
     const monthStart = new Date();
@@ -110,25 +110,25 @@ export const useTokenUsage = () => {
     const { data: monthRecords } = await supabase
       .from("ai_token_usage")
       .select("cost_usd, user_id")
-      .eq("clinic_id", businessId)
+      .eq("clinic_id", clinicId)
       .gte("created_at", monthStartStr);
 
     const totalClinicCost = (monthRecords || []).reduce((sum, r) => sum + (Number(r.cost_usd) || 0), 0);
 
     // Check clinic budget
     const { data: clinic } = await supabase
-      .from("businesses")
+      .from("clinics")
       .select("monthly_token_budget_usd")
-      .eq("id", businessId)
+      .eq("id", clinicId)
       .single();
 
-    const businessBudget = (clinic as any)?.monthly_token_budget_usd;
-    if (businessBudget !== null && businessBudget !== undefined && businessBudget > 0) {
-      const pct = (totalClinicCost / businessBudget) * 100;
+    const clinicBudget = (clinic as any)?.monthly_token_budget_usd;
+    if (clinicBudget !== null && clinicBudget !== undefined && clinicBudget > 0) {
+      const pct = (totalClinicCost / clinicBudget) * 100;
       if (pct >= 100) {
-        toast.error(`⚠️ La negocio ha superado el presupuesto mensual de IA ($${businessBudget.toFixed(2)}). Consumo actual: $${totalClinicCost.toFixed(2)}`);
+        toast.error(`⚠️ La clínica ha superado el presupuesto mensual de IA ($${clinicBudget.toFixed(2)}). Consumo actual: $${totalClinicCost.toFixed(2)}`);
       } else if (pct >= 80) {
-        toast.warning(`⚠️ La negocio ha consumido el ${pct.toFixed(0)}% del presupuesto mensual de IA ($${totalClinicCost.toFixed(2)} / $${businessBudget.toFixed(2)})`);
+        toast.warning(`⚠️ La clínica ha consumido el ${pct.toFixed(0)}% del presupuesto mensual de IA ($${totalClinicCost.toFixed(2)} / $${clinicBudget.toFixed(2)})`);
       }
     }
 
@@ -138,7 +138,7 @@ export const useTokenUsage = () => {
         .from("user_token_limits")
         .select("monthly_budget_usd")
         .eq("user_id", userId)
-        .eq("clinic_id", businessId)
+        .eq("clinic_id", clinicId)
         .maybeSingle();
 
       const userBudget = (userLimit as any)?.monthly_budget_usd;
@@ -154,7 +154,7 @@ export const useTokenUsage = () => {
         }
       }
     }
-  }, [businessId]);
+  }, [clinicId]);
 
   const now = new Date();
   const todayStr = now.toISOString().substring(0, 10);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useBusiness } from "@/hooks/useBusiness";
+import { useClinic } from "@/hooks/useClinic";
 import { startOfMonth, endOfMonth, subMonths, format, startOfDay, endOfDay, eachDayOfInterval, subDays } from "date-fns";
 
 export interface AgentMetrics {
@@ -29,13 +29,13 @@ export interface CallCenterMetrics {
 }
 
 export const useCallCenterMetrics = () => {
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
   const [metrics, setMetrics] = useState<CallCenterMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<"week" | "month" | "3months">("month");
 
   useEffect(() => {
-    if (!businessId) return;
+    if (!clinicId) return;
 
     const fetchMetrics = async () => {
       setLoading(true);
@@ -51,13 +51,13 @@ export const useCallCenterMetrics = () => {
       const { data: contacts } = await supabase
         .from("contacts")
         .select("id, funnel_stage")
-        .eq("clinic_id", businessId);
+        .eq("clinic_id", clinicId);
 
       // Fetch call logs in period
       const { data: calls } = await supabase
         .from("call_logs")
         .select("*")
-        .eq("clinic_id", businessId)
+        .eq("clinic_id", clinicId)
         .gte("created_at", fromISO)
         .order("created_at", { ascending: true });
 
@@ -142,7 +142,7 @@ export const useCallCenterMetrics = () => {
     };
 
     fetchMetrics();
-  }, [businessId, period]);
+  }, [clinicId, period]);
 
   return { metrics, loading, period, setPeriod };
 };

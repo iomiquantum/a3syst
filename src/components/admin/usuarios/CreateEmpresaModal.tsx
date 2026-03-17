@@ -25,7 +25,7 @@ const CreateEmpresaModal = ({ open, onOpenChange }: CreateEmpresaModalProps) => 
       const userId = session.session?.user?.id;
       if (!userId) throw new Error("No autenticado");
 
-      const { error } = await supabase.from("businesses").insert({
+      const { error } = await supabase.from("clinics").insert({
         name: form.nombre.trim(),
         owner_id: userId,
         description: "",
@@ -33,7 +33,7 @@ const CreateEmpresaModal = ({ open, onOpenChange }: CreateEmpresaModalProps) => 
       if (error) throw error;
 
       toast.success("Empresa creada exitosamente");
-      queryClient.invalidateQueries({ queryKey: ["admin-businesses"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-clinics"] });
       queryClient.invalidateQueries({ queryKey: ["admin-usuarios"] });
       onOpenChange(false);
       setForm({ nombre: "", email_contacto: "", telefono: "" });

@@ -96,7 +96,7 @@ const FAQ_ITEMS = [
 ];
 
 const TESTIMONIALS = [
-  { name: 'Negocio Dental Sonrisa', result: 'Más orden, más cierres', text: 'Antes perdíamos el 40% de los leads por responder tarde. Con A3 todo queda registrado y organizado.' },
+  { name: 'Clínica Dental Sonrisa', result: 'Más orden, más cierres', text: 'Antes perdíamos el 40% de los leads por responder tarde. Con A3 todo queda registrado y organizado.' },
   { name: 'Academia FitPro', result: 'Menos tiempo respondiendo', text: 'Pasamos de 4 horas al día contestando mensajes a tener todo centralizado y controlado.' },
   { name: 'Restaurante La Terraza', result: 'Operación más ligera', text: 'Un solo sistema para reservas, clientes y seguimiento. Dejamos de usar 5 herramientas diferentes.' },
 ];
@@ -1446,7 +1446,7 @@ const PreLaunchPage = () => {
             <div className="relative">
               <Textarea
                 placeholder={trialType === 'copy'
-                  ? 'Describe qué copy deseas: para qué negocio, qué tono, qué red social, qué quieres comunicar...\n\nEj: "Necesito un post para Instagram de mi negocio dental, tono profesional pero cercano, sobre blanqueamiento dental con promoción del 20%"'
+                  ? 'Describe qué copy deseas: para qué negocio, qué tono, qué red social, qué quieres comunicar...\n\nEj: "Necesito un post para Instagram de mi clínica dental, tono profesional pero cercano, sobre blanqueamiento dental con promoción del 20%"'
                   : 'Describe la imagen que deseas generar con su copy para redes sociales.\n\nEj: "Una imagen llamativa para promocionar mi academia de fitness, con colores vibrantes, estilo moderno, que muestre energía y motivación. El copy debe invitar a una clase gratis"'
                 }
                 value={trialPrompt}

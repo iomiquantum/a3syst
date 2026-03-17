@@ -94,7 +94,7 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
       permissions: defaultPerms,
     } as any);
     if (error) { toast.error(error.message); return; }
-    toast.success("Usuario asignado a la negocio");
+    toast.success("Usuario asignado a la clínica");
     setAssignOpen(false);
     setAssignForm({ user_id: "", clinic_id: "", role: "secretary" });
     onRefresh();
@@ -185,11 +185,11 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
           <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
-                <UserPlus className="w-4 h-4 mr-2" /> Asignar a Negocio
+                <UserPlus className="w-4 h-4 mr-2" /> Asignar a Clínica
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader><DialogTitle>Asignar Usuario a Negocio</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>Asignar Usuario a Clínica</DialogTitle></DialogHeader>
               <div className="space-y-4 pt-2">
                 <div>
                   <Label>Usuario *</Label>
@@ -203,9 +203,9 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
                   </Select>
                 </div>
                 <div>
-                  <Label>Negocio *</Label>
+                  <Label>Clínica *</Label>
                   <Select value={assignForm.clinic_id} onValueChange={v => setAssignForm({ ...assignForm, clinic_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Seleccionar negocio" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar clínica" /></SelectTrigger>
                     <SelectContent>
                       {clinics.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                     </SelectContent>
@@ -239,7 +239,7 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Usuario</th>
-                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Negocios Asignadas</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Clínicas Asignadas</th>
                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Roles</th>
                   <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Acciones</th>
                 </tr>
@@ -260,7 +260,7 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
                     </td>
                     <td className="px-5 py-3.5">
                       {userRoles.length === 0 ? (
-                        <span className="text-xs text-muted-foreground">Sin negocio</span>
+                        <span className="text-xs text-muted-foreground">Sin clínica</span>
                       ) : (
                         <div className="space-y-1">
                           {userRoles.map(r => (

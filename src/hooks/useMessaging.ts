@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useBusiness } from "@/hooks/useBusiness";
+import { useClinic } from "@/hooks/useClinic";
 import { toast } from "sonner";
 
 export interface Contact {
@@ -61,7 +61,7 @@ const FUNNEL_STAGES = [
 export { FUNNEL_STAGES };
 
 export const useMessaging = () => {
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
@@ -71,11 +71,11 @@ export const useMessaging = () => {
   const [channelFilter, setChannelFilter] = useState("todos");
 
   const fetchConversations = async () => {
-    if (!businessId) return;
+    if (!clinicId) return;
     const { data, error } = await supabase
       .from("conversations")
       .select("*")
-      .eq("clinic_id", businessId)
+      .eq("clinic_id", clinicId)
       .eq("archived", false)
       .order("last_message_at", { ascending: false });
 
@@ -123,12 +123,12 @@ export const useMessaging = () => {
   };
 
   const sendMessage = async (content: string) => {
-    if (!selectedConversation || !businessId || !content.trim()) return;
+    if (!selectedConversation || !clinicId || !content.trim()) return;
     setSendingMessage(true);
 
     const newMsg = {
       conversation_id: selectedConversation.id,
-      clinic_id: businessId,
+      clinic_id: clinicId,
       direction: "outbound",
       content: content.trim(),
       message_type: "text",
@@ -193,7 +193,7 @@ export const useMessaging = () => {
     filteredConversations = filteredConversations.filter(c => (c.channel || "whatsapp") === channelFilter);
   }
 
-  useEffect(() => { fetchConversations(); }, [businessId]);
+  useEffect(() => { fetchConversations(); }, [clinicId]);
 
   // Keep a ref to selectedConversation for realtime callback
   const selectedConvRef = useRef<Conversation | null>(null);
@@ -203,14 +203,14 @@ export const useMessaging = () => {
 
   // Realtime subscription — stable channel, uses ref to avoid stale closures
   useEffect(() => {
-    if (!businessId) return;
+    if (!clinicId) return;
     const channel = supabase
-      .channel("messages-realtime-" + businessId)
+      .channel("messages-realtime-" + clinicId)
       .on("postgres_changes", {
         event: "INSERT",
         schema: "public",
         table: "messages",
-        filter: `clinic_id=eq.${businessId}`,
+        filter: `clinic_id=eq.${clinicId}`,
       }, (payload) => {
         const newMsg = payload.new as Message;
         const currentConv = selectedConvRef.current;
@@ -226,7 +226,7 @@ export const useMessaging = () => {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [businessId]);
+  }, [clinicId]);
 
   return {
     conversations: filteredConversations,

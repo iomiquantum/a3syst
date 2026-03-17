@@ -172,7 +172,7 @@ const AdsADNTab = ({ ads }: Props) => {
           <div className="grid grid-cols-2 gap-5">
             <div className="space-y-2">
               <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nombre del Negocio</Label>
-              <Input value={businessName} onChange={e => setBusinessName(e.target.value)} placeholder="Mi Negocio" className="h-11" />
+              <Input value={businessName} onChange={e => setBusinessName(e.target.value)} placeholder="Mi Clínica" className="h-11" />
             </div>
             <div className="space-y-2">
               <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Industria</Label>

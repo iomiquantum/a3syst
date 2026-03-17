@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useBusiness } from "@/hooks/useBusiness";
+import { useClinic } from "@/hooks/useClinic";
 import { useToast } from "@/hooks/use-toast";
 
 export type PromptTemplateType = "image" | "copy" | "video";
@@ -17,33 +17,33 @@ export interface PromptTemplate {
 }
 
 export function usePromptTemplates() {
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
   return useQuery({
-    queryKey: ["prompt-templates", businessId],
+    queryKey: ["prompt-templates", clinicId],
     queryFn: async () => {
-      if (!businessId) return [];
+      if (!clinicId) return [];
       const { data, error } = await supabase
         .from("prompt_templates" as any)
         .select("*")
-        .eq("clinic_id", businessId)
+        .eq("clinic_id", clinicId)
         .order("type");
       if (error) throw error;
       return (data || []) as unknown as PromptTemplate[];
     },
-    enabled: !!businessId,
+    enabled: !!clinicId,
   });
 }
 
 export function useActivePromptTemplate(type: PromptTemplateType) {
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
   return useQuery({
-    queryKey: ["prompt-template-active", businessId, type],
+    queryKey: ["prompt-template-active", clinicId, type],
     queryFn: async () => {
-      if (!businessId) return null;
+      if (!clinicId) return null;
       const { data, error } = await supabase
         .from("prompt_templates" as any)
         .select("*")
-        .eq("clinic_id", businessId)
+        .eq("clinic_id", clinicId)
         .eq("type", type)
         .eq("is_active", true)
         .limit(1)
@@ -51,18 +51,18 @@ export function useActivePromptTemplate(type: PromptTemplateType) {
       if (error) throw error;
       return data as unknown as PromptTemplate | null;
     },
-    enabled: !!businessId,
+    enabled: !!clinicId,
   });
 }
 
 export function useSavePromptTemplate() {
   const qc = useQueryClient();
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (tpl: { id?: string; type: PromptTemplateType; name: string; template: string; is_active: boolean }) => {
-      if (!businessId) throw new Error("No clinic");
+      if (!clinicId) throw new Error("No clinic");
       if (tpl.id) {
         const { data, error } = await supabase
           .from("prompt_templates" as any)
@@ -75,7 +75,7 @@ export function useSavePromptTemplate() {
       } else {
         const { data, error } = await supabase
           .from("prompt_templates" as any)
-          .insert({ clinic_id: businessId, type: tpl.type, name: tpl.name, template: tpl.template, is_active: tpl.is_active })
+          .insert({ clinic_id: clinicId, type: tpl.type, name: tpl.name, template: tpl.template, is_active: tpl.is_active })
           .select()
           .single();
         if (error) throw error;

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
-import { useBusiness } from "@/hooks/useBusiness";
+import { useClinic } from "@/hooks/useClinic";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -216,7 +216,7 @@ Empieza con tu primera pregunta.`;
 const OnboardingPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { businessId, refreshBusiness } = useBusiness();
+  const { clinicId, refreshClinic } = useClinic();
   const [state, dispatch] = useReducer(reducer, initialState);
   const [textInput, setTextInput] = useState("");
   const [showTextInput, setShowTextInput] = useState(false);
@@ -421,7 +421,7 @@ const OnboardingPage = () => {
 
   /* ─── Generation ─── */
   const generateBusiness = async () => {
-    if (!businessId) return;
+    if (!clinicId) return;
     dispatch({ type: "SET_PHASE", phase: "generating" });
 
     const steps = [
@@ -436,7 +436,7 @@ const OnboardingPage = () => {
     let logoUrl: string | null = branding.logo_url;
     if (logoFile) {
       const ext = logoFile.name.split(".").pop();
-      const path = `${businessId}/logo.${ext}`;
+      const path = `${clinicId}/logo.${ext}`;
       const { error } = await supabase.storage.from("clinic-logos").upload(path, logoFile, { upsert: true });
       if (!error) {
         const { data: urlData } = supabase.storage.from("clinic-logos").getPublicUrl(path);
@@ -451,7 +451,7 @@ const OnboardingPage = () => {
     });
     const slug = slugData || collectedData.business_name?.toLowerCase().replace(/\s+/g, "-") || "mi-negocio";
 
-    await supabase.from("businesses").update({
+    await supabase.from("clinics").update({
       name: collectedData.business_name || "Mi Negocio",
       business_type: collectedData.business_type || "general",
       description: collectedData.description || "",
@@ -466,7 +466,7 @@ const OnboardingPage = () => {
       additional_info: collectedData.additional_info || "",
       onboarding_method: state.method,
       ...(logoUrl ? { logo_url: logoUrl } : {}),
-    } as any).eq("id", businessId);
+    } as any).eq("id", clinicId);
 
     setGenerationStep(1);
     await new Promise(r => setTimeout(r, 600));
@@ -474,7 +474,7 @@ const OnboardingPage = () => {
     // Step 2: Insert treatments
     if (collectedData.services.length > 0) {
       const rows = collectedData.services.filter(s => s.name).map(s => ({
-        clinic_id: businessId,
+        clinic_id: clinicId,
         name: s.name,
         price: s.price || 0,
         duration: parseInt(s.duration || "30") || 30,
@@ -490,7 +490,7 @@ const OnboardingPage = () => {
 
     // Step 3: AI agent config
     await supabase.from("ai_agent_config").upsert({
-      clinic_id: businessId,
+      clinic_id: clinicId,
       agent_name: collectedData.agent_name || "Ana",
       tone: collectedData.agent_tone || "friendly",
       greeting: `¡Hola! 👋 Soy ${collectedData.agent_name || "Ana"}, asistente de ${collectedData.business_name || "tu negocio"}. ¿En qué puedo ayudarte?`,
@@ -508,7 +508,7 @@ const OnboardingPage = () => {
     await new Promise(r => setTimeout(r, 600));
 
     // Mark completed
-    await supabase.from("businesses").update({ onboarding_completed: true } as any).eq("id", businessId);
+    await supabase.from("clinics").update({ onboarding_completed: true } as any).eq("id", clinicId);
 
     dispatch({ type: "SET_SLUG", slug });
     dispatch({ type: "SET_PHASE", phase: "done" });
@@ -516,7 +516,7 @@ const OnboardingPage = () => {
   };
 
   const handleFinish = () => {
-    refreshBusiness();
+    refreshClinic();
     navigate("/dashboard");
   };
 

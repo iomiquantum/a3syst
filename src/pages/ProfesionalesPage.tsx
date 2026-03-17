@@ -7,14 +7,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useBusiness } from "@/hooks/useBusiness";
+import { useClinic } from "@/hooks/useClinic";
 import { useBusinessLabels } from "@/hooks/useBusinessLabels";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { professionalSchema, getValidationError } from "@/lib/validations";
 
 const ProfesionalesPage = () => {
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
   const { labels } = useBusinessLabels();
   const [professionals, setProfessionals] = useState<any[]>([]);
   const [specialties, setSpecialties] = useState<any[]>([]);
@@ -23,25 +23,25 @@ const ProfesionalesPage = () => {
   const [form, setForm] = useState({ full_name: "", email: "", phone: "", specialty_id: "", branch_id: "" });
 
   const fetchData = async () => {
-    if (!businessId) return;
+    if (!clinicId) return;
     const [{ data: p }, { data: s }, { data: b }] = await Promise.all([
-      supabase.from("professionals").select("*, specialties(name), branches(name)").eq("clinic_id", businessId).order("created_at"),
-      supabase.from("specialties").select("*").eq("clinic_id", businessId),
-      supabase.from("branches").select("*").eq("clinic_id", businessId),
+      supabase.from("professionals").select("*, specialties(name), branches(name)").eq("clinic_id", clinicId).order("created_at"),
+      supabase.from("specialties").select("*").eq("clinic_id", clinicId),
+      supabase.from("branches").select("*").eq("clinic_id", clinicId),
     ]);
     setProfessionals(p || []);
     setSpecialties(s || []);
     setBranches(b || []);
   };
 
-  useEffect(() => { fetchData(); }, [businessId]);
+  useEffect(() => { fetchData(); }, [clinicId]);
 
   const handleSave = async () => {
-    if (!businessId) return;
+    if (!clinicId) return;
     try {
       const validated = professionalSchema.parse(form);
       const { error } = await supabase.from("professionals").insert({
-        clinic_id: businessId, full_name: validated.full_name, email: validated.email,
+        clinic_id: clinicId, full_name: validated.full_name, email: validated.email,
         phone: validated.phone || "", specialty_id: validated.specialty_id || null, branch_id: validated.branch_id || null,
       });
       if (error) { toast.error(error.message); return; }

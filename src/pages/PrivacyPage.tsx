@@ -23,7 +23,7 @@ const PrivacyPage = () => (
   <LegalPageLayout title="Política de Privacidad de A3syst" lastUpdated={DATE} toc={toc}>
     <section id="intro">
       <h2>1. Introducción</h2>
-      <p>a3syst ("nosotros", "nuestro" o "la Plataforma") es un servicio de software (SaaS) que proporciona herramientas de gestión, automatización y marketing digital para negocios de bienestar incluyendo negocios, spas, salones y consultorios. Esta Política de Privacidad describe cómo recopilamos, usamos, almacenamos y protegemos tu información personal.</p>
+      <p>a3syst ("nosotros", "nuestro" o "la Plataforma") es un servicio de software (SaaS) que proporciona herramientas de gestión, automatización y marketing digital para negocios de bienestar incluyendo clínicas, spas, salones y consultorios. Esta Política de Privacidad describe cómo recopilamos, usamos, almacenamos y protegemos tu información personal.</p>
       <p>Operamos bajo las leyes de la República del Ecuador, incluyendo la Ley Orgánica de Protección de Datos Personales (LOPDP).</p>
     </section>
 

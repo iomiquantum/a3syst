@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
-import { useBusiness } from "@/hooks/useBusiness";
+import { useClinic } from "@/hooks/useClinic";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 
@@ -23,7 +23,7 @@ const ChatView = ({ conversation, messages, sending, onSend, onToggleChatbot }: 
   const [input, setInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -45,11 +45,11 @@ const ChatView = ({ conversation, messages, sending, onSend, onToggleChatbot }: 
   };
 
   const handleAIReply = async () => {
-    if (!businessId || aiLoading) return;
+    if (!clinicId || aiLoading) return;
     setAiLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("ai-agent-reply", {
-        body: { conversation_id: conversation.id, clinic_id: businessId },
+        body: { conversation_id: conversation.id, clinic_id: clinicId },
       });
       if (error) throw error;
       if (data?.error) {

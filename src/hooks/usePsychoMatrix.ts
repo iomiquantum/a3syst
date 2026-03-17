@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useBusiness } from "@/hooks/useBusiness";
+import { useClinic } from "@/hooks/useClinic";
 import { useToast } from "@/hooks/use-toast";
 
 export interface PsychoService {
@@ -30,51 +30,51 @@ export interface PsychoStrategy {
 }
 
 export function usePsychoServices() {
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
   return useQuery({
-    queryKey: ["psycho-services", businessId],
+    queryKey: ["psycho-services", clinicId],
     queryFn: async () => {
-      if (!businessId) return [];
+      if (!clinicId) return [];
       const { data, error } = await supabase
         .from("psycho_matrix_services" as any)
         .select("*")
-        .eq("clinic_id", businessId)
+        .eq("clinic_id", clinicId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as unknown as PsychoService[];
     },
-    enabled: !!businessId,
+    enabled: !!clinicId,
   });
 }
 
 export function usePsychoStrategies() {
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
   return useQuery({
-    queryKey: ["psycho-strategies", businessId],
+    queryKey: ["psycho-strategies", clinicId],
     queryFn: async () => {
-      if (!businessId) return [];
+      if (!clinicId) return [];
       const { data, error } = await supabase
         .from("psycho_matrix_strategies" as any)
         .select("*")
-        .eq("clinic_id", businessId)
+        .eq("clinic_id", clinicId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as unknown as PsychoStrategy[];
     },
-    enabled: !!businessId,
+    enabled: !!clinicId,
   });
 }
 
 export function useCreateService() {
   const qc = useQueryClient();
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (svc: { name: string; core_benefit: string; pain_point: string; target_price: string; price?: number; observations?: string }) => {
-      if (!businessId) throw new Error("No hay negocio seleccionada");
+      if (!clinicId) throw new Error("No hay clínica seleccionada");
       const { data, error } = await supabase
         .from("psycho_matrix_services" as any)
-        .insert({ ...svc, clinic_id: businessId })
+        .insert({ ...svc, clinic_id: clinicId })
         .select()
         .single();
       if (error) throw error;
@@ -116,7 +116,7 @@ export function useDuplicateStrategy() {
 }
 export function useSaveStrategy() {
   const qc = useQueryClient();
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (strategy: {
@@ -129,10 +129,10 @@ export function useSaveStrategy() {
       advanced_tech?: string;
       generated_prompt?: string;
     }) => {
-      if (!businessId) throw new Error("No clinic");
+      if (!clinicId) throw new Error("No clinic");
       const { data, error } = await supabase
         .from("psycho_matrix_strategies" as any)
-        .insert({ ...strategy, clinic_id: businessId })
+        .insert({ ...strategy, clinic_id: clinicId })
         .select()
         .single();
       if (error) throw error;

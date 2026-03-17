@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Video, Plus, Clock, Users, FileText, Brain, Loader2, ExternalLink, ClipboardPaste, Sparkles, CheckCircle2, ListTodo } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useBusiness } from "@/hooks/useBusiness";
+import { useClinic } from "@/hooks/useClinic";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -36,7 +36,7 @@ const SUMMARY_TYPES = [
 ];
 
 const ReunionesPage = () => {
-  const { businessId } = useBusiness();
+  const { clinicId } = useClinic();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
@@ -57,18 +57,18 @@ const ReunionesPage = () => {
 
   // Queries
   const { data: meetings = [], isLoading } = useQuery({
-    queryKey: ["meetings", businessId],
+    queryKey: ["meetings", clinicId],
     queryFn: async () => {
-      if (!businessId) return [];
+      if (!clinicId) return [];
       const { data, error } = await supabase
         .from("meetings")
         .select("*")
-        .eq("clinic_id", businessId)
+        .eq("clinic_id", clinicId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
-    enabled: !!businessId,
+    enabled: !!clinicId,
   });
 
   const { data: selectedSummary, refetch: refetchSummary } = useQuery({
@@ -100,18 +100,18 @@ const ReunionesPage = () => {
   });
 
   const { data: planningProjects = [] } = useQuery({
-    queryKey: ["planning-projects", businessId],
+    queryKey: ["planning-projects", clinicId],
     queryFn: async () => {
-      if (!businessId) return [];
+      if (!clinicId) return [];
       const { data } = await supabase
         .from("planning_projects")
         .select("*")
-        .eq("clinic_id", businessId)
+        .eq("clinic_id", clinicId)
         .eq("status", "active")
         .order("created_at", { ascending: false });
       return data || [];
     },
-    enabled: !!businessId,
+    enabled: !!clinicId,
   });
 
   const { data: planningColumns = [] } = useQuery({
@@ -131,9 +131,9 @@ const ReunionesPage = () => {
   // Create meeting mutation
   const createMutation = useMutation({
     mutationFn: async () => {
-      if (!businessId || !user) throw new Error("Sin contexto");
+      if (!clinicId || !user) throw new Error("Sin contexto");
       const { data: meeting, error } = await supabase.from("meetings").insert({
-        clinic_id: businessId,
+        clinic_id: clinicId,
         created_by: user.id,
         title: meetingTitle || "Reunión sin título",
         meeting_url: meetingUrl || null,
@@ -149,7 +149,7 @@ const ReunionesPage = () => {
 
         await supabase.from("meeting_transcripts").insert({
           meeting_id: meeting.id,
-          clinic_id: businessId,
+          clinic_id: clinicId,
           raw_transcript: rawTranscript,
           speakers: [],
           language: "es",
@@ -173,7 +173,7 @@ const ReunionesPage = () => {
   // Save pasted transcript to existing meeting
   const saveTranscriptMutation = useMutation({
     mutationFn: async (text: string) => {
-      if (!selectedMeeting?.id || !businessId) throw new Error("Sin contexto");
+      if (!selectedMeeting?.id || !clinicId) throw new Error("Sin contexto");
       const lines = text.trim().split("\n").filter(l => l.trim());
       const rawTranscript = lines.map((line) => ({ speaker: "Participante", text: line.trim(), timestamp: "" }));
 
@@ -185,7 +185,7 @@ const ReunionesPage = () => {
       } else {
         await supabase.from("meeting_transcripts").insert({
           meeting_id: selectedMeeting.id,
-          clinic_id: businessId,
+          clinic_id: clinicId,
           raw_transcript: rawTranscript,
           speakers: [],
           language: "es",
@@ -207,7 +207,7 @@ const ReunionesPage = () => {
   // AI Summarize mutation
   const summarizeMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedMeeting?.id || !businessId) throw new Error("Sin contexto");
+      if (!selectedMeeting?.id || !clinicId) throw new Error("Sin contexto");
 
       // Get transcript text
       let text = summarizeTranscript.trim();
@@ -225,7 +225,7 @@ const ReunionesPage = () => {
       const { data, error } = await supabase.functions.invoke("summarize-meeting", {
         body: {
           meeting_id: selectedMeeting.id,
-          clinic_id: businessId,
+          clinic_id: clinicId,
           transcript_text: text,
           summary_types: selectedSummaryTypes,
         },
@@ -248,7 +248,7 @@ const ReunionesPage = () => {
   // Create planning tasks mutation
   const createTasksMutation = useMutation({
     mutationFn: async () => {
-      if (!businessId || !user || !targetProjectId) throw new Error("Selecciona un proyecto");
+      if (!clinicId || !user || !targetProjectId) throw new Error("Selecciona un proyecto");
       const actionItems = (selectedSummary?.action_items as any[]) || [];
       const selected = Array.from(selectedActions);
       if (selected.length === 0) throw new Error("Selecciona al menos un item");
@@ -261,7 +261,7 @@ const ReunionesPage = () => {
         return {
           project_id: targetProjectId,
           column_id: firstColumn.id,
-          clinic_id: businessId,
+          clinic_id: clinicId,
           title: typeof item === "string" ? item : item.task || item.description || JSON.stringify(item),
           description: `Generado desde reunión: ${selectedMeeting?.title || "Sin título"}\n${item.assignee ? `Asignado a: ${item.assignee}` : ""}`,
           priority: item.priority || "medium",
