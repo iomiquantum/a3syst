@@ -404,6 +404,8 @@
   if (conversationId) {
     initForm.style.display = 'none';
     composer.style.display = 'flex';
-    fetchAndRenderAll();
+    fetchAndRenderAll().then(function() {
+      // Polling will start when user opens the panel (togglePanel)
+    });
   }
 })();
