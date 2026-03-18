@@ -30,17 +30,15 @@ const roleLabels: Record<string, string> = {
 const allRoles = ["admin", "manager", "secretary", "professional", "empleado", "vendedor"];
 
 const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuariosTabProps) => {
-  // Filters
   const [searchFilter, setSearchFilter] = useState("");
   const [clinicFilter, setClinicFilter] = useState("all");
 
-  // Create user form
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState({ full_name: "", email: "", password: "", clinic_id: "", role: "empleado" });
   const [showPassword, setShowPassword] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
-  // Assign user form
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignForm, setAssignForm] = useState({ user_id: "", clinic_id: "", role: "empleado" });
 
@@ -116,31 +114,68 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
 
   const handleRemoveRole = async (id: string) => {
     const { error } = await supabase.from("user_roles").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Rol eliminado");
     onRefresh();
   };
 
   const handleSuspendUser = async (userId: string) => {
     const { error } = await supabase.from("profiles").update({ estado: "suspendido" } as any).eq("user_id", userId);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Usuario suspendido");
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Usuario apagado");
     onRefresh();
   };
 
   const handleReactivateUser = async (userId: string) => {
     const { error } = await supabase.from("profiles").update({ estado: "activo" } as any).eq("user_id", userId);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Usuario reactivado");
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Usuario encendido");
     onRefresh();
   };
 
-  // Build user-centric view
+  const handleDeleteUser = async (userId: string, email: string) => {
+    const confirmed = window.confirm(`¿Eliminar completamente al usuario ${email}? Esta acción no se puede deshacer.`);
+    if (!confirmed) return;
+
+    setDeletingUserId(userId);
+    try {
+      const response = await supabase.functions.invoke("delete-user", {
+        body: { user_id: userId },
+      });
+
+      if (response.error) {
+        toast.error(response.error.message || "No se pudo eliminar el usuario");
+        return;
+      }
+
+      if (response.data?.error) {
+        toast.error(response.data.error);
+        return;
+      }
+
+      toast.success("Usuario eliminado");
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err.message || "No se pudo eliminar el usuario");
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
+
   const userMap = new Map<string, { profile: any; roles: any[] }>();
-  profiles.forEach(p => {
+  profiles.forEach((p) => {
     userMap.set(p.user_id, { profile: p, roles: [] });
   });
-  roles.forEach(r => {
+  roles.forEach((r) => {
     const existing = userMap.get(r.user_id);
     if (existing) {
       existing.roles.push(r);
@@ -155,22 +190,21 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
   const userList = useMemo(() => {
     let list = Array.from(userMap.values());
 
-    // Filter by clinic
     if (clinicFilter && clinicFilter !== "all") {
-      list = list.filter(u => u.roles.some(r => r.clinic_id === clinicFilter));
+      list = list.filter((u) => u.roles.some((r) => r.clinic_id === clinicFilter));
     }
 
-    // Filter by search
     if (searchFilter) {
       const q = searchFilter.toLowerCase();
-      list = list.filter(u =>
-        (u.profile.full_name || "").toLowerCase().includes(q) ||
-        (u.profile.email || "").toLowerCase().includes(q)
+      list = list.filter(
+        (u) =>
+          (u.profile.full_name || "").toLowerCase().includes(q) ||
+          (u.profile.email || "").toLowerCase().includes(q)
       );
     }
 
     return list.sort((a, b) => (a.profile.full_name || "").localeCompare(b.profile.full_name || ""));
-  }, [profiles, roles, clinicFilter, searchFilter]);
+  }, [clinicFilter, searchFilter, userMap]);
 
   const initials = (name: string) => {
     if (!name) return "??";
@@ -180,12 +214,18 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
 
   const getRoleStyle = (role: string) => {
     switch (role) {
-      case "super_admin": return "bg-destructive/10 text-destructive";
-      case "admin": return "bg-primary/10 text-primary";
-      case "manager": return "bg-accent/50 text-accent-foreground";
-      case "professional": return "bg-info/10 text-info";
-      case "vendedor": return "bg-success/10 text-success";
-      default: return "bg-warning/10 text-warning";
+      case "super_admin":
+        return "bg-destructive/10 text-destructive";
+      case "admin":
+        return "bg-primary/10 text-primary";
+      case "manager":
+        return "bg-accent/50 text-accent-foreground";
+      case "professional":
+        return "bg-info/10 text-info";
+      case "vendedor":
+        return "bg-success/10 text-success";
+      default:
+        return "bg-warning/10 text-warning";
     }
   };
 
@@ -203,15 +243,17 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader><DialogTitle>Crear Nuevo Usuario</DialogTitle></DialogHeader>
+              <DialogHeader>
+                <DialogTitle>Crear Nuevo Usuario</DialogTitle>
+              </DialogHeader>
               <div className="space-y-4 pt-2">
                 <div>
                   <Label>Nombre completo *</Label>
-                  <Input value={createForm.full_name} onChange={e => setCreateForm({ ...createForm, full_name: e.target.value })} maxLength={100} placeholder="Nombre completo" />
+                  <Input value={createForm.full_name} onChange={(e) => setCreateForm({ ...createForm, full_name: e.target.value })} maxLength={100} placeholder="Nombre completo" />
                 </div>
                 <div>
                   <Label>Email *</Label>
-                  <Input type="email" value={createForm.email} onChange={e => setCreateForm({ ...createForm, email: e.target.value })} maxLength={255} placeholder="email@ejemplo.com" />
+                  <Input type="email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} maxLength={255} placeholder="email@ejemplo.com" />
                 </div>
                 <div>
                   <Label>Contraseña *</Label>
@@ -219,7 +261,7 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
                     <Input
                       type={showPassword ? "text" : "password"}
                       value={createForm.password}
-                      onChange={e => setCreateForm({ ...createForm, password: e.target.value })}
+                      onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
                       placeholder="Mínimo 6 caracteres"
                       className="pr-10"
                     />
@@ -230,20 +272,32 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
                 </div>
                 <div>
                   <Label>Clínica (opcional)</Label>
-                  <Select value={createForm.clinic_id} onValueChange={v => setCreateForm({ ...createForm, clinic_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Asignar a clínica" /></SelectTrigger>
+                  <Select value={createForm.clinic_id} onValueChange={(v) => setCreateForm({ ...createForm, clinic_id: v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Asignar a clínica" />
+                    </SelectTrigger>
                     <SelectContent>
-                      {clinics.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      {clinics.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 {createForm.clinic_id && (
                   <div>
                     <Label>Rol</Label>
-                    <Select value={createForm.role} onValueChange={v => setCreateForm({ ...createForm, role: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    <Select value={createForm.role} onValueChange={(v) => setCreateForm({ ...createForm, role: v })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
-                        {allRoles.map(r => <SelectItem key={r} value={r}>{roleLabels[r]}</SelectItem>)}
+                        {allRoles.map((r) => (
+                          <SelectItem key={r} value={r}>
+                            {roleLabels[r]}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -262,65 +316,84 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader><DialogTitle>Asignar Usuario a Clínica</DialogTitle></DialogHeader>
+              <DialogHeader>
+                <DialogTitle>Asignar Usuario a Clínica</DialogTitle>
+              </DialogHeader>
               <div className="space-y-4 pt-2">
                 <div>
                   <Label>Usuario *</Label>
-                  <Select value={assignForm.user_id} onValueChange={v => setAssignForm({ ...assignForm, user_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Seleccionar usuario" /></SelectTrigger>
+                  <Select value={assignForm.user_id} onValueChange={(v) => setAssignForm({ ...assignForm, user_id: v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar usuario" />
+                    </SelectTrigger>
                     <SelectContent>
-                      {profiles.map(p => (
-                        <SelectItem key={p.user_id} value={p.user_id}>{p.full_name || p.email} ({p.email})</SelectItem>
+                      {profiles.map((p) => (
+                        <SelectItem key={p.user_id} value={p.user_id}>
+                          {p.full_name || p.email} ({p.email})
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label>Clínica *</Label>
-                  <Select value={assignForm.clinic_id} onValueChange={v => setAssignForm({ ...assignForm, clinic_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Seleccionar clínica" /></SelectTrigger>
+                  <Select value={assignForm.clinic_id} onValueChange={(v) => setAssignForm({ ...assignForm, clinic_id: v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar clínica" />
+                    </SelectTrigger>
                     <SelectContent>
-                      {clinics.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      {clinics.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label>Rol *</Label>
-                  <Select value={assignForm.role} onValueChange={v => setAssignForm({ ...assignForm, role: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select value={assignForm.role} onValueChange={(v) => setAssignForm({ ...assignForm, role: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
-                      {allRoles.map(r => <SelectItem key={r} value={r}>{roleLabels[r]}</SelectItem>)}
+                      {allRoles.map((r) => (
+                        <SelectItem key={r} value={r}>
+                          {roleLabels[r]}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <Button onClick={handleAssignUser} className="w-full gradient-primary text-primary-foreground" disabled={!assignForm.user_id || !assignForm.clinic_id}>Asignar</Button>
+                <Button onClick={handleAssignUser} className="w-full gradient-primary text-primary-foreground" disabled={!assignForm.user_id || !assignForm.clinic_id}>
+                  Asignar
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
         </div>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nombre o email..."
-            value={searchFilter}
-            onChange={e => setSearchFilter(e.target.value)}
-            className="pl-9"
-          />
+          <Input placeholder="Buscar por nombre o email..." value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} className="pl-9" />
         </div>
         <Select value={clinicFilter} onValueChange={setClinicFilter}>
-          <SelectTrigger className="w-[220px]"><SelectValue placeholder="Filtrar por clínica" /></SelectTrigger>
+          <SelectTrigger className="w-[220px]">
+            <SelectValue placeholder="Filtrar por clínica" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas las clínicas</SelectItem>
-            {clinics.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            {clinics.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
-      {/* User list */}
       <Card className="shadow-card">
         <CardContent className="p-0">
           {userList.length === 0 ? (
@@ -340,6 +413,8 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
                 {userList.map(({ profile, roles: userRoles }) => {
                   const estado = (profile as any)?.estado || "activo";
                   const isSuspended = estado === "suspendido";
+                  const canDeleteUser = userRoles.length === 0;
+                  const isDeleting = deletingUserId === profile.user_id;
 
                   return (
                     <tr key={profile.user_id} className={`border-b border-border last:border-0 hover:bg-muted/30 transition-colors ${isSuspended ? "opacity-60" : ""}`}>
@@ -364,7 +439,7 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
                           <span className="text-xs text-muted-foreground">Sin clínica</span>
                         ) : (
                           <div className="space-y-1">
-                            {userRoles.map(r => (
+                            {userRoles.map((r) => (
                               <p key={r.id} className="text-sm text-muted-foreground">
                                 {(r.clinics as any)?.name || "—"}
                               </p>
@@ -377,7 +452,7 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
                           <span className="text-xs text-muted-foreground">—</span>
                         ) : (
                           <div className="flex flex-wrap gap-1">
-                            {userRoles.map(r => (
+                            {userRoles.map((r) => (
                               <span key={r.id} className={`text-xs font-medium px-2.5 py-1 rounded-full ${getRoleStyle(r.role)}`}>
                                 {roleLabels[r.role] || r.role}
                               </span>
@@ -388,19 +463,31 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1">
                           {isSuspended ? (
-                            <button onClick={() => handleReactivateUser(profile.user_id)} title="Reactivar" className="p-1.5 rounded-md hover:bg-success/10">
+                            <button onClick={() => handleReactivateUser(profile.user_id)} title="Prender usuario" className="p-1.5 rounded-md hover:bg-success/10">
                               <PlayCircle className="w-4 h-4 text-success" />
                             </button>
                           ) : (
-                            <button onClick={() => handleSuspendUser(profile.user_id)} title="Suspender" className="p-1.5 rounded-md hover:bg-warning/10">
+                            <button onClick={() => handleSuspendUser(profile.user_id)} title="Apagar usuario" className="p-1.5 rounded-md hover:bg-warning/10">
                               <PauseCircle className="w-4 h-4 text-warning" />
                             </button>
                           )}
-                          {userRoles.map(r => (
+
+                          {userRoles.map((r) => (
                             <button key={r.id} onClick={() => handleRemoveRole(r.id)} title={`Quitar de ${(r.clinics as any)?.name}`} className="p-1.5 rounded-md hover:bg-destructive/10">
                               <Trash2 className="w-4 h-4 text-destructive" />
                             </button>
                           ))}
+
+                          {canDeleteUser && (
+                            <button
+                              onClick={() => handleDeleteUser(profile.user_id, profile.email)}
+                              title="Eliminar usuario"
+                              disabled={isDeleting}
+                              className="p-1.5 rounded-md hover:bg-destructive/10 disabled:opacity-50"
+                            >
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
