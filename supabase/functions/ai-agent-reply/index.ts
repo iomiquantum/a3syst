@@ -12,6 +12,7 @@ serve(async (req) => {
   try {
     const { conversation_id, clinic_id, triggered_by = "manual", channel: requestChannel } = await req.json();
     const isFollowUp = triggered_by === "follow_up";
+    console.log("ai-agent-reply called:", { conversation_id, clinic_id, triggered_by, isFollowUp, requestChannel });
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
