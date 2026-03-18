@@ -237,6 +237,19 @@ const ChatView = ({ conversation, messages, sending, onSend, onToggleChatbot, on
           <div className="flex items-center gap-2">
             <ChannelIcon channel={conversation.channel || "whatsapp"} size="sm" showLabel />
             <span className="text-xs text-muted-foreground">· {conversation.contact?.funnel_stage || "Nuevos"}</span>
+            {(conversation.follow_up_count || 0) > 0 && (
+              <span className="text-[10px] font-medium text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded-full">
+                Contacto {conversation.follow_up_count}
+              </span>
+            )}
+            {conversation.last_inbound_at && (() => {
+              const mins = Math.floor((Date.now() - new Date(conversation.last_inbound_at).getTime()) / 60000);
+              if (mins >= 30) {
+                const display = mins >= 1440 ? `${Math.floor(mins / 1440)}d` : mins >= 60 ? `${Math.floor(mins / 60)}h` : `${mins}m`;
+                return <span className="text-[10px] text-muted-foreground">⏱ Sin respuesta: {display}</span>;
+              }
+              return null;
+            })()}
           </div>
         </div>
         {/* Autopilot toggle in header */}
