@@ -314,6 +314,7 @@
     if (!checkRateLimit()) return;
 
     input.value = '';
+    // Add locally for instant feedback (will be deduped by ID when polling picks it up)
     addMessage(msg, 'out');
 
     try {
