@@ -269,6 +269,7 @@ const MensajesPage = () => {
                     sending={sendingMessage}
                     onSend={sendMessage}
                     onToggleChatbot={toggleChatbot}
+                    onFollowUpSent={handleFollowUpSent}
                   />
                 ) : (
                   <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
