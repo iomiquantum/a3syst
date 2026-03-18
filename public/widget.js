@@ -17,6 +17,7 @@
   let conversationId = localStorage.getItem('iomi_conv_id') || '';
   let isOpen = false;
   let polling = null;
+  let renderedMsgIds = new Set(); // track rendered message IDs to avoid duplicates
   let msgCount = 0; // rate limiting
   let lastMsgTime = 0;
   let captchaAnswer = null;
