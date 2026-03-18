@@ -1090,7 +1090,9 @@ export type Database = {
           clinic_id: string
           contact_id: string
           created_at: string
+          follow_up_count: number
           id: string
+          last_inbound_at: string | null
           last_message_at: string | null
           last_message_preview: string | null
           status: string
@@ -1107,7 +1109,9 @@ export type Database = {
           clinic_id: string
           contact_id: string
           created_at?: string
+          follow_up_count?: number
           id?: string
+          last_inbound_at?: string | null
           last_message_at?: string | null
           last_message_preview?: string | null
           status?: string
@@ -1124,7 +1128,9 @@ export type Database = {
           clinic_id?: string
           contact_id?: string
           created_at?: string
+          follow_up_count?: number
           id?: string
+          last_inbound_at?: string | null
           last_message_at?: string | null
           last_message_preview?: string | null
           status?: string
