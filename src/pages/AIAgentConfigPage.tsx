@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useAIAgentConfig, ServiceItem } from "@/hooks/useAIAgentConfig";
+import HealthBusinessFields from "@/components/ai/HealthBusinessFields";
 import { Skeleton } from "@/components/ui/skeleton";
 import AIUsageHistory from "@/components/ai/AIUsageHistory";
 import ChannelPromptsSection from "@/components/ai/ChannelPromptsSection";
