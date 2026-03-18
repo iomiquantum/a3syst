@@ -89,6 +89,18 @@ const RegisterPage = () => {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">PIN de acceso</label>
+              <div className="relative">
+                <Input
+                  type="password" value={accessPin} onChange={(e) => setAccessPin(e.target.value.toUpperCase())}
+                  placeholder="Ingresa el PIN de invitación"
+                  maxLength={6}
+                  className="h-12 bg-secondary border-border text-foreground placeholder:text-muted-foreground/50 pr-10 focus:border-primary/50 focus:ring-primary/20"
+                />
+                <ShieldCheck className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+              </div>
+              <p className="text-xs text-muted-foreground/50 mt-1">Solicita tu PIN al administrador</p>
             </div>
             <div className="flex items-start gap-2">
               <Checkbox id="terms" checked={acceptedTerms} onCheckedChange={(c) => setAcceptedTerms(!!c)} className="mt-1" />
