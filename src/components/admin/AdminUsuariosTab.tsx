@@ -1,11 +1,12 @@
-import { useState } from "react";
-import { Plus, Trash2, Users, UserPlus, Eye, EyeOff } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, Trash2, Users, UserPlus, Eye, EyeOff, Search, PauseCircle, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -17,25 +18,35 @@ interface AdminUsuariosTabProps {
 }
 
 const roleLabels: Record<string, string> = {
+  super_admin: "Super Admin",
   admin: "Administrador",
+  manager: "Gerente",
   secretary: "Secretario/a",
   professional: "Profesional",
+  empleado: "Empleado",
+  vendedor: "Vendedor",
 };
 
+const allRoles = ["admin", "manager", "secretary", "professional", "empleado", "vendedor"];
+
 const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuariosTabProps) => {
+  // Filters
+  const [searchFilter, setSearchFilter] = useState("");
+  const [clinicFilter, setClinicFilter] = useState("all");
+
   // Create user form
   const [createOpen, setCreateOpen] = useState(false);
-  const [createForm, setCreateForm] = useState({ full_name: "", email: "", password: "" });
+  const [createForm, setCreateForm] = useState({ full_name: "", email: "", password: "", clinic_id: "", role: "empleado" });
   const [showPassword, setShowPassword] = useState(false);
   const [creating, setCreating] = useState(false);
 
   // Assign user form
   const [assignOpen, setAssignOpen] = useState(false);
-  const [assignForm, setAssignForm] = useState({ user_id: "", clinic_id: "", role: "secretary" });
+  const [assignForm, setAssignForm] = useState({ user_id: "", clinic_id: "", role: "empleado" });
 
   const handleCreateUser = async () => {
     if (!createForm.full_name.trim() || !createForm.email.trim() || !createForm.password) {
-      toast.error("Todos los campos son requeridos");
+      toast.error("Nombre, email y contraseña son requeridos");
       return;
     }
     if (createForm.password.length < 6) {
@@ -44,12 +55,13 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
     }
     setCreating(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
       const response = await supabase.functions.invoke("create-user", {
         body: {
           email: createForm.email.trim(),
           password: createForm.password,
           full_name: createForm.full_name.trim(),
+          clinic_id: createForm.clinic_id || undefined,
+          role: createForm.role || undefined,
         },
       });
 
@@ -65,9 +77,9 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
         return;
       }
 
-      toast.success("Usuario creado exitosamente");
+      toast.success(response.data?.message || "Usuario creado exitosamente");
       setCreateOpen(false);
-      setCreateForm({ full_name: "", email: "", password: "" });
+      setCreateForm({ full_name: "", email: "", password: "", clinic_id: "", role: "empleado" });
       onRefresh();
     } catch (err: any) {
       toast.error(err.message || "Error al crear usuario");
@@ -81,22 +93,24 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
       return;
     }
 
-    const defaultPerms = assignForm.role === "admin"
-      ? { agenda: true, pacientes: true, ventas: true, configuracion: true, reportes: true }
-      : assignForm.role === "secretary"
-      ? { agenda: true, pacientes: true, ventas: true, configuracion: false, reportes: false }
-      : { agenda: true, pacientes: true, ventas: false, configuracion: false, reportes: false };
+    const response = await supabase.functions.invoke("create-user", {
+      body: {
+        email: profiles.find(p => p.user_id === assignForm.user_id)?.email || "",
+        password: "placeholder",
+        full_name: profiles.find(p => p.user_id === assignForm.user_id)?.full_name || "",
+        clinic_id: assignForm.clinic_id,
+        role: assignForm.role,
+      },
+    });
 
-    const { error } = await supabase.from("user_roles").insert({
-      user_id: assignForm.user_id,
-      clinic_id: assignForm.clinic_id,
-      role: assignForm.role as "admin" | "secretary" | "professional",
-      permissions: defaultPerms,
-    } as any);
-    if (error) { toast.error(error.message); return; }
+    if (response.data?.error) {
+      toast.error(response.data.error);
+      return;
+    }
+
     toast.success("Usuario asignado a la clínica");
     setAssignOpen(false);
-    setAssignForm({ user_id: "", clinic_id: "", role: "secretary" });
+    setAssignForm({ user_id: "", clinic_id: "", role: "empleado" });
     onRefresh();
   };
 
@@ -107,7 +121,21 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
     onRefresh();
   };
 
-  // Build a user-centric view: group roles by user
+  const handleSuspendUser = async (userId: string) => {
+    const { error } = await supabase.from("profiles").update({ estado: "suspendido" } as any).eq("user_id", userId);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Usuario suspendido");
+    onRefresh();
+  };
+
+  const handleReactivateUser = async (userId: string) => {
+    const { error } = await supabase.from("profiles").update({ estado: "activo" } as any).eq("user_id", userId);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Usuario reactivado");
+    onRefresh();
+  };
+
+  // Build user-centric view
   const userMap = new Map<string, { profile: any; roles: any[] }>();
   profiles.forEach(p => {
     userMap.set(p.user_id, { profile: p, roles: [] });
@@ -124,9 +152,25 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
     }
   });
 
-  const userList = Array.from(userMap.values()).sort((a, b) =>
-    (a.profile.full_name || "").localeCompare(b.profile.full_name || "")
-  );
+  const userList = useMemo(() => {
+    let list = Array.from(userMap.values());
+
+    // Filter by clinic
+    if (clinicFilter && clinicFilter !== "all") {
+      list = list.filter(u => u.roles.some(r => r.clinic_id === clinicFilter));
+    }
+
+    // Filter by search
+    if (searchFilter) {
+      const q = searchFilter.toLowerCase();
+      list = list.filter(u =>
+        (u.profile.full_name || "").toLowerCase().includes(q) ||
+        (u.profile.email || "").toLowerCase().includes(q)
+      );
+    }
+
+    return list.sort((a, b) => (a.profile.full_name || "").localeCompare(b.profile.full_name || ""));
+  }, [profiles, roles, clinicFilter, searchFilter]);
 
   const initials = (name: string) => {
     if (!name) return "??";
@@ -134,14 +178,24 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
     return parts.length >= 2 ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase() : name.substring(0, 2).toUpperCase();
   };
 
+  const getRoleStyle = (role: string) => {
+    switch (role) {
+      case "super_admin": return "bg-destructive/10 text-destructive";
+      case "admin": return "bg-primary/10 text-primary";
+      case "manager": return "bg-accent/50 text-accent-foreground";
+      case "professional": return "bg-info/10 text-info";
+      case "vendedor": return "bg-success/10 text-success";
+      default: return "bg-warning/10 text-warning";
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-          <Users className="w-5 h-5" /> Usuarios del Sistema
+          <Users className="w-5 h-5" /> Usuarios del Sistema ({userList.length})
         </h2>
         <div className="flex gap-2">
-          {/* Create User Dialog */}
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
               <Button className="gradient-primary text-primary-foreground hover:opacity-90">
@@ -174,6 +228,26 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
                     </button>
                   </div>
                 </div>
+                <div>
+                  <Label>Clínica (opcional)</Label>
+                  <Select value={createForm.clinic_id} onValueChange={v => setCreateForm({ ...createForm, clinic_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Asignar a clínica" /></SelectTrigger>
+                    <SelectContent>
+                      {clinics.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {createForm.clinic_id && (
+                  <div>
+                    <Label>Rol</Label>
+                    <Select value={createForm.role} onValueChange={v => setCreateForm({ ...createForm, role: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {allRoles.map(r => <SelectItem key={r} value={r}>{roleLabels[r]}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <Button onClick={handleCreateUser} className="w-full gradient-primary text-primary-foreground" disabled={creating || !createForm.full_name.trim() || !createForm.email.trim() || createForm.password.length < 6}>
                   {creating ? "Creando..." : "Crear Usuario"}
                 </Button>
@@ -181,7 +255,6 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
             </DialogContent>
           </Dialog>
 
-          {/* Assign User Dialog */}
           <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
@@ -216,9 +289,7 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
                   <Select value={assignForm.role} onValueChange={v => setAssignForm({ ...assignForm, role: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="admin">Administrador</SelectItem>
-                      <SelectItem value="secretary">Secretario/a</SelectItem>
-                      <SelectItem value="professional">Profesional</SelectItem>
+                      {allRoles.map(r => <SelectItem key={r} value={r}>{roleLabels[r]}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -229,76 +300,112 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nombre o email..."
+            value={searchFilter}
+            onChange={e => setSearchFilter(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={clinicFilter} onValueChange={setClinicFilter}>
+          <SelectTrigger className="w-[220px]"><SelectValue placeholder="Filtrar por clínica" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas las clínicas</SelectItem>
+            {clinics.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* User list */}
       <Card className="shadow-card">
         <CardContent className="p-0">
           {userList.length === 0 ? (
-            <p className="p-8 text-center text-muted-foreground">No hay usuarios registrados aún.</p>
+            <p className="p-8 text-center text-muted-foreground">No hay usuarios que coincidan con los filtros.</p>
           ) : (
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Usuario</th>
-                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Clínicas Asignadas</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Estado</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Clínicas</th>
                   <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Roles</th>
                   <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {userList.map(({ profile, roles: userRoles }) => (
-                  <tr key={profile.user_id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center shrink-0">
-                          <span className="text-xs font-semibold text-primary-foreground">{initials(profile.full_name)}</span>
+                {userList.map(({ profile, roles: userRoles }) => {
+                  const estado = (profile as any)?.estado || "activo";
+                  const isSuspended = estado === "suspendido";
+
+                  return (
+                    <tr key={profile.user_id} className={`border-b border-border last:border-0 hover:bg-muted/30 transition-colors ${isSuspended ? "opacity-60" : ""}`}>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center shrink-0">
+                            <span className="text-xs font-semibold text-primary-foreground">{initials(profile.full_name)}</span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{profile.full_name || "Sin nombre"}</p>
+                            <p className="text-xs text-muted-foreground">{profile.email}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{profile.full_name || "Sin nombre"}</p>
-                          <p className="text-xs text-muted-foreground">{profile.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      {userRoles.length === 0 ? (
-                        <span className="text-xs text-muted-foreground">Sin clínica</span>
-                      ) : (
-                        <div className="space-y-1">
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <Badge variant={isSuspended ? "destructive" : "outline"} className="text-xs">
+                          {isSuspended ? "Suspendido" : "Activo"}
+                        </Badge>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        {userRoles.length === 0 ? (
+                          <span className="text-xs text-muted-foreground">Sin clínica</span>
+                        ) : (
+                          <div className="space-y-1">
+                            {userRoles.map(r => (
+                              <p key={r.id} className="text-sm text-muted-foreground">
+                                {(r.clinics as any)?.name || "—"}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        {userRoles.length === 0 ? (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {userRoles.map(r => (
+                              <span key={r.id} className={`text-xs font-medium px-2.5 py-1 rounded-full ${getRoleStyle(r.role)}`}>
+                                {roleLabels[r.role] || r.role}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {isSuspended ? (
+                            <button onClick={() => handleReactivateUser(profile.user_id)} title="Reactivar" className="p-1.5 rounded-md hover:bg-success/10">
+                              <PlayCircle className="w-4 h-4 text-success" />
+                            </button>
+                          ) : (
+                            <button onClick={() => handleSuspendUser(profile.user_id)} title="Suspender" className="p-1.5 rounded-md hover:bg-warning/10">
+                              <PauseCircle className="w-4 h-4 text-warning" />
+                            </button>
+                          )}
                           {userRoles.map(r => (
-                            <p key={r.id} className="text-sm text-muted-foreground">
-                              {(r.clinics as any)?.name || "—"}
-                            </p>
+                            <button key={r.id} onClick={() => handleRemoveRole(r.id)} title={`Quitar de ${(r.clinics as any)?.name}`} className="p-1.5 rounded-md hover:bg-destructive/10">
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </button>
                           ))}
                         </div>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      {userRoles.length === 0 ? (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      ) : (
-                        <div className="flex flex-wrap gap-1">
-                          {userRoles.map(r => (
-                            <span key={r.id} className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                              r.role === "admin" ? "bg-primary/10 text-primary" :
-                              r.role === "professional" ? "bg-info/10 text-info" :
-                              "bg-warning/10 text-warning"
-                            }`}>
-                              {roleLabels[r.role] || r.role}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {userRoles.map(r => (
-                          <button key={r.id} onClick={() => handleRemoveRole(r.id)} title={`Quitar de ${(r.clinics as any)?.name}`} className="p-1.5 rounded-md hover:bg-destructive/10">
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </button>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
