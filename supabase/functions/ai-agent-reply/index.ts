@@ -214,7 +214,18 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
     }
 
     const aiData = await aiResponse.json();
-    const reply = aiData.choices?.[0]?.message?.content || "Lo siento, no pude generar una respuesta.";
+    const rawReply = aiData.choices?.[0]?.message?.content;
+    
+    // CRITICAL: If AI couldn't generate a response, return error to operator — NEVER send fallback to customer
+    if (!rawReply || rawReply.trim() === "") {
+      console.error("AI returned empty response:", JSON.stringify(aiData));
+      return new Response(JSON.stringify({ error: "La IA no pudo generar una respuesta. Intenta de nuevo o responde manualmente." }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    
+    const reply = rawReply;
     const usage = aiData.usage || {};
     const tokensInput = usage.prompt_tokens || 0;
     const tokensOutput = usage.completion_tokens || 0;
