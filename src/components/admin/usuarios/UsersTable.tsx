@@ -68,12 +68,12 @@ const UsersTable = ({ usuarios, isLoading, page, pageSize, onPageChange, onViewU
       <Card className="shadow-card hidden md:block">
         <CardContent className="p-0">
           <table className="w-full">
-            <thead>
+             <thead>
               <tr className="border-b border-border">
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Usuario</th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Empresa</th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Rol</th>
-                <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Estado</th>
+                <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Activo</th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Último acceso</th>
                 <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Acciones</th>
               </tr>
@@ -112,8 +112,28 @@ const UsersTable = ({ usuarios, isLoading, page, pageSize, onPageChange, onViewU
                       }
                     </div>
                   </td>
-                  <td className="px-5 py-3.5">
-                    <Badge className={`text-xs ${estadoColors[u.estado] || "bg-muted"}`}>{u.estado}</Badge>
+                  <td className="px-5 py-3.5 text-center">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="inline-flex items-center">
+                            <Switch
+                              checked={u.estado === "activo"}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  onReactivate(u);
+                                } else {
+                                  onSuspend(u);
+                                }
+                              }}
+                            />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {u.estado === "activo" ? "Desactivar usuario" : "Activar usuario"}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </td>
                   <td className="px-5 py-3.5 text-sm text-muted-foreground">
                     {u.ultimo_acceso ? formatDistanceToNow(new Date(u.ultimo_acceso), { addSuffix: true, locale: es }) : "Nunca"}
@@ -129,11 +149,6 @@ const UsersTable = ({ usuarios, isLoading, page, pageSize, onPageChange, onViewU
                           <DropdownMenuItem onClick={() => onChangeRole(u, u.roles[0].id, u.roles[0].role)}>
                             <Shield className="w-4 h-4 mr-2" /> Cambiar rol
                           </DropdownMenuItem>
-                        )}
-                        {u.estado === "activo" ? (
-                          <DropdownMenuItem onClick={() => onSuspend(u)}><Pause className="w-4 h-4 mr-2" /> Suspender</DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem onClick={() => onReactivate(u)}><Play className="w-4 h-4 mr-2" /> Reactivar</DropdownMenuItem>
                         )}
                         <DropdownMenuItem onClick={() => onResetPassword(u.email)}><KeyRound className="w-4 h-4 mr-2" /> Reset contraseña</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => onViewHistory(u)}><History className="w-4 h-4 mr-2" /> Historial</DropdownMenuItem>
