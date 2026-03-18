@@ -48,9 +48,10 @@ const ROLE_LABELS: Record<string, string> = {
   vendedor: "Vendedor",
 };
 
-const ChatView = ({ conversation, messages, sending, onSend, onToggleChatbot }: Props) => {
+const ChatView = ({ conversation, messages, sending, onSend, onToggleChatbot, onFollowUpSent }: Props) => {
   const [input, setInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [followUpLoading, setFollowUpLoading] = useState(false);
   const [senderProfiles, setSenderProfiles] = useState<Record<string, SenderProfile>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const { clinicId } = useClinic();
