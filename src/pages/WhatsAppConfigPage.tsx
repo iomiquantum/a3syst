@@ -1,11 +1,11 @@
 import AppLayout from "@/components/AppLayout";
-import WhatsAppWizard from "@/components/whatsapp/WhatsAppWizard";
+import WhatsAppSettings from "@/components/whatsapp/WhatsAppSettings";
 
 const WhatsAppConfigPage = () => {
   return (
     <AppLayout>
-      <div className="py-4">
-        <WhatsAppWizard />
+      <div className="p-4 max-w-4xl mx-auto">
+        <WhatsAppSettings />
       </div>
     </AppLayout>
   );
