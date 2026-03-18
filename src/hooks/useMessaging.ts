@@ -141,6 +141,8 @@ export const useMessaging = () => {
             to_number: toNumber,
             message_type: "text",
             content: content.trim(),
+            sent_by: user?.id || null,
+            conversation_id: selectedConversation.id,
           },
         });
 

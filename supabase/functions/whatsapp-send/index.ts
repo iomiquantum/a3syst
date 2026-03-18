@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { clinic_id, to_number, message_type, content } = await req.json();
+    const { clinic_id, to_number, message_type, content, sent_by, conversation_id } = await req.json();
 
     if (!clinic_id || !to_number || !content) {
       return new Response(
