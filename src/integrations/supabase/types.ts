@@ -264,6 +264,56 @@ export type Database = {
           },
         ]
       }
+      ai_agent_channel_prompts: {
+        Row: {
+          additional_prompt: string | null
+          channel: string
+          clinic_id: string
+          created_at: string | null
+          enabled: boolean | null
+          fallback_message: string | null
+          id: string
+          max_response_length: number | null
+          updated_at: string | null
+          welcome_message: string | null
+          welcome_message_enabled: boolean | null
+        }
+        Insert: {
+          additional_prompt?: string | null
+          channel: string
+          clinic_id: string
+          created_at?: string | null
+          enabled?: boolean | null
+          fallback_message?: string | null
+          id?: string
+          max_response_length?: number | null
+          updated_at?: string | null
+          welcome_message?: string | null
+          welcome_message_enabled?: boolean | null
+        }
+        Update: {
+          additional_prompt?: string | null
+          channel?: string
+          clinic_id?: string
+          created_at?: string | null
+          enabled?: boolean | null
+          fallback_message?: string | null
+          id?: string
+          max_response_length?: number | null
+          updated_at?: string | null
+          welcome_message?: string | null
+          welcome_message_enabled?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agent_channel_prompts_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_agent_config: {
         Row: {
           agent_name: string

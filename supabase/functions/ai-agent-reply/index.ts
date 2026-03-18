@@ -10,7 +10,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { conversation_id, clinic_id, triggered_by = "manual" } = await req.json();
+    const { conversation_id, clinic_id, triggered_by = "manual", channel: requestChannel } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
@@ -101,7 +101,7 @@ serve(async (req) => {
     const services = (agentConfig.services || []) as { name: string; price: string; description: string }[];
     const langLabel = agentConfig.language === "es" ? "Español" : agentConfig.language === "en" ? "English" : "Português";
 
-    const systemPrompt = `Eres "${agentConfig.agent_name}", un asistente virtual de una clínica dental.
+    let systemPrompt = `Eres "${agentConfig.agent_name}", un asistente virtual de una clínica dental.
 Idioma: ${langLabel}
 Tono: ${agentConfig.tone}
 
@@ -119,6 +119,23 @@ IMPORTANTE:
 - Usa emojis con moderación.
 - Si no sabes algo, sugiere contactar a la clínica directamente.
 - Nunca inventes información sobre servicios o precios que no estén listados arriba.`;
+
+    // Fetch channel-specific instructions
+    const resolvedChannel = requestChannel || conversationData.channel || "web_chat";
+    const { data: channelPrompt } = await supabase
+      .from("ai_agent_channel_prompts")
+      .select("*")
+      .eq("clinic_id", clinic_id)
+      .eq("channel", resolvedChannel)
+      .eq("enabled", true)
+      .maybeSingle();
+
+    if (channelPrompt && channelPrompt.additional_prompt) {
+      systemPrompt += `\n\n=== INSTRUCCIONES ESPECÍFICAS PARA ESTE CANAL ===\n${channelPrompt.additional_prompt}`;
+    }
+    if (channelPrompt && channelPrompt.max_response_length) {
+      systemPrompt += `\n\nIMPORTANTE: Responde en máximo ${channelPrompt.max_response_length} caracteres.`;
+    }
 
     const aiMessages = [
       { role: "system", content: systemPrompt },

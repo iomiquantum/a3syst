@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { useAIAgentConfig, ServiceItem } from "@/hooks/useAIAgentConfig";
 import { Skeleton } from "@/components/ui/skeleton";
 import AIUsageHistory from "@/components/ai/AIUsageHistory";
+import ChannelPromptsSection from "@/components/ai/ChannelPromptsSection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
@@ -215,6 +216,9 @@ ${config.greeting}`}
                 </div>
               </CardContent>
             </Card>
+
+            {/* Channel Prompts Section */}
+            <ChannelPromptsSection agentConfig={config} />
 
             <Separator />
             <AIUsageHistory />
