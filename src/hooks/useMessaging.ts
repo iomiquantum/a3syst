@@ -125,8 +125,12 @@ export const useMessaging = () => {
     }
   };
 
+  const sendingRef = useRef(false);
+
   const sendMessage = async (content: string) => {
     if (!selectedConversation || !clinicId || !content.trim()) return;
+    if (sendingRef.current) return; // prevent rapid-fire duplicates
+    sendingRef.current = true;
     setSendingMessage(true);
 
     const channel = selectedConversation.channel || "whatsapp";
