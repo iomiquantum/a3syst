@@ -316,6 +316,8 @@ async function syncToUnifiedMessaging(
         last_message_preview: content.substring(0, 100),
         unread_count: (convData?.unread_count || 0) + 1,
         status: "open",
+        last_inbound_at: new Date().toISOString(),
+        follow_up_count: 0, // Reset follow-up count when user responds
       }).eq("id", conversationId);
     }
 

@@ -280,6 +280,17 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
       }).eq("id", conversation_id);
     }
 
+    // If follow-up, update follow_up_count and contact funnel_stage
+    if (isFollowUp) {
+      const newCount = (conversationData.follow_up_count || 0) + 1;
+      await supabase.from("conversations").update({ follow_up_count: newCount }).eq("id", conversation_id);
+      
+      // Update contact funnel stage to contacto_N
+      if (conversationData.contact_id && newCount <= 5) {
+        await supabase.from("contacts").update({ funnel_stage: `contacto_${newCount}` }).eq("id", conversationData.contact_id);
+      }
+    }
+
     // Log usage to ai_agent_usage
     await supabase.from("ai_agent_usage").insert({
       clinic_id,
@@ -300,10 +311,10 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
       tokens_input: tokensInput,
       tokens_output: tokensOutput,
       cost_usd: costUsd,
-      action_label: `Respuesta automática agente`,
+      action_label: isFollowUp ? `Seguimiento contacto ${(conversationData.follow_up_count || 0) + 1}` : `Respuesta automática agente`,
     });
 
-    return new Response(JSON.stringify({ reply, message: savedMsg }), {
+    return new Response(JSON.stringify({ reply, message: savedMsg, follow_up_count: isFollowUp ? (conversationData.follow_up_count || 0) + 1 : undefined }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
