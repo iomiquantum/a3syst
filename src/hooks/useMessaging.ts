@@ -29,6 +29,8 @@ export interface Conversation {
   chatbot_active: boolean;
   archived: boolean;
   visitor_contact: string | null;
+  follow_up_count: number;
+  last_inbound_at: string | null;
   contact?: Contact;
 }
 
@@ -50,6 +52,9 @@ const FUNNEL_STAGES = [
   { key: "ads", label: "ADS", color: "text-muted-foreground" },
   { key: "contacto_1", label: "Contacto 1", color: "text-blue-500" },
   { key: "contacto_2", label: "Contacto 2", color: "text-blue-500" },
+  { key: "contacto_3", label: "Contacto 3", color: "text-blue-500" },
+  { key: "contacto_4", label: "Contacto 4", color: "text-blue-400" },
+  { key: "contacto_5", label: "Contacto 5", color: "text-blue-400" },
   { key: "no_responden", label: "No responden", color: "text-muted-foreground" },
   { key: "no_interesado", label: "No interesado", color: "text-destructive" },
   { key: "pidio_info", label: "Pidió info", color: "text-warning" },

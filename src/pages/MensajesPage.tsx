@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { MessageSquare, ArrowLeft, Bot, Zap, CheckCircle2, AlertCircle } from "lucide-react";
+import { MessageSquare, ArrowLeft, Bot, Zap, CheckCircle2, AlertCircle, UserCheck } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import InboxSidebar from "@/components/messaging/InboxSidebar";
 import ChatView from "@/components/messaging/ChatView";
@@ -13,7 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-type Tab = "escalados" | "resueltos";
+type Tab = "escalados" | "resueltos" | "seguimiento";
 
 const MensajesPage = () => {
   const {
@@ -32,7 +32,12 @@ const MensajesPage = () => {
     updateContactStage,
     updateContact,
     toggleChatbot,
+    fetchConversations,
   } = useMessaging();
+
+  const handleFollowUpSent = () => {
+    fetchConversations();
+  };
 
   const isMobile = useIsMobile();
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
@@ -56,10 +61,31 @@ const MensajesPage = () => {
   const escalated = allConversations.filter(c => !c.chatbot_active && c.unread_count > 0);
   const activeConvs = allConversations.filter(c => c.status === "open" || c.unread_count > 0);
 
+  // Conversations needing follow-up: bot replied but no inbound in 30 min
+  const followUpConversations = useMemo(() => {
+    const thirtyMinAgo = Date.now() - 30 * 60 * 1000;
+    return allConversations.filter(c => {
+      if (!c.last_inbound_at) return false;
+      const lastIn = new Date(c.last_inbound_at).getTime();
+      const lastMsg = new Date(c.last_message_at).getTime();
+      // Bot replied (last message is after last inbound) AND no inbound in 30 min
+      return lastMsg > lastIn && lastIn < thirtyMinAgo && c.status !== "closed";
+    });
+  }, [allConversations]);
+
   // Filtered conversations based on tab
   const tabConversations = useMemo(() => {
     if (activeTab === "escalados") {
       return conversations.filter(c => !c.chatbot_active || c.unread_count > 0);
+    }
+    if (activeTab === "seguimiento") {
+      const thirtyMinAgo = Date.now() - 30 * 60 * 1000;
+      return conversations.filter(c => {
+        if (!c.last_inbound_at) return false;
+        const lastIn = new Date(c.last_inbound_at).getTime();
+        const lastMsg = new Date(c.last_message_at).getTime();
+        return lastMsg > lastIn && lastIn < thirtyMinAgo && c.status !== "closed";
+      });
     }
     return conversations.filter(c => c.chatbot_active && c.unread_count === 0);
   }, [conversations, activeTab]);
@@ -93,6 +119,12 @@ const MensajesPage = () => {
                     <Zap className="w-3 h-3" /> Escalados
                     {escalated.length > 0 && <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] flex items-center justify-center">{escalated.length}</span>}
                   </button>
+                  <button onClick={() => setActiveTab("seguimiento")}
+                    className={cn("flex-1 py-2 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors",
+                      activeTab === "seguimiento" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
+                    <UserCheck className="w-3 h-3" /> Seguimiento
+                    {followUpConversations.length > 0 && <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] flex items-center justify-center">{followUpConversations.length}</span>}
+                  </button>
                   <button onClick={() => setActiveTab("resueltos")}
                     className={cn("flex-1 py-2 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors",
                       activeTab === "resueltos" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
@@ -124,7 +156,7 @@ const MensajesPage = () => {
                 <span className="text-sm font-medium truncate">{selectedConversation.contact?.name || "Chat"}</span>
               </div>
               <div className="flex-1 overflow-hidden">
-                <ChatView conversation={selectedConversation} messages={messages} sending={sendingMessage} onSend={sendMessage} onToggleChatbot={toggleChatbot} />
+                <ChatView conversation={selectedConversation} messages={messages} sending={sendingMessage} onSend={sendMessage} onToggleChatbot={toggleChatbot} onFollowUpSent={handleFollowUpSent} />
               </div>
             </div>
           ) : (
@@ -185,6 +217,14 @@ const MensajesPage = () => {
                 <span className="ml-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{escalated.length}</span>
               )}
             </button>
+            <button onClick={() => setActiveTab("seguimiento")}
+              className={cn("px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors",
+                activeTab === "seguimiento" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
+              <UserCheck className="w-3.5 h-3.5" /> Seguimiento
+              {followUpConversations.length > 0 && (
+                <span className="ml-1 w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-bold flex items-center justify-center">{followUpConversations.length}</span>
+              )}
+            </button>
             <button onClick={() => setActiveTab("resueltos")}
               className={cn("px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors",
                 activeTab === "resueltos" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
@@ -229,6 +269,7 @@ const MensajesPage = () => {
                     sending={sendingMessage}
                     onSend={sendMessage}
                     onToggleChatbot={toggleChatbot}
+                    onFollowUpSent={handleFollowUpSent}
                   />
                 ) : (
                   <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">

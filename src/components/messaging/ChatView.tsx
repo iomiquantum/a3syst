@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Smile, Paperclip, Bot, Loader2, User, AlertTriangle, Check, CheckCheck, Clock, XCircle } from "lucide-react";
+import { Send, Smile, Paperclip, Bot, Loader2, User, AlertTriangle, Check, CheckCheck, Clock, XCircle, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Conversation, Message } from "@/hooks/useMessaging";
 import ChannelIcon from "@/components/messaging/ChannelIcon";
@@ -19,6 +19,7 @@ interface Props {
   sending: boolean;
   onSend: (content: string) => void;
   onToggleChatbot?: (conversationId: string, active: boolean) => void;
+  onFollowUpSent?: (conversationId: string) => void;
 }
 
 // Cache for sender profile lookups
@@ -47,9 +48,10 @@ const ROLE_LABELS: Record<string, string> = {
   vendedor: "Vendedor",
 };
 
-const ChatView = ({ conversation, messages, sending, onSend, onToggleChatbot }: Props) => {
+const ChatView = ({ conversation, messages, sending, onSend, onToggleChatbot, onFollowUpSent }: Props) => {
   const [input, setInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [followUpLoading, setFollowUpLoading] = useState(false);
   const [senderProfiles, setSenderProfiles] = useState<Record<string, SenderProfile>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const { clinicId } = useClinic();
@@ -137,6 +139,31 @@ const ChatView = ({ conversation, messages, sending, onSend, onToggleChatbot }: 
     }
   };
 
+  const handleFollowUp = async () => {
+    if (!clinicId || followUpLoading) return;
+    setFollowUpLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-agent-reply", {
+        body: {
+          conversation_id: conversation.id,
+          clinic_id: clinicId,
+          triggered_by: "follow_up",
+        },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+      } else {
+        toast.success(`Seguimiento enviado (Contacto ${(conversation.follow_up_count || 0) + 1})`);
+        onFollowUpSent?.(conversation.id);
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Error al generar seguimiento");
+    } finally {
+      setFollowUpLoading(false);
+    }
+  };
+
   const formatTime = (date: string) => {
     try { return format(new Date(date), "HH:mm", { locale: es }); } catch { return ""; }
   };
@@ -210,6 +237,19 @@ const ChatView = ({ conversation, messages, sending, onSend, onToggleChatbot }: 
           <div className="flex items-center gap-2">
             <ChannelIcon channel={conversation.channel || "whatsapp"} size="sm" showLabel />
             <span className="text-xs text-muted-foreground">· {conversation.contact?.funnel_stage || "Nuevos"}</span>
+            {(conversation.follow_up_count || 0) > 0 && (
+              <span className="text-[10px] font-medium text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded-full">
+                Contacto {conversation.follow_up_count}
+              </span>
+            )}
+            {conversation.last_inbound_at && (() => {
+              const mins = Math.floor((Date.now() - new Date(conversation.last_inbound_at).getTime()) / 60000);
+              if (mins >= 30) {
+                const display = mins >= 1440 ? `${Math.floor(mins / 1440)}d` : mins >= 60 ? `${Math.floor(mins / 60)}h` : `${mins}m`;
+                return <span className="text-[10px] text-muted-foreground">⏱ Sin respuesta: {display}</span>;
+              }
+              return null;
+            })()}
           </div>
         </div>
         {/* Autopilot toggle in header */}
@@ -336,6 +376,18 @@ const ChatView = ({ conversation, messages, sending, onSend, onToggleChatbot }: 
             {aiLoading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Bot className="w-3 h-3 mr-1" />}
             {aiLoading ? "Pensando..." : "Respuesta IA"}
           </Button>
+          {(conversation.follow_up_count || 0) < 5 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs border-orange-500/30 text-orange-600 hover:bg-orange-500/10"
+              onClick={handleFollowUp}
+              disabled={followUpLoading}
+            >
+              {followUpLoading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <UserCheck className="w-3 h-3 mr-1" />}
+              {followUpLoading ? "Generando..." : `Seguimiento ${(conversation.follow_up_count || 0) + 1}`}
+            </Button>
+          )}
         </div>
         <div className="flex items-end gap-2">
           <div className="flex-1 relative">

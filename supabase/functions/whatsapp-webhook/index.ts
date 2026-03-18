@@ -304,7 +304,9 @@ async function syncToUnifiedMessaging(
           clinic_id: clinicId, contact_id: contactId, channel: "whatsapp",
           status: "open", last_message_at: new Date().toISOString(),
           last_message_preview: content.substring(0, 100),
-          unread_count: 1, chatbot_active: false, visitor_contact: contactPhone,
+          unread_count: 1, chatbot_active: true, visitor_contact: contactPhone,
+          last_inbound_at: new Date().toISOString(),
+          follow_up_count: 0,
         })
         .select("id")
         .single();
@@ -316,6 +318,8 @@ async function syncToUnifiedMessaging(
         last_message_preview: content.substring(0, 100),
         unread_count: (convData?.unread_count || 0) + 1,
         status: "open",
+        last_inbound_at: new Date().toISOString(),
+        follow_up_count: 0, // Reset follow-up count when user responds
       }).eq("id", conversationId);
     }
 

@@ -355,7 +355,7 @@ const InboxSidebar = ({ conversations, allConversations, selected, funnelFilter,
                     <span className="text-[11px] text-muted-foreground shrink-0">{timeAgo(conv.last_message_at)}</span>
                   </div>
                   <p className="text-xs text-muted-foreground truncate mt-0.5">{conv.last_message_preview || "Sin mensajes"}</p>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                     {conv.chatbot_active && conv.unread_count === 0 ? (
                       <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
                         🤖 IA respondiendo
@@ -373,6 +373,19 @@ const InboxSidebar = ({ conversations, allConversations, selected, funnelFilter,
                         ✅ Resuelto
                       </span>
                     )}
+                    {(conv.follow_up_count || 0) > 0 && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded-full">
+                        📞 Contacto {conv.follow_up_count}
+                      </span>
+                    )}
+                    {conv.last_inbound_at && (() => {
+                      const mins = Math.floor((Date.now() - new Date(conv.last_inbound_at).getTime()) / 60000);
+                      if (mins >= 30) {
+                        const display = mins >= 1440 ? `${Math.floor(mins / 1440)}d` : mins >= 60 ? `${Math.floor(mins / 60)}h` : `${mins}m`;
+                        return <span className="text-[9px] text-muted-foreground">⏱ {display}</span>;
+                      }
+                      return null;
+                    })()}
                     {conv.unread_count > 0 && (
                       <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center ml-auto">{conv.unread_count}</span>
                     )}
