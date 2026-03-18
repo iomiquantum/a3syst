@@ -161,6 +161,7 @@ export const useMessaging = () => {
       } catch (e: any) {
         toast.error(e.message || "Error al enviar mensaje de WhatsApp");
       }
+      sendingRef.current = false;
       setSendingMessage(false);
       return;
     }
