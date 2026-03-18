@@ -2601,51 +2601,78 @@ export type Database = {
       whatsapp_connections: {
         Row: {
           access_token: string | null
+          business_name: string | null
           clinic_id: string | null
           coexistence_enabled: boolean | null
           connected_at: string | null
           created_at: string | null
           display_name: string | null
+          display_phone_number: string | null
           id: string
+          last_error: string | null
           last_health_check: string | null
+          last_verified_at: string | null
+          meta_app_id: string | null
+          meta_app_name: string | null
           phone_number: string | null
           phone_number_id: string
           quality_rating: string | null
           status: string | null
           updated_at: string | null
           waba_id: string
+          webhook_configured: boolean | null
+          webhook_url: string | null
+          webhook_verify_token: string | null
         }
         Insert: {
           access_token?: string | null
+          business_name?: string | null
           clinic_id?: string | null
           coexistence_enabled?: boolean | null
           connected_at?: string | null
           created_at?: string | null
           display_name?: string | null
+          display_phone_number?: string | null
           id?: string
+          last_error?: string | null
           last_health_check?: string | null
+          last_verified_at?: string | null
+          meta_app_id?: string | null
+          meta_app_name?: string | null
           phone_number?: string | null
           phone_number_id: string
           quality_rating?: string | null
           status?: string | null
           updated_at?: string | null
           waba_id: string
+          webhook_configured?: boolean | null
+          webhook_url?: string | null
+          webhook_verify_token?: string | null
         }
         Update: {
           access_token?: string | null
+          business_name?: string | null
           clinic_id?: string | null
           coexistence_enabled?: boolean | null
           connected_at?: string | null
           created_at?: string | null
           display_name?: string | null
+          display_phone_number?: string | null
           id?: string
+          last_error?: string | null
           last_health_check?: string | null
+          last_verified_at?: string | null
+          meta_app_id?: string | null
+          meta_app_name?: string | null
           phone_number?: string | null
           phone_number_id?: string
           quality_rating?: string | null
           status?: string | null
           updated_at?: string | null
           waba_id?: string
+          webhook_configured?: boolean | null
+          webhook_url?: string | null
+          webhook_verify_token?: string | null
         }
         Relationships: [
           {
@@ -2657,43 +2684,145 @@ export type Database = {
           },
         ]
       }
+      whatsapp_conversations: {
+        Row: {
+          assigned_to: string | null
+          clinic_id: string
+          connection_id: string
+          contact_name: string | null
+          contact_phone: string
+          contact_wa_id: string | null
+          created_at: string | null
+          id: string
+          last_message_at: string | null
+          last_message_preview: string | null
+          metadata: Json | null
+          patient_id: string | null
+          status: string | null
+          unread_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          clinic_id: string
+          connection_id: string
+          contact_name?: string | null
+          contact_phone: string
+          contact_wa_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          metadata?: Json | null
+          patient_id?: string | null
+          status?: string | null
+          unread_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          clinic_id?: string
+          connection_id?: string
+          contact_name?: string | null
+          contact_phone?: string
+          contact_wa_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          metadata?: Json | null
+          patient_id?: string | null
+          status?: string | null
+          unread_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_conversations_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_conversations_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_messages: {
         Row: {
           clinic_id: string | null
+          connection_id: string | null
           content: Json
+          conversation_id: string | null
           created_at: string | null
           direction: string
+          error_code: string | null
+          error_message: string | null
           from_number: string
           id: string
+          media_caption: string | null
+          media_mime_type: string | null
+          media_url: string | null
           message_type: string | null
           phone_number_id: string
+          raw_payload: Json | null
+          sent_by: string | null
           status: string | null
+          status_timestamp: string | null
+          text_content: string | null
           to_number: string
           wa_message_id: string | null
         }
         Insert: {
           clinic_id?: string | null
+          connection_id?: string | null
           content?: Json
+          conversation_id?: string | null
           created_at?: string | null
           direction: string
+          error_code?: string | null
+          error_message?: string | null
           from_number: string
           id?: string
+          media_caption?: string | null
+          media_mime_type?: string | null
+          media_url?: string | null
           message_type?: string | null
           phone_number_id: string
+          raw_payload?: Json | null
+          sent_by?: string | null
           status?: string | null
+          status_timestamp?: string | null
+          text_content?: string | null
           to_number: string
           wa_message_id?: string | null
         }
         Update: {
           clinic_id?: string | null
+          connection_id?: string | null
           content?: Json
+          conversation_id?: string | null
           created_at?: string | null
           direction?: string
+          error_code?: string | null
+          error_message?: string | null
           from_number?: string
           id?: string
+          media_caption?: string | null
+          media_mime_type?: string | null
+          media_url?: string | null
           message_type?: string | null
           phone_number_id?: string
+          raw_payload?: Json | null
+          sent_by?: string | null
           status?: string | null
+          status_timestamp?: string | null
+          text_content?: string | null
           to_number?: string
           wa_message_id?: string | null
         }
@@ -2703,6 +2832,20 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_conversations"
             referencedColumns: ["id"]
           },
         ]
