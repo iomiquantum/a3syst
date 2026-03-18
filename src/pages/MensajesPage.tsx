@@ -35,8 +35,11 @@ const MensajesPage = () => {
     fetchConversations,
   } = useMessaging();
 
-  const handleFollowUpSent = () => {
+  const handleFollowUpSent = (conversationId?: string) => {
     fetchConversations();
+    if (conversationId) {
+      fetchMessages(conversationId);
+    }
   };
 
   const isMobile = useIsMobile();
