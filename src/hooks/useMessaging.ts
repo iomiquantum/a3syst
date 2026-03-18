@@ -147,24 +147,9 @@ export const useMessaging = () => {
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
 
-        // Insert into local messages table for immediate UI update
-        const { data: msgData } = await supabase.from("messages").insert({
-          conversation_id: selectedConversation.id,
-          clinic_id: clinicId,
-          direction: "outbound",
-          content: content.trim(),
-          message_type: "text",
-          status: "sent",
-          sent_by: user?.id || null,
-          whatsapp_message_id: data?.wa_message_id || null,
-        }).select().single();
-
-        if (msgData) {
-          setMessages(prev => {
-            if (prev.some(m => m.id === msgData.id)) return prev;
-            return [...prev, msgData as Message];
-          });
-        }
+        // The whatsapp-send edge function already inserts into the messages table,
+        // so we just refetch to avoid duplicates. Realtime will also pick it up.
+        await fetchMessages(selectedConversation.id);
 
         await supabase.from("conversations").update({
           last_message_at: new Date().toISOString(),
