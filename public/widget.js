@@ -17,6 +17,7 @@
   let conversationId = localStorage.getItem('iomi_conv_id') || '';
   let isOpen = false;
   let polling = null;
+  let renderedMsgIds = new Set(); // track rendered message IDs to avoid duplicates
   let msgCount = 0; // rate limiting
   let lastMsgTime = 0;
   let captchaAnswer = null;
@@ -283,9 +284,11 @@
       if (data.conversation_id) {
         conversationId = data.conversation_id;
         localStorage.setItem('iomi_conv_id', conversationId);
-        addMessage(message, 'out');
+        // Don't add locally — polling will pick up the inbound message with its server ID
         initForm.style.display = 'none';
         composer.style.display = 'flex';
+        // Do an immediate fetch to render all messages with proper IDs
+        await fetchAndRenderAll();
         startPolling();
       } else {
         showError(data.error || 'Error al enviar');
@@ -311,6 +314,7 @@
     if (!checkRateLimit()) return;
 
     input.value = '';
+    // Add locally for instant feedback (will be deduped by ID when polling picks it up)
     addMessage(msg, 'out');
 
     try {
@@ -353,51 +357,55 @@
         });
         const data = await res.json();
         const msgs = data.messages || [];
-        const outbound = msgs.filter(m => m.direction === 'outbound');
-        if (outbound.length > 0) {
-          const currentOutbound = messagesArea.querySelectorAll('.iomi-msg.in[data-server]').length;
-          outbound.forEach((m, i) => {
-            if (i >= currentOutbound) {
-              const div = document.createElement('div');
-              div.className = 'iomi-msg in';
-              div.setAttribute('data-server', '1');
-              div.innerHTML = '<div class="bubble">' + escapeHtml(m.content) + '</div>';
-              messagesArea.appendChild(div);
-            }
-          });
-          messagesArea.scrollTop = messagesArea.scrollHeight;
-        }
+        // Render any messages we haven't rendered yet
+        msgs.forEach(function(m) {
+          if (renderedMsgIds.has(m.id)) return;
+          renderedMsgIds.add(m.id);
+          var dir = m.direction === 'inbound' ? 'out' : 'in';
+          var div = document.createElement('div');
+          div.className = 'iomi-msg ' + dir;
+          div.setAttribute('data-msg-id', m.id);
+          div.innerHTML = '<div class="bubble">' + escapeHtml(m.content) + '</div>';
+          messagesArea.appendChild(div);
+        });
+        messagesArea.scrollTop = messagesArea.scrollHeight;
       } catch (e) { /* silent */ }
-    }, 5000);
+    }, 4000);
   }
 
   function stopPolling() {
     if (polling) { clearInterval(polling); polling = null; }
   }
 
+  async function fetchAndRenderAll() {
+    try {
+      const res = await fetch(API_URL + '/functions/v1/widget-messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversation_id: conversationId, clinic_id: CLINIC_ID }),
+      });
+      const data = await res.json();
+      messagesArea.innerHTML = '';
+      renderedMsgIds.clear();
+      (data.messages || []).forEach(function(m) {
+        renderedMsgIds.add(m.id);
+        var dir = m.direction === 'inbound' ? 'out' : 'in';
+        var div = document.createElement('div');
+        div.className = 'iomi-msg ' + dir;
+        div.setAttribute('data-msg-id', m.id);
+        div.innerHTML = '<div class="bubble">' + escapeHtml(m.content) + '</div>';
+        messagesArea.appendChild(div);
+      });
+      messagesArea.scrollTop = messagesArea.scrollHeight;
+    } catch (e) { /* silent */ }
+  }
+
   // Restore session
   if (conversationId) {
     initForm.style.display = 'none';
     composer.style.display = 'flex';
-    (async () => {
-      try {
-        const res = await fetch(API_URL + '/functions/v1/widget-messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ conversation_id: conversationId, clinic_id: CLINIC_ID }),
-        });
-        const data = await res.json();
-        messagesArea.innerHTML = '';
-        (data.messages || []).forEach(m => {
-          const dir = m.direction === 'inbound' ? 'out' : 'in';
-          const div = document.createElement('div');
-          div.className = 'iomi-msg ' + dir;
-          if (dir === 'in') div.setAttribute('data-server', '1');
-          div.innerHTML = '<div class="bubble">' + escapeHtml(m.content) + '</div>';
-          messagesArea.appendChild(div);
-        });
-        messagesArea.scrollTop = messagesArea.scrollHeight;
-      } catch (e) { /* silent */ }
-    })();
+    fetchAndRenderAll().then(function() {
+      // Polling will start when user opens the panel (togglePanel)
+    });
   }
 })();

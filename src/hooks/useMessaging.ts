@@ -125,8 +125,12 @@ export const useMessaging = () => {
     }
   };
 
+  const sendingRef = useRef(false);
+
   const sendMessage = async (content: string) => {
     if (!selectedConversation || !clinicId || !content.trim()) return;
+    if (sendingRef.current) return; // prevent rapid-fire duplicates
+    sendingRef.current = true;
     setSendingMessage(true);
 
     const channel = selectedConversation.channel || "whatsapp";
@@ -157,6 +161,7 @@ export const useMessaging = () => {
       } catch (e: any) {
         toast.error(e.message || "Error al enviar mensaje de WhatsApp");
       }
+      sendingRef.current = false;
       setSendingMessage(false);
       return;
     }
@@ -182,6 +187,7 @@ export const useMessaging = () => {
       last_message_preview: content.trim().substring(0, 100),
     }).eq("id", selectedConversation.id);
 
+    sendingRef.current = false;
     setSendingMessage(false);
   };
 
