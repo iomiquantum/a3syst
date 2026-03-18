@@ -13,7 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-type Tab = "escalados" | "resueltos";
+type Tab = "escalados" | "resueltos" | "seguimiento";
 
 const MensajesPage = () => {
   const {
