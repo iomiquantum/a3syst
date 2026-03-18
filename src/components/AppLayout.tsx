@@ -315,9 +315,9 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         open={helpOpen}
         onClose={() => setHelpOpen(false)}
         content={helpContent}
-        onStartTour={() => setTourRunning(true)}
+        onStartTour={() => {/* Tour hidden until app approved */}}
       />
-      <GuidedTour run={tourRunning} onFinish={() => setTourRunning(false)} />
+      {/* GuidedTour hidden until Meta app is approved */}
     </div>
   );
 };
