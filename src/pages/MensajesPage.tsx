@@ -32,7 +32,12 @@ const MensajesPage = () => {
     updateContactStage,
     updateContact,
     toggleChatbot,
+    fetchConversations,
   } = useMessaging();
+
+  const handleFollowUpSent = () => {
+    fetchConversations();
+  };
 
   const isMobile = useIsMobile();
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
