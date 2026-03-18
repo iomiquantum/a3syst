@@ -179,6 +179,11 @@ const AIAgentConfigPage = () => {
               </CardContent>
             </Card>
 
+            {/* Health Business Fields */}
+            {isHealthBusiness && (
+              <HealthBusinessFields config={config} onUpdate={update} />
+            )}
+
             {/* Special Instructions */}
             <Card className="shadow-card">
               <CardHeader>
@@ -207,7 +212,19 @@ OBJETIVO:
 ${config.objective}
 
 SERVICIOS DISPONIBLES:
-${config.services.map((s) => `• ${s.name} — $${s.price} — ${s.description}`).join("\n") || "(sin servicios)"}
+${config.services.map((s) => `• ${s.name} — $${s.price} — ${s.description}`).join("\n") || "(sin servicios)"}${isHealthBusiness && config.treatments_text ? `
+
+TRATAMIENTOS:
+${config.treatments_text}` : ""}${isHealthBusiness && config.prices_text ? `
+
+PRECIOS:
+${config.prices_text}` : ""}${isHealthBusiness && config.locations_text ? `
+
+UBICACIONES:
+${config.locations_text}` : ""}${isHealthBusiness && config.professionals_text ? `
+
+PROFESIONALES:
+${config.professionals_text}` : ""}
 
 INSTRUCCIONES:
 ${config.special_instructions}
