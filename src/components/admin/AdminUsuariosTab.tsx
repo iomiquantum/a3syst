@@ -62,6 +62,7 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
           full_name: createForm.full_name.trim(),
           clinic_id: createForm.clinic_id || undefined,
           role: createForm.role || undefined,
+          skip_onboarding: true,
         },
       });
 
