@@ -153,10 +153,7 @@ export const useMessaging = () => {
         // so we just refetch to avoid duplicates. Realtime will also pick it up.
         await fetchMessages(selectedConversation.id);
 
-        await supabase.from("conversations").update({
-          last_message_at: new Date().toISOString(),
-          last_message_preview: content.trim().substring(0, 100),
-        }).eq("id", selectedConversation.id);
+        // conversation update is handled by the edge function
       } catch (e: any) {
         toast.error(e.message || "Error al enviar mensaje de WhatsApp");
       }
