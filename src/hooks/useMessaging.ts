@@ -303,5 +303,6 @@ export const useMessaging = () => {
     updateContact,
     toggleChatbot,
     fetchConversations,
+    fetchMessages,
   };
 };

@@ -148,13 +148,15 @@ const ChatView = ({ conversation, messages, sending, onSend, onToggleChatbot, on
           conversation_id: conversation.id,
           clinic_id: clinicId,
           triggered_by: "follow_up",
+          channel: conversation.channel || "whatsapp",
         },
       });
+      console.log("Follow-up response:", { data, error });
       if (error) throw error;
       if (data?.error) {
         toast.error(data.error);
       } else {
-        toast.success(`Seguimiento enviado (Contacto ${(conversation.follow_up_count || 0) + 1})`);
+        toast.success(`Seguimiento enviado (Contacto ${(conversation.follow_up_count || 0) + 1}): ${data?.reply?.substring(0, 80) || ""}`);
         onFollowUpSent?.(conversation.id);
       }
     } catch (e: any) {
