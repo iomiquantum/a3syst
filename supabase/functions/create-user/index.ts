@@ -87,6 +87,17 @@ serve(async (req) => {
       }
     }
 
+    // If skip_onboarding, mark the auto-created clinic as completed
+    if (skip_onboarding && data.user) {
+      const { error: onbErr } = await adminClient
+        .from("clinics")
+        .update({ onboarding_completed: true })
+        .eq("owner_id", data.user.id);
+      if (onbErr) {
+        console.error("Error skipping onboarding:", onbErr);
+      }
+    }
+
     return new Response(JSON.stringify({ user: { id: data.user.id, email: data.user.email }, message: "Usuario creado exitosamente" }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

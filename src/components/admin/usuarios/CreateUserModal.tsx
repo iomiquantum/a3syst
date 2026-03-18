@@ -86,6 +86,16 @@ const CreateUserModal = ({ open, onOpenChange, clinics, onSubmit, isLoading }: C
             <Label>Notas internas</Label>
             <Textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} placeholder="Notas sobre este usuario..." rows={2} maxLength={1000} />
           </div>
+          <div className="flex items-center gap-2 rounded-md border border-border bg-muted/50 p-3">
+            <Checkbox
+              id="skip_onboarding"
+              checked={form.skip_onboarding}
+              onCheckedChange={(v) => setForm({ ...form, skip_onboarding: !!v })}
+            />
+            <Label htmlFor="skip_onboarding" className="text-sm cursor-pointer leading-tight">
+              Saltar onboarding (el usuario accede directo a la plataforma sin configurar negocio desde cero)
+            </Label>
+          </div>
           <Button onClick={handleSubmit} className="w-full" disabled={!valid || isLoading}>
             {isLoading ? "Creando..." : "Crear Usuario"}
           </Button>
