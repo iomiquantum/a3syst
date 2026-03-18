@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
-import { Plus, Trash2, Users, UserPlus, Eye, EyeOff, Search, PauseCircle, PlayCircle } from "lucide-react";
+import { Plus, Trash2, Users, UserPlus, Eye, EyeOff, Search, Power, UserX, X } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
