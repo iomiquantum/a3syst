@@ -191,17 +191,30 @@ const UsersTable = ({ usuarios, isLoading, page, pageSize, onPageChange, onViewU
                       <Shield className="w-4 h-4 mr-2" /> Cambiar rol
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuItem onClick={() => onResetPassword(u.email)}><KeyRound className="w-4 h-4 mr-2" /> Reset contraseña</DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem className="text-destructive" onClick={() => setDeleteUser(u)}>
                     <Trash2 className="w-4 h-4 mr-2" /> Eliminar
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <div className="flex flex-wrap gap-1 mt-2">
-              {u.roles.map(r => (
-                <Badge key={r.id} className={`text-xs ${roleColors[r.role] || "bg-muted"}`}>{roleLabelsAdmin[r.role] || r.role}</Badge>
-              ))}
-              <Badge className={`text-xs ${estadoColors[u.estado] || "bg-muted"}`}>{u.estado}</Badge>
+            <div className="flex items-center justify-between mt-2">
+              <div className="flex flex-wrap gap-1">
+                {u.roles.map(r => (
+                  <Badge key={r.id} className={`text-xs ${roleColors[r.role] || "bg-muted"}`}>{roleLabelsAdmin[r.role] || r.role}</Badge>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{u.estado === "activo" ? "Activo" : "Inactivo"}</span>
+                <Switch
+                  checked={u.estado === "activo"}
+                  onCheckedChange={(checked) => {
+                    if (checked) onReactivate(u);
+                    else onSuspend(u);
+                  }}
+                />
+              </div>
             </div>
           </Card>
         ))}
