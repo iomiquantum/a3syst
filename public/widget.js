@@ -284,9 +284,11 @@
       if (data.conversation_id) {
         conversationId = data.conversation_id;
         localStorage.setItem('iomi_conv_id', conversationId);
-        addMessage(message, 'out');
+        // Don't add locally — polling will pick up the inbound message with its server ID
         initForm.style.display = 'none';
         composer.style.display = 'flex';
+        // Do an immediate fetch to render all messages with proper IDs
+        await fetchAndRenderAll();
         startPolling();
       } else {
         showError(data.error || 'Error al enviar');
