@@ -377,29 +377,33 @@
     if (polling) { clearInterval(polling); polling = null; }
   }
 
+  async function fetchAndRenderAll() {
+    try {
+      const res = await fetch(API_URL + '/functions/v1/widget-messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversation_id: conversationId, clinic_id: CLINIC_ID }),
+      });
+      const data = await res.json();
+      messagesArea.innerHTML = '';
+      renderedMsgIds.clear();
+      (data.messages || []).forEach(function(m) {
+        renderedMsgIds.add(m.id);
+        var dir = m.direction === 'inbound' ? 'out' : 'in';
+        var div = document.createElement('div');
+        div.className = 'iomi-msg ' + dir;
+        div.setAttribute('data-msg-id', m.id);
+        div.innerHTML = '<div class="bubble">' + escapeHtml(m.content) + '</div>';
+        messagesArea.appendChild(div);
+      });
+      messagesArea.scrollTop = messagesArea.scrollHeight;
+    } catch (e) { /* silent */ }
+  }
+
   // Restore session
   if (conversationId) {
     initForm.style.display = 'none';
     composer.style.display = 'flex';
-    (async () => {
-      try {
-        const res = await fetch(API_URL + '/functions/v1/widget-messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ conversation_id: conversationId, clinic_id: CLINIC_ID }),
-        });
-        const data = await res.json();
-        messagesArea.innerHTML = '';
-        (data.messages || []).forEach(m => {
-          const dir = m.direction === 'inbound' ? 'out' : 'in';
-          const div = document.createElement('div');
-          div.className = 'iomi-msg ' + dir;
-          if (dir === 'in') div.setAttribute('data-server', '1');
-          div.innerHTML = '<div class="bubble">' + escapeHtml(m.content) + '</div>';
-          messagesArea.appendChild(div);
-        });
-        messagesArea.scrollTop = messagesArea.scrollHeight;
-      } catch (e) { /* silent */ }
-    })();
+    fetchAndRenderAll();
   }
 })();
