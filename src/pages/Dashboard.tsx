@@ -61,7 +61,7 @@ interface ActivityItem {
 
 /* ─── Component ─── */
 const Dashboard = () => {
-  const { clinicId, clinicName } = useClinic();
+  const { clinicId, clinicName, needsOnboarding } = useClinic();
   const { user } = useAuth();
   const { labels } = useBusinessLabels();
   const navigate = useNavigate();
