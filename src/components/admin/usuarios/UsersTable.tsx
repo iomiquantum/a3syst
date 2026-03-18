@@ -7,9 +7,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { MoreVertical, Eye, Pencil, Shield, Pause, Play, KeyRound, History, Trash2 } from "lucide-react";
+import { MoreVertical, Eye, Shield, KeyRound, History, Trash2 } from "lucide-react";
 import { UsuarioCompleto, roleLabelsAdmin, roleColors, estadoColors } from "@/hooks/useUsuariosAdmin";
 
 interface UsersTableProps {
@@ -66,12 +68,12 @@ const UsersTable = ({ usuarios, isLoading, page, pageSize, onPageChange, onViewU
       <Card className="shadow-card hidden md:block">
         <CardContent className="p-0">
           <table className="w-full">
-            <thead>
+             <thead>
               <tr className="border-b border-border">
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Usuario</th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Empresa</th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Rol</th>
-                <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Estado</th>
+                <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Activo</th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Último acceso</th>
                 <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Acciones</th>
               </tr>
@@ -110,8 +112,28 @@ const UsersTable = ({ usuarios, isLoading, page, pageSize, onPageChange, onViewU
                       }
                     </div>
                   </td>
-                  <td className="px-5 py-3.5">
-                    <Badge className={`text-xs ${estadoColors[u.estado] || "bg-muted"}`}>{u.estado}</Badge>
+                  <td className="px-5 py-3.5 text-center">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="inline-flex items-center">
+                            <Switch
+                              checked={u.estado === "activo"}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  onReactivate(u);
+                                } else {
+                                  onSuspend(u);
+                                }
+                              }}
+                            />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {u.estado === "activo" ? "Desactivar usuario" : "Activar usuario"}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </td>
                   <td className="px-5 py-3.5 text-sm text-muted-foreground">
                     {u.ultimo_acceso ? formatDistanceToNow(new Date(u.ultimo_acceso), { addSuffix: true, locale: es }) : "Nunca"}
@@ -127,11 +149,6 @@ const UsersTable = ({ usuarios, isLoading, page, pageSize, onPageChange, onViewU
                           <DropdownMenuItem onClick={() => onChangeRole(u, u.roles[0].id, u.roles[0].role)}>
                             <Shield className="w-4 h-4 mr-2" /> Cambiar rol
                           </DropdownMenuItem>
-                        )}
-                        {u.estado === "activo" ? (
-                          <DropdownMenuItem onClick={() => onSuspend(u)}><Pause className="w-4 h-4 mr-2" /> Suspender</DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem onClick={() => onReactivate(u)}><Play className="w-4 h-4 mr-2" /> Reactivar</DropdownMenuItem>
                         )}
                         <DropdownMenuItem onClick={() => onResetPassword(u.email)}><KeyRound className="w-4 h-4 mr-2" /> Reset contraseña</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => onViewHistory(u)}><History className="w-4 h-4 mr-2" /> Historial</DropdownMenuItem>
@@ -174,17 +191,30 @@ const UsersTable = ({ usuarios, isLoading, page, pageSize, onPageChange, onViewU
                       <Shield className="w-4 h-4 mr-2" /> Cambiar rol
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuItem onClick={() => onResetPassword(u.email)}><KeyRound className="w-4 h-4 mr-2" /> Reset contraseña</DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem className="text-destructive" onClick={() => setDeleteUser(u)}>
                     <Trash2 className="w-4 h-4 mr-2" /> Eliminar
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <div className="flex flex-wrap gap-1 mt-2">
-              {u.roles.map(r => (
-                <Badge key={r.id} className={`text-xs ${roleColors[r.role] || "bg-muted"}`}>{roleLabelsAdmin[r.role] || r.role}</Badge>
-              ))}
-              <Badge className={`text-xs ${estadoColors[u.estado] || "bg-muted"}`}>{u.estado}</Badge>
+            <div className="flex items-center justify-between mt-2">
+              <div className="flex flex-wrap gap-1">
+                {u.roles.map(r => (
+                  <Badge key={r.id} className={`text-xs ${roleColors[r.role] || "bg-muted"}`}>{roleLabelsAdmin[r.role] || r.role}</Badge>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{u.estado === "activo" ? "Activo" : "Inactivo"}</span>
+                <Switch
+                  checked={u.estado === "activo"}
+                  onCheckedChange={(checked) => {
+                    if (checked) onReactivate(u);
+                    else onSuspend(u);
+                  }}
+                />
+              </div>
             </div>
           </Card>
         ))}
