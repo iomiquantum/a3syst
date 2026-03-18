@@ -12,224 +12,203 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { clinic_id, to_number, message_type, content, sent_by, conversation_id } = await req.json();
-
-    if (!clinic_id || !to_number || !content) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields: clinic_id, to_number, content" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Lookup active connection for this clinic
-    const { data: connection, error: connError } = await supabase
-      .from("whatsapp_connections")
-      .select("phone_number_id, access_token, phone_number")
-      .eq("clinic_id", clinic_id)
-      .eq("status", "active")
-      .maybeSingle();
+    const body = await req.json();
+    const {
+      clinic_id, to, to_number, message, content,
+      type = "text", message_type,
+      connection_id, conversation_id,
+      template_name, template_language, template_components,
+      sent_by,
+    } = body;
 
-    if (connError || !connection) {
-      console.error("Connection lookup error:", connError);
-      return new Response(
-        JSON.stringify({ error: "No active WhatsApp connection found for this clinic" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    const targetNumber = (to || to_number || "").replace(/[^0-9]/g, "");
+    const msgType = type || message_type || "text";
+    const msgContent = message || content;
+    const effectiveClinicId = clinic_id;
+
+    if (!effectiveClinicId || !targetNumber) {
+      return jsonResponse({ error: "Missing clinic_id and to/to_number" }, 400);
     }
 
-    const { phone_number_id, phone_number } = connection;
+    // Find active connection
+    let connQuery = supabase
+      .from("whatsapp_connections")
+      .select("*")
+      .eq("clinic_id", effectiveClinicId)
+      .eq("status", "active");
+    if (connection_id) connQuery = connQuery.eq("id", connection_id);
+    const { data: connection } = await connQuery.limit(1).maybeSingle();
 
-    // Sanitize phone number: remove +, spaces, dashes — keep only digits
-    const cleanNumber = to_number.replace(/[^0-9]/g, "");
-    console.log("Sending to:", cleanNumber, "original:", to_number);
+    if (!connection) {
+      return jsonResponse({ error: "No active WhatsApp connection found" }, 404);
+    }
 
-    // Build the message payload for Meta WhatsApp Cloud API
-    const type = message_type || "text";
-    const messagePayload: Record<string, unknown> = {
+    // Resolve access token with fallback
+    const dbToken = (connection.access_token || "").trim();
+    const envToken = (Deno.env.get("META_ACCESS_TOKEN") || "").trim();
+    const accessToken = dbToken || envToken;
+
+    if (!accessToken) {
+      return jsonResponse({ error: "Missing access token" }, 400);
+    }
+
+    // Build Meta payload
+    const metaPayload: Record<string, unknown> = {
       messaging_product: "whatsapp",
       recipient_type: "individual",
-      to: cleanNumber,
-      type,
+      to: targetNumber,
     };
 
-    if (type === "text") {
-      messagePayload.text = typeof content === "string" ? { body: content } : content;
-    } else if (type === "image") {
-      messagePayload.image = content;
-    } else if (type === "document") {
-      messagePayload.document = content;
-    } else if (type === "template") {
-      messagePayload.template = content;
-    } else if (type === "interactive") {
-      messagePayload.interactive = content;
+    if (msgType === "template") {
+      metaPayload.type = "template";
+      metaPayload.template = {
+        name: template_name,
+        language: { code: template_language || "es" },
+      };
+      if (template_components) metaPayload.template = { ...metaPayload.template as object, components: template_components };
+    } else if (msgType === "text") {
+      metaPayload.type = "text";
+      metaPayload.text = typeof msgContent === "string" ? { body: msgContent } : msgContent;
     } else {
-      messagePayload[type] = content;
+      metaPayload.type = msgType;
+      metaPayload[msgType] = msgContent;
     }
 
-    const graphUrl = `https://graph.facebook.com/v22.0/${phone_number_id}/messages`;
-    console.log("Meta API URL:", graphUrl);
-    console.log("Payload:", JSON.stringify(messagePayload));
+    console.log("[WA-Send] Sending to:", targetNumber, "type:", msgType);
 
-    const dbToken = typeof connection.access_token === "string" ? connection.access_token.trim() : "";
-    const envToken = Deno.env.get("META_ACCESS_TOKEN")?.trim() || "";
+    const graphUrl = `https://graph.facebook.com/v22.0/${connection.phone_number_id}/messages`;
+    const metaResponse = await fetch(graphUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(metaPayload),
+    });
 
-    if (!dbToken && !envToken) {
-      console.error("No access token available from database or META_ACCESS_TOKEN secret");
-      return new Response(
-        JSON.stringify({ error: "Missing access token — update whatsapp_connections or META_ACCESS_TOKEN" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const parseMetaResponse = async (response: Response) => {
-      const rawBody = await response.text();
-      try {
-        return rawBody ? JSON.parse(rawBody) : null;
-      } catch {
-        return { raw: rawBody };
-      }
-    };
-
-    const isTokenExpiredOrInvalid = (result: any) => {
-      const error = result?.error;
-      const message = typeof error?.message === "string" ? error.message.toLowerCase() : "";
-      return error?.code === 190 || error?.error_subcode === 463 || message.includes("access token");
-    };
-
-    const sendWithToken = async (accessToken: string, source: "db" | "env") => {
-      const response = await fetch(graphUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(messagePayload),
-      });
-
-      const result = await parseMetaResponse(response);
-
-      console.log("Meta API Response:", JSON.stringify({
-        status: response.status,
-        ok: response.ok,
-        body: result,
-        tokenSource: source,
-      }));
-
-      return { response, result, tokenSource: source };
-    };
-
-    const tokensToTry: Array<{ value: string; source: "db" | "env" }> = [];
-    if (dbToken) tokensToTry.push({ value: dbToken, source: "db" });
-    if (envToken && envToken !== dbToken) tokensToTry.push({ value: envToken, source: "env" });
-
-    let metaResponse: Response | null = null;
-    let metaResult: any = null;
-    let tokenSource: "db" | "env" | null = null;
-
-    for (const candidate of tokensToTry) {
-      const attempt = await sendWithToken(candidate.value, candidate.source);
-      metaResponse = attempt.response;
-      metaResult = attempt.result;
-      tokenSource = attempt.tokenSource;
-
-      if (metaResponse.ok) break;
-
-      const shouldFallbackToEnv =
-        candidate.source === "db" &&
-        !!envToken &&
-        envToken !== dbToken &&
-        isTokenExpiredOrInvalid(metaResult);
-
-      if (!shouldFallbackToEnv) break;
-
-      console.warn("Database token rejected by Meta, retrying with META_ACCESS_TOKEN fallback");
-    }
-
-    if (!metaResponse || !tokenSource) {
-      return new Response(
-        JSON.stringify({ error: "Failed to initialize Meta API request" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const metaResult = await metaResponse.json();
+    console.log("[WA-Send] Meta response:", metaResponse.status, JSON.stringify(metaResult));
 
     if (!metaResponse.ok) {
-      console.error("Meta API error:", JSON.stringify(metaResult));
-      return new Response(
-        JSON.stringify({ error: "Failed to send message", details: metaResult, tokenSource }),
-        { status: metaResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      // If token is expired, try env fallback
+      if (accessToken === dbToken && envToken && envToken !== dbToken && metaResult?.error?.code === 190) {
+        console.warn("[WA-Send] DB token expired, trying env fallback");
+        const retryResponse = await fetch(graphUrl, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${envToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify(metaPayload),
+        });
+        const retryResult = await retryResponse.json();
+        if (retryResponse.ok) {
+          const waMessageId = retryResult?.messages?.[0]?.id;
+          await logOutboundMessage(supabase, connection, effectiveClinicId, targetNumber, msgType, msgContent, waMessageId, sent_by, conversation_id, template_name);
+          return jsonResponse({ success: true, wa_message_id: waMessageId });
+        }
+        return jsonResponse({ error: "Failed to send", details: retryResult }, retryResponse.status);
+      }
+
+      if (metaResult?.error?.code === 190) {
+        await supabase.from("whatsapp_connections").update({ status: "error", last_error: "Token expirado o inválido" }).eq("id", connection.id);
+      }
+      return jsonResponse({ error: "Failed to send", details: metaResult }, metaResponse.status);
     }
 
     const waMessageId = metaResult?.messages?.[0]?.id;
+    await logOutboundMessage(supabase, connection, effectiveClinicId, targetNumber, msgType, msgContent, waMessageId, sent_by, conversation_id, template_name);
 
-    // Log outbound message in whatsapp_messages
-    const { error: insertError } = await supabase
-      .from("whatsapp_messages")
-      .insert({
-        clinic_id,
-        phone_number_id,
-        direction: "outbound",
-        from_number: phone_number || phone_number_id,
-        to_number: cleanNumber,
-        message_type: type,
-        content: typeof content === "string" ? { body: content } : content,
-        wa_message_id: waMessageId,
-        status: "sent",
-      });
-
-    if (insertError) {
-      console.error("Error logging outbound message:", insertError);
-    }
-
-    // Also insert into unified messages table for the Mensajes panel
-    const messageText = typeof content === "string" ? content : (content?.body || JSON.stringify(content));
-
-    // Find conversation for this contact — use passed conversation_id or look up
-    let convId = conversation_id || null;
-
-    if (!convId) {
-      const { data: conv } = await supabase
-        .from("conversations")
-        .select("id")
-        .eq("clinic_id", clinic_id)
-        .eq("channel", "whatsapp")
-        .eq("visitor_contact", cleanNumber)
-        .maybeSingle();
-      convId = conv?.id || null;
-    }
-
-    if (convId) {
-      await supabase.from("messages").insert({
-        conversation_id: convId,
-        clinic_id,
-        direction: "outbound",
-        content: messageText,
-        message_type: type,
-        whatsapp_message_id: waMessageId,
-        status: "sent",
-        sent_by: sent_by || null,
-      });
-
-      await supabase.from("conversations").update({
-        last_message_at: new Date().toISOString(),
-        last_message_preview: messageText.substring(0, 100),
-      }).eq("id", convId);
-    }
-
-    return new Response(
-      JSON.stringify({ success: true, wa_message_id: waMessageId }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonResponse({ success: true, wa_message_id: waMessageId });
   } catch (err) {
-    console.error("whatsapp-send error:", err);
-    return new Response(
-      JSON.stringify({ error: String(err) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    console.error("[WA-Send] Error:", err);
+    return jsonResponse({ error: String(err) }, 500);
   }
 });
+
+function jsonResponse(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+async function logOutboundMessage(
+  supabase: ReturnType<typeof createClient>,
+  connection: Record<string, unknown>,
+  clinicId: string,
+  toNumber: string,
+  msgType: string,
+  content: unknown,
+  waMessageId: string | undefined,
+  sentBy: string | undefined,
+  conversationId: string | undefined,
+  templateName: string | undefined,
+) {
+  const textContent = msgType === "template"
+    ? `📋 Template: ${templateName}`
+    : typeof content === "string" ? content : (content as Record<string, string>)?.body || JSON.stringify(content);
+
+  // Log in whatsapp_messages (legacy)
+  await supabase.from("whatsapp_messages").insert({
+    clinic_id: clinicId,
+    phone_number_id: connection.phone_number_id,
+    connection_id: connection.id,
+    direction: "outbound",
+    from_number: connection.phone_number || connection.display_phone_number || connection.phone_number_id,
+    to_number: toNumber,
+    message_type: msgType,
+    content: typeof content === "string" ? { body: content } : content || {},
+    text_content: textContent,
+    wa_message_id: waMessageId,
+    status: "sent",
+    sent_by: sentBy || null,
+    conversation_id: conversationId || null,
+  });
+
+  // Upsert whatsapp_conversation
+  const { data: waConv } = await supabase
+    .from("whatsapp_conversations")
+    .upsert({
+      connection_id: connection.id as string,
+      clinic_id: clinicId,
+      contact_phone: toNumber,
+      status: "open",
+      last_message_at: new Date().toISOString(),
+      last_message_preview: textContent.substring(0, 100),
+    }, { onConflict: "connection_id,contact_phone" })
+    .select("id")
+    .maybeSingle();
+
+  // Also sync to unified messages
+  let convId = conversationId || null;
+  if (!convId) {
+    const { data: conv } = await supabase
+      .from("conversations")
+      .select("id")
+      .eq("clinic_id", clinicId)
+      .eq("channel", "whatsapp")
+      .eq("visitor_contact", toNumber)
+      .maybeSingle();
+    convId = conv?.id || null;
+  }
+
+  if (convId) {
+    await supabase.from("messages").insert({
+      conversation_id: convId,
+      clinic_id: clinicId,
+      direction: "outbound",
+      content: textContent,
+      message_type: msgType,
+      whatsapp_message_id: waMessageId,
+      status: "sent",
+      sent_by: sentBy || null,
+    });
+    await supabase.from("conversations").update({
+      last_message_at: new Date().toISOString(),
+      last_message_preview: textContent.substring(0, 100),
+    }).eq("id", convId);
+  }
+}
