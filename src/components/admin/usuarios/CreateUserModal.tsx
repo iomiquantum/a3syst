@@ -13,7 +13,7 @@ interface CreateUserModalProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   clinics: { id: string; name: string }[];
-  onSubmit: (form: { nombre: string; apellido: string; email: string; telefono: string; clinic_id: string; role: string; notas: string; password: string }) => void;
+  onSubmit: (form: { nombre: string; apellido: string; email: string; telefono: string; clinic_id: string; role: string; notas: string; password: string; skip_onboarding: boolean }) => void;
   isLoading: boolean;
 }
 
