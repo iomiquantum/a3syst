@@ -619,14 +619,26 @@ const OnboardingPage = () => {
     setGenerationStep(4);
     await new Promise(r => setTimeout(r, 600));
 
-    await (supabase as any).from("clinics").update({ onboarding_completed: true }).eq("id", clinicId);
+    // Don't mark onboarding_completed yet — user must explicitly finalize
 
     dispatch({ type: "SET_SLUG", slug });
     dispatch({ type: "SET_PHASE", phase: "done" });
     localStorage.removeItem("a3_onboarding");
   };
 
-  const handleFinish = () => { refreshClinic(); navigate("/dashboard"); };
+  const handleFinish = async () => {
+    // Mark onboarding as completed only when user explicitly finalizes
+    if (clinicId) {
+      await (supabase as any).from("clinics").update({ onboarding_completed: true }).eq("id", clinicId);
+    }
+    refreshClinic();
+    navigate("/dashboard");
+  };
+
+  const handleEditOnboarding = () => {
+    // Go back to review phase so user can edit their data
+    dispatch({ type: "SET_PHASE", phase: "review" });
+  };
 
   const landingUrl = `${window.location.origin}/negocio/${state.slug}`;
   const copyLink = () => { navigator.clipboard.writeText(landingUrl); toast.success("¡Link copiado!"); };
@@ -1328,8 +1340,8 @@ const OnboardingPage = () => {
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="w-full max-w-md space-y-6 text-center">
             <div className="text-6xl mb-2">🎉</div>
-            <h2 className="text-3xl font-bold">¡Tu negocio está en línea!</h2>
-            <p className="text-muted-foreground">Comparte tu link para empezar a recibir clientes</p>
+            <h2 className="text-3xl font-bold">¡Tu negocio está listo!</h2>
+            <p className="text-muted-foreground">Revisa tu landing, comparte tu link o ajusta la información antes de finalizar.</p>
 
             <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-card">
               <input readOnly value={landingUrl} className="flex-1 text-sm bg-transparent border-none outline-none text-foreground truncate" />
@@ -1345,9 +1357,17 @@ const OnboardingPage = () => {
               </Button>
             </div>
 
-            <Button onClick={handleFinish} size="lg" className="mt-4 w-full">
-              Ir al panel de control <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
+            <div className="border-t border-border pt-6 space-y-3">
+              <Button onClick={handleEditOnboarding} size="lg" variant="outline" className="w-full">
+                <Pencil className="w-4 h-4 mr-2" /> Editar Onboarding
+              </Button>
+              <Button onClick={handleFinish} size="lg" className="w-full gradient-primary text-primary-foreground hover:opacity-90">
+                <Check className="w-4 h-4 mr-2" /> Finalizar Onboarding
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Al finalizar, el onboarding se marcará como completado y no volverá a aparecer.
+              </p>
+            </div>
           </div>
         </div>
       )}
