@@ -91,12 +91,13 @@ export function useUsuariosAdmin() {
   });
 
   const createUser = useMutation({
-    mutationFn: async (form: { nombre: string; apellido: string; email: string; telefono: string; clinic_id: string; role: string; notas: string; password: string }) => {
+    mutationFn: async (form: { nombre: string; apellido: string; email: string; telefono: string; clinic_id: string; role: string; notas: string; password: string; skip_onboarding?: boolean }) => {
       const { data, error } = await supabase.functions.invoke("create-user", {
         body: {
           email: form.email.trim(),
           password: form.password,
           full_name: `${form.nombre.trim()} ${form.apellido.trim()}`,
+          skip_onboarding: form.skip_onboarding !== false,
         },
       });
       if (error) throw error;

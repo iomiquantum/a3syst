@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff } from "lucide-react";
 import { roleLabelsAdmin } from "@/hooks/useUsuariosAdmin";
 
@@ -12,17 +13,17 @@ interface CreateUserModalProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   clinics: { id: string; name: string }[];
-  onSubmit: (form: { nombre: string; apellido: string; email: string; telefono: string; clinic_id: string; role: string; notas: string; password: string }) => void;
+  onSubmit: (form: { nombre: string; apellido: string; email: string; telefono: string; clinic_id: string; role: string; notas: string; password: string; skip_onboarding: boolean }) => void;
   isLoading: boolean;
 }
 
 const CreateUserModal = ({ open, onOpenChange, clinics, onSubmit, isLoading }: CreateUserModalProps) => {
-  const [form, setForm] = useState({ nombre: "", apellido: "", email: "", telefono: "", clinic_id: "", role: "empleado", notas: "", password: "" });
+  const [form, setForm] = useState({ nombre: "", apellido: "", email: "", telefono: "", clinic_id: "", role: "empleado", notas: "", password: "", skip_onboarding: true });
   const [showPw, setShowPw] = useState(false);
 
   const handleSubmit = () => {
     onSubmit(form);
-    setForm({ nombre: "", apellido: "", email: "", telefono: "", clinic_id: "", role: "empleado", notas: "", password: "" });
+    setForm({ nombre: "", apellido: "", email: "", telefono: "", clinic_id: "", role: "empleado", notas: "", password: "", skip_onboarding: true });
   };
 
   const valid = form.nombre.trim() && form.apellido.trim() && form.email.trim() && form.password.length >= 6 && form.clinic_id && form.role;
@@ -84,6 +85,16 @@ const CreateUserModal = ({ open, onOpenChange, clinics, onSubmit, isLoading }: C
           <div>
             <Label>Notas internas</Label>
             <Textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} placeholder="Notas sobre este usuario..." rows={2} maxLength={1000} />
+          </div>
+          <div className="flex items-center gap-2 rounded-md border border-border bg-muted/50 p-3">
+            <Checkbox
+              id="skip_onboarding"
+              checked={form.skip_onboarding}
+              onCheckedChange={(v) => setForm({ ...form, skip_onboarding: !!v })}
+            />
+            <Label htmlFor="skip_onboarding" className="text-sm cursor-pointer leading-tight">
+              Saltar onboarding (el usuario accede directo a la plataforma sin configurar negocio desde cero)
+            </Label>
           </div>
           <Button onClick={handleSubmit} className="w-full" disabled={!valid || isLoading}>
             {isLoading ? "Creando..." : "Crear Usuario"}

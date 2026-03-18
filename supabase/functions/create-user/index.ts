@@ -30,7 +30,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { email, password, full_name, clinic_id, role } = body;
+    const { email, password, full_name, clinic_id, role, skip_onboarding } = body;
 
     if (!email || !password || !full_name) {
       return new Response(JSON.stringify({ error: "Email, contraseña y nombre son requeridos" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -84,6 +84,17 @@ serve(async (req) => {
       });
       if (roleError) {
         console.error("Error assigning role:", roleError);
+      }
+    }
+
+    // If skip_onboarding, mark the auto-created clinic as completed
+    if (skip_onboarding && data.user) {
+      const { error: onbErr } = await adminClient
+        .from("clinics")
+        .update({ onboarding_completed: true })
+        .eq("owner_id", data.user.id);
+      if (onbErr) {
+        console.error("Error skipping onboarding:", onbErr);
       }
     }
 
