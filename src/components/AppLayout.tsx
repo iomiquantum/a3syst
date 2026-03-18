@@ -87,7 +87,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       label: "AUTOPILOTOS",
       items: [
         { icon: MessageSquare, label: "Mensajes", path: "/mensajes", badge: unreadMessages },
-        { icon: MessageSquare, label: "WhatsApp", path: "/mensajes/whatsapp", color: "#25d366", isNew: true },
+        { icon: MessageSquare, label: "WhatsApp", path: "/whatsapp", color: "#25d366", isNew: true },
         { icon: Calendar, label: "Agenda", path: "/agenda", badge: todayAppointments },
         { icon: BarChart3, label: "CRM", path: "/crm" },
         { icon: Megaphone, label: "Marketing", path: "/marketing" },
