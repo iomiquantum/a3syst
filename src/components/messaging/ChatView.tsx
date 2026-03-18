@@ -19,6 +19,7 @@ interface Props {
   sending: boolean;
   onSend: (content: string) => void;
   onToggleChatbot?: (conversationId: string, active: boolean) => void;
+  onFollowUpSent?: (conversationId: string) => void;
 }
 
 // Cache for sender profile lookups
