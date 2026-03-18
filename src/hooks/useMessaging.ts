@@ -187,6 +187,7 @@ export const useMessaging = () => {
       last_message_preview: content.trim().substring(0, 100),
     }).eq("id", selectedConversation.id);
 
+    sendingRef.current = false;
     setSendingMessage(false);
   };
 
