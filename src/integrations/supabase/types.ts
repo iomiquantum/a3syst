@@ -323,10 +323,14 @@ export type Database = {
           greeting: string
           id: string
           language: string
+          locations_text: string | null
           objective: string
+          prices_text: string | null
+          professionals_text: string | null
           services: Json
           special_instructions: string
           tone: string
+          treatments_text: string | null
           updated_at: string
         }
         Insert: {
@@ -337,10 +341,14 @@ export type Database = {
           greeting?: string
           id?: string
           language?: string
+          locations_text?: string | null
           objective?: string
+          prices_text?: string | null
+          professionals_text?: string | null
           services?: Json
           special_instructions?: string
           tone?: string
+          treatments_text?: string | null
           updated_at?: string
         }
         Update: {
@@ -351,10 +359,14 @@ export type Database = {
           greeting?: string
           id?: string
           language?: string
+          locations_text?: string | null
           objective?: string
+          prices_text?: string | null
+          professionals_text?: string | null
           services?: Json
           special_instructions?: string
           tone?: string
+          treatments_text?: string | null
           updated_at?: string
         }
         Relationships: [

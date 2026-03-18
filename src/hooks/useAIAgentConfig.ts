@@ -20,6 +20,10 @@ export interface AIAgentConfig {
   special_instructions: string;
   services: ServiceItem[];
   enabled: boolean;
+  treatments_text: string;
+  prices_text: string;
+  locations_text: string;
+  professionals_text: string;
 }
 
 const defaultConfig: AIAgentConfig = {
@@ -31,7 +35,18 @@ const defaultConfig: AIAgentConfig = {
   special_instructions: "- Siempre preguntar nombre y teléfono antes de agendar.\n- No dar diagnósticos médicos.\n- Derivar urgencias al número de emergencia.",
   services: [],
   enabled: true,
+  treatments_text: "",
+  prices_text: "",
+  locations_text: "",
+  professionals_text: "",
 };
+
+const HEALTH_TYPES = [
+  "clinica_medica", "clinica_dental", "clinica_estetica", "clinica_veterinaria",
+  "fisioterapia", "psicologia", "nutricion", "salud", "hospital", "laboratorio",
+  "farmacia", "optica", "podologia", "dermatologia", "ginecologia", "pediatria",
+  "traumatologia", "cardiologia", "oftalmologia", "urologia", "neurologia",
+];
 
 export const useAIAgentConfig = () => {
   const { clinicId } = useClinic();
@@ -39,12 +54,32 @@ export const useAIAgentConfig = () => {
   const [config, setConfig] = useState<AIAgentConfig>(defaultConfig);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isHealthBusiness, setIsHealthBusiness] = useState(false);
 
   useEffect(() => {
     if (!clinicId) return;
     setLoading(true);
 
-    const fetch = async () => {
+    const fetchAll = async () => {
+      // Fetch clinic business type
+      const { data: clinic } = await supabase
+        .from("clinics")
+        .select("business_type, business_category")
+        .eq("id", clinicId)
+        .maybeSingle();
+
+      if (clinic) {
+        const bt = (clinic.business_type || "").toLowerCase();
+        const bc = (clinic.business_category || "").toLowerCase();
+        setIsHealthBusiness(
+          HEALTH_TYPES.some(h => bt.includes(h) || bc.includes(h)) ||
+          bt.includes("clínica") || bt.includes("clinic") || bt.includes("salud") ||
+          bt.includes("médic") || bt.includes("medic") || bt.includes("doctor") ||
+          bc.includes("salud") || bc.includes("clinic") || bc.includes("médic")
+        );
+      }
+
+      // Fetch agent config
       const { data, error } = await supabase
         .from("ai_agent_config")
         .select("*")
@@ -62,6 +97,10 @@ export const useAIAgentConfig = () => {
           special_instructions: data.special_instructions,
           services: (data.services as any as ServiceItem[]) || [],
           enabled: data.enabled,
+          treatments_text: (data as any).treatments_text || "",
+          prices_text: (data as any).prices_text || "",
+          locations_text: (data as any).locations_text || "",
+          professionals_text: (data as any).professionals_text || "",
         });
       } else {
         setConfig(defaultConfig);
@@ -69,7 +108,7 @@ export const useAIAgentConfig = () => {
       setLoading(false);
     };
 
-    fetch();
+    fetchAll();
   }, [clinicId]);
 
   const save = useCallback(async (updated: AIAgentConfig) => {
@@ -86,11 +125,15 @@ export const useAIAgentConfig = () => {
       special_instructions: updated.special_instructions,
       services: updated.services as any,
       enabled: updated.enabled,
+      treatments_text: updated.treatments_text,
+      prices_text: updated.prices_text,
+      locations_text: updated.locations_text,
+      professionals_text: updated.professionals_text,
     };
 
     const { data, error } = await supabase
       .from("ai_agent_config")
-      .upsert({ ...payload, id: updated.id }, { onConflict: "clinic_id" })
+      .upsert({ ...payload, id: updated.id } as any, { onConflict: "clinic_id" })
       .select()
       .single();
 
@@ -104,5 +147,5 @@ export const useAIAgentConfig = () => {
     }
   }, [clinicId, toast]);
 
-  return { config, setConfig, loading, saving, save };
+  return { config, setConfig, loading, saving, save, isHealthBusiness };
 };

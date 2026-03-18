@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useAIAgentConfig, ServiceItem } from "@/hooks/useAIAgentConfig";
+import HealthBusinessFields from "@/components/ai/HealthBusinessFields";
 import { Skeleton } from "@/components/ui/skeleton";
 import AIUsageHistory from "@/components/ai/AIUsageHistory";
 import ChannelPromptsSection from "@/components/ai/ChannelPromptsSection";
@@ -17,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 const AIAgentConfigPage = () => {
-  const { config, setConfig, loading, saving, save } = useAIAgentConfig();
+  const { config, setConfig, loading, saving, save, isHealthBusiness } = useAIAgentConfig();
   
   // Autopilot settings state
   const [agendaReminders, setAgendaReminders] = useState(true);
@@ -178,6 +179,11 @@ const AIAgentConfigPage = () => {
               </CardContent>
             </Card>
 
+            {/* Health Business Fields */}
+            {isHealthBusiness && (
+              <HealthBusinessFields config={config} onUpdate={update} />
+            )}
+
             {/* Special Instructions */}
             <Card className="shadow-card">
               <CardHeader>
@@ -206,7 +212,19 @@ OBJETIVO:
 ${config.objective}
 
 SERVICIOS DISPONIBLES:
-${config.services.map((s) => `• ${s.name} — $${s.price} — ${s.description}`).join("\n") || "(sin servicios)"}
+${config.services.map((s) => `• ${s.name} — $${s.price} — ${s.description}`).join("\n") || "(sin servicios)"}${isHealthBusiness && config.treatments_text ? `
+
+TRATAMIENTOS:
+${config.treatments_text}` : ""}${isHealthBusiness && config.prices_text ? `
+
+PRECIOS:
+${config.prices_text}` : ""}${isHealthBusiness && config.locations_text ? `
+
+UBICACIONES:
+${config.locations_text}` : ""}${isHealthBusiness && config.professionals_text ? `
+
+PROFESIONALES:
+${config.professionals_text}` : ""}
 
 INSTRUCCIONES:
 ${config.special_instructions}
