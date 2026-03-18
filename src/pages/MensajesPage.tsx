@@ -33,6 +33,7 @@ const MensajesPage = () => {
     updateContact,
     toggleChatbot,
     fetchConversations,
+    fetchMessages,
   } = useMessaging();
 
   const handleFollowUpSent = (conversationId?: string) => {
