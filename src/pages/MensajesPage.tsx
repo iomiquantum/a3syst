@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { MessageSquare, ArrowLeft, Bot, Zap, CheckCircle2, AlertCircle } from "lucide-react";
+import { MessageSquare, ArrowLeft, Bot, Zap, CheckCircle2, AlertCircle, UserCheck } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import InboxSidebar from "@/components/messaging/InboxSidebar";
 import ChatView from "@/components/messaging/ChatView";
