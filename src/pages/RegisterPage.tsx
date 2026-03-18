@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Eye, EyeOff, Zap, ArrowRight, Sun, Moon } from "lucide-react";
+import { Eye, EyeOff, Zap, ArrowRight, Sun, Moon, ShieldCheck } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
@@ -11,6 +11,7 @@ const RegisterPage = () => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [accessPin, setAccessPin] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -20,7 +21,8 @@ const RegisterPage = () => {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName || !email || !password) { toast.error("Completa todos los campos"); return; }
+    if (!fullName || !email || !password || !accessPin) { toast.error("Completa todos los campos"); return; }
+    if (accessPin !== "A3A3A3") { toast.error("PIN de acceso inválido"); return; }
     if (!acceptedTerms) { toast.error("Debes aceptar los Términos y la Política de Privacidad"); return; }
     if (password.length < 6) { toast.error("La contraseña debe tener al menos 6 caracteres"); return; }
     setLoading(true);
@@ -87,6 +89,19 @@ const RegisterPage = () => {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">PIN de acceso</label>
+              <div className="relative">
+                <Input
+                  type="password" value={accessPin} onChange={(e) => setAccessPin(e.target.value.toUpperCase())}
+                  placeholder="Ingresa el PIN de invitación"
+                  maxLength={6}
+                  className="h-12 bg-secondary border-border text-foreground placeholder:text-muted-foreground/50 pr-10 focus:border-primary/50 focus:ring-primary/20"
+                />
+                <ShieldCheck className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+              </div>
+              <p className="text-xs text-muted-foreground/50 mt-1">Solicita tu PIN al administrador</p>
             </div>
             <div className="flex items-start gap-2">
               <Checkbox id="terms" checked={acceptedTerms} onCheckedChange={(c) => setAcceptedTerms(!!c)} className="mt-1" />
