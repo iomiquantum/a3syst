@@ -376,6 +376,18 @@ const ChatView = ({ conversation, messages, sending, onSend, onToggleChatbot, on
             {aiLoading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Bot className="w-3 h-3 mr-1" />}
             {aiLoading ? "Pensando..." : "Respuesta IA"}
           </Button>
+          {(conversation.follow_up_count || 0) < 5 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs border-orange-500/30 text-orange-600 hover:bg-orange-500/10"
+              onClick={handleFollowUp}
+              disabled={followUpLoading}
+            >
+              {followUpLoading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <UserCheck className="w-3 h-3 mr-1" />}
+              {followUpLoading ? "Generando..." : `Seguimiento ${(conversation.follow_up_count || 0) + 1}`}
+            </Button>
+          )}
         </div>
         <div className="flex items-end gap-2">
           <div className="flex-1 relative">
