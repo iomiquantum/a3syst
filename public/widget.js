@@ -354,22 +354,20 @@
         });
         const data = await res.json();
         const msgs = data.messages || [];
-        const outbound = msgs.filter(m => m.direction === 'outbound');
-        if (outbound.length > 0) {
-          const currentOutbound = messagesArea.querySelectorAll('.iomi-msg.in[data-server]').length;
-          outbound.forEach((m, i) => {
-            if (i >= currentOutbound) {
-              const div = document.createElement('div');
-              div.className = 'iomi-msg in';
-              div.setAttribute('data-server', '1');
-              div.innerHTML = '<div class="bubble">' + escapeHtml(m.content) + '</div>';
-              messagesArea.appendChild(div);
-            }
-          });
-          messagesArea.scrollTop = messagesArea.scrollHeight;
-        }
+        // Render any messages we haven't rendered yet
+        msgs.forEach(function(m) {
+          if (renderedMsgIds.has(m.id)) return;
+          renderedMsgIds.add(m.id);
+          var dir = m.direction === 'inbound' ? 'out' : 'in';
+          var div = document.createElement('div');
+          div.className = 'iomi-msg ' + dir;
+          div.setAttribute('data-msg-id', m.id);
+          div.innerHTML = '<div class="bubble">' + escapeHtml(m.content) + '</div>';
+          messagesArea.appendChild(div);
+        });
+        messagesArea.scrollTop = messagesArea.scrollHeight;
       } catch (e) { /* silent */ }
-    }, 5000);
+    }, 4000);
   }
 
   function stopPolling() {
