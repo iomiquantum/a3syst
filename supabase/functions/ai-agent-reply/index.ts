@@ -134,6 +134,27 @@ IMPORTANTE:
 - Si no sabes algo, sugiere contactar al negocio directamente.
 - Nunca inventes información sobre servicios o precios que no estén listados arriba.`;
 
+    // Follow-up mode: add specific instructions
+    if (isFollowUp) {
+      const followUpCount = (conversationData.follow_up_count || 0) + 1;
+      const lastInbound = conversationData.last_inbound_at;
+      const timeSince = lastInbound 
+        ? Math.floor((Date.now() - new Date(lastInbound).getTime()) / 60000)
+        : 0;
+      const timeLabel = timeSince >= 1440 
+        ? `${Math.floor(timeSince / 1440)} días` 
+        : timeSince >= 60 
+          ? `${Math.floor(timeSince / 60)} horas` 
+          : `${timeSince} minutos`;
+
+      systemPrompt += `\n\n=== MODO SEGUIMIENTO (Contacto ${followUpCount}) ===
+Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondido en ${timeLabel}.
+- Genera un mensaje amable y persuasivo para que el contacto retome la conversación.
+- NO repitas el mismo mensaje anterior, varía el enfoque.
+- Contacto ${followUpCount <= 2 ? ": Sé amable y recuerda los beneficios del servicio." : followUpCount <= 4 ? ": Crea urgencia moderada, menciona disponibilidad limitada o promociones." : ": Último intento, ofrece ayuda directa o alternativas de contacto."}
+- Mantén el mensaje corto (1-2 oraciones máximo).`;
+    }
+
     // Fetch channel-specific instructions
     const resolvedChannel = requestChannel || conversationData.channel || "web_chat";
     const { data: channelPrompt } = await supabase
