@@ -18,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 const AIAgentConfigPage = () => {
-  const { config, setConfig, loading, saving, save } = useAIAgentConfig();
+  const { config, setConfig, loading, saving, save, isHealthBusiness } = useAIAgentConfig();
   
   // Autopilot settings state
   const [agendaReminders, setAgendaReminders] = useState(true);
