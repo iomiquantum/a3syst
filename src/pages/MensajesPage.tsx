@@ -56,10 +56,31 @@ const MensajesPage = () => {
   const escalated = allConversations.filter(c => !c.chatbot_active && c.unread_count > 0);
   const activeConvs = allConversations.filter(c => c.status === "open" || c.unread_count > 0);
 
+  // Conversations needing follow-up: bot replied but no inbound in 30 min
+  const followUpConversations = useMemo(() => {
+    const thirtyMinAgo = Date.now() - 30 * 60 * 1000;
+    return allConversations.filter(c => {
+      if (!c.last_inbound_at) return false;
+      const lastIn = new Date(c.last_inbound_at).getTime();
+      const lastMsg = new Date(c.last_message_at).getTime();
+      // Bot replied (last message is after last inbound) AND no inbound in 30 min
+      return lastMsg > lastIn && lastIn < thirtyMinAgo && c.status !== "closed";
+    });
+  }, [allConversations]);
+
   // Filtered conversations based on tab
   const tabConversations = useMemo(() => {
     if (activeTab === "escalados") {
       return conversations.filter(c => !c.chatbot_active || c.unread_count > 0);
+    }
+    if (activeTab === "seguimiento") {
+      const thirtyMinAgo = Date.now() - 30 * 60 * 1000;
+      return conversations.filter(c => {
+        if (!c.last_inbound_at) return false;
+        const lastIn = new Date(c.last_inbound_at).getTime();
+        const lastMsg = new Date(c.last_message_at).getTime();
+        return lastMsg > lastIn && lastIn < thirtyMinAgo && c.status !== "closed";
+      });
     }
     return conversations.filter(c => c.chatbot_active && c.unread_count === 0);
   }, [conversations, activeTab]);
