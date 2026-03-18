@@ -156,7 +156,7 @@ const MensajesPage = () => {
                 <span className="text-sm font-medium truncate">{selectedConversation.contact?.name || "Chat"}</span>
               </div>
               <div className="flex-1 overflow-hidden">
-                <ChatView conversation={selectedConversation} messages={messages} sending={sendingMessage} onSend={sendMessage} onToggleChatbot={toggleChatbot} />
+                <ChatView conversation={selectedConversation} messages={messages} sending={sendingMessage} onSend={sendMessage} onToggleChatbot={toggleChatbot} onFollowUpSent={handleFollowUpSent} />
               </div>
             </div>
           ) : (
