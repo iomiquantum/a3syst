@@ -619,7 +619,7 @@ const OnboardingPage = () => {
     setGenerationStep(4);
     await new Promise(r => setTimeout(r, 600));
 
-    await (supabase as any).from("clinics").update({ onboarding_completed: true }).eq("id", clinicId);
+    // Don't mark onboarding_completed yet — user must explicitly finalize
 
     dispatch({ type: "SET_SLUG", slug });
     dispatch({ type: "SET_PHASE", phase: "done" });
