@@ -217,6 +217,9 @@ ${config.greeting}`}
               </CardContent>
             </Card>
 
+            {/* Channel Prompts Section */}
+            <ChannelPromptsSection agentConfig={config} />
+
             <Separator />
             <AIUsageHistory />
           </TabsContent>
