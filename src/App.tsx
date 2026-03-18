@@ -11,6 +11,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
 import WhatsAppConfigPage from "./pages/WhatsAppConfigPage";
 import WhatsAppMessagesPage from "./pages/WhatsAppMessagesPage";
+import WhatsAppPage from "./pages/WhatsAppPage";
 import RegisterPage from "./pages/RegisterPage";
 import Dashboard from "./pages/Dashboard";
 import PacientesPage from "./pages/PacientesPage";
