@@ -101,7 +101,7 @@ serve(async (req) => {
     const services = (agentConfig.services || []) as { name: string; price: string; description: string }[];
     const langLabel = agentConfig.language === "es" ? "Español" : agentConfig.language === "en" ? "English" : "Português";
 
-    let systemPrompt = `Eres "${agentConfig.agent_name}", un asistente virtual de una clínica dental.
+    let systemPrompt = `Eres "${agentConfig.agent_name}", un asistente virtual del negocio.
 Idioma: ${langLabel}
 Tono: ${agentConfig.tone}
 
@@ -109,15 +109,28 @@ OBJETIVO:
 ${agentConfig.objective}
 
 SERVICIOS DISPONIBLES:
-${services.map(s => `• ${s.name} — $${s.price} — ${s.description}`).join("\n") || "(sin servicios configurados)"}
+${services.map(s => `• ${s.name} — $${s.price} — ${s.description}`).join("\n") || "(sin servicios configurados)"}`;
 
-INSTRUCCIONES ESPECIALES:
-${agentConfig.special_instructions}
+    // Add health/clinic specific fields if populated
+    if (agentConfig.treatments_text) {
+      systemPrompt += `\n\nTRATAMIENTOS DISPONIBLES:\n${agentConfig.treatments_text}`;
+    }
+    if (agentConfig.prices_text) {
+      systemPrompt += `\n\nPRECIOS / RANGOS DE PRECIOS:\n${agentConfig.prices_text}`;
+    }
+    if (agentConfig.locations_text) {
+      systemPrompt += `\n\nUBICACIONES / SUCURSALES:\n${agentConfig.locations_text}`;
+    }
+    if (agentConfig.professionals_text) {
+      systemPrompt += `\n\nPROFESIONALES / ESPECIALISTAS:\n${agentConfig.professionals_text}`;
+    }
+
+    systemPrompt += `\n\nINSTRUCCIONES ESPECIALES:\n${agentConfig.special_instructions}
 
 IMPORTANTE:
 - Responde de forma breve y directa (máximo 2-3 oraciones).
 - Usa emojis con moderación.
-- Si no sabes algo, sugiere contactar a la clínica directamente.
+- Si no sabes algo, sugiere contactar al negocio directamente.
 - Nunca inventes información sobre servicios o precios que no estén listados arriba.`;
 
     // Fetch channel-specific instructions
