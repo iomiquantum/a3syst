@@ -7,9 +7,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { MoreVertical, Eye, Pencil, Shield, Pause, Play, KeyRound, History, Trash2 } from "lucide-react";
+import { MoreVertical, Eye, Shield, KeyRound, History, Trash2 } from "lucide-react";
 import { UsuarioCompleto, roleLabelsAdmin, roleColors, estadoColors } from "@/hooks/useUsuariosAdmin";
 
 interface UsersTableProps {
