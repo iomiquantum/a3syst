@@ -89,6 +89,7 @@ const RegisterPage = () => {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+            </div>
             <div>
               <label className="block text-sm font-medium text-muted-foreground mb-2">PIN de acceso</label>
               <div className="relative">
