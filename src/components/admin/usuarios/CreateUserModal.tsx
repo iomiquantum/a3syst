@@ -18,12 +18,12 @@ interface CreateUserModalProps {
 }
 
 const CreateUserModal = ({ open, onOpenChange, clinics, onSubmit, isLoading }: CreateUserModalProps) => {
-  const [form, setForm] = useState({ nombre: "", apellido: "", email: "", telefono: "", clinic_id: "", role: "empleado", notas: "", password: "" });
+  const [form, setForm] = useState({ nombre: "", apellido: "", email: "", telefono: "", clinic_id: "", role: "empleado", notas: "", password: "", skip_onboarding: true });
   const [showPw, setShowPw] = useState(false);
 
   const handleSubmit = () => {
     onSubmit(form);
-    setForm({ nombre: "", apellido: "", email: "", telefono: "", clinic_id: "", role: "empleado", notas: "", password: "" });
+    setForm({ nombre: "", apellido: "", email: "", telefono: "", clinic_id: "", role: "empleado", notas: "", password: "", skip_onboarding: true });
   };
 
   const valid = form.nombre.trim() && form.apellido.trim() && form.email.trim() && form.password.length >= 6 && form.clinic_id && form.role;
