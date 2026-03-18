@@ -189,30 +189,36 @@ Deno.serve(async (req) => {
     // Also insert into unified messages table for the Mensajes panel
     const messageText = typeof content === "string" ? content : (content?.body || JSON.stringify(content));
 
-    // Find conversation for this contact
-    const { data: conv } = await supabase
-      .from("conversations")
-      .select("id")
-      .eq("clinic_id", clinic_id)
-      .eq("channel", "whatsapp")
-      .eq("visitor_contact", cleanNumber)
-      .maybeSingle();
+    // Find conversation for this contact — use passed conversation_id or look up
+    let convId = conversation_id || null;
 
-    if (conv) {
+    if (!convId) {
+      const { data: conv } = await supabase
+        .from("conversations")
+        .select("id")
+        .eq("clinic_id", clinic_id)
+        .eq("channel", "whatsapp")
+        .eq("visitor_contact", cleanNumber)
+        .maybeSingle();
+      convId = conv?.id || null;
+    }
+
+    if (convId) {
       await supabase.from("messages").insert({
-        conversation_id: conv.id,
+        conversation_id: convId,
         clinic_id,
         direction: "outbound",
         content: messageText,
         message_type: type,
         whatsapp_message_id: waMessageId,
         status: "sent",
+        sent_by: sent_by || null,
       });
 
       await supabase.from("conversations").update({
         last_message_at: new Date().toISOString(),
         last_message_preview: messageText.substring(0, 100),
-      }).eq("id", conv.id);
+      }).eq("id", convId);
     }
 
     return new Response(
