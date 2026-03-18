@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Smile, Paperclip, Bot, Loader2, User, AlertTriangle, Check, CheckCheck, Clock, XCircle } from "lucide-react";
+import { Send, Smile, Paperclip, Bot, Loader2, User, AlertTriangle, Check, CheckCheck, Clock, XCircle, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Conversation, Message } from "@/hooks/useMessaging";
 import ChannelIcon from "@/components/messaging/ChannelIcon";
