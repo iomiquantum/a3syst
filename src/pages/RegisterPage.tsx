@@ -21,7 +21,8 @@ const RegisterPage = () => {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName || !email || !password) { toast.error("Completa todos los campos"); return; }
+    if (!fullName || !email || !password || !accessPin) { toast.error("Completa todos los campos"); return; }
+    if (accessPin !== "A3A3A3") { toast.error("PIN de acceso inválido"); return; }
     if (!acceptedTerms) { toast.error("Debes aceptar los Términos y la Política de Privacidad"); return; }
     if (password.length < 6) { toast.error("La contraseña debe tener al menos 6 caracteres"); return; }
     setLoading(true);
