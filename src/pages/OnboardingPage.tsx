@@ -626,7 +626,19 @@ const OnboardingPage = () => {
     localStorage.removeItem("a3_onboarding");
   };
 
-  const handleFinish = () => { refreshClinic(); navigate("/dashboard"); };
+  const handleFinish = async () => {
+    // Mark onboarding as completed only when user explicitly finalizes
+    if (clinicId) {
+      await (supabase as any).from("clinics").update({ onboarding_completed: true }).eq("id", clinicId);
+    }
+    refreshClinic();
+    navigate("/dashboard");
+  };
+
+  const handleEditOnboarding = () => {
+    // Go back to review phase so user can edit their data
+    dispatch({ type: "SET_PHASE", phase: "review" });
+  };
 
   const landingUrl = `${window.location.origin}/negocio/${state.slug}`;
   const copyLink = () => { navigator.clipboard.writeText(landingUrl); toast.success("¡Link copiado!"); };
