@@ -1,0 +1,1 @@
+ALTER TABLE public.conversations ALTER COLUMN chatbot_active SET DEFAULT true;
