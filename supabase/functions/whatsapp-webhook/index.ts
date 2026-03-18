@@ -172,10 +172,68 @@ Deno.serve(async (req) => {
             last_message_at: new Date().toISOString(),
           }).eq("id", conversation.id);
 
-          // Also sync to unified contacts & conversations for backward compat
           await syncToUnifiedMessaging(supabase, clinicId, contactPhone, contactName, content, messageType, msg.id);
 
           console.log("[WA-Webhook] Message processed:", { contactPhone, conversationId: conversation.id });
+
+          // --- AUTO-RESPUESTA DEL AGENTE IA ---
+          if (messageType === "text" && content) {
+            try {
+              const { data: agentConfig } = await supabase
+                .from("ai_agent_config")
+                .select("enabled")
+                .eq("clinic_id", clinicId)
+                .eq("enabled", true)
+                .maybeSingle();
+
+              const { data: channelConfig } = await supabase
+                .from("ai_agent_channel_prompts")
+                .select("enabled")
+                .eq("clinic_id", clinicId)
+                .eq("channel", "whatsapp")
+                .eq("enabled", true)
+                .maybeSingle();
+
+              if (agentConfig && channelConfig) {
+                // Find unified conversation for ai-agent-reply
+                const { data: unifiedConv } = await supabase
+                  .from("conversations")
+                  .select("id")
+                  .eq("clinic_id", clinicId)
+                  .eq("channel", "whatsapp")
+                  .eq("visitor_contact", contactPhone)
+                  .maybeSingle();
+
+                if (unifiedConv) {
+                  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+                  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+                  const agentResponse = await fetch(
+                    `${supabaseUrl}/functions/v1/ai-agent-reply`,
+                    {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${serviceKey}`,
+                        "apikey": serviceKey,
+                      },
+                      body: JSON.stringify({
+                        clinic_id: clinicId,
+                        channel: "whatsapp",
+                        conversation_id: unifiedConv.id,
+                        triggered_by: "auto",
+                      }),
+                    }
+                  );
+
+                  const agentResult = await agentResponse.json().catch(() => null);
+                  console.log("[WA-Webhook] AI Agent response:", agentResult?.reply ? "OK" : "no reply");
+                }
+              }
+            } catch (agentError) {
+              console.log("[WA-Webhook] AI Agent skipped:", (agentError as Error).message);
+            }
+          }
         }
       }
 
