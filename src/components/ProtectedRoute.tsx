@@ -23,10 +23,8 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  // If user needs onboarding and isn't already on that page
-  if (needsOnboarding && location.pathname !== "/onboarding") {
-    return <Navigate to="/onboarding" replace />;
-  }
+  // Only redirect to onboarding if user is the clinic OWNER and hasn't completed it
+  // Admin-created users and role-assigned users should never be forced to onboarding
 
   return <>{children}</>;
 };

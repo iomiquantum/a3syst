@@ -2,7 +2,9 @@ import { useState, useEffect, useMemo } from "react";
 import {
   Check, X, Edit3, MessageSquare, Calendar, Users, DollarSign, FileText,
   Bot, Clock, TrendingUp, Sparkles, PartyPopper, Palmtree, ArrowRight,
+  Rocket, Settings,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import WhatsAppDashboardCard from "@/components/whatsapp/WhatsAppDashboardCard";
 import AppLayout from "@/components/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -59,7 +61,7 @@ interface ActivityItem {
 
 /* ─── Component ─── */
 const Dashboard = () => {
-  const { clinicId, clinicName } = useClinic();
+  const { clinicId, clinicName, needsOnboarding } = useClinic();
   const { user } = useAuth();
   const { labels } = useBusinessLabels();
   const navigate = useNavigate();
@@ -357,6 +359,33 @@ const Dashboard = () => {
             Autopilotos activos
           </span>
         </div>
+
+        {/* ═══ ONBOARDING BANNER ═══ */}
+        {needsOnboarding && (
+          <Card className="border-primary/30 bg-gradient-to-r from-primary/10 to-primary/5 backdrop-blur-sm overflow-hidden">
+            <CardContent className="p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shrink-0">
+                  <Rocket className="w-6 h-6 text-primary-foreground" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground">Completa la configuración de tu negocio</h3>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Configura tus servicios, horarios y preferencias para activar todos los autopilotos.
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => navigate("/onboarding")}
+                size="lg"
+                className="gradient-primary text-primary-foreground hover:opacity-90 whitespace-nowrap shrink-0"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Finalizar Onboarding
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* ═══ 1: APPROVAL QUEUE ═══ */}
         <section>
