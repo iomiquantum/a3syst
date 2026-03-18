@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
-import { Plus, Trash2, Users, UserPlus, Eye, EyeOff, Search, PauseCircle, PlayCircle } from "lucide-react";
+import { Plus, Trash2, Users, UserPlus, Eye, EyeOff, Search, Power, UserX, X } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -461,33 +463,53 @@ const AdminUsuariosTab = ({ clinics, profiles, roles, onRefresh }: AdminUsuarios
                         )}
                       </td>
                       <td className="px-5 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {isSuspended ? (
-                            <button onClick={() => handleReactivateUser(profile.user_id)} title="Prender usuario" className="p-1.5 rounded-md hover:bg-success/10">
-                              <PlayCircle className="w-4 h-4 text-success" />
-                            </button>
-                          ) : (
-                            <button onClick={() => handleSuspendUser(profile.user_id)} title="Apagar usuario" className="p-1.5 rounded-md hover:bg-warning/10">
-                              <PauseCircle className="w-4 h-4 text-warning" />
-                            </button>
-                          )}
+                        <div className="flex items-center justify-end gap-2">
+                          {/* Toggle activar/desactivar */}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div>
+                                  <Switch
+                                    checked={!isSuspended}
+                                    onCheckedChange={(checked) =>
+                                      checked ? handleReactivateUser(profile.user_id) : handleSuspendUser(profile.user_id)
+                                    }
+                                  />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>{isSuspended ? "Activar usuario" : "Desactivar usuario"}</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
 
+                          {/* Quitar de clínica (por cada rol) */}
                           {userRoles.map((r) => (
-                            <button key={r.id} onClick={() => handleRemoveRole(r.id)} title={`Quitar de ${(r.clinics as any)?.name}`} className="p-1.5 rounded-md hover:bg-destructive/10">
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </button>
+                            <TooltipProvider key={r.id}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button onClick={() => handleRemoveRole(r.id)} className="p-1.5 rounded-md hover:bg-warning/10">
+                                    <X className="w-4 h-4 text-warning" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Quitar de {(r.clinics as any)?.name || "clínica"}</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           ))}
 
-                          {canDeleteUser && (
-                            <button
-                              onClick={() => handleDeleteUser(profile.user_id, profile.email)}
-                              title="Eliminar usuario"
-                              disabled={isDeleting}
-                              className="p-1.5 rounded-md hover:bg-destructive/10 disabled:opacity-50"
-                            >
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </button>
-                          )}
+                          {/* Eliminar usuario */}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => handleDeleteUser(profile.user_id, profile.email)}
+                                  disabled={isDeleting}
+                                  className="p-1.5 rounded-md hover:bg-destructive/10 disabled:opacity-50"
+                                >
+                                  <Trash2 className="w-4 h-4 text-destructive" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>Eliminar usuario</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
                       </td>
                     </tr>

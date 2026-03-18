@@ -46,23 +46,17 @@ serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    const [{ data: roles, error: rolesError }, { data: clinics, error: clinicsError }] = await Promise.all([
-      adminClient.from("user_roles").select("id").eq("user_id", user_id),
-      adminClient.from("clinics").select("id").eq("owner_id", user_id),
-    ]);
+    // Clean up roles and owned clinics first
+    const { error: rolesDelErr } = await adminClient.from("user_roles").delete().eq("user_id", user_id);
+    if (rolesDelErr) console.error("Error deleting roles:", rolesDelErr.message);
 
-    if (rolesError || clinicsError) {
-      return new Response(JSON.stringify({ error: rolesError?.message || clinicsError?.message || "No se pudo validar el usuario" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if ((roles?.length ?? 0) > 0 || (clinics?.length ?? 0) > 0) {
-      return new Response(JSON.stringify({ error: "Primero debes quitar sus roles o clínicas antes de eliminar este usuario" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Transfer ownership of clinics or delete them
+    const { data: ownedClinics } = await adminClient.from("clinics").select("id").eq("owner_id", user_id);
+    if (ownedClinics && ownedClinics.length > 0) {
+      // Delete clinics owned by this user (or you could transfer ownership)
+      for (const clinic of ownedClinics) {
+        await adminClient.from("clinics").delete().eq("id", clinic.id);
+      }
     }
 
     const { error: authDeleteError } = await adminClient.auth.admin.deleteUser(user_id);
