@@ -212,6 +212,14 @@ const MensajesPage = () => {
                 <span className="ml-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{escalated.length}</span>
               )}
             </button>
+            <button onClick={() => setActiveTab("seguimiento")}
+              className={cn("px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors",
+                activeTab === "seguimiento" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
+              <UserCheck className="w-3.5 h-3.5" /> Seguimiento
+              {followUpConversations.length > 0 && (
+                <span className="ml-1 w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-bold flex items-center justify-center">{followUpConversations.length}</span>
+              )}
+            </button>
             <button onClick={() => setActiveTab("resueltos")}
               className={cn("px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors",
                 activeTab === "resueltos" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>

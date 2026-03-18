@@ -139,6 +139,31 @@ const ChatView = ({ conversation, messages, sending, onSend, onToggleChatbot, on
     }
   };
 
+  const handleFollowUp = async () => {
+    if (!clinicId || followUpLoading) return;
+    setFollowUpLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-agent-reply", {
+        body: {
+          conversation_id: conversation.id,
+          clinic_id: clinicId,
+          triggered_by: "follow_up",
+        },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+      } else {
+        toast.success(`Seguimiento enviado (Contacto ${(conversation.follow_up_count || 0) + 1})`);
+        onFollowUpSent?.(conversation.id);
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Error al generar seguimiento");
+    } finally {
+      setFollowUpLoading(false);
+    }
+  };
+
   const formatTime = (date: string) => {
     try { return format(new Date(date), "HH:mm", { locale: es }); } catch { return ""; }
   };
