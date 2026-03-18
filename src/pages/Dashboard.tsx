@@ -2,7 +2,9 @@ import { useState, useEffect, useMemo } from "react";
 import {
   Check, X, Edit3, MessageSquare, Calendar, Users, DollarSign, FileText,
   Bot, Clock, TrendingUp, Sparkles, PartyPopper, Palmtree, ArrowRight,
+  Rocket, Settings,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import WhatsAppDashboardCard from "@/components/whatsapp/WhatsAppDashboardCard";
 import AppLayout from "@/components/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
