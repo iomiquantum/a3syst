@@ -114,6 +114,12 @@ const MensajesPage = () => {
                     <Zap className="w-3 h-3" /> Escalados
                     {escalated.length > 0 && <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] flex items-center justify-center">{escalated.length}</span>}
                   </button>
+                  <button onClick={() => setActiveTab("seguimiento")}
+                    className={cn("flex-1 py-2 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors",
+                      activeTab === "seguimiento" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
+                    <UserCheck className="w-3 h-3" /> Seguimiento
+                    {followUpConversations.length > 0 && <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] flex items-center justify-center">{followUpConversations.length}</span>}
+                  </button>
                   <button onClick={() => setActiveTab("resueltos")}
                     className={cn("flex-1 py-2 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors",
                       activeTab === "resueltos" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
