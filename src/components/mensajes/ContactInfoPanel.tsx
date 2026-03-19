@@ -219,13 +219,13 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete }: Props) => {
           <EditableField field="email" label="Email" value={contact.email} icon={Mail} copyable />
           <EditableField field="location" label="Ubicación" value={contact.location} icon={MapPin} />
 
-          {/* Funnel */}
+          {/* Pipeline Stage */}
           <div className="space-y-1">
-            <p className="text-[11px] text-muted-foreground flex items-center gap-1">✧ Etapa del embudo</p>
-            <Select value={contact.funnel_stage} onValueChange={updateStage}>
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1">✧ Etapa del pipeline</p>
+            <Select value={c.pipeline_tab} onValueChange={updateStage}>
               <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {FUNNEL_STAGES.map(s => (
+                {PIPELINE_STAGES.map(s => (
                   <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
                 ))}
               </SelectContent>
