@@ -292,6 +292,20 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
       }).eq("id", conversation_id);
     }
 
+    // === PIPELINE: Start inactivity timer after AI response ===
+    const { data: convState } = await supabase
+      .from("conversations")
+      .select("pipeline_tab")
+      .eq("id", conversation_id)
+      .single();
+
+    if (convState?.pipeline_tab === "resueltos_ia") {
+      await supabase.from("conversations").update({
+        inactivity_timer_start: new Date().toISOString(),
+      }).eq("id", conversation_id);
+      console.log(`[PIPELINE] Inactivity timer started for conv ${conversation_id}`);
+    }
+
     // If follow-up, update follow_up_count and contact funnel_stage
     if (isFollowUp) {
       const newCount = (conversationData.follow_up_count || 0) + 1;
