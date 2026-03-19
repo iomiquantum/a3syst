@@ -214,7 +214,12 @@ const MensajesPage = () => {
 
               <div className="flex-1 min-w-0 overflow-hidden">
                 {selectedConv ? (
-                  <MensajesChat conversation={selectedConv} onActionComplete={handleActionComplete} />
+                  <MensajesChat
+                    conversation={selectedConv}
+                    onActionComplete={handleActionComplete}
+                    showContactPanel={showContactPanel}
+                    onToggleContactPanel={() => setShowContactPanel(p => !p)}
+                  />
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
                     <MessageSquare className="w-12 h-12 mb-3 opacity-30" />
@@ -226,9 +231,13 @@ const MensajesPage = () => {
                 )}
               </div>
 
-              {selectedConv && (
-                <div className="w-[260px] border-l border-border shrink-0 overflow-hidden hidden lg:block">
-                  <ContactInfoPanel conversation={selectedConv} onActionComplete={handleActionComplete} />
+              {selectedConv && showContactPanel && (
+                <div className="w-[280px] border-l border-border shrink-0 overflow-hidden hidden md:block">
+                  <ContactInfoPanel
+                    conversation={selectedConv}
+                    onActionComplete={handleActionComplete}
+                    onClose={() => setShowContactPanel(false)}
+                  />
                 </div>
               )}
             </>
