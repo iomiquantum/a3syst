@@ -3,17 +3,18 @@ import { MessageSquare, ArrowLeft } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import MensajesHeader, { ViewMode } from "@/components/mensajes/MensajesHeader";
 import MensajesResumen from "@/components/mensajes/MensajesResumen";
-import MensajesPipelineTabs, { PipelineFilter } from "@/components/mensajes/MensajesPipelineTabs";
+import MensajesPipelineTabs from "@/components/mensajes/MensajesPipelineTabs";
 import MensajesSidebar from "@/components/mensajes/MensajesSidebar";
 import MensajesConversationList from "@/components/mensajes/MensajesConversationList";
 import MensajesChat from "@/components/mensajes/MensajesChat";
 import MensajesKanban from "@/components/mensajes/MensajesKanban";
-import { MOCK_CONVERSATIONS, MockConversation } from "@/data/mockConversations";
+import { useConversationsByPipeline, PipelineConversation, PipelineFilter } from "@/hooks/useConversationsByPipeline";
+import { usePipelineStats } from "@/hooks/usePipelineStats";
+import { useChannelStats } from "@/hooks/useChannelStats";
+import { useTagStats } from "@/hooks/useTagStats";
 import { Period } from "@/components/mensajes/PeriodSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { SlidersHorizontal } from "lucide-react";
 import { DateRange } from "react-day-picker";
 
 const VIEW_MODE_KEY = "mensajes-view-mode";
@@ -29,50 +30,29 @@ const MensajesPage = () => {
   const [selectedChannel, setSelectedChannel] = useState("todos");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedConv, setSelectedConv] = useState<MockConversation | null>(null);
+  const [selectedConv, setSelectedConv] = useState<PipelineConversation | null>(null);
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
 
   useEffect(() => {
     localStorage.setItem(VIEW_MODE_KEY, viewMode);
   }, [viewMode]);
 
-  // Filter conversations
-  const filteredConversations = useMemo(() => {
-    let result = [...MOCK_CONVERSATIONS];
+  // Real data hooks
+  const { tabCounts, resumenStats, loading: statsLoading, refetch: refetchStats } = usePipelineStats();
+  const { counts: channelCounts, total: channelTotal } = useChannelStats();
+  const { tags: tagStats } = useTagStats();
 
-    // Pipeline tab filter
-    if (activeTab !== "todos") {
-      if (activeTab === "seguimiento_c1") {
-        result = result.filter(c => c.pipelineTab === "seguimiento_c1" || c.pipelineTab === "seguimiento_c2" || c.pipelineTab === "seguimiento_c3");
-      } else {
-        result = result.filter(c => c.pipelineTab === activeTab);
-      }
-    }
+  const { conversations, loading: convsLoading, refetch: refetchConvs } = useConversationsByPipeline({
+    pipelineTab: activeTab,
+    channel: selectedChannel,
+    tags: selectedTags,
+    searchQuery,
+  });
 
-    // Channel filter
-    if (selectedChannel !== "todos") {
-      result = result.filter(c => c.channel === selectedChannel);
-    }
-
-    // Tags filter
-    if (selectedTags.length > 0) {
-      result = result.filter(c => selectedTags.some(t => c.tags.includes(t)));
-    }
-
-    // Search
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(c =>
-        c.contactName.toLowerCase().includes(q) ||
-        c.contactPhone.toLowerCase().includes(q)
-      );
-    }
-
-    // Sort by lastMessageAt DESC
-    result.sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
-
-    return result;
-  }, [activeTab, selectedChannel, selectedTags, searchQuery]);
+  const handleActionComplete = () => {
+    refetchConvs();
+    refetchStats();
+  };
 
   // Active filter chips
   const activeFilters = useMemo(() => {
@@ -91,31 +71,32 @@ const MensajesPage = () => {
     if (key.startsWith("tag:")) setSelectedTags(prev => prev.filter(t => `tag:${t}` !== key));
   };
 
-  const handleSelectConv = (c: MockConversation) => {
+  const handleSelectConv = (c: PipelineConversation) => {
     setSelectedConv(c);
     if (isMobile) setMobileView("chat");
   };
 
-  // Mobile layout
-  if (isMobile) {
-    if (mobileView === "chat" && selectedConv) {
-      return (
-        <AppLayout>
-          <div className="h-[calc(100vh-4rem)] -m-6 flex flex-col border border-border rounded-lg overflow-hidden bg-card">
-            <div className="h-12 px-2 border-b border-border flex items-center gap-2 bg-card shrink-0">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMobileView("list")}>
-                <ArrowLeft className="w-4 h-4" />
-              </Button>
-              <span className="text-sm font-medium truncate">{selectedConv.contactName}</span>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <MensajesChat conversation={selectedConv} />
-            </div>
+  // Mobile chat view
+  if (isMobile && mobileView === "chat" && selectedConv) {
+    return (
+      <AppLayout>
+        <div className="h-[calc(100vh-4rem)] -m-6 flex flex-col border border-border rounded-lg overflow-hidden bg-card">
+          <div className="h-12 px-2 border-b border-border flex items-center gap-2 bg-card shrink-0">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMobileView("list")}>
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <span className="text-sm font-medium truncate">{selectedConv.contactName}</span>
           </div>
-        </AppLayout>
-      );
-    }
+          <div className="flex-1 overflow-hidden">
+            <MensajesChat conversation={selectedConv} onActionComplete={handleActionComplete} />
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
+  // Mobile list view
+  if (isMobile) {
     return (
       <AppLayout>
         <div className="h-[calc(100vh-4rem)] -m-6 flex flex-col border border-border rounded-lg overflow-hidden bg-card">
@@ -125,23 +106,24 @@ const MensajesPage = () => {
           <div className="px-3 py-2 border-b border-border shrink-0">
             <MensajesPipelineTabs
               activeTab={activeTab} onTabChange={setActiveTab}
-              conversations={MOCK_CONVERSATIONS}
+              tabCounts={tabCounts}
               period={pipelinePeriod} onPeriodChange={setPipelinePeriod}
               dateRange={pipelineRange} onDateRangeChange={setPipelineRange}
             />
           </div>
           <div className="flex-1 min-h-0 overflow-hidden">
             {viewMode === "pipeline" ? (
-              <MensajesKanban conversations={filteredConversations} />
+              <MensajesKanban conversations={conversations} onActionComplete={handleActionComplete} />
             ) : (
               <MensajesConversationList
-                conversations={filteredConversations}
+                conversations={conversations}
                 selectedId={selectedConv?.id || null}
                 onSelect={handleSelectConv}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 activeFilters={activeFilters}
                 onRemoveFilter={handleRemoveFilter}
+                loading={convsLoading}
               />
             )}
           </div>
@@ -162,6 +144,8 @@ const MensajesPage = () => {
         {/* NIVEL 2 — Resumen ejecutivo */}
         <div className="px-4 py-2.5 border-b border-border shrink-0">
           <MensajesResumen
+            stats={resumenStats}
+            loading={statsLoading}
             period={resumenPeriod} onPeriodChange={setResumenPeriod}
             dateRange={resumenRange} onDateRangeChange={setResumenRange}
           />
@@ -171,7 +155,7 @@ const MensajesPage = () => {
         <div className="px-4 py-2.5 border-b border-border shrink-0">
           <MensajesPipelineTabs
             activeTab={activeTab} onTabChange={setActiveTab}
-            conversations={MOCK_CONVERSATIONS}
+            tabCounts={tabCounts}
             period={pipelinePeriod} onPeriodChange={setPipelinePeriod}
             dateRange={pipelineRange} onDateRangeChange={setPipelineRange}
           />
@@ -182,7 +166,9 @@ const MensajesPage = () => {
           {/* Sidebar filtros */}
           <div className="w-[200px] border-r border-border shrink-0 overflow-hidden hidden md:block">
             <MensajesSidebar
-              conversations={MOCK_CONVERSATIONS}
+              channelCounts={channelCounts}
+              totalConversations={channelTotal}
+              tagStats={tagStats}
               selectedChannel={selectedChannel}
               onChannelChange={setSelectedChannel}
               selectedTags={selectedTags}
@@ -192,27 +178,28 @@ const MensajesPage = () => {
 
           {viewMode === "pipeline" ? (
             <div className="flex-1 min-w-0 overflow-hidden">
-              <MensajesKanban conversations={filteredConversations} />
+              <MensajesKanban conversations={conversations} onActionComplete={handleActionComplete} />
             </div>
           ) : (
             <>
               {/* Lista de conversaciones */}
               <div className="w-[280px] border-r border-border shrink-0 overflow-hidden">
                 <MensajesConversationList
-                  conversations={filteredConversations}
+                  conversations={conversations}
                   selectedId={selectedConv?.id || null}
                   onSelect={handleSelectConv}
                   searchQuery={searchQuery}
                   onSearchChange={setSearchQuery}
                   activeFilters={activeFilters}
                   onRemoveFilter={handleRemoveFilter}
+                  loading={convsLoading}
                 />
               </div>
 
               {/* Chat activo */}
               <div className="flex-1 min-w-0 overflow-hidden">
                 {selectedConv ? (
-                  <MensajesChat conversation={selectedConv} />
+                  <MensajesChat conversation={selectedConv} onActionComplete={handleActionComplete} />
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
                     <MessageSquare className="w-12 h-12 mb-3 opacity-30" />
