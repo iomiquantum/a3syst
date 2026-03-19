@@ -130,7 +130,7 @@ export const useConversationsByPipeline = (params: Params) => {
   useEffect(() => {
     setLoading(true);
     fetchConversations();
-  }, [clinicId, params.pipelineTab, params.channel, params.tags.join(","), params.searchQuery, params.periodStart, params.periodEnd]);
+  }, [clinicId, params.pipelineTab, params.channel, params.tags.join(","), params.searchQuery, params.periodStart, params.periodEnd, params.showArchived]);
 
   // Realtime subscription
   useEffect(() => {
