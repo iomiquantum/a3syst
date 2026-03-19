@@ -15,6 +15,7 @@ Deno.serve(async (req) => {
   const startTime = Date.now();
   const errors: { conversation_id: string; error: string }[] = [];
   let tarea1Count = 0, tarea2Sent = 0, tarea2NoResponden = 0, tarea3Fixed = 0;
+  let tarea5Reminder1 = 0, tarea5Reminder2 = 0;
 
   // === ACQUIRE LOCK ===
   const { data: lockRow } = await supabase
@@ -26,7 +27,6 @@ Deno.serve(async (req) => {
     .maybeSingle();
 
   if (!lockRow) {
-    // Check for stale lock (>10 min)
     const { data: staleLock } = await supabase
       .from("pipeline_execution_lock")
       .select("started_at")
@@ -61,9 +61,8 @@ Deno.serve(async (req) => {
     const c3Delay = rules["c3_delay_minutes"] || 720;
     const delayMap: Record<number, number> = { 1: c1Delay, 2: c2Delay, 3: c3Delay };
 
-    // ========== TAREA 1: Inactivity timeout (resueltos_ia → seguimiento_c1) ==========
+    // ========== TAREA 1: Inactivity timeout ==========
     console.log("[PIPELINE] TAREA 1: Checking inactivity timeout...");
-
     const cutoff = new Date(Date.now() - inactivityTimeout * 60 * 1000).toISOString();
     const { data: inactiveConvs } = await supabase
       .from("conversations")
@@ -75,25 +74,16 @@ Deno.serve(async (req) => {
 
     for (const conv of inactiveConvs || []) {
       try {
-        // Re-verify state
         const { data: fresh } = await supabase.from("conversations").select("pipeline_tab").eq("id", conv.id).single();
-        if (fresh?.pipeline_tab !== "resueltos_ia") {
-          console.log(`[PIPELINE] Conv ${conv.id} no longer in resueltos_ia, skipping`);
-          continue;
-        }
+        if (fresh?.pipeline_tab !== "resueltos_ia") continue;
 
-        // Get clinic-specific C1 delay or use global
         let contactDelay = c1Delay;
         const { data: clinicRule } = await supabase
-          .from("clinic_pipeline_rules")
-          .select("rule_value")
-          .eq("clinic_id", conv.clinic_id)
-          .eq("rule_key", "c1_delay_minutes")
-          .maybeSingle();
+          .from("clinic_pipeline_rules").select("rule_value")
+          .eq("clinic_id", conv.clinic_id).eq("rule_key", "c1_delay_minutes").maybeSingle();
         if (clinicRule) contactDelay = Number(clinicRule.rule_value) || c1Delay;
 
         const nextContactAt = new Date(Date.now() + contactDelay * 60 * 1000).toISOString();
-
         await supabase.from("conversations").update({
           pipeline_tab: "seguimiento_c1",
           seguimiento_contact_number: 1,
@@ -102,26 +92,18 @@ Deno.serve(async (req) => {
         }).eq("id", conv.id);
 
         await supabase.from("conversation_pipeline_history").insert({
-          conversation_id: conv.id,
-          clinic_id: conv.clinic_id,
-          from_tab: "resueltos_ia",
-          to_tab: "seguimiento_c1",
-          moved_by: "system",
-          reason: `Inactividad de ${inactivityTimeout} minutos`,
+          conversation_id: conv.id, clinic_id: conv.clinic_id,
+          from_tab: "resueltos_ia", to_tab: "seguimiento_c1",
+          moved_by: "system", reason: `Inactividad de ${inactivityTimeout} minutos`,
         });
-
         tarea1Count++;
-        console.log(`[PIPELINE] Conv ${conv.id} moved resueltos_ia → seguimiento_c1`);
       } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        errors.push({ conversation_id: conv.id, error: msg });
-        console.error(`[PIPELINE] Error processing conv ${conv.id}:`, msg);
+        errors.push({ conversation_id: conv.id, error: e instanceof Error ? e.message : String(e) });
       }
     }
 
-    // ========== TAREA 2: Send follow-up messages (C1, C2, C3) ==========
+    // ========== TAREA 2: Follow-up messages (C1-C3) ==========
     console.log("[PIPELINE] TAREA 2: Sending follow-up messages...");
-
     const now = new Date().toISOString();
     const { data: followUpConvs } = await supabase
       .from("conversations")
@@ -132,126 +114,61 @@ Deno.serve(async (req) => {
 
     for (const conv of followUpConvs || []) {
       try {
-        // Re-verify state
         const { data: fresh } = await supabase.from("conversations").select("pipeline_tab, seguimiento_contact_number").eq("id", conv.id).single();
-        if (!fresh || !fresh.pipeline_tab?.startsWith("seguimiento_c")) {
-          console.log(`[PIPELINE] Conv ${conv.id} no longer in seguimiento, skipping`);
-          continue;
-        }
+        if (!fresh || !fresh.pipeline_tab?.startsWith("seguimiento_c")) continue;
 
         const contactNumber = fresh.seguimiento_contact_number || conv.seguimiento_contact_number || 1;
-
-        // Check if auto message is active for this clinic + contact_number
         const { data: autoMsg } = await supabase
-          .from("seguimiento_auto_messages")
-          .select("message_template, is_active, is_automatic")
-          .eq("clinic_id", conv.clinic_id)
-          .eq("contact_number", contactNumber)
-          .maybeSingle();
+          .from("seguimiento_auto_messages").select("message_template, is_active, is_automatic")
+          .eq("clinic_id", conv.clinic_id).eq("contact_number", contactNumber).maybeSingle();
 
-        if (!autoMsg || !autoMsg.is_active) {
-          console.log(`[PIPELINE] Conv ${conv.id} C${contactNumber} is_active=false, skipping message`);
-          continue;
-        }
+        if (!autoMsg || !autoMsg.is_active) continue;
 
-        // Anti-duplicate: check last message isn't a pipeline auto message for same contact_number in last 30 min
         const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
         const { data: recentAutoMsgs } = await supabase
-          .from("messages")
-          .select("id, content, created_at")
-          .eq("conversation_id", conv.id)
-          .eq("direction", "outbound")
-          .gt("created_at", thirtyMinAgo)
-          .order("created_at", { ascending: false })
-          .limit(3);
+          .from("messages").select("id, content, created_at")
+          .eq("conversation_id", conv.id).eq("direction", "outbound")
+          .gt("created_at", thirtyMinAgo).order("created_at", { ascending: false }).limit(3);
 
-        // Simple duplicate check: if the most recent outbound message contains the same template text, skip
-        const template = autoMsg.message_template || "";
-        
-        // Get contact name
         let contactName = "cliente";
         if (conv.contact_id) {
           const { data: contact } = await supabase.from("contacts").select("name").eq("id", conv.contact_id).single();
-          if (contact?.name) contactName = contact.name.split(" ")[0]; // First name
+          if (contact?.name) contactName = contact.name.split(" ")[0];
         }
 
-        const messageContent = template.replace(/\{\{nombre\}\}/g, contactName);
+        const messageContent = (autoMsg.message_template || "").replace(/\{\{nombre\}\}/g, contactName);
+        if (recentAutoMsgs?.some(m => m.content === messageContent)) continue;
 
-        // Check duplicate
-        if (recentAutoMsgs?.some(m => m.content === messageContent)) {
-          console.log(`[PIPELINE] Conv ${conv.id} duplicate C${contactNumber} message detected, skipping`);
-          continue;
-        }
-
-        // === SEND THE MESSAGE ===
         const channel = conv.channel || "whatsapp";
         if (channel === "whatsapp" && conv.visitor_contact) {
-          // Send via whatsapp-send edge function
           const sendResp = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
             method: "POST",
-            headers: {
-              Authorization: `Bearer ${supabaseKey}`,
-              apikey: supabaseKey,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              clinic_id: conv.clinic_id,
-              to_number: conv.visitor_contact,
-              message_type: "text",
-              content: messageContent,
-              conversation_id: conv.id,
-            }),
+            headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
+            body: JSON.stringify({ clinic_id: conv.clinic_id, to_number: conv.visitor_contact, message_type: "text", content: messageContent, conversation_id: conv.id }),
           });
-          const sendResult = await sendResp.json().catch(() => null);
-          if (!sendResp.ok || sendResult?.error) {
-            throw new Error(`WhatsApp send failed: ${JSON.stringify(sendResult)}`);
-          }
-          console.log(`[PIPELINE] WhatsApp C${contactNumber} sent to conv ${conv.id}`);
+          if (!sendResp.ok) throw new Error(`WhatsApp send failed`);
         } else {
-          // Direct insert for non-WhatsApp
           await supabase.from("messages").insert({
-            conversation_id: conv.id,
-            clinic_id: conv.clinic_id,
-            direction: "outbound",
-            content: messageContent,
-            message_type: "text",
-            status: "sent",
+            conversation_id: conv.id, clinic_id: conv.clinic_id,
+            direction: "outbound", content: messageContent, message_type: "text", status: "sent",
           });
         }
-
         tarea2Sent++;
 
-        // Move to next stage or no_responden
         const nextContactNumber = contactNumber + 1;
         if (nextContactNumber > maxAutoContacts) {
-          // Move to no_responden
-          await supabase.from("conversations").update({
-            pipeline_tab: "no_responden",
-            seguimiento_next_contact_at: null,
-            seguimiento_last_contact_at: now,
-          }).eq("id", conv.id);
-
+          await supabase.from("conversations").update({ pipeline_tab: "no_responden", seguimiento_next_contact_at: null, seguimiento_last_contact_at: now }).eq("id", conv.id);
           await supabase.from("conversation_pipeline_history").insert({
-            conversation_id: conv.id,
-            clinic_id: conv.clinic_id,
-            from_tab: `seguimiento_c${contactNumber}`,
-            to_tab: "no_responden",
-            moved_by: "system",
-            reason: `Sin respuesta después de ${maxAutoContacts} contactos`,
+            conversation_id: conv.id, clinic_id: conv.clinic_id,
+            from_tab: `seguimiento_c${contactNumber}`, to_tab: "no_responden",
+            moved_by: "system", reason: `Sin respuesta después de ${maxAutoContacts} contactos`,
           });
-
           tarea2NoResponden++;
-          console.log(`[PIPELINE] Conv ${conv.id} → no_responden after C${contactNumber}`);
         } else {
-          // Move to next contact
           const nextDelay = delayMap[nextContactNumber] || c3Delay;
-          // Check clinic override
           const { data: clinicDelay } = await supabase
-            .from("clinic_pipeline_rules")
-            .select("rule_value")
-            .eq("clinic_id", conv.clinic_id)
-            .eq("rule_key", `c${nextContactNumber}_delay_minutes`)
-            .maybeSingle();
+            .from("clinic_pipeline_rules").select("rule_value")
+            .eq("clinic_id", conv.clinic_id).eq("rule_key", `c${nextContactNumber}_delay_minutes`).maybeSingle();
           const actualDelay = clinicDelay ? Number(clinicDelay.rule_value) || nextDelay : nextDelay;
 
           await supabase.from("conversations").update({
@@ -262,30 +179,19 @@ Deno.serve(async (req) => {
           }).eq("id", conv.id);
 
           await supabase.from("conversation_pipeline_history").insert({
-            conversation_id: conv.id,
-            clinic_id: conv.clinic_id,
-            from_tab: `seguimiento_c${contactNumber}`,
-            to_tab: `seguimiento_c${nextContactNumber}`,
-            moved_by: "system",
-            reason: `Seguimiento automático C${contactNumber} enviado`,
+            conversation_id: conv.id, clinic_id: conv.clinic_id,
+            from_tab: `seguimiento_c${contactNumber}`, to_tab: `seguimiento_c${nextContactNumber}`,
+            moved_by: "system", reason: `Seguimiento automático C${contactNumber} enviado`,
           });
-
-          console.log(`[PIPELINE] Conv ${conv.id} moved C${contactNumber} → C${nextContactNumber}`);
         }
-
-        // Update last_message_at
         await supabase.from("conversations").update({ last_message_at: now }).eq("id", conv.id);
-
       } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        errors.push({ conversation_id: conv.id, error: msg });
-        console.error(`[PIPELINE] Error on conv ${conv.id}:`, msg);
+        errors.push({ conversation_id: conv.id, error: e instanceof Error ? e.message : String(e) });
       }
     }
 
     // ========== TAREA 3: Cleanup inconsistencies ==========
     console.log("[PIPELINE] TAREA 3: Cleanup...");
-
     const { data: inconsistent } = await supabase
       .from("conversations")
       .select("id, clinic_id, pipeline_tab, seguimiento_contact_number, seguimiento_last_contact_at")
@@ -297,22 +203,176 @@ Deno.serve(async (req) => {
         const cn = conv.seguimiento_contact_number || 1;
         const delay = delayMap[cn] || c1Delay;
         const base = conv.seguimiento_last_contact_at || new Date().toISOString();
-        const recalculated = new Date(new Date(base).getTime() + delay * 60 * 1000).toISOString();
-
         await supabase.from("conversations").update({
-          seguimiento_next_contact_at: recalculated,
+          seguimiento_next_contact_at: new Date(new Date(base).getTime() + delay * 60 * 1000).toISOString(),
         }).eq("id", conv.id);
-
         tarea3Fixed++;
-        console.warn(`[PIPELINE WARNING] Conv ${conv.id} had null next_contact_at, recalculated`);
       } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        errors.push({ conversation_id: conv.id, error: msg });
+        errors.push({ conversation_id: conv.id, error: e instanceof Error ? e.message : String(e) });
+      }
+    }
+
+    // ========== TAREA 5: APPOINTMENT REMINDERS ==========
+    console.log("[PIPELINE] TAREA 5: Appointment reminders...");
+
+    // Get all clinics with reminder configs
+    const { data: reminderConfigs } = await supabase
+      .from("appointment_reminder_config")
+      .select("*")
+      .eq("is_active", true);
+
+    if (reminderConfigs && reminderConfigs.length > 0) {
+      // Group by clinic
+      const configByClinic: Record<string, any[]> = {};
+      for (const rc of reminderConfigs) {
+        if (!configByClinic[rc.clinic_id]) configByClinic[rc.clinic_id] = [];
+        configByClinic[rc.clinic_id].push(rc);
+      }
+
+      const nowDate = new Date();
+
+      // REMINDER 1
+      const { data: reminder1Convs } = await supabase
+        .from("conversations")
+        .select("id, clinic_id, contact_id, channel, visitor_contact, appointment_date, appointment_time, appointment_service, appointment_confirmed")
+        .eq("pipeline_tab", "agendados")
+        .eq("appointment_reminder_1_sent", false)
+        .not("appointment_date", "is", null)
+        .gt("appointment_date", nowDate.toISOString());
+
+      for (const conv of reminder1Convs || []) {
+        try {
+          if (conv.appointment_confirmed) continue; // Already confirmed, skip
+          
+          const clinicConfigs = configByClinic[conv.clinic_id];
+          const r1Config = clinicConfigs?.find((c: any) => c.reminder_number === 1);
+          if (!r1Config) continue;
+
+          const appointmentDate = new Date(conv.appointment_date);
+          const hoursUntil = (appointmentDate.getTime() - nowDate.getTime()) / (1000 * 60 * 60);
+          if (hoursUntil > r1Config.hours_before_appointment) continue; // Too early
+
+          // Get contact name
+          let contactName = "cliente";
+          if (conv.contact_id) {
+            const { data: contact } = await supabase.from("contacts").select("name").eq("id", conv.contact_id).single();
+            if (contact?.name) contactName = contact.name.split(" ")[0];
+          }
+
+          const fecha = appointmentDate.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" });
+          const hora = conv.appointment_time || appointmentDate.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+          const servicio = conv.appointment_service || "tu cita";
+
+          const message = (r1Config.message_template || "")
+            .replace(/\{\{nombre\}\}/g, contactName)
+            .replace(/\{\{fecha\}\}/g, fecha)
+            .replace(/\{\{hora\}\}/g, hora)
+            .replace(/\{\{servicio\}\}/g, servicio);
+
+          // Send
+          if (conv.channel === "whatsapp" && conv.visitor_contact) {
+            await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
+              body: JSON.stringify({ clinic_id: conv.clinic_id, to_number: conv.visitor_contact, message_type: "text", content: message, conversation_id: conv.id }),
+            });
+          } else {
+            await supabase.from("messages").insert({
+              conversation_id: conv.id, clinic_id: conv.clinic_id,
+              direction: "outbound", content: message, message_type: "text", status: "sent",
+            });
+          }
+
+          await supabase.from("conversations").update({
+            appointment_reminder_1_sent: true,
+            appointment_reminder_1_sent_at: nowDate.toISOString(),
+            appointment_status: "reminder_1_sent",
+          }).eq("id", conv.id);
+
+          await supabase.from("conversation_pipeline_history").insert({
+            conversation_id: conv.id, clinic_id: conv.clinic_id,
+            from_tab: "agendados", to_tab: "agendados",
+            moved_by: "system", reason: "Recordatorio 1 enviado",
+          });
+
+          tarea5Reminder1++;
+          console.log(`[APPOINTMENT] Recordatorio 1 enviado para conv ${conv.id}`);
+        } catch (e) {
+          errors.push({ conversation_id: conv.id, error: e instanceof Error ? e.message : String(e) });
+        }
+      }
+
+      // REMINDER 2
+      const { data: reminder2Convs } = await supabase
+        .from("conversations")
+        .select("id, clinic_id, contact_id, channel, visitor_contact, appointment_date, appointment_time, appointment_service, appointment_confirmed")
+        .eq("pipeline_tab", "agendados")
+        .eq("appointment_reminder_1_sent", true)
+        .eq("appointment_reminder_2_sent", false)
+        .eq("appointment_confirmed", false)
+        .not("appointment_date", "is", null)
+        .gt("appointment_date", nowDate.toISOString());
+
+      for (const conv of reminder2Convs || []) {
+        try {
+          const clinicConfigs = configByClinic[conv.clinic_id];
+          const r2Config = clinicConfigs?.find((c: any) => c.reminder_number === 2);
+          if (!r2Config) continue;
+
+          const appointmentDate = new Date(conv.appointment_date);
+          const hoursUntil = (appointmentDate.getTime() - nowDate.getTime()) / (1000 * 60 * 60);
+          if (hoursUntil > r2Config.hours_before_appointment) continue;
+
+          let contactName = "cliente";
+          if (conv.contact_id) {
+            const { data: contact } = await supabase.from("contacts").select("name").eq("id", conv.contact_id).single();
+            if (contact?.name) contactName = contact.name.split(" ")[0];
+          }
+
+          const fecha = appointmentDate.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" });
+          const hora = conv.appointment_time || appointmentDate.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+          const servicio = conv.appointment_service || "tu cita";
+
+          const message = (r2Config.message_template || "")
+            .replace(/\{\{nombre\}\}/g, contactName)
+            .replace(/\{\{fecha\}\}/g, fecha)
+            .replace(/\{\{hora\}\}/g, hora)
+            .replace(/\{\{servicio\}\}/g, servicio);
+
+          if (conv.channel === "whatsapp" && conv.visitor_contact) {
+            await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
+              body: JSON.stringify({ clinic_id: conv.clinic_id, to_number: conv.visitor_contact, message_type: "text", content: message, conversation_id: conv.id }),
+            });
+          } else {
+            await supabase.from("messages").insert({
+              conversation_id: conv.id, clinic_id: conv.clinic_id,
+              direction: "outbound", content: message, message_type: "text", status: "sent",
+            });
+          }
+
+          await supabase.from("conversations").update({
+            appointment_reminder_2_sent: true,
+            appointment_reminder_2_sent_at: nowDate.toISOString(),
+            appointment_status: "reminder_2_sent",
+          }).eq("id", conv.id);
+
+          await supabase.from("conversation_pipeline_history").insert({
+            conversation_id: conv.id, clinic_id: conv.clinic_id,
+            from_tab: "agendados", to_tab: "agendados",
+            moved_by: "system", reason: "Recordatorio 2 enviado",
+          });
+
+          tarea5Reminder2++;
+          console.log(`[APPOINTMENT] Recordatorio 2 enviado para conv ${conv.id}`);
+        } catch (e) {
+          errors.push({ conversation_id: conv.id, error: e instanceof Error ? e.message : String(e) });
+        }
       }
     }
 
   } finally {
-    // === RELEASE LOCK ===
     await supabase.from("pipeline_execution_lock").update({
       is_running: false,
       last_completed_at: new Date().toISOString(),
@@ -325,10 +385,11 @@ Deno.serve(async (req) => {
     tarea2_messages_sent: tarea2Sent,
     tarea2_moved_to_no_responden: tarea2NoResponden,
     tarea3_inconsistencies_fixed: tarea3Fixed,
+    tarea5_reminder1_sent: tarea5Reminder1,
+    tarea5_reminder2_sent: tarea5Reminder2,
     errors,
   };
 
-  // Log execution
   await supabase.from("pipeline_execution_log").insert({
     moved_to_c1: tarea1Count,
     messages_sent: tarea2Sent,
