@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Phone, Mail, MapPin, Tag, FileText, ExternalLink, UserPlus, Calendar, Pencil, Check, X, Plus, Pin, Archive, Copy } from "lucide-react";
+import { Phone, Mail, MapPin, Tag, FileText, ExternalLink, UserPlus, Calendar, Pencil, Check, X, Plus, Pin, Archive, Copy, PanelRightClose } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -46,11 +46,12 @@ interface ContactData {
 interface Props {
   conversation: PipelineConversation;
   onActionComplete?: () => void;
+  onClose?: () => void;
 }
 
 type EditField = "name" | "phone" | "phone2" | "email" | "location" | "notes" | null;
 
-const ContactInfoPanel = ({ conversation: c, onActionComplete }: Props) => {
+const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props) => {
   const [contact, setContact] = useState<ContactData | null>(null);
   const [loading, setLoading] = useState(true);
   const [editField, setEditField] = useState<EditField>(null);
@@ -175,8 +176,15 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete }: Props) => {
     <ScrollArea className="h-full">
       <div className="p-4 space-y-4">
         {/* Header */}
-        <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
-          <FileText className="w-3.5 h-3.5" /> Información de contacto
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
+            <FileText className="w-3.5 h-3.5" /> Información de contacto
+          </div>
+          {onClose && (
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
+              <X className="w-3.5 h-3.5" />
+            </Button>
+          )}
         </div>
 
         {/* Avatar & Name */}

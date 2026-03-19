@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { MessageSquare, ArrowLeft } from "lucide-react";
+import { MessageSquare, ArrowLeft, PanelRightOpen } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import MensajesHeader, { ViewMode } from "@/components/mensajes/MensajesHeader";
 import MensajesResumen from "@/components/mensajes/MensajesResumen";
@@ -36,6 +36,7 @@ const MensajesPage = () => {
   const [selectedConv, setSelectedConv] = useState<PipelineConversation | null>(null);
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const [showArchived, setShowArchived] = useState(false);
+  const [showContactPanel, setShowContactPanel] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(VIEW_MODE_KEY, viewMode);
@@ -213,7 +214,12 @@ const MensajesPage = () => {
 
               <div className="flex-1 min-w-0 overflow-hidden">
                 {selectedConv ? (
-                  <MensajesChat conversation={selectedConv} onActionComplete={handleActionComplete} />
+                  <MensajesChat
+                    conversation={selectedConv}
+                    onActionComplete={handleActionComplete}
+                    showContactPanel={showContactPanel}
+                    onToggleContactPanel={() => setShowContactPanel(p => !p)}
+                  />
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
                     <MessageSquare className="w-12 h-12 mb-3 opacity-30" />
@@ -225,9 +231,13 @@ const MensajesPage = () => {
                 )}
               </div>
 
-              {selectedConv && (
-                <div className="w-[260px] border-l border-border shrink-0 overflow-hidden hidden lg:block">
-                  <ContactInfoPanel conversation={selectedConv} onActionComplete={handleActionComplete} />
+              {selectedConv && showContactPanel && (
+                <div className="w-[280px] border-l border-border shrink-0 overflow-hidden hidden md:block">
+                  <ContactInfoPanel
+                    conversation={selectedConv}
+                    onActionComplete={handleActionComplete}
+                    onClose={() => setShowContactPanel(false)}
+                  />
                 </div>
               )}
             </>
