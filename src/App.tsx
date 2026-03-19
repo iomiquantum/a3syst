@@ -22,6 +22,7 @@ import TratamientosPage from "./pages/TratamientosPage";
 import ProfesionalesPage from "./pages/ProfesionalesPage";
 import UsuariosPage from "./pages/UsuariosPage";
 import AdminPage from "./pages/AdminPage";
+import AdminPipelinePage from "./pages/AdminPipelinePage";
 import AdminUsuariosPage from "./pages/AdminUsuariosPage";
 import MensajesPage from "./pages/MensajesPage";
 import WidgetConfigPage from "./pages/WidgetConfigPage";
@@ -32,6 +33,7 @@ import AdsPage from "./pages/AdsPage";
 import ContentPage from "./pages/ContentPage";
 import PsychoMatrixPage from "./pages/PsychoMatrixPage";
 import PlanificacionPage from "./pages/PlanificacionPage";
+import PipelineConfigPage from "./pages/PipelineConfigPage";
 import ReunionesPage from "./pages/ReunionesPage";
 import LandingPage from "./pages/LandingPage";
 import PreLaunchPage from "./pages/PreLaunchPage";
@@ -105,6 +107,8 @@ const App = () => (
                <Route path="/mensajes/whatsapp" element={<ProtectedRoute><WhatsAppMessagesPage /></ProtectedRoute>} />
                <Route path="/whatsapp" element={<ProtectedRoute><WhatsAppPage /></ProtectedRoute>} />
               <Route path="/admin/usuarios" element={<ProtectedRoute><AdminUsuariosPage /></ProtectedRoute>} />
+              <Route path="/admin/pipeline" element={<ProtectedRoute><AdminPipelinePage /></ProtectedRoute>} />
+              <Route path="/configuracion/pipeline" element={<ProtectedRoute><PipelineConfigPage /></ProtectedRoute>} />
               <Route path="/ads" element={<ProtectedRoute><AdsPage /></ProtectedRoute>} />
               <Route path="/contenido" element={<ProtectedRoute><ContentPage /></ProtectedRoute>} />
               <Route path="/psycho-matrix" element={<ProtectedRoute><PsychoMatrixPage /></ProtectedRoute>} />

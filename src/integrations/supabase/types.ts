@@ -1938,6 +1938,39 @@ export type Database = {
         }
         Relationships: []
       }
+      pipeline_execution_log: {
+        Row: {
+          duration_ms: number | null
+          errors: Json | null
+          executed_at: string | null
+          id: string
+          inconsistencies_fixed: number | null
+          messages_sent: number | null
+          moved_to_c1: number | null
+          moved_to_no_responden: number | null
+        }
+        Insert: {
+          duration_ms?: number | null
+          errors?: Json | null
+          executed_at?: string | null
+          id?: string
+          inconsistencies_fixed?: number | null
+          messages_sent?: number | null
+          moved_to_c1?: number | null
+          moved_to_no_responden?: number | null
+        }
+        Update: {
+          duration_ms?: number | null
+          errors?: Json | null
+          executed_at?: string | null
+          id?: string
+          inconsistencies_fixed?: number | null
+          messages_sent?: number | null
+          moved_to_c1?: number | null
+          moved_to_no_responden?: number | null
+        }
+        Relationships: []
+      }
       pipeline_global_rules: {
         Row: {
           description: string | null
