@@ -110,6 +110,9 @@ const App = () => (
                <Route path="/whatsapp" element={<ProtectedRoute><WhatsAppPage /></ProtectedRoute>} />
               <Route path="/admin/usuarios" element={<ProtectedRoute><AdminUsuariosPage /></ProtectedRoute>} />
               <Route path="/admin/pipeline" element={<ProtectedRoute><AdminPipelinePage /></ProtectedRoute>} />
+              <Route path="/admin/plantillas" element={<ProtectedRoute><AdminPlantillasPage /></ProtectedRoute>} />
+              <Route path="/admin/plantillas/nueva" element={<ProtectedRoute><AdminPlantillaEditorPage /></ProtectedRoute>} />
+              <Route path="/admin/plantillas/:id/editar" element={<ProtectedRoute><AdminPlantillaEditorPage /></ProtectedRoute>} />
               <Route path="/configuracion/pipeline" element={<ProtectedRoute><PipelineConfigPage /></ProtectedRoute>} />
               <Route path="/ads" element={<ProtectedRoute><AdsPage /></ProtectedRoute>} />
               <Route path="/contenido" element={<ProtectedRoute><ContentPage /></ProtectedRoute>} />
