@@ -102,6 +102,7 @@ export const useConversationsByPipeline = (params: Params) => {
       seguimiento_contact_number: c.seguimiento_contact_number || 0,
       seguimiento_is_recurrente: c.seguimiento_is_recurrente || false,
       seguimiento_recurrente_count: c.seguimiento_recurrente_count || 0,
+      pinned: c.pinned || false,
       contactName: c.contacts?.name || c.visitor_name || "Sin nombre",
       contactPhone: c.contacts?.phone || c.visitor_contact || "",
       contactTags: c.contacts?.tags || [],
