@@ -41,6 +41,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete }: Props) => {
   const { clinicId } = useClinic();
   const { user } = useAuth();
   const { moveConversation } = usePipelineAction();
+  const { templateSlug } = useClinicTemplate();
   const [input, setInput] = useState("");
   const [autopilot, setAutopilot] = useState(c.chatbot_active);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
