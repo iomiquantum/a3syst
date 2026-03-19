@@ -36,6 +36,7 @@ const MensajesPage = () => {
   const [selectedConv, setSelectedConv] = useState<PipelineConversation | null>(null);
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const [showArchived, setShowArchived] = useState(false);
+  const [showContactPanel, setShowContactPanel] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(VIEW_MODE_KEY, viewMode);
