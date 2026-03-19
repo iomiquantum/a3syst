@@ -13,7 +13,7 @@ import { usePipelineStats } from "@/hooks/usePipelineStats";
 import { useChannelStats } from "@/hooks/useChannelStats";
 import { useTagStats } from "@/hooks/useTagStats";
 import { useClinicPipelineTabs } from "@/hooks/useClinicPipelineTabs";
-import { Period } from "@/components/mensajes/PeriodSelector";
+import { Period, periodToDateRange } from "@/components/mensajes/PeriodSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { DateRange } from "react-day-picker";
@@ -25,7 +25,7 @@ const MensajesPage = () => {
   const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem(VIEW_MODE_KEY) as ViewMode) || "buzon");
   const [resumenPeriod, setResumenPeriod] = useState<Period>("hoy");
   const [resumenRange, setResumenRange] = useState<DateRange | undefined>();
-  const [pipelinePeriod, setPipelinePeriod] = useState<Period>("semana");
+  const [pipelinePeriod, setPipelinePeriod] = useState<Period>("max");
   const [pipelineRange, setPipelineRange] = useState<DateRange | undefined>();
   const [activeTab, setActiveTab] = useState<PipelineFilter>("todos");
   const [selectedChannel, setSelectedChannel] = useState("todos");
@@ -38,6 +38,17 @@ const MensajesPage = () => {
     localStorage.setItem(VIEW_MODE_KEY, viewMode);
   }, [viewMode]);
 
+  // Compute period date boundaries for pipeline
+  const pipelineDates = useMemo(() => {
+    if (pipelinePeriod === "rango" && pipelineRange?.from) {
+      return {
+        from: pipelineRange.from.toISOString(),
+        to: pipelineRange.to ? pipelineRange.to.toISOString() : undefined,
+      };
+    }
+    return periodToDateRange(pipelinePeriod);
+  }, [pipelinePeriod, pipelineRange]);
+
   // Real data hooks
   const { tabCounts, resumenStats, loading: statsLoading, refetch: refetchStats } = usePipelineStats();
   const { counts: channelCounts, total: channelTotal } = useChannelStats();
@@ -49,6 +60,8 @@ const MensajesPage = () => {
     channel: selectedChannel,
     tags: selectedTags,
     searchQuery,
+    periodStart: pipelineDates.from,
+    periodEnd: pipelineDates.to,
   });
 
   const handleActionComplete = () => {
