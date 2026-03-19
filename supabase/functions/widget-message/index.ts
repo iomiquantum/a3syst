@@ -197,7 +197,11 @@ Deno.serve(async (req) => {
       last_message_at: new Date().toISOString(),
       last_message_preview: sanitizedMessage.substring(0, 100),
       unread_count: (conversation.unread_count || 0) + 1,
+      last_inbound_at: new Date().toISOString(),
     }).eq("id", conversation.id);
+
+    // === PIPELINE: Handle inbound message transitions ===
+    await handleIncomingMessagePipeline(supabase, conversation.id, clinic_id);
 
     return new Response(JSON.stringify({
       success: true,
