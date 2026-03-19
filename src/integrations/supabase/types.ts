@@ -1230,6 +1230,7 @@ export type Database = {
           marked_cliente_by: string | null
           marked_no_interesado_at: string | null
           marked_no_interesado_by: string | null
+          pinned: boolean
           pipeline_tab: string | null
           pipeline_template_id: string | null
           seguimiento_contact_number: number | null
@@ -1263,6 +1264,7 @@ export type Database = {
           marked_cliente_by?: string | null
           marked_no_interesado_at?: string | null
           marked_no_interesado_by?: string | null
+          pinned?: boolean
           pipeline_tab?: string | null
           pipeline_template_id?: string | null
           seguimiento_contact_number?: number | null
@@ -1296,6 +1298,7 @@ export type Database = {
           marked_cliente_by?: string | null
           marked_no_interesado_at?: string | null
           marked_no_interesado_by?: string | null
+          pinned?: boolean
           pipeline_tab?: string | null
           pipeline_template_id?: string | null
           seguimiento_contact_number?: number | null

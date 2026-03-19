@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { Pin } from "lucide-react";
 import PipelineBadge from "./PipelineBadge";
 import ChannelIcon from "@/components/messaging/ChannelIcon";
 import type { PipelineConversation, PipelineTab } from "@/hooks/useConversationsByPipeline";
@@ -78,7 +79,10 @@ const ConversationCard = ({ conversation: c, selected, onClick, variant = "list"
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-1">
-            <p className="text-[13px] font-semibold text-foreground truncate">{c.contactName}</p>
+            <p className="text-[13px] font-semibold text-foreground truncate flex items-center gap-1">
+              {c.pinned && <Pin className="w-3 h-3 text-primary shrink-0" />}
+              {c.contactName}
+            </p>
             <span className="text-[10px] text-muted-foreground shrink-0">{relativeTime(c.last_message_at)}</span>
           </div>
           <p className="text-[11px] text-muted-foreground truncate">{c.last_message_preview}</p>

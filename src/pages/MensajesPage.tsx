@@ -34,6 +34,7 @@ const MensajesPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedConv, setSelectedConv] = useState<PipelineConversation | null>(null);
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
+  const [showArchived, setShowArchived] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(VIEW_MODE_KEY, viewMode);
@@ -63,6 +64,7 @@ const MensajesPage = () => {
     searchQuery,
     periodStart: pipelineDates.from,
     periodEnd: pipelineDates.to,
+    showArchived,
   });
 
   const handleActionComplete = () => {
@@ -190,6 +192,8 @@ const MensajesPage = () => {
               onChannelChange={setSelectedChannel}
               selectedTags={selectedTags}
               onTagsChange={setSelectedTags}
+              showArchived={showArchived}
+              onShowArchivedChange={setShowArchived}
             />
           </div>
 

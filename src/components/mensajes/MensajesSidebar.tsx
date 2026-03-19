@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Archive } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,6 +19,8 @@ interface Props {
   onChannelChange: (ch: string) => void;
   selectedTags: string[];
   onTagsChange: (tags: string[]) => void;
+  showArchived: boolean;
+  onShowArchivedChange: (v: boolean) => void;
 }
 
 const CHANNELS = [
@@ -29,7 +32,7 @@ const CHANNELS = [
   { key: "tiktok", label: "TikTok", connected: false },
 ];
 
-const MensajesSidebar = ({ channelCounts, totalConversations, tagStats, selectedChannel, onChannelChange, selectedTags, onTagsChange }: Props) => {
+const MensajesSidebar = ({ channelCounts, totalConversations, tagStats, selectedChannel, onChannelChange, selectedTags, onTagsChange, showArchived, onShowArchivedChange }: Props) => {
   const [tagSearch, setTagSearch] = useState("");
 
   const getChannelCount = (ch: string) => {
@@ -129,6 +132,17 @@ const MensajesSidebar = ({ channelCounts, totalConversations, tagStats, selected
               <p className="text-[10px] text-muted-foreground text-center py-2">Sin etiquetas</p>
             )}
           </div>
+        </div>
+
+        <div className="border-t border-border" />
+
+        {/* Archivadas */}
+        <div>
+          <label className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer">
+            <Archive className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-xs text-foreground flex-1">Archivadas</span>
+            <Switch checked={showArchived} onCheckedChange={onShowArchivedChange} className="scale-75" />
+          </label>
         </div>
       </div>
     </ScrollArea>

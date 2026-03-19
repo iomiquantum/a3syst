@@ -27,6 +27,7 @@ export interface PipelineConversation {
   seguimiento_contact_number: number;
   seguimiento_is_recurrente: boolean;
   seguimiento_recurrente_count: number;
+  pinned: boolean;
   contactName: string;
   contactPhone: string;
   contactTags: string[];
@@ -40,6 +41,7 @@ interface Params {
   searchQuery: string;
   periodStart?: string;
   periodEnd?: string;
+  showArchived?: boolean;
 }
 
 export const useConversationsByPipeline = (params: Params) => {
@@ -54,7 +56,8 @@ export const useConversationsByPipeline = (params: Params) => {
       .from("conversations")
       .select("*, contacts!conversations_contact_id_fkey(name, phone, email, tags)")
       .eq("clinic_id", clinicId)
-      .eq("archived", false)
+      .eq("archived", params.showArchived ? true : false)
+      .order("pinned", { ascending: false })
       .order("last_message_at", { ascending: false });
 
     // Pipeline filter
@@ -99,6 +102,7 @@ export const useConversationsByPipeline = (params: Params) => {
       seguimiento_contact_number: c.seguimiento_contact_number || 0,
       seguimiento_is_recurrente: c.seguimiento_is_recurrente || false,
       seguimiento_recurrente_count: c.seguimiento_recurrente_count || 0,
+      pinned: c.pinned || false,
       contactName: c.contacts?.name || c.visitor_name || "Sin nombre",
       contactPhone: c.contacts?.phone || c.visitor_contact || "",
       contactTags: c.contacts?.tags || [],
@@ -126,7 +130,7 @@ export const useConversationsByPipeline = (params: Params) => {
   useEffect(() => {
     setLoading(true);
     fetchConversations();
-  }, [clinicId, params.pipelineTab, params.channel, params.tags.join(","), params.searchQuery, params.periodStart, params.periodEnd]);
+  }, [clinicId, params.pipelineTab, params.channel, params.tags.join(","), params.searchQuery, params.periodStart, params.periodEnd, params.showArchived]);
 
   // Realtime subscription
   useEffect(() => {

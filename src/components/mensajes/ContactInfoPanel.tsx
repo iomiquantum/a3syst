@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 import { Phone, Mail, MapPin, Tag, FileText, ExternalLink, UserPlus, Calendar, Pencil, Check, X, Plus, Pin, Archive, Copy } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -10,13 +11,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { PipelineConversation } from "@/hooks/useConversationsByPipeline";
 
-const FUNNEL_STAGES = [
-  { key: "nuevos", label: "Nuevos" },
-  { key: "pidio_info", label: "Pidio info" },
-  { key: "interesado", label: "Interesado" },
-  { key: "cita_agendada", label: "Cita agendada" },
-  { key: "convertido", label: "Convertido" },
-  { key: "perdido", label: "Perdido" },
+const PIPELINE_STAGES = [
+  { key: "resueltos_ia", label: "Resueltos IA" },
+  { key: "seguimiento_c1", label: "Seguimiento C1" },
+  { key: "seguimiento_c2", label: "Seguimiento C2" },
+  { key: "seguimiento_c3", label: "Seguimiento C3" },
+  { key: "no_responden", label: "No responden" },
+  { key: "no_interesado", label: "No interesado" },
+  { key: "escalados", label: "Escalados" },
+  { key: "clientes", label: "Clientes" },
+  { key: "seguimiento_venta", label: "Seg. Venta" },
+  { key: "pacientes", label: "Pacientes" },
+  { key: "show_sin_venta", label: "Show sin venta" },
+  { key: "seguimiento_c4", label: "Seguimiento C4" },
+  { key: "seguimiento_c5", label: "Seguimiento C5" },
+  { key: "perdidos", label: "Perdidos" },
 ];
 
 interface ContactData {
@@ -84,8 +93,10 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete }: Props) => {
   };
 
   const updateStage = async (stage: string) => {
-    await supabase.from("contacts").update({ funnel_stage: stage }).eq("id", contact.id);
-    setContact(prev => prev ? { ...prev, funnel_stage: stage } : prev);
+    // Update the pipeline_tab on the conversation, not the contact funnel_stage
+    await (supabase as any).from("conversations").update({ pipeline_tab: stage }).eq("id", c.id);
+    toast.success("Etapa actualizada");
+    onActionComplete?.();
   };
 
   const addTag = async () => {
@@ -199,7 +210,7 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete }: Props) => {
             </div>
           )}
           <span className="text-[11px] text-muted-foreground mt-0.5">
-            ● {FUNNEL_STAGES.find(s => s.key === contact.funnel_stage)?.label || contact.funnel_stage}
+            ● {PIPELINE_STAGES.find(s => s.key === c.pipeline_tab)?.label || c.pipeline_tab}
           </span>
         </div>
 
@@ -209,13 +220,13 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete }: Props) => {
           <EditableField field="email" label="Email" value={contact.email} icon={Mail} copyable />
           <EditableField field="location" label="Ubicación" value={contact.location} icon={MapPin} />
 
-          {/* Funnel */}
+          {/* Pipeline Stage */}
           <div className="space-y-1">
-            <p className="text-[11px] text-muted-foreground flex items-center gap-1">✧ Etapa del embudo</p>
-            <Select value={contact.funnel_stage} onValueChange={updateStage}>
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1">✧ Etapa del pipeline</p>
+            <Select value={c.pipeline_tab} onValueChange={updateStage}>
               <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {FUNNEL_STAGES.map(s => (
+                {PIPELINE_STAGES.map(s => (
                   <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
                 ))}
               </SelectContent>
@@ -287,8 +298,13 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete }: Props) => {
           <button onClick={() => toast.info("Agendar cita (próximamente)")} className="w-full h-9 rounded-lg border border-border text-foreground text-sm font-medium flex items-center justify-center gap-2 hover:bg-muted transition-colors">
             <Calendar className="w-4 h-4" /> Agendar
           </button>
-          <button onClick={() => toast.info("Fijar conversación (próximamente)")} className="w-full h-8 rounded-lg border border-border text-foreground text-xs font-medium flex items-center justify-center gap-2 hover:bg-muted transition-colors">
-            <Pin className="w-3.5 h-3.5" /> Fijar Conversación
+          <button onClick={async () => {
+            const newPinned = !c.pinned;
+            await (supabase as any).from("conversations").update({ pinned: newPinned }).eq("id", c.id);
+            toast.success(newPinned ? "Conversación fijada" : "Conversación desfijada");
+            onActionComplete?.();
+          }} className={cn("w-full h-8 rounded-lg border border-border text-xs font-medium flex items-center justify-center gap-2 hover:bg-muted transition-colors", c.pinned ? "text-primary bg-primary/10 border-primary/30" : "text-foreground")}>
+            <Pin className="w-3.5 h-3.5" /> {c.pinned ? "Desfiar Conversación" : "Fijar Conversación"}
           </button>
           <button onClick={async () => {
             await supabase.from("conversations").update({ archived: true }).eq("id", c.id);
