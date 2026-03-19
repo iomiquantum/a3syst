@@ -506,6 +506,73 @@ export type Database = {
           },
         ]
       }
+      appointment_confirmation_config: {
+        Row: {
+          clinic_id: string
+          confirmation_message_template: string
+          id: string
+          include_google_maps_link: boolean | null
+          include_preparation_notes: boolean | null
+        }
+        Insert: {
+          clinic_id: string
+          confirmation_message_template?: string
+          id?: string
+          include_google_maps_link?: boolean | null
+          include_preparation_notes?: boolean | null
+        }
+        Update: {
+          clinic_id?: string
+          confirmation_message_template?: string
+          id?: string
+          include_google_maps_link?: boolean | null
+          include_preparation_notes?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_confirmation_config_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointment_reminder_config: {
+        Row: {
+          clinic_id: string
+          hours_before_appointment: number
+          id: string
+          is_active: boolean | null
+          message_template: string
+          reminder_number: number
+        }
+        Insert: {
+          clinic_id: string
+          hours_before_appointment: number
+          id?: string
+          is_active?: boolean | null
+          message_template: string
+          reminder_number: number
+        }
+        Update: {
+          clinic_id?: string
+          hours_before_appointment?: number
+          id?: string
+          is_active?: boolean | null
+          message_template?: string
+          reminder_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_reminder_config_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           branch_id: string | null
@@ -597,34 +664,46 @@ export type Database = {
         Row: {
           active: boolean
           address: string | null
+          arrival_instructions: string | null
           clinic_id: string
           created_at: string
           description: string | null
+          full_address: string | null
+          google_maps_url: string | null
           id: string
           name: string
           phone: string | null
+          preparation_notes: string | null
           updated_at: string
         }
         Insert: {
           active?: boolean
           address?: string | null
+          arrival_instructions?: string | null
           clinic_id: string
           created_at?: string
           description?: string | null
+          full_address?: string | null
+          google_maps_url?: string | null
           id?: string
           name: string
           phone?: string | null
+          preparation_notes?: string | null
           updated_at?: string
         }
         Update: {
           active?: boolean
           address?: string | null
+          arrival_instructions?: string | null
           clinic_id?: string
           created_at?: string
           description?: string | null
+          full_address?: string | null
+          google_maps_url?: string | null
           id?: string
           name?: string
           phone?: string | null
+          preparation_notes?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1211,6 +1290,24 @@ export type Database = {
       }
       conversations: {
         Row: {
+          appointment_attended: boolean | null
+          appointment_attended_at: string | null
+          appointment_attended_marked_by: string | null
+          appointment_branch_id: string | null
+          appointment_confirmation_message_sent: boolean | null
+          appointment_confirmed: boolean | null
+          appointment_confirmed_at: string | null
+          appointment_date: string | null
+          appointment_had_sale: boolean | null
+          appointment_reminder_1_sent: boolean | null
+          appointment_reminder_1_sent_at: string | null
+          appointment_reminder_2_sent: boolean | null
+          appointment_reminder_2_sent_at: string | null
+          appointment_sale_marked_at: string | null
+          appointment_sale_marked_by: string | null
+          appointment_service: string | null
+          appointment_status: string | null
+          appointment_time: string | null
           archived: boolean
           assigned_to: string | null
           channel: string
@@ -1245,6 +1342,24 @@ export type Database = {
           visitor_name: string | null
         }
         Insert: {
+          appointment_attended?: boolean | null
+          appointment_attended_at?: string | null
+          appointment_attended_marked_by?: string | null
+          appointment_branch_id?: string | null
+          appointment_confirmation_message_sent?: boolean | null
+          appointment_confirmed?: boolean | null
+          appointment_confirmed_at?: string | null
+          appointment_date?: string | null
+          appointment_had_sale?: boolean | null
+          appointment_reminder_1_sent?: boolean | null
+          appointment_reminder_1_sent_at?: string | null
+          appointment_reminder_2_sent?: boolean | null
+          appointment_reminder_2_sent_at?: string | null
+          appointment_sale_marked_at?: string | null
+          appointment_sale_marked_by?: string | null
+          appointment_service?: string | null
+          appointment_status?: string | null
+          appointment_time?: string | null
           archived?: boolean
           assigned_to?: string | null
           channel?: string
@@ -1279,6 +1394,24 @@ export type Database = {
           visitor_name?: string | null
         }
         Update: {
+          appointment_attended?: boolean | null
+          appointment_attended_at?: string | null
+          appointment_attended_marked_by?: string | null
+          appointment_branch_id?: string | null
+          appointment_confirmation_message_sent?: boolean | null
+          appointment_confirmed?: boolean | null
+          appointment_confirmed_at?: string | null
+          appointment_date?: string | null
+          appointment_had_sale?: boolean | null
+          appointment_reminder_1_sent?: boolean | null
+          appointment_reminder_1_sent_at?: string | null
+          appointment_reminder_2_sent?: boolean | null
+          appointment_reminder_2_sent_at?: string | null
+          appointment_sale_marked_at?: string | null
+          appointment_sale_marked_by?: string | null
+          appointment_service?: string | null
+          appointment_status?: string | null
+          appointment_time?: string | null
           archived?: boolean
           assigned_to?: string | null
           channel?: string
@@ -1313,6 +1446,13 @@ export type Database = {
           visitor_name?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "conversations_appointment_branch_id_fkey"
+            columns: ["appointment_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "conversations_assigned_to_fkey"
             columns: ["assigned_to"]
