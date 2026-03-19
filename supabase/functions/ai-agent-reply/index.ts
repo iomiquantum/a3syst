@@ -10,9 +10,10 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { conversation_id, clinic_id, triggered_by = "manual", channel: requestChannel } = await req.json();
+    const { conversation_id, clinic_id, triggered_by = "manual", channel: requestChannel, draft_only = false, custom_prompt } = await req.json();
     const isFollowUp = triggered_by === "follow_up";
-    console.log("ai-agent-reply called:", { conversation_id, clinic_id, triggered_by, isFollowUp, requestChannel });
+    const isDraft = draft_only === true;
+    console.log("ai-agent-reply called:", { conversation_id, clinic_id, triggered_by, isFollowUp, isDraft, requestChannel });
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
@@ -173,6 +174,11 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
       systemPrompt += `\n\nIMPORTANTE: Responde en máximo ${channelPrompt.max_response_length} caracteres.`;
     }
 
+    // If custom prompt provided (human-guided AI), add it
+    if (custom_prompt) {
+      systemPrompt += `\n\n=== INSTRUCCIÓN DEL OPERADOR ===\nEl operador humano te pide que generes una respuesta con estas indicaciones: "${custom_prompt}"\nGenera una respuesta apropiada basándote en el contexto del chat y estas instrucciones.`;
+    }
+
     const aiMessages = [
       { role: "system", content: systemPrompt },
       ...(recentMessages || []).map((m) => ({
@@ -230,6 +236,22 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
     const tokensInput = usage.prompt_tokens || 0;
     const tokensOutput = usage.completion_tokens || 0;
     const modelUsed = aiData.model || "google/gemini-3-flash-preview";
+
+    // Draft mode: return reply without sending or saving message
+    if (isDraft) {
+      // Still log usage
+      await supabase.from("ai_agent_usage").insert({
+        clinic_id,
+        conversation_id,
+        tokens_input: tokensInput,
+        tokens_output: tokensOutput,
+        model: modelUsed,
+        triggered_by: "manual_draft",
+      });
+      return new Response(JSON.stringify({ reply, draft: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     let savedMsg: unknown = null;
 

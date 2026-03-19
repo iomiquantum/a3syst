@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Bot, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import PipelineBadge from "./PipelineBadge";
 import ChannelIcon from "@/components/messaging/ChannelIcon";
+import ChatToolbar from "./ChatToolbar";
 import { usePipelineAction } from "@/hooks/usePipelineAction";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
@@ -48,6 +48,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete }: Props) => {
   const [loadingMsgs, setLoadingMsgs] = useState(true);
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Fetch real messages
   useEffect(() => {
@@ -63,7 +64,6 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete }: Props) => {
     };
     fetchMessages();
 
-    // Realtime messages
     const channel = supabase
       .channel(`chat-${c.id}`)
       .on("postgres_changes", {
@@ -98,7 +98,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete }: Props) => {
 
   // Send message
   const handleSend = async () => {
-    if (!input.trim() || autopilot || sending || !clinicId) return;
+    if (!input.trim() || sending || !clinicId) return;
     setSending(true);
 
     const channel = c.channel || "whatsapp";
@@ -139,7 +139,27 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete }: Props) => {
     onActionComplete?.();
   };
 
+  const handleInsertText = (text: string) => {
+    setInput(prev => prev + text);
+    setTimeout(() => textareaRef.current?.focus(), 50);
+  };
+
   const isBotMessage = (m: ChatMessage) => m.direction === "outbound" && !m.sent_by;
+
+  // Auto-resize textarea
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    const el = e.target;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 120) + "px";
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -231,27 +251,37 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete }: Props) => {
         </div>
       </div>
 
-      {/* Input */}
-      <div className="px-4 py-3 border-t border-border shrink-0">
-        {autopilot ? (
-          <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-muted text-muted-foreground text-sm">
-            <Bot className="w-4 h-4 text-violet-500 shrink-0" />
-            La IA está respondiendo esta conversación...
-          </div>
-        ) : (
-          <div className="flex gap-2">
-            <Input
-              placeholder="Escribe un mensaje..."
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleSend()}
-              className="flex-1"
-            />
-            <Button onClick={handleSend} disabled={!input.trim() || sending} size="icon">
-              <Send className="w-4 h-4" />
-            </Button>
+      {/* Input area */}
+      <div className="px-4 py-3 border-t border-border shrink-0 space-y-2">
+        {/* Autopilot banner — informational only, does NOT block input */}
+        {autopilot && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 text-xs">
+            <Bot className="w-3.5 h-3.5 shrink-0" />
+            <span>La IA está respondiendo esta conversación. Puedes enviar mensajes como humano sin desactivarla.</span>
           </div>
         )}
+
+        <div className="flex items-end gap-2">
+          <div className="flex-1 flex flex-col gap-1">
+            <ChatToolbar
+              onInsertText={handleInsertText}
+              conversationId={c.id}
+              clinicId={clinicId || ""}
+            />
+            <Textarea
+              ref={textareaRef}
+              placeholder="Escribe un mensaje... (Shift+Enter para nueva línea)"
+              value={input}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              className="min-h-[40px] max-h-[120px] text-sm resize-none py-2"
+              rows={1}
+            />
+          </div>
+          <Button onClick={handleSend} disabled={!input.trim() || sending} size="icon" className="shrink-0 h-10 w-10">
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );

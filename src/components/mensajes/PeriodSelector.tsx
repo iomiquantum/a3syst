@@ -4,11 +4,30 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { CalendarDays } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
 
-export type Period = "hoy" | "ayer" | "semana" | "mes" | "rango";
+export type Period = "max" | "hoy" | "ayer" | "semana" | "mes" | "rango";
+
+export function periodToDateRange(period: Period): { from?: string; to?: string } {
+  const now = new Date();
+  switch (period) {
+    case "hoy":
+      return { from: startOfDay(now).toISOString(), to: endOfDay(now).toISOString() };
+    case "ayer": {
+      const y = subDays(now, 1);
+      return { from: startOfDay(y).toISOString(), to: endOfDay(y).toISOString() };
+    }
+    case "semana":
+      return { from: startOfWeek(now, { weekStartsOn: 1 }).toISOString(), to: endOfWeek(now, { weekStartsOn: 1 }).toISOString() };
+    case "mes":
+      return { from: startOfMonth(now).toISOString(), to: endOfMonth(now).toISOString() };
+    case "max":
+    default:
+      return {};
+  }
+}
 
 interface Props {
   label: string;
@@ -18,6 +37,15 @@ interface Props {
   onDateRangeChange?: (r: DateRange | undefined) => void;
 }
 
+const PERIOD_LABELS: Record<Period, string> = {
+  max: "Max",
+  hoy: "Hoy",
+  ayer: "Ayer",
+  semana: "Semana",
+  mes: "Mes",
+  rango: "Rango",
+};
+
 const PeriodSelector = ({ label, value, onChange, dateRange, onDateRangeChange }: Props) => {
   const [calOpen, setCalOpen] = useState(false);
 
@@ -26,9 +54,9 @@ const PeriodSelector = ({ label, value, onChange, dateRange, onDateRangeChange }
       <span className="text-[9px] text-muted-foreground uppercase tracking-wider">{label}</span>
       <div className="flex items-center gap-1">
         <ToggleGroup type="single" value={value} onValueChange={v => v && onChange(v as Period)} size="sm" className="gap-0 border border-border rounded-md overflow-hidden">
-          {(["hoy", "ayer", "semana", "mes", "rango"] as Period[]).map(p => (
+          {(["max", "hoy", "ayer", "semana", "mes", "rango"] as Period[]).map(p => (
             <ToggleGroupItem key={p} value={p} className="px-2.5 py-1 text-[10px] font-medium rounded-none data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-              {p === "hoy" ? "Hoy" : p === "ayer" ? "Ayer" : p === "semana" ? "Semana" : p === "mes" ? "Mes" : "Rango"}
+              {PERIOD_LABELS[p]}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
