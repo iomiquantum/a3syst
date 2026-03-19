@@ -1917,6 +1917,27 @@ export type Database = {
           },
         ]
       }
+      pipeline_execution_lock: {
+        Row: {
+          id: number
+          is_running: boolean | null
+          last_completed_at: string | null
+          started_at: string | null
+        }
+        Insert: {
+          id?: number
+          is_running?: boolean | null
+          last_completed_at?: string | null
+          started_at?: string | null
+        }
+        Update: {
+          id?: number
+          is_running?: boolean | null
+          last_completed_at?: string | null
+          started_at?: string | null
+        }
+        Relationships: []
+      }
       pipeline_global_rules: {
         Row: {
           description: string | null

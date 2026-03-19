@@ -172,7 +172,12 @@ Deno.serve(async (req) => {
             last_message_at: new Date().toISOString(),
           }).eq("id", conversation.id);
 
-          await syncToUnifiedMessaging(supabase, clinicId, contactPhone, contactName, content, messageType, msg.id);
+          const unifiedConvId = await syncToUnifiedMessaging(supabase, clinicId, contactPhone, contactName, content, messageType, msg.id);
+
+          // === PIPELINE: Handle inbound message transitions ===
+          if (unifiedConvId) {
+            await handleIncomingMessagePipeline(supabase, unifiedConvId, clinicId);
+          }
 
           console.log("[WA-Webhook] Message processed:", { contactPhone, conversationId: conversation.id });
 
@@ -262,9 +267,8 @@ async function syncToUnifiedMessaging(
   content: string,
   messageType: string,
   waMessageId: string
-) {
+): Promise<string | null> {
   try {
-    // Find or create contact
     let contactId: string | null = null;
     const { data: existingContact } = await supabase
       .from("contacts")
@@ -284,9 +288,8 @@ async function syncToUnifiedMessaging(
       contactId = newContact?.id || null;
     }
 
-    if (!contactId) return;
+    if (!contactId) return null;
 
-    // Find or create unified conversation
     const { data: existingConv } = await supabase
       .from("conversations")
       .select("id")
@@ -307,6 +310,7 @@ async function syncToUnifiedMessaging(
           unread_count: 1, chatbot_active: true, visitor_contact: contactPhone,
           last_inbound_at: new Date().toISOString(),
           follow_up_count: 0,
+          pipeline_tab: "resueltos_ia",
         })
         .select("id")
         .single();
@@ -319,7 +323,7 @@ async function syncToUnifiedMessaging(
         unread_count: (convData?.unread_count || 0) + 1,
         status: "open",
         last_inbound_at: new Date().toISOString(),
-        follow_up_count: 0, // Reset follow-up count when user responds
+        follow_up_count: 0,
       }).eq("id", conversationId);
     }
 
@@ -330,7 +334,88 @@ async function syncToUnifiedMessaging(
         whatsapp_message_id: waMessageId, status: "received",
       });
     }
+
+    return conversationId || null;
   } catch (err) {
     console.error("[WA-Webhook] Sync to unified error:", err);
+    return null;
+  }
+}
+
+async function handleIncomingMessagePipeline(
+  supabase: ReturnType<typeof createClient>,
+  conversationId: string,
+  clinicId: string,
+) {
+  try {
+    const { data: conv } = await supabase
+      .from("conversations")
+      .select("pipeline_tab, seguimiento_is_recurrente, seguimiento_recurrente_count, seguimiento_contact_number, inactivity_timer_start")
+      .eq("id", conversationId)
+      .single();
+
+    if (!conv) return;
+
+    const tab = conv.pipeline_tab || "resueltos_ia";
+
+    if (tab === "no_responden") {
+      const newCount = (conv.seguimiento_recurrente_count || 0) + 1;
+      await supabase.from("conversations").update({
+        pipeline_tab: "resueltos_ia",
+        seguimiento_is_recurrente: true,
+        seguimiento_recurrente_count: newCount,
+        seguimiento_contact_number: 0,
+        seguimiento_next_contact_at: null,
+        inactivity_timer_start: null,
+      }).eq("id", conversationId);
+
+      await supabase.from("conversation_pipeline_history").insert({
+        conversation_id: conversationId,
+        clinic_id: clinicId,
+        from_tab: "no_responden",
+        to_tab: "resueltos_ia",
+        moved_by: "system",
+        reason: `Cliente respondió - seguimiento recurrente #${newCount}`,
+      });
+      console.log(`[PIPELINE] Cliente respondió desde no_responden → resueltos_ia (recurrente #${newCount})`);
+
+    } else if (tab.startsWith("seguimiento_c")) {
+      const wasRecurrente = conv.seguimiento_is_recurrente;
+      const newCount = wasRecurrente
+        ? (conv.seguimiento_recurrente_count || 0) + 1
+        : 1;
+
+      await supabase.from("conversations").update({
+        pipeline_tab: "resueltos_ia",
+        seguimiento_is_recurrente: true,
+        seguimiento_recurrente_count: newCount,
+        seguimiento_contact_number: 0,
+        seguimiento_next_contact_at: null,
+        inactivity_timer_start: null,
+      }).eq("id", conversationId);
+
+      await supabase.from("conversation_pipeline_history").insert({
+        conversation_id: conversationId,
+        clinic_id: clinicId,
+        from_tab: tab,
+        to_tab: "resueltos_ia",
+        moved_by: "system",
+        reason: `Cliente respondió durante seguimiento ${tab.replace("seguimiento_", "").toUpperCase()}`,
+      });
+      console.log(`[PIPELINE] Cliente respondió durante ${tab} → resueltos_ia`);
+
+    } else if (tab === "resueltos_ia") {
+      if (conv.inactivity_timer_start) {
+        await supabase.from("conversations").update({
+          inactivity_timer_start: null,
+        }).eq("id", conversationId);
+        console.log(`[PIPELINE] Inactivity timer reset for conv ${conversationId}`);
+      }
+
+    } else if (["no_interesado", "clientes", "escalados"].includes(tab)) {
+      console.log(`[PIPELINE] Message received in sticky state '${tab}', no move`);
+    }
+  } catch (err) {
+    console.error("[PIPELINE] handleIncomingMessagePipeline error:", err);
   }
 }

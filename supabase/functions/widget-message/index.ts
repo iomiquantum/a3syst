@@ -175,6 +175,7 @@ Deno.serve(async (req) => {
           channel: "web_widget",
           status: "open",
           chatbot_active: true,
+          pipeline_tab: "resueltos_ia",
         }).select().single();
         if (error) throw error;
         conversation = data;
@@ -197,7 +198,11 @@ Deno.serve(async (req) => {
       last_message_at: new Date().toISOString(),
       last_message_preview: sanitizedMessage.substring(0, 100),
       unread_count: (conversation.unread_count || 0) + 1,
+      last_inbound_at: new Date().toISOString(),
     }).eq("id", conversation.id);
+
+    // === PIPELINE: Handle inbound message transitions ===
+    await handleIncomingMessagePipeline(supabase, conversation.id, clinic_id);
 
     return new Response(JSON.stringify({
       success: true,
@@ -211,6 +216,68 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+});
+
+async function handleIncomingMessagePipeline(
+  supabase: ReturnType<typeof createClient>,
+  conversationId: string,
+  clinicId: string,
+) {
+  try {
+    const { data: conv } = await supabase
+      .from("conversations")
+      .select("pipeline_tab, seguimiento_is_recurrente, seguimiento_recurrente_count, seguimiento_contact_number, inactivity_timer_start")
+      .eq("id", conversationId)
+      .single();
+
+    if (!conv) return;
+    const tab = conv.pipeline_tab || "resueltos_ia";
+
+    if (tab === "no_responden") {
+      const newCount = (conv.seguimiento_recurrente_count || 0) + 1;
+      await supabase.from("conversations").update({
+        pipeline_tab: "resueltos_ia",
+        seguimiento_is_recurrente: true,
+        seguimiento_recurrente_count: newCount,
+        seguimiento_contact_number: 0,
+        seguimiento_next_contact_at: null,
+        inactivity_timer_start: null,
+      }).eq("id", conversationId);
+      await supabase.from("conversation_pipeline_history").insert({
+        conversation_id: conversationId, clinic_id: clinicId,
+        from_tab: "no_responden", to_tab: "resueltos_ia",
+        moved_by: "system", reason: `Cliente respondió - seguimiento recurrente #${newCount}`,
+      });
+      console.log(`[PIPELINE] Widget: no_responden → resueltos_ia (recurrente #${newCount})`);
+
+    } else if (tab.startsWith("seguimiento_c")) {
+      const wasRecurrente = conv.seguimiento_is_recurrente;
+      const newCount = wasRecurrente ? (conv.seguimiento_recurrente_count || 0) + 1 : 1;
+      await supabase.from("conversations").update({
+        pipeline_tab: "resueltos_ia",
+        seguimiento_is_recurrente: true,
+        seguimiento_recurrente_count: newCount,
+        seguimiento_contact_number: 0,
+        seguimiento_next_contact_at: null,
+        inactivity_timer_start: null,
+      }).eq("id", conversationId);
+      await supabase.from("conversation_pipeline_history").insert({
+        conversation_id: conversationId, clinic_id: clinicId,
+        from_tab: tab, to_tab: "resueltos_ia",
+        moved_by: "system", reason: `Cliente respondió durante seguimiento ${tab.replace("seguimiento_", "").toUpperCase()}`,
+      });
+      console.log(`[PIPELINE] Widget: ${tab} → resueltos_ia`);
+
+    } else if (tab === "resueltos_ia" && conv.inactivity_timer_start) {
+      await supabase.from("conversations").update({ inactivity_timer_start: null }).eq("id", conversationId);
+      console.log(`[PIPELINE] Widget: inactivity timer reset for conv ${conversationId}`);
+
+    } else if (["no_interesado", "clientes", "escalados"].includes(tab)) {
+      console.log(`[PIPELINE] Widget: message in sticky state '${tab}', no move`);
+    }
+  } catch (err) {
+    console.error("[PIPELINE] handleIncomingMessagePipeline error:", err);
+  }
+}
   }
 });
