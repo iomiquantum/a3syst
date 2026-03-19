@@ -22,6 +22,8 @@ interface Props {
   conversation: PipelineConversation;
   onBack?: () => void;
   onActionComplete?: () => void;
+  showContactPanel?: boolean;
+  onToggleContactPanel?: () => void;
 }
 
 function getInitials(name: string): string {
