@@ -227,6 +227,13 @@ const MensajesPage = () => {
                   </div>
                 )}
               </div>
+
+              {/* Panel de contacto */}
+              {selectedConv && (
+                <div className="w-[260px] border-l border-border shrink-0 overflow-hidden hidden lg:block">
+                  <ContactInfoPanel conversation={selectedConv} onActionComplete={handleActionComplete} />
+                </div>
+              )}
             </>
           )}
         </div>
