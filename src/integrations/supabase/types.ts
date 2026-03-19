@@ -850,6 +850,83 @@ export type Database = {
           },
         ]
       }
+      clinic_pipeline_config: {
+        Row: {
+          clinic_id: string
+          custom_overrides: Json | null
+          id: string
+          loaded_at: string | null
+          loaded_by: string | null
+          pipeline_template_id: string | null
+        }
+        Insert: {
+          clinic_id: string
+          custom_overrides?: Json | null
+          id?: string
+          loaded_at?: string | null
+          loaded_by?: string | null
+          pipeline_template_id?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          custom_overrides?: Json | null
+          id?: string
+          loaded_at?: string | null
+          loaded_by?: string | null
+          pipeline_template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_pipeline_config_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_pipeline_config_pipeline_template_id_fkey"
+            columns: ["pipeline_template_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinic_pipeline_rules: {
+        Row: {
+          clinic_id: string
+          id: string
+          rule_key: string
+          rule_value: Json
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          clinic_id: string
+          id?: string
+          rule_key: string
+          rule_value: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          id?: string
+          rule_key?: string
+          rule_value?: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_pipeline_rules_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinics: {
         Row: {
           additional_info: string | null
@@ -1081,6 +1158,57 @@ export type Database = {
           },
         ]
       }
+      conversation_pipeline_history: {
+        Row: {
+          clinic_id: string
+          conversation_id: string
+          created_at: string | null
+          from_tab: string | null
+          id: string
+          metadata: Json | null
+          moved_by: string
+          reason: string | null
+          to_tab: string
+        }
+        Insert: {
+          clinic_id: string
+          conversation_id: string
+          created_at?: string | null
+          from_tab?: string | null
+          id?: string
+          metadata?: Json | null
+          moved_by?: string
+          reason?: string | null
+          to_tab: string
+        }
+        Update: {
+          clinic_id?: string
+          conversation_id?: string
+          created_at?: string | null
+          from_tab?: string | null
+          id?: string
+          metadata?: Json | null
+          moved_by?: string
+          reason?: string | null
+          to_tab?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_pipeline_history_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_pipeline_history_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           archived: boolean
@@ -1090,11 +1218,25 @@ export type Database = {
           clinic_id: string
           contact_id: string
           created_at: string
+          escalado_at: string | null
+          escalado_reason: string | null
           follow_up_count: number
           id: string
+          inactivity_timer_start: string | null
           last_inbound_at: string | null
           last_message_at: string | null
           last_message_preview: string | null
+          marked_cliente_at: string | null
+          marked_cliente_by: string | null
+          marked_no_interesado_at: string | null
+          marked_no_interesado_by: string | null
+          pipeline_tab: string | null
+          pipeline_template_id: string | null
+          seguimiento_contact_number: number | null
+          seguimiento_is_recurrente: boolean | null
+          seguimiento_last_contact_at: string | null
+          seguimiento_next_contact_at: string | null
+          seguimiento_recurrente_count: number | null
           status: string
           unread_count: number
           updated_at: string
@@ -1109,11 +1251,25 @@ export type Database = {
           clinic_id: string
           contact_id: string
           created_at?: string
+          escalado_at?: string | null
+          escalado_reason?: string | null
           follow_up_count?: number
           id?: string
+          inactivity_timer_start?: string | null
           last_inbound_at?: string | null
           last_message_at?: string | null
           last_message_preview?: string | null
+          marked_cliente_at?: string | null
+          marked_cliente_by?: string | null
+          marked_no_interesado_at?: string | null
+          marked_no_interesado_by?: string | null
+          pipeline_tab?: string | null
+          pipeline_template_id?: string | null
+          seguimiento_contact_number?: number | null
+          seguimiento_is_recurrente?: boolean | null
+          seguimiento_last_contact_at?: string | null
+          seguimiento_next_contact_at?: string | null
+          seguimiento_recurrente_count?: number | null
           status?: string
           unread_count?: number
           updated_at?: string
@@ -1128,11 +1284,25 @@ export type Database = {
           clinic_id?: string
           contact_id?: string
           created_at?: string
+          escalado_at?: string | null
+          escalado_reason?: string | null
           follow_up_count?: number
           id?: string
+          inactivity_timer_start?: string | null
           last_inbound_at?: string | null
           last_message_at?: string | null
           last_message_preview?: string | null
+          marked_cliente_at?: string | null
+          marked_cliente_by?: string | null
+          marked_no_interesado_at?: string | null
+          marked_no_interesado_by?: string | null
+          pipeline_tab?: string | null
+          pipeline_template_id?: string | null
+          seguimiento_contact_number?: number | null
+          seguimiento_is_recurrente?: boolean | null
+          seguimiento_last_contact_at?: string | null
+          seguimiento_next_contact_at?: string | null
+          seguimiento_recurrente_count?: number | null
           status?: string
           unread_count?: number
           updated_at?: string
@@ -1747,6 +1917,81 @@ export type Database = {
           },
         ]
       }
+      pipeline_global_rules: {
+        Row: {
+          description: string | null
+          id: string
+          rule_key: string
+          rule_value: Json
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          rule_key: string
+          rule_value: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          rule_key?: string
+          rule_value?: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      pipeline_templates: {
+        Row: {
+          automation_rules: Json | null
+          base_tabs: Json
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          extra_labels: Json | null
+          id: string
+          industry_type: string
+          is_active: boolean | null
+          name: string
+          seguimiento_config: Json | null
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          automation_rules?: Json | null
+          base_tabs?: Json
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          extra_labels?: Json | null
+          id?: string
+          industry_type: string
+          is_active?: boolean | null
+          name: string
+          seguimiento_config?: Json | null
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          automation_rules?: Json | null
+          base_tabs?: Json
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          extra_labels?: Json | null
+          id?: string
+          industry_type?: string
+          is_active?: boolean | null
+          name?: string
+          seguimiento_config?: Json | null
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       planning_columns: {
         Row: {
           clinic_id: string
@@ -2339,6 +2584,50 @@ export type Database = {
             columns: ["treatment_id"]
             isOneToOne: false
             referencedRelation: "treatments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seguimiento_auto_messages: {
+        Row: {
+          clinic_id: string
+          contact_number: number
+          created_at: string | null
+          delay_minutes: number
+          id: string
+          is_active: boolean | null
+          is_automatic: boolean | null
+          message_template: string
+          updated_at: string | null
+        }
+        Insert: {
+          clinic_id: string
+          contact_number: number
+          created_at?: string | null
+          delay_minutes: number
+          id?: string
+          is_active?: boolean | null
+          is_automatic?: boolean | null
+          message_template: string
+          updated_at?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          contact_number?: number
+          created_at?: string | null
+          delay_minutes?: number
+          id?: string
+          is_active?: boolean | null
+          is_automatic?: boolean | null
+          message_template?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seguimiento_auto_messages_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
