@@ -209,7 +209,7 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete }: Props) => {
             </div>
           )}
           <span className="text-[11px] text-muted-foreground mt-0.5">
-            ● {FUNNEL_STAGES.find(s => s.key === contact.funnel_stage)?.label || contact.funnel_stage}
+            ● {PIPELINE_STAGES.find(s => s.key === c.pipeline_tab)?.label || c.pipeline_tab}
           </span>
         </div>
 
