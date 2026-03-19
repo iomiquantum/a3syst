@@ -40,7 +40,7 @@ interface ChatMessage {
   status: string;
 }
 
-const MensajesChat = ({ conversation: c, onBack, onActionComplete }: Props) => {
+const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPanel, onToggleContactPanel }: Props) => {
   const { clinicId } = useClinic();
   const { user } = useAuth();
   const { moveConversation } = usePipelineAction();
