@@ -15,6 +15,7 @@ import { useClinic } from "@/hooks/useClinic";
 import { useAuth } from "@/hooks/useAuth";
 import { useClinicTemplate } from "@/hooks/useClinicTemplate";
 import ClinicChatActions from "./ClinicChatActions";
+import AppointmentBanner from "./AppointmentBanner";
 import type { PipelineConversation } from "@/hooks/useConversationsByPipeline";
 
 interface Props {
