@@ -197,6 +197,11 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
             </span>
             <Switch checked={autopilot} onCheckedChange={handleToggleAutopilot} className="scale-75" />
           </div>
+          {onToggleContactPanel && (
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onToggleContactPanel} title={showContactPanel ? "Ocultar ficha" : "Ver ficha de contacto"}>
+              {showContactPanel ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+            </Button>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
