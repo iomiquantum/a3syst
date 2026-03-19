@@ -46,6 +46,7 @@ interface ContactData {
 interface Props {
   conversation: PipelineConversation;
   onActionComplete?: () => void;
+  onClose?: () => void;
 }
 
 type EditField = "name" | "phone" | "phone2" | "email" | "location" | "notes" | null;
