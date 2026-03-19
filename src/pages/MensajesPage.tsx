@@ -8,6 +8,7 @@ import MensajesSidebar from "@/components/mensajes/MensajesSidebar";
 import MensajesConversationList from "@/components/mensajes/MensajesConversationList";
 import MensajesChat from "@/components/mensajes/MensajesChat";
 import MensajesKanban from "@/components/mensajes/MensajesKanban";
+import ContactInfoPanel from "@/components/mensajes/ContactInfoPanel";
 import { useConversationsByPipeline, PipelineConversation, PipelineFilter } from "@/hooks/useConversationsByPipeline";
 import { usePipelineStats } from "@/hooks/usePipelineStats";
 import { useChannelStats } from "@/hooks/useChannelStats";
@@ -226,6 +227,13 @@ const MensajesPage = () => {
                   </div>
                 )}
               </div>
+
+              {/* Panel de contacto */}
+              {selectedConv && (
+                <div className="w-[260px] border-l border-border shrink-0 overflow-hidden hidden lg:block">
+                  <ContactInfoPanel conversation={selectedConv} onActionComplete={handleActionComplete} />
+                </div>
+              )}
             </>
           )}
         </div>

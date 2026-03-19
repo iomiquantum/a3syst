@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import ConversationCard from "./ConversationCard";
 import MensajesChat from "./MensajesChat";
+import ContactInfoPanel from "./ContactInfoPanel";
 import type { PipelineConversation, PipelineTab } from "@/hooks/useConversationsByPipeline";
 
 const KANBAN_COLUMNS: { tab: PipelineTab; label: string; color: string }[] = [
@@ -64,8 +65,17 @@ const MensajesKanban = ({ conversations, onActionComplete }: Props) => {
       </div>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="right" className="w-full sm:w-[480px] p-0">
-          {selectedConv && <MensajesChat conversation={selectedConv} onActionComplete={onActionComplete} />}
+        <SheetContent side="right" className="w-full sm:w-[720px] p-0">
+          {selectedConv && (
+            <div className="flex h-full">
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <MensajesChat conversation={selectedConv} onActionComplete={onActionComplete} />
+              </div>
+              <div className="w-[250px] border-l border-border shrink-0 overflow-hidden hidden sm:block">
+                <ContactInfoPanel conversation={selectedConv} onActionComplete={onActionComplete} />
+              </div>
+            </div>
+          )}
         </SheetContent>
       </Sheet>
     </>
