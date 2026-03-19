@@ -64,6 +64,7 @@ const MensajesPage = () => {
     searchQuery,
     periodStart: pipelineDates.from,
     periodEnd: pipelineDates.to,
+    showArchived,
   });
 
   const handleActionComplete = () => {
