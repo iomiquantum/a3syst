@@ -107,6 +107,8 @@ const App = () => (
                <Route path="/mensajes/whatsapp" element={<ProtectedRoute><WhatsAppMessagesPage /></ProtectedRoute>} />
                <Route path="/whatsapp" element={<ProtectedRoute><WhatsAppPage /></ProtectedRoute>} />
               <Route path="/admin/usuarios" element={<ProtectedRoute><AdminUsuariosPage /></ProtectedRoute>} />
+              <Route path="/admin/pipeline" element={<ProtectedRoute><AdminPipelinePage /></ProtectedRoute>} />
+              <Route path="/configuracion/pipeline" element={<ProtectedRoute><PipelineConfigPage /></ProtectedRoute>} />
               <Route path="/ads" element={<ProtectedRoute><AdsPage /></ProtectedRoute>} />
               <Route path="/contenido" element={<ProtectedRoute><ContentPage /></ProtectedRoute>} />
               <Route path="/psycho-matrix" element={<ProtectedRoute><PsychoMatrixPage /></ProtectedRoute>} />
