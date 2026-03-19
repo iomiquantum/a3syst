@@ -23,6 +23,8 @@ import ProfesionalesPage from "./pages/ProfesionalesPage";
 import UsuariosPage from "./pages/UsuariosPage";
 import AdminPage from "./pages/AdminPage";
 import AdminPipelinePage from "./pages/AdminPipelinePage";
+import AdminPlantillasPage from "./pages/AdminPlantillasPage";
+import AdminPlantillaEditorPage from "./pages/AdminPlantillaEditorPage";
 import AdminUsuariosPage from "./pages/AdminUsuariosPage";
 import MensajesPage from "./pages/MensajesPage";
 import WidgetConfigPage from "./pages/WidgetConfigPage";
