@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import ConversationCard from "./ConversationCard";
 import ActiveFilters from "./ActiveFilters";
-import type { MockConversation } from "@/data/mockConversations";
+import type { PipelineConversation } from "@/hooks/useConversationsByPipeline";
 
 interface FilterChip {
   key: string;
@@ -13,9 +13,9 @@ interface FilterChip {
 }
 
 interface Props {
-  conversations: MockConversation[];
+  conversations: PipelineConversation[];
   selectedId: string | null;
-  onSelect: (c: MockConversation) => void;
+  onSelect: (c: PipelineConversation) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   activeFilters: FilterChip[];

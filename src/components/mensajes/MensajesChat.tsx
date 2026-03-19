@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Send, Bot, User, MoreVertical } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Send, Bot, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -9,34 +9,134 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import PipelineBadge from "./PipelineBadge";
 import ChannelIcon from "@/components/messaging/ChannelIcon";
-import type { MockConversation } from "@/data/mockConversations";
-import { MOCK_MESSAGES } from "@/data/mockConversations";
+import { usePipelineAction } from "@/hooks/usePipelineAction";
+import { supabase } from "@/integrations/supabase/client";
+import { useClinic } from "@/hooks/useClinic";
+import { useAuth } from "@/hooks/useAuth";
+import type { PipelineConversation, PipelineTab } from "@/hooks/useConversationsByPipeline";
 
 interface Props {
-  conversation: MockConversation;
+  conversation: PipelineConversation;
   onBack?: () => void;
+  onActionComplete?: () => void;
 }
 
 function getInitials(name: string): string {
-  return name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
+  return name.split(" ").slice(0, 2).map(w => w[0] || "").join("").toUpperCase();
 }
 
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+interface ChatMessage {
+  id: string;
+  direction: string;
+  content: string;
+  sent_by: string | null;
+  message_type: string;
+  created_at: string;
+  status: string;
 }
 
-const MensajesChat = ({ conversation: c, onBack }: Props) => {
+const MensajesChat = ({ conversation: c, onBack, onActionComplete }: Props) => {
+  const { clinicId } = useClinic();
+  const { user } = useAuth();
+  const { moveConversation } = usePipelineAction();
   const [input, setInput] = useState("");
-  const [autopilot, setAutopilot] = useState(c.autopilotActive);
-  const messages = MOCK_MESSAGES[c.id] || [];
+  const [autopilot, setAutopilot] = useState(c.chatbot_active);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loadingMsgs, setLoadingMsgs] = useState(true);
+  const [sending, setSending] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const pendingAction = () => toast.info("Acción pendiente de implementación");
+  // Fetch real messages
+  useEffect(() => {
+    const fetchMessages = async () => {
+      setLoadingMsgs(true);
+      const { data, error } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("conversation_id", c.id)
+        .order("created_at", { ascending: true });
+      if (!error) setMessages((data || []) as ChatMessage[]);
+      setLoadingMsgs(false);
+    };
+    fetchMessages();
 
-  const handleSend = () => {
-    if (!input.trim() || autopilot) return;
-    toast.success("Mensaje enviado (mock)");
-    setInput("");
+    // Realtime messages
+    const channel = supabase
+      .channel(`chat-${c.id}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "messages",
+        filter: `conversation_id=eq.${c.id}`,
+      }, (payload) => {
+        setMessages(prev => {
+          if (prev.some(m => m.id === (payload.new as any).id)) return prev;
+          return [...prev, payload.new as ChatMessage];
+        });
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [c.id]);
+
+  // Auto-scroll
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Toggle autopilot
+  const handleToggleAutopilot = async (active: boolean) => {
+    setAutopilot(active);
+    await (supabase as any).from("conversations").update({ chatbot_active: active }).eq("id", c.id);
+    toast.success(active ? "Autopilot activado" : "Autopilot desactivado");
   };
+
+  // Send message
+  const handleSend = async () => {
+    if (!input.trim() || autopilot || sending || !clinicId) return;
+    setSending(true);
+
+    const channel = c.channel || "whatsapp";
+    if (channel === "whatsapp" && c.contactPhone) {
+      try {
+        const { error } = await supabase.functions.invoke("whatsapp-send", {
+          body: {
+            clinic_id: clinicId,
+            to_number: c.contactPhone,
+            message_type: "text",
+            content: input.trim(),
+            sent_by: user?.id || null,
+            conversation_id: c.id,
+          },
+        });
+        if (error) throw error;
+      } catch (e: any) {
+        toast.error(e.message || "Error al enviar");
+      }
+    } else {
+      await supabase.from("messages").insert({
+        conversation_id: c.id,
+        clinic_id: clinicId,
+        direction: "outbound",
+        content: input.trim(),
+        message_type: "text",
+        status: "sent",
+        sent_by: user?.id || null,
+      });
+    }
+
+    setInput("");
+    setSending(false);
+  };
+
+  const handleAction = async (tab: PipelineTab) => {
+    await moveConversation(c.id, tab);
+    onActionComplete?.();
+  };
+
+  const isBotMessage = (m: ChatMessage) => m.direction === "outbound" && !m.sent_by;
 
   return (
     <div className="h-full flex flex-col">
@@ -49,11 +149,11 @@ const MensajesChat = ({ conversation: c, onBack }: Props) => {
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground truncate">{c.contactName}</p>
             <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-              <PipelineBadge tab={c.pipelineTab} />
+              <PipelineBadge tab={c.pipeline_tab} />
               <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                 <ChannelIcon channel={c.channel} size="sm" /> {c.channel === "whatsapp" ? "WhatsApp" : c.channel === "web" ? "Web" : c.channel}
               </span>
-              {c.tags.slice(0, 3).map(t => (
+              {c.contactTags.slice(0, 3).map(t => (
                 <span key={t} className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">{t}</span>
               ))}
             </div>
@@ -64,7 +164,7 @@ const MensajesChat = ({ conversation: c, onBack }: Props) => {
             <span className={cn("text-[10px] font-medium", autopilot ? "text-emerald-500" : "text-muted-foreground")}>
               Autopilot {autopilot ? "ON" : "OFF"}
             </span>
-            <Switch checked={autopilot} onCheckedChange={setAutopilot} className="scale-75" />
+            <Switch checked={autopilot} onCheckedChange={handleToggleAutopilot} className="scale-75" />
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -73,21 +173,22 @@ const MensajesChat = ({ conversation: c, onBack }: Props) => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={pendingAction}>Marcar como no interesado</DropdownMenuItem>
-              <DropdownMenuItem onClick={pendingAction}>Escalar a humano</DropdownMenuItem>
-              <DropdownMenuItem onClick={pendingAction}>Convertir a cliente</DropdownMenuItem>
-              <DropdownMenuItem onClick={pendingAction}>Reiniciar seguimiento</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAction("no_interesado")}>Marcar como no interesado</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAction("escalados")}>Escalar a humano</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAction("clientes")}>Convertir a cliente</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAction("resueltos_ia")}>Reiniciar seguimiento</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={pendingAction}>Ver contacto en CRM</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => toast.info("Ir a CRM (pendiente)")}>Ver contacto en CRM</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 px-4 py-3">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3">
         <div className="space-y-3 max-w-2xl mx-auto">
-          {messages.length === 0 && (
+          {loadingMsgs && <p className="text-center text-sm text-muted-foreground py-8">Cargando mensajes...</p>}
+          {!loadingMsgs && messages.length === 0 && (
             <p className="text-center text-sm text-muted-foreground py-8">No hay mensajes aún</p>
           )}
           {messages.map(m => (
@@ -95,33 +196,32 @@ const MensajesChat = ({ conversation: c, onBack }: Props) => {
               <div className={cn(
                 "max-w-[75%] rounded-xl px-3.5 py-2.5 text-sm",
                 m.direction === "outbound"
-                  ? m.sender === "ai"
+                  ? isBotMessage(m)
                     ? "bg-muted border border-border"
                     : "bg-primary text-primary-foreground"
                   : "bg-muted"
               )}>
-                {m.sender === "ai" && m.direction === "outbound" && (
+                {isBotMessage(m) && (
                   <div className="flex items-center gap-1 mb-1">
                     <Bot className="w-3 h-3 text-violet-500" />
                     <span className="text-[10px] font-medium text-violet-500">Asistente IA</span>
                   </div>
                 )}
-                <p className="leading-relaxed">{m.content}</p>
-                <p className={cn("text-[10px] mt-1 text-right", m.direction === "outbound" && m.sender !== "ai" ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                  {formatTime(m.time)}
+                <p className="leading-relaxed whitespace-pre-wrap">{m.content}</p>
+                <p className={cn("text-[10px] mt-1 text-right", m.direction === "outbound" && !isBotMessage(m) ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                  {new Date(m.created_at).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
                 </p>
               </div>
             </div>
           ))}
 
-          {/* Timer note */}
-          {c.pipelineTab === "resueltos_ia" && (
+          {c.pipeline_tab === "resueltos_ia" && (
             <p className="text-center text-[11px] text-muted-foreground italic py-2">
               Si no responde en 30 min pasa a Seguimiento C1
             </p>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Input */}
       <div className="px-4 py-3 border-t border-border shrink-0">
@@ -139,7 +239,7 @@ const MensajesChat = ({ conversation: c, onBack }: Props) => {
               onKeyDown={e => e.key === "Enter" && handleSend()}
               className="flex-1"
             />
-            <Button onClick={handleSend} disabled={!input.trim()} size="icon">
+            <Button onClick={handleSend} disabled={!input.trim() || sending} size="icon">
               <Send className="w-4 h-4" />
             </Button>
           </div>
