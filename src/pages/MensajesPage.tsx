@@ -158,7 +158,7 @@ const MensajesPage = () => {
         <div className="px-4 py-2.5 border-b border-border shrink-0">
           <MensajesPipelineTabs
             activeTab={activeTab} onTabChange={setActiveTab}
-            tabCounts={tabCounts}
+            tabs={pipelineTabs}
             period={pipelinePeriod} onPeriodChange={setPipelinePeriod}
             dateRange={pipelineRange} onDateRangeChange={setPipelineRange}
           />
