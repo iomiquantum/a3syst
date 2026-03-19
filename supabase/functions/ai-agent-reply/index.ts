@@ -237,6 +237,22 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
     const tokensOutput = usage.completion_tokens || 0;
     const modelUsed = aiData.model || "google/gemini-3-flash-preview";
 
+    // Draft mode: return reply without sending or saving message
+    if (isDraft) {
+      // Still log usage
+      await supabase.from("ai_agent_usage").insert({
+        clinic_id,
+        conversation_id,
+        tokens_input: tokensInput,
+        tokens_output: tokensOutput,
+        model: modelUsed,
+        triggered_by: "manual_draft",
+      });
+      return new Response(JSON.stringify({ reply, draft: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     let savedMsg: unknown = null;
 
     if (conversationData.channel === "whatsapp") {
