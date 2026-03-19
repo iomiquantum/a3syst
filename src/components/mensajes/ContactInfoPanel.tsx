@@ -10,13 +10,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { PipelineConversation } from "@/hooks/useConversationsByPipeline";
 
-const FUNNEL_STAGES = [
-  { key: "nuevos", label: "Nuevos" },
-  { key: "pidio_info", label: "Pidio info" },
-  { key: "interesado", label: "Interesado" },
-  { key: "cita_agendada", label: "Cita agendada" },
-  { key: "convertido", label: "Convertido" },
-  { key: "perdido", label: "Perdido" },
+const PIPELINE_STAGES = [
+  { key: "resueltos_ia", label: "Resueltos IA" },
+  { key: "seguimiento_c1", label: "Seguimiento C1" },
+  { key: "seguimiento_c2", label: "Seguimiento C2" },
+  { key: "seguimiento_c3", label: "Seguimiento C3" },
+  { key: "no_responden", label: "No responden" },
+  { key: "no_interesado", label: "No interesado" },
+  { key: "escalados", label: "Escalados" },
+  { key: "clientes", label: "Clientes" },
+  { key: "seguimiento_venta", label: "Seg. Venta" },
+  { key: "pacientes", label: "Pacientes" },
+  { key: "show_sin_venta", label: "Show sin venta" },
+  { key: "seguimiento_c4", label: "Seguimiento C4" },
+  { key: "seguimiento_c5", label: "Seguimiento C5" },
+  { key: "perdidos", label: "Perdidos" },
 ];
 
 interface ContactData {
