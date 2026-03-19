@@ -12,6 +12,7 @@ import { useConversationsByPipeline, PipelineConversation, PipelineFilter } from
 import { usePipelineStats } from "@/hooks/usePipelineStats";
 import { useChannelStats } from "@/hooks/useChannelStats";
 import { useTagStats } from "@/hooks/useTagStats";
+import { useClinicPipelineTabs } from "@/hooks/useClinicPipelineTabs";
 import { Period } from "@/components/mensajes/PeriodSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
