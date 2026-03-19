@@ -33,6 +33,7 @@ import AdsPage from "./pages/AdsPage";
 import ContentPage from "./pages/ContentPage";
 import PsychoMatrixPage from "./pages/PsychoMatrixPage";
 import PlanificacionPage from "./pages/PlanificacionPage";
+import PipelineConfigPage from "./pages/PipelineConfigPage";
 import ReunionesPage from "./pages/ReunionesPage";
 import LandingPage from "./pages/LandingPage";
 import PreLaunchPage from "./pages/PreLaunchPage";
