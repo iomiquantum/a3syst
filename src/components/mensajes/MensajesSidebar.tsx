@@ -133,6 +133,17 @@ const MensajesSidebar = ({ channelCounts, totalConversations, tagStats, selected
             )}
           </div>
         </div>
+
+        <div className="border-t border-border" />
+
+        {/* Archivadas */}
+        <div>
+          <label className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer">
+            <Archive className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-xs text-foreground flex-1">Archivadas</span>
+            <Switch checked={showArchived} onCheckedChange={onShowArchivedChange} className="scale-75" />
+          </label>
+        </div>
       </div>
     </ScrollArea>
   );
