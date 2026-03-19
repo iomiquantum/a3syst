@@ -297,8 +297,13 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete }: Props) => {
           <button onClick={() => toast.info("Agendar cita (próximamente)")} className="w-full h-9 rounded-lg border border-border text-foreground text-sm font-medium flex items-center justify-center gap-2 hover:bg-muted transition-colors">
             <Calendar className="w-4 h-4" /> Agendar
           </button>
-          <button onClick={() => toast.info("Fijar conversación (próximamente)")} className="w-full h-8 rounded-lg border border-border text-foreground text-xs font-medium flex items-center justify-center gap-2 hover:bg-muted transition-colors">
-            <Pin className="w-3.5 h-3.5" /> Fijar Conversación
+          <button onClick={async () => {
+            const newPinned = !c.pinned;
+            await (supabase as any).from("conversations").update({ pinned: newPinned }).eq("id", c.id);
+            toast.success(newPinned ? "Conversación fijada" : "Conversación desfijada");
+            onActionComplete?.();
+          }} className={cn("w-full h-8 rounded-lg border border-border text-xs font-medium flex items-center justify-center gap-2 hover:bg-muted transition-colors", c.pinned ? "text-primary bg-primary/10 border-primary/30" : "text-foreground")}>
+            <Pin className="w-3.5 h-3.5" /> {c.pinned ? "Desfiar Conversación" : "Fijar Conversación"}
           </button>
           <button onClick={async () => {
             await supabase.from("conversations").update({ archived: true }).eq("id", c.id);
