@@ -307,8 +307,28 @@ const AdminPlantillaEditorPage = () => {
           </CardContent>
         </Card>
 
-        {/* Save */}
+        {/* Save & Export */}
         <div className="flex gap-2 justify-end pb-8">
+          {!isNew && (
+            <Button variant="outline" onClick={() => {
+              const exportData = {
+                name, slug, version: "1.0", industry_type: industry, description,
+                base_tabs: tabs, extra_labels: labels,
+                automation_rules: (() => { try { return JSON.parse(automationRules); } catch { return []; } })(),
+                exported_at: new Date().toISOString(),
+              };
+              const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `plantilla-${slug}-v1.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+              toast.success("JSON exportado");
+            }}>
+              <Download className="w-4 h-4 mr-1.5" />Exportar JSON
+            </Button>
+          )}
           <Button variant="outline" onClick={() => navigate("/admin/plantillas")}>Cancelar</Button>
           <Button onClick={handleSave} disabled={saving}>
             <Save className="w-4 h-4 mr-1.5" />{saving ? "Guardando..." : isNew ? "Crear plantilla" : "Guardar cambios"}
