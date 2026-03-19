@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import ConversationCard from "./ConversationCard";
 import MensajesChat from "./MensajesChat";
+import ContactInfoPanel from "./ContactInfoPanel";
 import type { PipelineConversation, PipelineTab } from "@/hooks/useConversationsByPipeline";
 
 const KANBAN_COLUMNS: { tab: PipelineTab; label: string; color: string }[] = [
