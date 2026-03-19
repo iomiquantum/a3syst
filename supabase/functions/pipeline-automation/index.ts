@@ -102,13 +102,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ========== TAREA 2: Follow-up messages (C1-C3) ==========
+    // ========== TAREA 2: Follow-up messages (C1-C5) ==========
     console.log("[PIPELINE] TAREA 2: Sending follow-up messages...");
     const now = new Date().toISOString();
+    const seguimientoTabs = ["seguimiento_c1", "seguimiento_c2", "seguimiento_c3", "seguimiento_c4", "seguimiento_c5"];
     const { data: followUpConvs } = await supabase
       .from("conversations")
       .select("id, clinic_id, pipeline_tab, seguimiento_contact_number, contact_id, channel, visitor_contact")
-      .in("pipeline_tab", ["seguimiento_c1", "seguimiento_c2", "seguimiento_c3"])
+      .in("pipeline_tab", seguimientoTabs)
       .not("seguimiento_next_contact_at", "is", null)
       .lt("seguimiento_next_contact_at", now);
 
@@ -122,39 +123,48 @@ Deno.serve(async (req) => {
           .from("seguimiento_auto_messages").select("message_template, is_active, is_automatic")
           .eq("clinic_id", conv.clinic_id).eq("contact_number", contactNumber).maybeSingle();
 
-        if (!autoMsg || !autoMsg.is_active) continue;
+        // Determine if we should send a message
+        const shouldSendMessage = autoMsg?.is_active && autoMsg?.is_automatic && autoMsg?.message_template;
 
-        const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-        const { data: recentAutoMsgs } = await supabase
-          .from("messages").select("id, content, created_at")
-          .eq("conversation_id", conv.id).eq("direction", "outbound")
-          .gt("created_at", thirtyMinAgo).order("created_at", { ascending: false }).limit(3);
+        if (shouldSendMessage) {
+          const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+          const { data: recentAutoMsgs } = await supabase
+            .from("messages").select("id, content, created_at")
+            .eq("conversation_id", conv.id).eq("direction", "outbound")
+            .gt("created_at", thirtyMinAgo).order("created_at", { ascending: false }).limit(3);
 
-        let contactName = "cliente";
-        if (conv.contact_id) {
-          const { data: contact } = await supabase.from("contacts").select("name").eq("id", conv.contact_id).single();
-          if (contact?.name) contactName = contact.name.split(" ")[0];
-        }
+          let contactName = "cliente";
+          if (conv.contact_id) {
+            const { data: contact } = await supabase.from("contacts").select("name").eq("id", conv.contact_id).single();
+            if (contact?.name) contactName = contact.name.split(" ")[0];
+          }
 
-        const messageContent = (autoMsg.message_template || "").replace(/\{\{nombre\}\}/g, contactName);
-        if (recentAutoMsgs?.some(m => m.content === messageContent)) continue;
-
-        const channel = conv.channel || "whatsapp";
-        if (channel === "whatsapp" && conv.visitor_contact) {
-          const sendResp = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
-            body: JSON.stringify({ clinic_id: conv.clinic_id, to_number: conv.visitor_contact, message_type: "text", content: messageContent, conversation_id: conv.id }),
-          });
-          if (!sendResp.ok) throw new Error(`WhatsApp send failed`);
+          const messageContent = (autoMsg.message_template || "").replace(/\{\{nombre\}\}/g, contactName);
+          if (!recentAutoMsgs?.some(m => m.content === messageContent)) {
+            const channel = conv.channel || "whatsapp";
+            if (channel === "whatsapp" && conv.visitor_contact) {
+              const sendResp = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
+                body: JSON.stringify({ clinic_id: conv.clinic_id, to_number: conv.visitor_contact, message_type: "text", content: messageContent, conversation_id: conv.id }),
+              });
+              if (!sendResp.ok) {
+                console.error(`[PIPELINE] WhatsApp send failed for conv ${conv.id}`);
+              }
+            } else {
+              await supabase.from("messages").insert({
+                conversation_id: conv.id, clinic_id: conv.clinic_id,
+                direction: "outbound", content: messageContent, message_type: "text", status: "sent",
+              });
+            }
+            tarea2Sent++;
+            console.log(`[PIPELINE] C${contactNumber} message sent for conv ${conv.id}`);
+          }
         } else {
-          await supabase.from("messages").insert({
-            conversation_id: conv.id, clinic_id: conv.clinic_id,
-            direction: "outbound", content: messageContent, message_type: "text", status: "sent",
-          });
+          console.log(`[PIPELINE] No auto message for conv ${conv.id} (clinic ${conv.clinic_id}, contact ${contactNumber}), advancing pipeline without sending`);
         }
-        tarea2Sent++;
 
+        // Always advance pipeline regardless of whether message was sent
         const nextContactNumber = contactNumber + 1;
         if (nextContactNumber > maxAutoContacts) {
           await supabase.from("conversations").update({ pipeline_tab: "no_responden", seguimiento_next_contact_at: null, seguimiento_last_contact_at: now }).eq("id", conv.id);
@@ -181,10 +191,12 @@ Deno.serve(async (req) => {
           await supabase.from("conversation_pipeline_history").insert({
             conversation_id: conv.id, clinic_id: conv.clinic_id,
             from_tab: `seguimiento_c${contactNumber}`, to_tab: `seguimiento_c${nextContactNumber}`,
-            moved_by: "system", reason: `Seguimiento automático C${contactNumber} enviado`,
+            moved_by: "system", reason: shouldSendMessage ? `Seguimiento automático C${contactNumber} enviado` : `Avance automático C${contactNumber} (sin mensaje configurado)`,
           });
         }
-        await supabase.from("conversations").update({ last_message_at: now }).eq("id", conv.id);
+        if (shouldSendMessage) {
+          await supabase.from("conversations").update({ last_message_at: now }).eq("id", conv.id);
+        }
       } catch (e) {
         errors.push({ conversation_id: conv.id, error: e instanceof Error ? e.message : String(e) });
       }
