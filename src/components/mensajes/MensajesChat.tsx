@@ -213,6 +213,9 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete }: Props) => {
         </div>
       </div>
 
+      {/* Appointment Banner */}
+      <AppointmentBanner conversation={c} onActionComplete={onActionComplete} />
+
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3">
         <div className="space-y-3 max-w-2xl mx-auto">
