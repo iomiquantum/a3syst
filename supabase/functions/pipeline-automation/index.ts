@@ -328,6 +328,16 @@ Deno.serve(async (req) => {
     errors,
   };
 
+  // Log execution
+  await supabase.from("pipeline_execution_log").insert({
+    moved_to_c1: tarea1Count,
+    messages_sent: tarea2Sent,
+    moved_to_no_responden: tarea2NoResponden,
+    inconsistencies_fixed: tarea3Fixed,
+    errors: errors.length > 0 ? JSON.stringify(errors) : "[]",
+    duration_ms: Date.now() - startTime,
+  });
+
   console.log("[PIPELINE] Execution complete:", JSON.stringify(result));
   return jsonResponse(result);
 });
