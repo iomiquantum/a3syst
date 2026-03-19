@@ -53,35 +53,46 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // Regular user: check owned clinic
-    const { data: ownedClinic } = await (supabase as any)
+    // Regular user: gather ALL clinics they have access to (owned + roles)
+    const allUserClinics: { id: string; name: string; onboarding_completed?: boolean; isOwned: boolean }[] = [];
+
+    // 1. Check owned clinics
+    const { data: ownedClinics } = await (supabase as any)
       .from("clinics")
       .select("id, name, business_type, onboarding_completed")
-      .eq("owner_id", user.id)
-      .limit(1)
-      .maybeSingle();
+      .eq("owner_id", user.id);
 
-    if (ownedClinic) {
-      setClinicId(ownedClinic.id);
-      setClinicName(ownedClinic.name);
-      // Needs onboarding if not completed
-      setNeedsOnboarding(!(ownedClinic as any).onboarding_completed);
-      setLoading(false);
-      return;
-    }
+    (ownedClinics || []).forEach((c: any) => {
+      allUserClinics.push({ id: c.id, name: c.name, onboarding_completed: c.onboarding_completed, isOwned: true });
+    });
 
-    // Otherwise check roles
+    // 2. Check role-assigned clinics
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("clinic_id, clinics(name)")
-      .eq("user_id", user.id)
-      .limit(1)
-      .maybeSingle();
+      .eq("user_id", user.id);
 
-    if (roleData) {
-      setClinicId(roleData.clinic_id);
-      setClinicName((roleData as any).clinics?.name ?? "Mi Negocio");
-      setNeedsOnboarding(false);
+    (roleData || []).forEach((r: any) => {
+      if (!allUserClinics.some(c => c.id === r.clinic_id)) {
+        allUserClinics.push({ id: r.clinic_id, name: r.clinics?.name ?? "Mi Negocio", isOwned: false });
+      }
+    });
+
+    if (allUserClinics.length > 1) {
+      setAllClinics(allUserClinics.map(c => ({ id: c.id, name: c.name })));
+    }
+
+    if (allUserClinics.length > 0 && !clinicId) {
+      // Prefer a role-assigned clinic over the auto-created "Mi Negocio" if available
+      const preferred = allUserClinics.find(c => !c.isOwned) || allUserClinics[0];
+      setClinicId(preferred.id);
+      setClinicName(preferred.name);
+      const ownedMatch = ownedClinics?.find((c: any) => c.id === preferred.id);
+      setNeedsOnboarding(ownedMatch ? !ownedMatch.onboarding_completed : false);
+    } else if (allUserClinics.length > 0 && clinicId) {
+      // Keep current selection
+    } else {
+      setNeedsOnboarding(true);
     }
     setLoading(false);
   };
