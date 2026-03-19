@@ -27,6 +27,7 @@ export interface PipelineConversation {
   seguimiento_contact_number: number;
   seguimiento_is_recurrente: boolean;
   seguimiento_recurrente_count: number;
+  pinned: boolean;
   contactName: string;
   contactPhone: string;
   contactTags: string[];
