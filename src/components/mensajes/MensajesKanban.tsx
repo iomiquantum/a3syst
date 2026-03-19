@@ -1,11 +1,11 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import ConversationCard from "./ConversationCard";
 import MensajesChat from "./MensajesChat";
-import type { MockConversation, PipelineTab } from "@/data/mockConversations";
+import type { PipelineConversation, PipelineTab } from "@/hooks/useConversationsByPipeline";
 
 const KANBAN_COLUMNS: { tab: PipelineTab; label: string; color: string }[] = [
   { tab: "resueltos_ia", label: "Resueltos IA", color: "bg-violet-500" },
@@ -18,14 +18,15 @@ const KANBAN_COLUMNS: { tab: PipelineTab; label: string; color: string }[] = [
 ];
 
 interface Props {
-  conversations: MockConversation[];
+  conversations: PipelineConversation[];
+  onActionComplete?: () => void;
 }
 
-const MensajesKanban = ({ conversations }: Props) => {
-  const [selectedConv, setSelectedConv] = useState<MockConversation | null>(null);
+const MensajesKanban = ({ conversations, onActionComplete }: Props) => {
+  const [selectedConv, setSelectedConv] = useState<PipelineConversation | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const handleSelect = (c: MockConversation) => {
+  const handleSelect = (c: PipelineConversation) => {
     setSelectedConv(c);
     setSheetOpen(true);
   };
@@ -37,7 +38,7 @@ const MensajesKanban = ({ conversations }: Props) => {
         style={{ gridTemplateColumns: `repeat(${KANBAN_COLUMNS.length}, minmax(180px, 1fr))` }}
       >
         {KANBAN_COLUMNS.map(col => {
-          const items = conversations.filter(c => c.pipelineTab === col.tab);
+          const items = conversations.filter(c => c.pipeline_tab === col.tab);
           return (
             <div key={col.tab} className="flex flex-col min-w-0 rounded-lg border border-border bg-muted/30">
               <div className="p-2.5 border-b border-border flex items-center justify-between">
@@ -64,7 +65,7 @@ const MensajesKanban = ({ conversations }: Props) => {
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="right" className="w-full sm:w-[480px] p-0">
-          {selectedConv && <MensajesChat conversation={selectedConv} />}
+          {selectedConv && <MensajesChat conversation={selectedConv} onActionComplete={onActionComplete} />}
         </SheetContent>
       </Sheet>
     </>

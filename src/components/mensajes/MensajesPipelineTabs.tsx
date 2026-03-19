@@ -3,9 +3,19 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PeriodSelector, { Period } from "./PeriodSelector";
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
-import type { PipelineTab, MockConversation } from "@/data/mockConversations";
+import type { PipelineFilter } from "@/hooks/useConversationsByPipeline";
 
-export type PipelineFilter = "todos" | PipelineTab;
+interface TabCounts {
+  todos: number;
+  resueltos_ia: number;
+  seguimiento_c1: number;
+  seguimiento_c2: number;
+  seguimiento_c3: number;
+  no_responden: number;
+  no_interesado: number;
+  escalados: number;
+  clientes: number;
+}
 
 const TABS: { value: PipelineFilter; label: string; icon?: React.ElementType; badgeColor: string }[] = [
   { value: "todos", label: "Todos", badgeColor: "bg-muted text-muted-foreground" },
@@ -20,28 +30,28 @@ const TABS: { value: PipelineFilter; label: string; icon?: React.ElementType; ba
 interface Props {
   activeTab: PipelineFilter;
   onTabChange: (t: PipelineFilter) => void;
-  conversations: MockConversation[];
+  tabCounts: TabCounts;
   period: Period;
   onPeriodChange: (p: Period) => void;
   dateRange?: DateRange;
   onDateRangeChange?: (r: DateRange | undefined) => void;
 }
 
-function getCount(conversations: MockConversation[], tab: PipelineFilter): number {
-  if (tab === "todos") return conversations.length;
-  if (tab === "seguimiento_c1") return conversations.filter(c => c.pipelineTab === "seguimiento_c1" || c.pipelineTab === "seguimiento_c2" || c.pipelineTab === "seguimiento_c3").length;
-  return conversations.filter(c => c.pipelineTab === tab).length;
+function getCount(tabCounts: TabCounts, tab: PipelineFilter): number {
+  if (tab === "todos") return tabCounts.todos;
+  if (tab === "seguimiento_c1") return tabCounts.seguimiento_c1 + tabCounts.seguimiento_c2 + tabCounts.seguimiento_c3;
+  return tabCounts[tab as keyof TabCounts] || 0;
 }
 
-const MensajesPipelineTabs = ({ activeTab, onTabChange, conversations, period, onPeriodChange, dateRange, onDateRangeChange }: Props) => {
-  const escaladosCount = conversations.filter(c => c.pipelineTab === "escalados").length;
+const MensajesPipelineTabs = ({ activeTab, onTabChange, tabCounts, period, onPeriodChange, dateRange, onDateRangeChange }: Props) => {
+  const escaladosCount = tabCounts.escalados;
 
   return (
     <div className="flex items-center justify-between gap-4 flex-wrap">
       <Tabs value={activeTab} onValueChange={v => onTabChange(v as PipelineFilter)} className="flex-1 min-w-0">
         <TabsList className="h-auto p-1 bg-muted/50 gap-0.5 flex-wrap">
           {TABS.map(t => {
-            const count = getCount(conversations, t.value);
+            const count = getCount(tabCounts, t.value);
             const isEscalado = t.value === "escalados" && escaladosCount > 0;
             return (
               <TabsTrigger key={t.value} value={t.value} className="px-2.5 py-1.5 text-[11px] gap-1 relative data-[state=active]:bg-card data-[state=active]:shadow-sm">

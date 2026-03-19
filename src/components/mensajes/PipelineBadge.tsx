@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { PipelineTab } from "@/data/mockConversations";
+import type { PipelineTab } from "@/hooks/useConversationsByPipeline";
 
 const CONFIG: Record<PipelineTab, { label: string; bg: string; text: string }> = {
   resueltos_ia: { label: "IA", bg: "bg-violet-100 dark:bg-violet-500/20", text: "text-violet-700 dark:text-violet-300" },
