@@ -179,13 +179,33 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
       systemPrompt += `\n\n=== INSTRUCCIÓN DEL OPERADOR ===\nEl operador humano te pide que generes una respuesta con estas indicaciones: "${custom_prompt}"\nGenera una respuesta apropiada basándote en el contexto del chat y estas instrucciones.`;
     }
 
-    const aiMessages = [
+    const aiMessages: { role: string; content: string }[] = [
       { role: "system", content: systemPrompt },
       ...(recentMessages || []).map((m) => ({
         role: m.direction === "inbound" ? "user" : "assistant",
         content: m.content,
       })),
     ];
+
+    // In draft mode, if the last message is from the assistant (outbound),
+    // the model has nothing to respond to. Add a synthetic user prompt.
+    const lastRole = aiMessages[aiMessages.length - 1]?.role;
+    if (isDraft && lastRole === "assistant") {
+      aiMessages.push({
+        role: "user",
+        content: custom_prompt
+          ? `El operador te pide: "${custom_prompt}". Genera una respuesta apropiada para enviar al cliente.`
+          : "Genera un mensaje de seguimiento apropiado para este cliente basándote en el contexto de la conversación.",
+      });
+    } else if (isDraft && lastRole === "system") {
+      // No messages at all
+      aiMessages.push({
+        role: "user",
+        content: custom_prompt
+          ? `El operador te pide: "${custom_prompt}". Genera una respuesta apropiada.`
+          : "Genera un saludo inicial apropiado para un nuevo cliente.",
+      });
+    }
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
