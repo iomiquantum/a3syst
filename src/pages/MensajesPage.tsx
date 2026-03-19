@@ -1,174 +1,150 @@
-import { useState, useMemo } from "react";
-import { MessageSquare, ArrowLeft, Bot, Zap, CheckCircle2, AlertCircle, UserCheck } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { MessageSquare, ArrowLeft } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
-import InboxSidebar from "@/components/messaging/InboxSidebar";
-import ChatView from "@/components/messaging/ChatView";
-import ContactPanel from "@/components/messaging/ContactPanel";
-import { useMessaging } from "@/hooks/useMessaging";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import MensajesHeader, { ViewMode } from "@/components/mensajes/MensajesHeader";
+import MensajesResumen from "@/components/mensajes/MensajesResumen";
+import MensajesPipelineTabs, { PipelineFilter } from "@/components/mensajes/MensajesPipelineTabs";
+import MensajesSidebar from "@/components/mensajes/MensajesSidebar";
+import MensajesConversationList from "@/components/mensajes/MensajesConversationList";
+import MensajesChat from "@/components/mensajes/MensajesChat";
+import MensajesKanban from "@/components/mensajes/MensajesKanban";
+import { MOCK_CONVERSATIONS, MockConversation } from "@/data/mockConversations";
+import { Period } from "@/components/mensajes/PeriodSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { SlidersHorizontal } from "lucide-react";
+import { DateRange } from "react-day-picker";
 
-type Tab = "escalados" | "resueltos" | "seguimiento";
+const VIEW_MODE_KEY = "mensajes-view-mode";
 
 const MensajesPage = () => {
-  const {
-    conversations,
-    allConversations,
-    messages,
-    selectedConversation,
-    loading,
-    sendingMessage,
-    funnelFilter,
-    channelFilter,
-    setFunnelFilter,
-    setChannelFilter,
-    selectConversation,
-    sendMessage,
-    updateContactStage,
-    updateContact,
-    toggleChatbot,
-    fetchConversations,
-    fetchMessages,
-  } = useMessaging();
+  const isMobile = useIsMobile();
+  const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem(VIEW_MODE_KEY) as ViewMode) || "buzon");
+  const [resumenPeriod, setResumenPeriod] = useState<Period>("hoy");
+  const [resumenRange, setResumenRange] = useState<DateRange | undefined>();
+  const [pipelinePeriod, setPipelinePeriod] = useState<Period>("semana");
+  const [pipelineRange, setPipelineRange] = useState<DateRange | undefined>();
+  const [activeTab, setActiveTab] = useState<PipelineFilter>("todos");
+  const [selectedChannel, setSelectedChannel] = useState("todos");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedConv, setSelectedConv] = useState<MockConversation | null>(null);
+  const [mobileView, setMobileView] = useState<"list" | "chat">("list");
 
-  const handleFollowUpSent = (conversationId?: string) => {
-    fetchConversations();
-    if (conversationId) {
-      fetchMessages(conversationId);
+  useEffect(() => {
+    localStorage.setItem(VIEW_MODE_KEY, viewMode);
+  }, [viewMode]);
+
+  // Filter conversations
+  const filteredConversations = useMemo(() => {
+    let result = [...MOCK_CONVERSATIONS];
+
+    // Pipeline tab filter
+    if (activeTab !== "todos") {
+      if (activeTab === "seguimiento_c1") {
+        result = result.filter(c => c.pipelineTab === "seguimiento_c1" || c.pipelineTab === "seguimiento_c2" || c.pipelineTab === "seguimiento_c3");
+      } else {
+        result = result.filter(c => c.pipelineTab === activeTab);
+      }
     }
+
+    // Channel filter
+    if (selectedChannel !== "todos") {
+      result = result.filter(c => c.channel === selectedChannel);
+    }
+
+    // Tags filter
+    if (selectedTags.length > 0) {
+      result = result.filter(c => selectedTags.some(t => c.tags.includes(t)));
+    }
+
+    // Search
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(c =>
+        c.contactName.toLowerCase().includes(q) ||
+        c.contactPhone.toLowerCase().includes(q)
+      );
+    }
+
+    // Sort by lastMessageAt DESC
+    result.sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
+
+    return result;
+  }, [activeTab, selectedChannel, selectedTags, searchQuery]);
+
+  // Active filter chips
+  const activeFilters = useMemo(() => {
+    const chips: { key: string; label: string; color?: string }[] = [];
+    if (selectedChannel !== "todos") {
+      chips.push({ key: `channel:${selectedChannel}`, label: selectedChannel === "whatsapp" ? "WhatsApp" : selectedChannel, color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300" });
+    }
+    selectedTags.forEach(t => {
+      chips.push({ key: `tag:${t}`, label: t, color: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300" });
+    });
+    return chips;
+  }, [selectedChannel, selectedTags]);
+
+  const handleRemoveFilter = (key: string) => {
+    if (key.startsWith("channel:")) setSelectedChannel("todos");
+    if (key.startsWith("tag:")) setSelectedTags(prev => prev.filter(t => `tag:${t}` !== key));
   };
 
-  const isMobile = useIsMobile();
-  const [mobileView, setMobileView] = useState<"list" | "chat">("list");
-  const [activeTab, setActiveTab] = useState<Tab>("escalados");
-  const [globalAutopilot, setGlobalAutopilot] = useState(true);
-
-  const handleSelectConversation = (conv: any) => {
-    selectConversation(conv);
+  const handleSelectConv = (c: MockConversation) => {
+    setSelectedConv(c);
     if (isMobile) setMobileView("chat");
   };
 
-  const handleBack = () => setMobileView("list");
-
-  // Metrics
-  const todayMessages = useMemo(() => {
-    const today = new Date().toISOString().split("T")[0];
-    return messages.filter(m => m.created_at?.startsWith(today));
-  }, [messages]);
-
-  const botMessages = allConversations.filter(c => c.chatbot_active);
-  const escalated = allConversations.filter(c => !c.chatbot_active && c.unread_count > 0);
-  const activeConvs = allConversations.filter(c => c.status === "open" || c.unread_count > 0);
-
-  // Conversations needing follow-up: bot replied but no inbound in 30 min
-  const followUpConversations = useMemo(() => {
-    const thirtyMinAgo = Date.now() - 30 * 60 * 1000;
-    return allConversations.filter(c => {
-      if (!c.last_inbound_at) return false;
-      const lastIn = new Date(c.last_inbound_at).getTime();
-      const lastMsg = new Date(c.last_message_at).getTime();
-      // Bot replied (last message is after last inbound) AND no inbound in 30 min
-      return lastMsg > lastIn && lastIn < thirtyMinAgo && c.status !== "closed";
-    });
-  }, [allConversations]);
-
-  // Filtered conversations based on tab
-  const tabConversations = useMemo(() => {
-    if (activeTab === "escalados") {
-      return conversations.filter(c => !c.chatbot_active || c.unread_count > 0);
-    }
-    if (activeTab === "seguimiento") {
-      const thirtyMinAgo = Date.now() - 30 * 60 * 1000;
-      return conversations.filter(c => {
-        if (!c.last_inbound_at) return false;
-        const lastIn = new Date(c.last_inbound_at).getTime();
-        const lastMsg = new Date(c.last_message_at).getTime();
-        return lastMsg > lastIn && lastIn < thirtyMinAgo && c.status !== "closed";
-      });
-    }
-    return conversations.filter(c => c.chatbot_active && c.unread_count === 0);
-  }, [conversations, activeTab]);
-
-  const stats = [
-    { label: "Respondidos hoy", value: todayMessages.length, icon: MessageSquare, color: "from-[#8B5CF6] to-[#6D28D9]" },
-    { label: "Escalados", value: escalated.length, icon: AlertCircle, color: "from-yellow-500 to-yellow-700" },
-    { label: "Activas", value: activeConvs.length, icon: Zap, color: "from-emerald-500 to-emerald-700" },
-  ];
-
   // Mobile layout
   if (isMobile) {
+    if (mobileView === "chat" && selectedConv) {
+      return (
+        <AppLayout>
+          <div className="h-[calc(100vh-4rem)] -m-6 flex flex-col border border-border rounded-lg overflow-hidden bg-card">
+            <div className="h-12 px-2 border-b border-border flex items-center gap-2 bg-card shrink-0">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMobileView("list")}>
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+              <span className="text-sm font-medium truncate">{selectedConv.contactName}</span>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <MensajesChat conversation={selectedConv} />
+            </div>
+          </div>
+        </AppLayout>
+      );
+    }
+
     return (
       <AppLayout>
         <div className="h-[calc(100vh-4rem)] -m-6 flex flex-col border border-border rounded-lg overflow-hidden bg-card">
-          {mobileView === "list" ? (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Mobile header */}
-              <div className="px-4 py-3 border-b border-border shrink-0 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h1 className="text-lg font-bold text-foreground">💬 Mensajes</h1>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[10px] font-medium text-emerald-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Autopilot
-                  </span>
-                </div>
-                {/* Tabs */}
-                <div className="flex border border-border rounded-lg overflow-hidden">
-                  <button onClick={() => setActiveTab("escalados")}
-                    className={cn("flex-1 py-2 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors",
-                      activeTab === "escalados" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
-                    <Zap className="w-3 h-3" /> Escalados
-                    {escalated.length > 0 && <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] flex items-center justify-center">{escalated.length}</span>}
-                  </button>
-                  <button onClick={() => setActiveTab("seguimiento")}
-                    className={cn("flex-1 py-2 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors",
-                      activeTab === "seguimiento" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
-                    <UserCheck className="w-3 h-3" /> Seguimiento
-                    {followUpConversations.length > 0 && <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] flex items-center justify-center">{followUpConversations.length}</span>}
-                  </button>
-                  <button onClick={() => setActiveTab("resueltos")}
-                    className={cn("flex-1 py-2 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors",
-                      activeTab === "resueltos" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
-                    <Bot className="w-3 h-3" /> Resueltos IA
-                  </button>
-                </div>
-              </div>
-              {loading ? (
-                <div className="flex-1 flex items-center justify-center"><p className="text-sm text-muted-foreground">Cargando...</p></div>
-              ) : (
-                <InboxSidebar
-                  conversations={tabConversations}
-                  allConversations={allConversations}
-                  selected={selectedConversation}
-                  funnelFilter={funnelFilter}
-                  channelFilter={channelFilter}
-                  onSelect={handleSelectConversation}
-                  onFilterChange={setFunnelFilter}
-                  onChannelFilterChange={setChannelFilter}
-                />
-              )}
-            </div>
-          ) : selectedConversation ? (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="h-12 px-2 border-b border-border flex items-center gap-2 bg-card shrink-0">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleBack}>
-                  <ArrowLeft className="w-4 h-4" />
-                </Button>
-                <span className="text-sm font-medium truncate">{selectedConversation.contact?.name || "Chat"}</span>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <ChatView conversation={selectedConversation} messages={messages} sending={sendingMessage} onSend={sendMessage} onToggleChatbot={toggleChatbot} onFollowUpSent={handleFollowUpSent} />
-              </div>
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
-              <MessageSquare className="w-12 h-12 mb-3 opacity-30" />
-              <p className="text-sm">Selecciona una conversación</p>
-            </div>
-          )}
+          <div className="px-3 py-2 border-b border-border shrink-0 space-y-2">
+            <MensajesHeader viewMode={viewMode} onViewModeChange={setViewMode} />
+          </div>
+          <div className="px-3 py-2 border-b border-border shrink-0">
+            <MensajesPipelineTabs
+              activeTab={activeTab} onTabChange={setActiveTab}
+              conversations={MOCK_CONVERSATIONS}
+              period={pipelinePeriod} onPeriodChange={setPipelinePeriod}
+              dateRange={pipelineRange} onDateRangeChange={setPipelineRange}
+            />
+          </div>
+          <div className="flex-1 min-h-0 overflow-hidden">
+            {viewMode === "pipeline" ? (
+              <MensajesKanban conversations={filteredConversations} />
+            ) : (
+              <MensajesConversationList
+                conversations={filteredConversations}
+                selectedId={selectedConv?.id || null}
+                onSelect={handleSelectConv}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                activeFilters={activeFilters}
+                onRemoveFilter={handleRemoveFilter}
+              />
+            )}
+          </div>
         </div>
       </AppLayout>
     );
@@ -178,133 +154,77 @@ const MensajesPage = () => {
   return (
     <AppLayout>
       <div className="h-[calc(100vh-7rem)] -m-6 flex flex-col border border-border rounded-lg overflow-hidden bg-card">
-        {/* ═══ TOP BAR ═══ */}
+        {/* NIVEL 1 — Header */}
         <div className="px-4 py-3 border-b border-border shrink-0">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-4">
-              <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
-                💬 Mensajes
-              </h1>
-              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                🤖 Autopilot de Mensajes: Activo
-              </span>
-            </div>
-            <div className="flex items-center gap-4">
-              {/* Stats */}
-              {stats.map(s => (
-                <div key={s.label} className="flex items-center gap-2">
-                  <div className={`w-7 h-7 rounded-md bg-gradient-to-br ${s.color} flex items-center justify-center`}>
-                    <s.icon className="w-3.5 h-3.5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-foreground leading-none">{loading ? "—" : s.value}</p>
-                    <p className="text-[9px] text-muted-foreground">{s.label}</p>
-                  </div>
-                </div>
-              ))}
-              {/* Global toggle */}
-              <div className="flex items-center gap-2 pl-3 border-l border-border">
-                <span className="text-xs text-muted-foreground">Autopilot</span>
-                <Switch checked={globalAutopilot} onCheckedChange={setGlobalAutopilot} />
-              </div>
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="flex gap-1 mt-3">
-            <button onClick={() => setActiveTab("escalados")}
-              className={cn("px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors",
-                activeTab === "escalados" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
-              <Zap className="w-3.5 h-3.5" /> Escalados
-              {escalated.length > 0 && (
-                <span className="ml-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{escalated.length}</span>
-              )}
-            </button>
-            <button onClick={() => setActiveTab("seguimiento")}
-              className={cn("px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors",
-                activeTab === "seguimiento" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
-              <UserCheck className="w-3.5 h-3.5" /> Seguimiento
-              {followUpConversations.length > 0 && (
-                <span className="ml-1 w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-bold flex items-center justify-center">{followUpConversations.length}</span>
-              )}
-            </button>
-            <button onClick={() => setActiveTab("resueltos")}
-              className={cn("px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors",
-                activeTab === "resueltos" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
-              <Bot className="w-3.5 h-3.5" /> Resueltos por IA
-              <span className="ml-1 w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold flex items-center justify-center">{botMessages.length}</span>
-            </button>
-          </div>
+          <MensajesHeader viewMode={viewMode} onViewModeChange={setViewMode} />
         </div>
 
-        {/* ═══ MAIN AREA ═══ */}
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <ResizablePanelGroup direction="horizontal" className="h-full">
-            <ResizablePanel defaultSize={30} minSize={20} maxSize={45}>
-              <div className="h-full flex border-r border-border">
-                {loading ? (
-                  <div className="flex-1 p-4 space-y-3">
-                    {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16 bg-muted" />)}
-                  </div>
-                ) : (
-                  <InboxSidebar
-                    conversations={tabConversations}
-                    allConversations={allConversations}
-                    selected={selectedConversation}
-                    funnelFilter={funnelFilter}
-                    channelFilter={channelFilter}
-                    onSelect={selectConversation}
-                    onFilterChange={setFunnelFilter}
-                    onChannelFilterChange={setChannelFilter}
-                  />
-                )}
+        {/* NIVEL 2 — Resumen ejecutivo */}
+        <div className="px-4 py-2.5 border-b border-border shrink-0">
+          <MensajesResumen
+            period={resumenPeriod} onPeriodChange={setResumenPeriod}
+            dateRange={resumenRange} onDateRangeChange={setResumenRange}
+          />
+        </div>
+
+        {/* NIVEL 3 — Pipeline tabs */}
+        <div className="px-4 py-2.5 border-b border-border shrink-0">
+          <MensajesPipelineTabs
+            activeTab={activeTab} onTabChange={setActiveTab}
+            conversations={MOCK_CONVERSATIONS}
+            period={pipelinePeriod} onPeriodChange={setPipelinePeriod}
+            dateRange={pipelineRange} onDateRangeChange={setPipelineRange}
+          />
+        </div>
+
+        {/* NIVEL 4 — 3 paneles */}
+        <div className="flex-1 min-h-0 overflow-hidden flex">
+          {/* Sidebar filtros */}
+          <div className="w-[200px] border-r border-border shrink-0 overflow-hidden hidden md:block">
+            <MensajesSidebar
+              conversations={MOCK_CONVERSATIONS}
+              selectedChannel={selectedChannel}
+              onChannelChange={setSelectedChannel}
+              selectedTags={selectedTags}
+              onTagsChange={setSelectedTags}
+            />
+          </div>
+
+          {viewMode === "pipeline" ? (
+            <div className="flex-1 min-w-0 overflow-hidden">
+              <MensajesKanban conversations={filteredConversations} />
+            </div>
+          ) : (
+            <>
+              {/* Lista de conversaciones */}
+              <div className="w-[280px] border-r border-border shrink-0 overflow-hidden">
+                <MensajesConversationList
+                  conversations={filteredConversations}
+                  selectedId={selectedConv?.id || null}
+                  onSelect={handleSelectConv}
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  activeFilters={activeFilters}
+                  onRemoveFilter={handleRemoveFilter}
+                />
               </div>
-            </ResizablePanel>
 
-            <ResizableHandle withHandle />
-
-            <ResizablePanel defaultSize={45} minSize={30}>
-              <div className="h-full flex flex-col min-w-0">
-                {selectedConversation ? (
-                  <ChatView
-                    conversation={selectedConversation}
-                    messages={messages}
-                    sending={sendingMessage}
-                    onSend={sendMessage}
-                    onToggleChatbot={toggleChatbot}
-                    onFollowUpSent={handleFollowUpSent}
-                  />
+              {/* Chat activo */}
+              <div className="flex-1 min-w-0 overflow-hidden">
+                {selectedConv ? (
+                  <MensajesChat conversation={selectedConv} />
                 ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
                     <MessageSquare className="w-12 h-12 mb-3 opacity-30" />
                     <p className="text-sm font-medium">Selecciona una conversación</p>
                     <p className="text-xs mt-1 max-w-xs text-center">
-                      {tabConversations.length === 0
-                        ? "Aún no hay conversaciones. Los leads empezarán a llegar cuando actives tus campañas o configures el widget de chat."
-                        : "Elige un contacto de la lista para ver sus mensajes"}
+                      Elige un contacto de la lista para ver sus mensajes
                     </p>
                   </div>
                 )}
               </div>
-            </ResizablePanel>
-
-            {selectedConversation && (
-              <>
-                <ResizableHandle withHandle />
-                <ResizablePanel defaultSize={25} minSize={15} maxSize={35}>
-                  <div className="h-full border-l border-border overflow-y-auto">
-                    <ContactPanel
-                      conversation={selectedConversation}
-                      onUpdateStage={updateContactStage}
-                      onUpdateContact={updateContact}
-                      onToggleChatbot={toggleChatbot}
-                    />
-                  </div>
-                </ResizablePanel>
-              </>
-            )}
-          </ResizablePanelGroup>
+            </>
+          )}
         </div>
       </div>
     </AppLayout>
