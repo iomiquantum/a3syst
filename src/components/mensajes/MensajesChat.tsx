@@ -13,7 +13,9 @@ import { usePipelineAction } from "@/hooks/usePipelineAction";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
 import { useAuth } from "@/hooks/useAuth";
-import type { PipelineConversation, PipelineTab } from "@/hooks/useConversationsByPipeline";
+import { useClinicTemplate } from "@/hooks/useClinicTemplate";
+import ClinicChatActions from "./ClinicChatActions";
+import type { PipelineConversation } from "@/hooks/useConversationsByPipeline";
 
 interface Props {
   conversation: PipelineConversation;
