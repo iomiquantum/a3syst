@@ -92,8 +92,10 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete }: Props) => {
   };
 
   const updateStage = async (stage: string) => {
-    await supabase.from("contacts").update({ funnel_stage: stage }).eq("id", contact.id);
-    setContact(prev => prev ? { ...prev, funnel_stage: stage } : prev);
+    // Update the pipeline_tab on the conversation, not the contact funnel_stage
+    await (supabase as any).from("conversations").update({ pipeline_tab: stage }).eq("id", c.id);
+    toast.success("Etapa actualizada");
+    onActionComplete?.();
   };
 
   const addTag = async () => {
