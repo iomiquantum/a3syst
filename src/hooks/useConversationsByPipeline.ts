@@ -56,7 +56,8 @@ export const useConversationsByPipeline = (params: Params) => {
       .from("conversations")
       .select("*, contacts!conversations_contact_id_fkey(name, phone, email, tags)")
       .eq("clinic_id", clinicId)
-      .eq("archived", false)
+      .eq("archived", params.showArchived ? true : false)
+      .order("pinned", { ascending: false })
       .order("last_message_at", { ascending: false });
 
     // Pipeline filter
