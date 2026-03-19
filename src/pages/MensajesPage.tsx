@@ -54,6 +54,7 @@ const MensajesPage = () => {
   const handleActionComplete = () => {
     refetchConvs();
     refetchStats();
+    refetchTabs();
   };
 
   // Active filter chips
