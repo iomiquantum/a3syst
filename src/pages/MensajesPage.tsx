@@ -29,6 +29,7 @@ const MensajesPage = () => {
   const [pipelinePeriod, setPipelinePeriod] = useState<Period>("max");
   const [pipelineRange, setPipelineRange] = useState<DateRange | undefined>();
   const [activeTab, setActiveTab] = useState<PipelineFilter>("todos");
+  const [subFilter, setSubFilter] = useState("todos");
   const [selectedChannel, setSelectedChannel] = useState("todos");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -40,22 +41,17 @@ const MensajesPage = () => {
     localStorage.setItem(VIEW_MODE_KEY, viewMode);
   }, [viewMode]);
 
-  // Compute period date boundaries for pipeline
   const pipelineDates = useMemo(() => {
     if (pipelinePeriod === "rango" && pipelineRange?.from) {
-      return {
-        from: pipelineRange.from.toISOString(),
-        to: pipelineRange.to ? pipelineRange.to.toISOString() : undefined,
-      };
+      return { from: pipelineRange.from.toISOString(), to: pipelineRange.to ? pipelineRange.to.toISOString() : undefined };
     }
     return periodToDateRange(pipelinePeriod);
   }, [pipelinePeriod, pipelineRange]);
 
-  // Real data hooks
   const { tabCounts, resumenStats, loading: statsLoading, refetch: refetchStats } = usePipelineStats();
   const { counts: channelCounts, total: channelTotal } = useChannelStats();
   const { tags: tagStats } = useTagStats();
-  const { tabs: pipelineTabs, refetch: refetchTabs } = useClinicPipelineTabs();
+  const { tabs: pipelineTabs, subFilterCounts, refetch: refetchTabs } = useClinicPipelineTabs();
 
   const { conversations, loading: convsLoading, refetch: refetchConvs } = useConversationsByPipeline({
     pipelineTab: activeTab,
@@ -65,6 +61,7 @@ const MensajesPage = () => {
     periodStart: pipelineDates.from,
     periodEnd: pipelineDates.to,
     showArchived,
+    subFilter: (activeTab === "seguimiento_c1" || activeTab === "agendados") ? subFilter : undefined,
   });
 
   const handleActionComplete = () => {
@@ -73,7 +70,6 @@ const MensajesPage = () => {
     refetchTabs();
   };
 
-  // Active filter chips
   const activeFilters = useMemo(() => {
     const chips: { key: string; label: string; color?: string }[] = [];
     if (selectedChannel !== "todos") {
@@ -128,6 +124,8 @@ const MensajesPage = () => {
               tabs={pipelineTabs}
               period={pipelinePeriod} onPeriodChange={setPipelinePeriod}
               dateRange={pipelineRange} onDateRangeChange={setPipelineRange}
+              subFilter={subFilter} onSubFilterChange={setSubFilter}
+              subFilterCounts={subFilterCounts}
             />
           </div>
           <div className="flex-1 min-h-0 overflow-hidden">
@@ -155,12 +153,10 @@ const MensajesPage = () => {
   return (
     <AppLayout>
       <div className="h-[calc(100vh-7rem)] -m-6 flex flex-col border border-border rounded-lg overflow-hidden bg-card">
-        {/* NIVEL 1 — Header */}
         <div className="px-4 py-3 border-b border-border shrink-0">
           <MensajesHeader viewMode={viewMode} onViewModeChange={setViewMode} />
         </div>
 
-        {/* NIVEL 2 — Resumen ejecutivo */}
         <div className="px-4 py-2.5 border-b border-border shrink-0">
           <MensajesResumen
             stats={resumenStats}
@@ -170,19 +166,18 @@ const MensajesPage = () => {
           />
         </div>
 
-        {/* NIVEL 3 — Pipeline tabs */}
         <div className="px-4 py-2.5 border-b border-border shrink-0">
           <MensajesPipelineTabs
             activeTab={activeTab} onTabChange={setActiveTab}
             tabs={pipelineTabs}
             period={pipelinePeriod} onPeriodChange={setPipelinePeriod}
             dateRange={pipelineRange} onDateRangeChange={setPipelineRange}
+            subFilter={subFilter} onSubFilterChange={setSubFilter}
+            subFilterCounts={subFilterCounts}
           />
         </div>
 
-        {/* NIVEL 4 — 3 paneles */}
         <div className="flex-1 min-h-0 overflow-hidden flex">
-          {/* Sidebar filtros */}
           <div className="w-[200px] border-r border-border shrink-0 overflow-hidden hidden md:block">
             <MensajesSidebar
               channelCounts={channelCounts}
@@ -203,7 +198,6 @@ const MensajesPage = () => {
             </div>
           ) : (
             <>
-              {/* Lista de conversaciones */}
               <div className="w-[280px] border-r border-border shrink-0 overflow-hidden">
                 <MensajesConversationList
                   conversations={conversations}
@@ -217,7 +211,6 @@ const MensajesPage = () => {
                 />
               </div>
 
-              {/* Chat activo */}
               <div className="flex-1 min-w-0 overflow-hidden">
                 {selectedConv ? (
                   <MensajesChat conversation={selectedConv} onActionComplete={handleActionComplete} />
@@ -232,7 +225,6 @@ const MensajesPage = () => {
                 )}
               </div>
 
-              {/* Panel de contacto */}
               {selectedConv && (
                 <div className="w-[260px] border-l border-border shrink-0 overflow-hidden hidden lg:block">
                   <ContactInfoPanel conversation={selectedConv} onActionComplete={handleActionComplete} />
