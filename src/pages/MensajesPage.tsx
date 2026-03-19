@@ -192,6 +192,8 @@ const MensajesPage = () => {
               onChannelChange={setSelectedChannel}
               selectedTags={selectedTags}
               onTagsChange={setSelectedTags}
+              showArchived={showArchived}
+              onShowArchivedChange={setShowArchived}
             />
           </div>
 
