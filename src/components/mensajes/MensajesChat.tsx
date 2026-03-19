@@ -204,7 +204,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete }: Props) => {
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => handleAction("no_interesado")}>Marcar como no interesado</DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAction("escalados")}>Escalar a humano</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAction("clientes")}>Convertir a cliente</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAction("pacientes")}>Convertir a paciente</DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAction("resueltos_ia")}>Reiniciar seguimiento</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => toast.info("Ir a CRM (pendiente)")}>Ver contacto en CRM</DropdownMenuItem>
