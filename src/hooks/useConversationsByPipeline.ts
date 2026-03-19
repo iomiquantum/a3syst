@@ -41,6 +41,7 @@ interface Params {
   searchQuery: string;
   periodStart?: string;
   periodEnd?: string;
+  showArchived?: boolean;
 }
 
 export const useConversationsByPipeline = (params: Params) => {
