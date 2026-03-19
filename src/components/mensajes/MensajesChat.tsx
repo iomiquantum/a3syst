@@ -162,7 +162,12 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete }: Props) => {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <ClinicChatActions
+            pipelineTab={c.pipeline_tab}
+            templateSlug={templateSlug}
+            onMove={(tab, reason, meta) => handleAction(tab, reason, meta)}
+          />
           <div className="flex items-center gap-2">
             <span className={cn("text-[10px] font-medium", autopilot ? "text-emerald-500" : "text-muted-foreground")}>
               Autopilot {autopilot ? "ON" : "OFF"}
