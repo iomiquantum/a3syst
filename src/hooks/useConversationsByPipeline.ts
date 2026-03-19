@@ -7,10 +7,16 @@ export type PipelineTab =
   | "seguimiento_c1"
   | "seguimiento_c2"
   | "seguimiento_c3"
+  | "seguimiento_c4"
+  | "seguimiento_c5"
   | "no_responden"
   | "no_interesado"
   | "escalados"
-  | "clientes";
+  | "agendados"
+  | "no_show"
+  | "show_sin_venta"
+  | "pacientes"
+  | "perdidos";
 
 export type PipelineFilter = "todos" | PipelineTab;
 
@@ -32,6 +38,15 @@ export interface PipelineConversation {
   contactPhone: string;
   contactTags: string[];
   contactEmail: string;
+  // Appointment fields
+  appointment_date: string | null;
+  appointment_time: string | null;
+  appointment_service: string | null;
+  appointment_status: string | null;
+  appointment_confirmed: boolean;
+  appointment_attended: boolean | null;
+  appointment_had_sale: boolean | null;
+  appointment_branch_id: string | null;
 }
 
 interface Params {
@@ -42,6 +57,7 @@ interface Params {
   periodStart?: string;
   periodEnd?: string;
   showArchived?: boolean;
+  subFilter?: string;
 }
 
 export const useConversationsByPipeline = (params: Params) => {
@@ -63,7 +79,18 @@ export const useConversationsByPipeline = (params: Params) => {
     // Pipeline filter
     if (params.pipelineTab !== "todos") {
       if (params.pipelineTab === "seguimiento_c1") {
-        query = query.in("pipeline_tab", ["seguimiento_c1", "seguimiento_c2", "seguimiento_c3"]);
+        // "Seguimiento" tab groups C1-C5
+        const seguimientoTabs = ["seguimiento_c1", "seguimiento_c2", "seguimiento_c3", "seguimiento_c4", "seguimiento_c5"];
+        if (params.subFilter && params.subFilter !== "todos") {
+          query = query.eq("pipeline_tab", params.subFilter);
+        } else {
+          query = query.in("pipeline_tab", seguimientoTabs);
+        }
+      } else if (params.pipelineTab === "agendados") {
+        query = query.eq("pipeline_tab", "agendados");
+        if (params.subFilter && params.subFilter !== "todos") {
+          query = query.eq("appointment_status", params.subFilter);
+        }
       } else {
         query = query.eq("pipeline_tab", params.pipelineTab);
       }
@@ -107,9 +134,17 @@ export const useConversationsByPipeline = (params: Params) => {
       contactPhone: c.contacts?.phone || c.visitor_contact || "",
       contactTags: c.contacts?.tags || [],
       contactEmail: c.contacts?.email || "",
+      appointment_date: c.appointment_date || null,
+      appointment_time: c.appointment_time || null,
+      appointment_service: c.appointment_service || null,
+      appointment_status: c.appointment_status || null,
+      appointment_confirmed: c.appointment_confirmed || false,
+      appointment_attended: c.appointment_attended ?? null,
+      appointment_had_sale: c.appointment_had_sale ?? null,
+      appointment_branch_id: c.appointment_branch_id || null,
     }));
 
-    // Client-side tag filter (Supabase array overlap is tricky)
+    // Client-side tag filter
     if (params.tags.length > 0) {
       mapped = mapped.filter(c => params.tags.some(t => c.contactTags.includes(t)));
     }
@@ -130,7 +165,7 @@ export const useConversationsByPipeline = (params: Params) => {
   useEffect(() => {
     setLoading(true);
     fetchConversations();
-  }, [clinicId, params.pipelineTab, params.channel, params.tags.join(","), params.searchQuery, params.periodStart, params.periodEnd, params.showArchived]);
+  }, [clinicId, params.pipelineTab, params.channel, params.tags.join(","), params.searchQuery, params.periodStart, params.periodEnd, params.showArchived, params.subFilter]);
 
   // Realtime subscription
   useEffect(() => {

@@ -15,6 +15,7 @@ import { useClinic } from "@/hooks/useClinic";
 import { useAuth } from "@/hooks/useAuth";
 import { useClinicTemplate } from "@/hooks/useClinicTemplate";
 import ClinicChatActions from "./ClinicChatActions";
+import AppointmentBanner from "./AppointmentBanner";
 import type { PipelineConversation } from "@/hooks/useConversationsByPipeline";
 
 interface Props {
@@ -203,7 +204,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete }: Props) => {
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => handleAction("no_interesado")}>Marcar como no interesado</DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAction("escalados")}>Escalar a humano</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAction("clientes")}>Convertir a cliente</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAction("pacientes")}>Convertir a paciente</DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAction("resueltos_ia")}>Reiniciar seguimiento</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => toast.info("Ir a CRM (pendiente)")}>Ver contacto en CRM</DropdownMenuItem>
@@ -211,6 +212,9 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete }: Props) => {
           </DropdownMenu>
         </div>
       </div>
+
+      {/* Appointment Banner */}
+      <AppointmentBanner conversation={c} onActionComplete={onActionComplete} />
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3">
