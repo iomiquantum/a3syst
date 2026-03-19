@@ -176,8 +176,15 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props)
     <ScrollArea className="h-full">
       <div className="p-4 space-y-4">
         {/* Header */}
-        <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
-          <FileText className="w-3.5 h-3.5" /> Información de contacto
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
+            <FileText className="w-3.5 h-3.5" /> Información de contacto
+          </div>
+          {onClose && (
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
+              <X className="w-3.5 h-3.5" />
+            </Button>
+          )}
         </div>
 
         {/* Avatar & Name */}
