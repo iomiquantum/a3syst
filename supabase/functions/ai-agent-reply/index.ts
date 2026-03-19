@@ -174,6 +174,11 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
       systemPrompt += `\n\nIMPORTANTE: Responde en máximo ${channelPrompt.max_response_length} caracteres.`;
     }
 
+    // If custom prompt provided (human-guided AI), add it
+    if (custom_prompt) {
+      systemPrompt += `\n\n=== INSTRUCCIÓN DEL OPERADOR ===\nEl operador humano te pide que generes una respuesta con estas indicaciones: "${custom_prompt}"\nGenera una respuesta apropiada basándote en el contexto del chat y estas instrucciones.`;
+    }
+
     const aiMessages = [
       { role: "system", content: systemPrompt },
       ...(recentMessages || []).map((m) => ({
