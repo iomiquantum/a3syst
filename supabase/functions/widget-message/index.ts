@@ -175,6 +175,7 @@ Deno.serve(async (req) => {
           channel: "web_widget",
           status: "open",
           chatbot_active: true,
+          pipeline_tab: "resueltos_ia",
         }).select().single();
         if (error) throw error;
         conversation = data;
