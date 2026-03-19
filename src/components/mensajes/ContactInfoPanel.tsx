@@ -51,7 +51,7 @@ interface Props {
 
 type EditField = "name" | "phone" | "phone2" | "email" | "location" | "notes" | null;
 
-const ContactInfoPanel = ({ conversation: c, onActionComplete }: Props) => {
+const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props) => {
   const [contact, setContact] = useState<ContactData | null>(null);
   const [loading, setLoading] = useState(true);
   const [editField, setEditField] = useState<EditField>(null);
