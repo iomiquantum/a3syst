@@ -13,7 +13,9 @@ import { usePipelineAction } from "@/hooks/usePipelineAction";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
 import { useAuth } from "@/hooks/useAuth";
-import type { PipelineConversation, PipelineTab } from "@/hooks/useConversationsByPipeline";
+import { useClinicTemplate } from "@/hooks/useClinicTemplate";
+import ClinicChatActions from "./ClinicChatActions";
+import type { PipelineConversation } from "@/hooks/useConversationsByPipeline";
 
 interface Props {
   conversation: PipelineConversation;
@@ -39,6 +41,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete }: Props) => {
   const { clinicId } = useClinic();
   const { user } = useAuth();
   const { moveConversation } = usePipelineAction();
+  const { templateSlug } = useClinicTemplate();
   const [input, setInput] = useState("");
   const [autopilot, setAutopilot] = useState(c.chatbot_active);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -131,8 +134,8 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete }: Props) => {
     setSending(false);
   };
 
-  const handleAction = async (tab: PipelineTab) => {
-    await moveConversation(c.id, tab);
+  const handleAction = async (tab: string, reason?: string, metadata?: Record<string, any>) => {
+    await moveConversation(c.id, tab, reason, metadata);
     onActionComplete?.();
   };
 
@@ -159,7 +162,12 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete }: Props) => {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <ClinicChatActions
+            pipelineTab={c.pipeline_tab}
+            templateSlug={templateSlug}
+            onMove={(tab, reason, meta) => handleAction(tab, reason, meta)}
+          />
           <div className="flex items-center gap-2">
             <span className={cn("text-[10px] font-medium", autopilot ? "text-emerald-500" : "text-muted-foreground")}>
               Autopilot {autopilot ? "ON" : "OFF"}

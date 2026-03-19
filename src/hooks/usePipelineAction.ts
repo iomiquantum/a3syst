@@ -2,16 +2,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import type { PipelineTab } from "@/hooks/useConversationsByPipeline";
-
 export const usePipelineAction = () => {
   const { clinicId } = useClinic();
   const { user } = useAuth();
 
   const moveConversation = async (
     conversationId: string,
-    targetTab: PipelineTab,
-    reason?: string
+    targetTab: string,
+    reason?: string,
+    metadata?: Record<string, any>
   ) => {
     if (!clinicId || !user) return;
 
