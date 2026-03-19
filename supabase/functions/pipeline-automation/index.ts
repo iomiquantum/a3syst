@@ -12,6 +12,7 @@ Deno.serve(async (req) => {
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  const startTime = Date.now();
   const errors: { conversation_id: string; error: string }[] = [];
   let tarea1Count = 0, tarea2Sent = 0, tarea2NoResponden = 0, tarea3Fixed = 0;
 
