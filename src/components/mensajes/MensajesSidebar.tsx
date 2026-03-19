@@ -32,7 +32,7 @@ const CHANNELS = [
   { key: "tiktok", label: "TikTok", connected: false },
 ];
 
-const MensajesSidebar = ({ channelCounts, totalConversations, tagStats, selectedChannel, onChannelChange, selectedTags, onTagsChange }: Props) => {
+const MensajesSidebar = ({ channelCounts, totalConversations, tagStats, selectedChannel, onChannelChange, selectedTags, onTagsChange, showArchived, onShowArchivedChange }: Props) => {
   const [tagSearch, setTagSearch] = useState("");
 
   const getChannelCount = (ch: string) => {
