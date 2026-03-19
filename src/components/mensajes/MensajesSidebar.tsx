@@ -19,6 +19,8 @@ interface Props {
   onChannelChange: (ch: string) => void;
   selectedTags: string[];
   onTagsChange: (tags: string[]) => void;
+  showArchived: boolean;
+  onShowArchivedChange: (v: boolean) => void;
 }
 
 const CHANNELS = [
