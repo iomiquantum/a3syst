@@ -22,6 +22,7 @@ import TratamientosPage from "./pages/TratamientosPage";
 import ProfesionalesPage from "./pages/ProfesionalesPage";
 import UsuariosPage from "./pages/UsuariosPage";
 import AdminPage from "./pages/AdminPage";
+import AdminPipelinePage from "./pages/AdminPipelinePage";
 import AdminUsuariosPage from "./pages/AdminUsuariosPage";
 import MensajesPage from "./pages/MensajesPage";
 import WidgetConfigPage from "./pages/WidgetConfigPage";
