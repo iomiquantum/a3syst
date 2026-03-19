@@ -20,8 +20,8 @@ const ClinicChatActions = ({ pipelineTab, templateSlug, onMove, onGenerateAI }: 
 
   if (templateSlug !== "clinicas") return null;
 
-  // seguimiento_venta: Show/No-show buttons
-  if (pipelineTab === "seguimiento_venta") {
+  // agendados: Show/No-show buttons (replaces seguimiento_venta)
+  if (pipelineTab === "agendados") {
     const handleShowConfirm = () => {
       if (hadSale) {
         onMove("pacientes", "Show con venta", { venta: true, show_result: "show" });
@@ -39,8 +39,8 @@ const ClinicChatActions = ({ pipelineTab, templateSlug, onMove, onGenerateAI }: 
           <CheckCircle className="w-3 h-3" /> Show
         </Button>
         <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => {
-          onMove("seguimiento_c1", "No-show, reagendar", { show_result: "no_show" });
-          toast.success("No-show → Reagendando en C1");
+          onMove("no_show", "No-show", { show_result: "no_show" });
+          toast.success("No-show → Marcado");
         }}>
           <XCircle className="w-3 h-3" /> No-show
         </Button>
@@ -72,10 +72,30 @@ const ClinicChatActions = ({ pipelineTab, templateSlug, onMove, onGenerateAI }: 
     return (
       <div className="flex items-center gap-1.5">
         <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => {
-          onMove("seguimiento_venta", "Próxima cita programada", { proxima_cita_scheduled: true });
-          toast.success("Programar próxima cita → Seg. para venta");
+          onMove("agendados", "Próxima cita programada", { proxima_cita_scheduled: true });
+          toast.success("Programar próxima cita → Agendados");
         }}>
           <CalendarPlus className="w-3 h-3" /> Próxima cita
+        </Button>
+      </div>
+    );
+  }
+
+  // no_show: Reagendar
+  if (pipelineTab === "no_show") {
+    return (
+      <div className="flex items-center gap-1.5">
+        <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => {
+          onMove("seguimiento_c1", "Reagendar desde no-show");
+          toast.success("Reagendando → Seguimiento C1");
+        }}>
+          <RotateCcw className="w-3 h-3" /> Reagendar
+        </Button>
+        <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => {
+          onMove("perdidos", "Marcado como perdido desde no-show");
+          toast.success("Movido a Perdidos");
+        }}>
+          <Archive className="w-3 h-3" /> Marcar perdido
         </Button>
       </div>
     );
