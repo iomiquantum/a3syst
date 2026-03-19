@@ -42,6 +42,7 @@ const MensajesPage = () => {
   const { tabCounts, resumenStats, loading: statsLoading, refetch: refetchStats } = usePipelineStats();
   const { counts: channelCounts, total: channelTotal } = useChannelStats();
   const { tags: tagStats } = useTagStats();
+  const { tabs: pipelineTabs, refetch: refetchTabs } = useClinicPipelineTabs();
 
   const { conversations, loading: convsLoading, refetch: refetchConvs } = useConversationsByPipeline({
     pipelineTab: activeTab,
