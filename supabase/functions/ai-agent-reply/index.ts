@@ -179,87 +179,134 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
       systemPrompt += `\n\n=== INSTRUCCIÓN DEL OPERADOR ===\nEl operador humano te pide que generes una respuesta con estas indicaciones: "${custom_prompt}"\nGenera una respuesta apropiada basándote en el contexto del chat y estas instrucciones.`;
     }
 
+    // Build messages array, consolidating consecutive same-role messages
+    // (Gemini rejects consecutive messages from the same role)
+    const rawMsgs = (recentMessages || []).map((m) => ({
+      role: m.direction === "inbound" ? "user" as const : "assistant" as const,
+      content: m.content || "",
+    }));
+
+    // Consolidate consecutive same-role messages
+    const consolidatedMsgs: { role: string; content: string }[] = [];
+    for (const msg of rawMsgs) {
+      if (!msg.content.trim()) continue;
+      const last = consolidatedMsgs[consolidatedMsgs.length - 1];
+      if (last && last.role === msg.role) {
+        last.content += "\n" + msg.content;
+      } else {
+        consolidatedMsgs.push({ ...msg });
+      }
+    }
+
     const aiMessages: { role: string; content: string }[] = [
       { role: "system", content: systemPrompt },
-      ...(recentMessages || []).map((m) => ({
-        role: m.direction === "inbound" ? "user" : "assistant",
-        content: m.content,
-      })),
+      ...consolidatedMsgs,
     ];
 
-    // In draft mode, if the last message is from the assistant (outbound),
-    // the model has nothing to respond to. Add a synthetic user prompt.
+    // In draft mode, ensure the last message is from "user" so the model generates a response
     const lastRole = aiMessages[aiMessages.length - 1]?.role;
-    if (isDraft && lastRole === "assistant") {
+    if (lastRole !== "user") {
       aiMessages.push({
         role: "user",
         content: custom_prompt
-          ? `El operador te pide: "${custom_prompt}". Genera una respuesta apropiada para enviar al cliente.`
-          : "Genera un mensaje de seguimiento apropiado para este cliente basándote en el contexto de la conversación.",
+          ? `[Instrucción del operador]: ${custom_prompt}. Por favor genera una respuesta apropiada para enviar al cliente.`
+          : "[Instrucción del sistema]: Genera un mensaje de seguimiento corto y apropiado para este cliente, basándote en el contexto de la conversación anterior. Responde directamente con el mensaje, sin explicaciones.",
       });
-    } else if (isDraft && lastRole === "system") {
-      // No messages at all
+    } else if (custom_prompt) {
+      // Last message is already from user, add the custom prompt as context
       aiMessages.push({
         role: "user",
-        content: custom_prompt
-          ? `El operador te pide: "${custom_prompt}". Genera una respuesta apropiada.`
-          : "Genera un saludo inicial apropiado para un nuevo cliente.",
+        content: `[Instrucción adicional del operador]: ${custom_prompt}`,
       });
+      // Need to consolidate again
+      const prev = aiMessages[aiMessages.length - 2];
+      if (prev && prev.role === "user") {
+        prev.content += "\n" + aiMessages.pop()!.content;
+      }
     }
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: aiMessages,
-        stream: false,
-      }),
-    });
+    console.log("AI messages count:", aiMessages.length, "last role:", aiMessages[aiMessages.length - 1]?.role, "isDraft:", isDraft);
 
-    if (!aiResponse.ok) {
-      const status = aiResponse.status;
-      if (status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again later." }), {
-          status: 429,
+    // Try primary model, fallback to gemini-2.5-flash if null response
+    const tryModel = async (model: string): Promise<{ reply: string | null; data: any }> => {
+      const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: aiMessages,
+          stream: false,
+          max_tokens: 500,
+        }),
+      });
+
+      if (!resp.ok) {
+        const status = resp.status;
+        if (status === 429) {
+          throw { status: 429, message: "Rate limit exceeded. Try again later." };
+        }
+        if (status === 402) {
+          throw { status: 402, message: "AI credits exhausted. Add funds in Settings." };
+        }
+        const errorText = await resp.text();
+        console.error("AI gateway error:", status, errorText);
+        throw { status: 500, message: "AI gateway error" };
+      }
+
+      const data = await resp.json();
+      const content = data.choices?.[0]?.message?.content;
+      return { reply: content && content.trim() ? content.trim() : null, data };
+    };
+
+    let reply: string | null = null;
+    let aiData: any = null;
+
+    // Try primary model
+    try {
+      const result = await tryModel("google/gemini-2.5-flash");
+      reply = result.reply;
+      aiData = result.data;
+    } catch (e: any) {
+      if (e.status === 429 || e.status === 402) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: e.status,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Add funds in Settings." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const errorText = await aiResponse.text();
-      console.error("AI gateway error:", status, errorText);
-      throw new Error("AI gateway error");
+      throw e;
     }
 
-    const aiData = await aiResponse.json();
-    const rawReply = aiData.choices?.[0]?.message?.content;
-    
-    // CRITICAL: If AI couldn't generate a response, return error to operator — NEVER send fallback to customer
-    if (!rawReply || rawReply.trim() === "") {
-      console.error("AI returned empty response:", JSON.stringify(aiData));
+    // Fallback to different model if null
+    if (!reply) {
+      console.warn("Primary model returned null, trying fallback model...");
+      try {
+        const result = await tryModel("openai/gpt-5-mini");
+        reply = result.reply;
+        aiData = result.data;
+      } catch (e) {
+        console.error("Fallback model also failed:", e);
+      }
+    }
+
+    // CRITICAL: If AI couldn't generate a response, return error to operator
+    if (!reply) {
+      console.error("AI returned empty response after retry:", JSON.stringify(aiData));
       return new Response(JSON.stringify({ error: "La IA no pudo generar una respuesta. Intenta de nuevo o responde manualmente." }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    
-    const reply = rawReply;
-    const usage = aiData.usage || {};
+
+    const usage = aiData?.usage || {};
     const tokensInput = usage.prompt_tokens || 0;
     const tokensOutput = usage.completion_tokens || 0;
-    const modelUsed = aiData.model || "google/gemini-3-flash-preview";
+    const modelUsed = aiData?.model || "google/gemini-2.5-flash";
 
     // Draft mode: return reply without sending or saving message
     if (isDraft) {
-      // Still log usage
       await supabase.from("ai_agent_usage").insert({
         clinic_id,
         conversation_id,
