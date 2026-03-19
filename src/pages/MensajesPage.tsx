@@ -12,6 +12,7 @@ import { useConversationsByPipeline, PipelineConversation, PipelineFilter } from
 import { usePipelineStats } from "@/hooks/usePipelineStats";
 import { useChannelStats } from "@/hooks/useChannelStats";
 import { useTagStats } from "@/hooks/useTagStats";
+import { useClinicPipelineTabs } from "@/hooks/useClinicPipelineTabs";
 import { Period } from "@/components/mensajes/PeriodSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ const MensajesPage = () => {
   const { tabCounts, resumenStats, loading: statsLoading, refetch: refetchStats } = usePipelineStats();
   const { counts: channelCounts, total: channelTotal } = useChannelStats();
   const { tags: tagStats } = useTagStats();
+  const { tabs: pipelineTabs, refetch: refetchTabs } = useClinicPipelineTabs();
 
   const { conversations, loading: convsLoading, refetch: refetchConvs } = useConversationsByPipeline({
     pipelineTab: activeTab,
@@ -52,6 +54,7 @@ const MensajesPage = () => {
   const handleActionComplete = () => {
     refetchConvs();
     refetchStats();
+    refetchTabs();
   };
 
   // Active filter chips
@@ -106,7 +109,7 @@ const MensajesPage = () => {
           <div className="px-3 py-2 border-b border-border shrink-0">
             <MensajesPipelineTabs
               activeTab={activeTab} onTabChange={setActiveTab}
-              tabCounts={tabCounts}
+              tabs={pipelineTabs}
               period={pipelinePeriod} onPeriodChange={setPipelinePeriod}
               dateRange={pipelineRange} onDateRangeChange={setPipelineRange}
             />
@@ -155,7 +158,7 @@ const MensajesPage = () => {
         <div className="px-4 py-2.5 border-b border-border shrink-0">
           <MensajesPipelineTabs
             activeTab={activeTab} onTabChange={setActiveTab}
-            tabCounts={tabCounts}
+            tabs={pipelineTabs}
             period={pipelinePeriod} onPeriodChange={setPipelinePeriod}
             dateRange={pipelineRange} onDateRangeChange={setPipelineRange}
           />
