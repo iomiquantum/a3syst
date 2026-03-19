@@ -133,8 +133,8 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete }: Props) => {
     setSending(false);
   };
 
-  const handleAction = async (tab: PipelineTab) => {
-    await moveConversation(c.id, tab);
+  const handleAction = async (tab: string, reason?: string, metadata?: Record<string, any>) => {
+    await moveConversation(c.id, tab, reason, metadata);
     onActionComplete?.();
   };
 
