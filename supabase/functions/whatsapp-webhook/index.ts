@@ -190,7 +190,7 @@ Deno.serve(async (req) => {
 
               const { data: channelConfig } = await supabase
                 .from("ai_agent_channel_prompts")
-                .select("enabled")
+                .select("enabled, welcome_message, welcome_message_enabled")
                 .eq("clinic_id", clinicId)
                 .eq("channel", "whatsapp")
                 .eq("enabled", true)
@@ -209,6 +209,38 @@ Deno.serve(async (req) => {
                   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
                   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+                  // --- WELCOME MESSAGE: Send first if new conversation ---
+                  let sentWelcome = false;
+                  if (isNewConversation && channelConfig.welcome_message_enabled && channelConfig.welcome_message) {
+                    try {
+                      console.log("[WA-Webhook] Sending welcome message for new conversation");
+                      const welcomeResp = await fetch(
+                        `${supabaseUrl}/functions/v1/whatsapp-send`,
+                        {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${serviceKey}`,
+                            "apikey": serviceKey,
+                          },
+                          body: JSON.stringify({
+                            clinic_id: clinicId,
+                            to_number: contactPhone,
+                            message_type: "text",
+                            content: channelConfig.welcome_message,
+                            conversation_id: unifiedConv.id,
+                          }),
+                        }
+                      );
+                      const welcomeResult = await welcomeResp.json().catch(() => null);
+                      sentWelcome = !welcomeResult?.error;
+                      console.log("[WA-Webhook] Welcome message:", sentWelcome ? "sent OK" : "failed");
+                    } catch (welcomeErr) {
+                      console.error("[WA-Webhook] Welcome message error:", welcomeErr);
+                    }
+                  }
+
+                  // --- CONTEXTUAL AI REPLY: Always generate a response to the user's question ---
                   const agentResponse = await fetch(
                     `${supabaseUrl}/functions/v1/ai-agent-reply`,
                     {
@@ -223,6 +255,7 @@ Deno.serve(async (req) => {
                         channel: "whatsapp",
                         conversation_id: unifiedConv.id,
                         triggered_by: "auto",
+                        skip_already_replied: sentWelcome,
                       }),
                     }
                   );
