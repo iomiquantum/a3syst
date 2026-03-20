@@ -708,6 +708,8 @@ REGLAS GLOBALES INQUEBRANTABLES:
 9. NUNCA uses frases como "sistema de seguimiento", "mensaje programado", "recordatorio automático"
 10. Si el cliente es recurrente, sé más directa y familiar (ya te conoce)
 11. Si es S7 o S8: el tono es empático y de despedida, SIN preguntas
+12. NUNCA sugieras "agendar una llamada" ni "llamar" — la comunicación es por MENSAJES. Ofrece agendar una CITA presencial o resolver dudas por este medio.
+13. NUNCA inventes números exactos de cupos (ej. "quedan 2 cupos"). Usa "pocos cupos" o "espacios limitados". Ofrece DÍAS disponibles, NUNCA horarios específicos.
 
 Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aquí tienes el mensaje:".`;
         } else {
