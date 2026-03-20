@@ -238,13 +238,13 @@ Deno.serve(async (req) => {
               if (agentConfig && channelConfig) {
                 const { data: unifiedConv } = await supabase
                   .from("conversations")
-                  .select("id")
+                  .select("id, chatbot_active")
                   .eq("clinic_id", clinicId)
                   .eq("channel", "whatsapp")
                   .eq("visitor_contact", contactPhone)
                   .maybeSingle();
 
-                if (unifiedConv) {
+                if (unifiedConv && unifiedConv.chatbot_active !== false) {
                   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
                   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
