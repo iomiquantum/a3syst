@@ -6,36 +6,9 @@ const corsHeaders = {
 };
 
 const LOCK_STALE_MS = 4 * 60 * 1000;
-const MAX_BATCH_HUMAN_DELAY_MS = 1200;
-const MAX_BATCH_SIZE_FOR_HUMAN_DELAY = 3;
-
-function calculateHumanDelay(responseText: string): number {
-  const length = responseText.length;
-  let base: number, range: number;
-
-  if (length < 50) {
-    base = 8; range = 3;
-  } else if (length < 150) {
-    base = 15; range = 5;
-  } else if (length < 300) {
-    base = 25; range = 7;
-  } else {
-    base = 35; range = 10;
-  }
-
-  const delay = Math.floor(base + (Math.random() * range * 2) - range);
-  return Math.min(Math.max(delay, 5), 45) * 1000;
-}
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function getBatchHumanDelayMs(messageContent: string, enabled: boolean, workload: number): number {
-  void messageContent;
-  void enabled;
-  void workload;
-  return 0;
 }
 
 interface ZonedDateParts {
@@ -144,7 +117,6 @@ function getScheduledContactTime(
     localNow.hour, localNow.minute, localNow.second,
   );
 
-  // If 'from' is already outside the send window, snap to next window start
   if (localNow.hour >= sendWindowEnd) {
     const nextDay = shiftLocalDate(localNow.year, localNow.month, localNow.day, 1);
     effectiveLocalMs = Date.UTC(nextDay.year, nextDay.month - 1, nextDay.day, sendWindowStart, 0, 0);
@@ -156,7 +128,6 @@ function getScheduledContactTime(
   const tentative = new Date(tentativeMs);
   const tHour = tentative.getUTCHours();
 
-  // If tentative falls within the send window, use it directly
   if (tHour >= sendWindowStart && tHour < sendWindowEnd) {
     return zonedTimeToUtc(
       tz, tentative.getUTCFullYear(), tentative.getUTCMonth() + 1,
@@ -164,8 +135,6 @@ function getScheduledContactTime(
     );
   }
 
-  // Tentative falls outside the window — skip the dead zone
-  // Dead zone duration = (24 - sendWindowEnd + sendWindowStart) hours
   const deadZoneMs = (24 - sendWindowEnd + sendWindowStart) * 60 * 60 * 1000;
   const adjustedMs = tentativeMs + deadZoneMs;
   const adjusted = new Date(adjustedMs);
@@ -176,14 +145,12 @@ function getScheduledContactTime(
   );
 }
 
-/** Check if WhatsApp 24h session window is open */
 function isWhatsAppWindowOpen(lastClientMessageAt: string | null): boolean {
   if (!lastClientMessageAt) return false;
   const diffHours = (Date.now() - new Date(lastClientMessageAt).getTime()) / (1000 * 60 * 60);
-  return diffHours < 23.5; // 23.5h safety margin
+  return diffHours < 23.5;
 }
 
-/** Determine which template type to use based on context */
 function getTemplateType(context: string): string {
   if (context === "recordatorio_cita") return "recordatorio_cita";
   if (context === "reactivacion") return "reactivacion";
@@ -205,7 +172,6 @@ async function clearWhatsAppBlockedState(
     .eq("id", conversationId);
 }
 
-/** Send a WhatsApp message, using template if 24h window is closed */
 async function sendWhatsAppMessageSmart(
   supabase: ReturnType<typeof createClient>,
   supabaseUrl: string,
@@ -224,7 +190,6 @@ async function sendWhatsAppMessageSmart(
 ): Promise<{ sent: boolean; type: string; reason?: string }> {
   const channel = conv.channel || "whatsapp";
 
-  // Non-WhatsApp: send freely
   if (channel !== "whatsapp") {
     await supabase.from("messages").insert({
       conversation_id: conv.id, clinic_id: conv.clinic_id,
@@ -237,16 +202,9 @@ async function sendWhatsAppMessageSmart(
     return { sent: false, type: "error", reason: "no_phone" };
   }
 
-  // Check 24h window
   const windowOpen = isWhatsAppWindowOpen(conv.last_client_message_at || null);
 
   if (windowOpen) {
-    // Send as free-form message
-    const diffHours = conv.last_client_message_at
-      ? ((Date.now() - new Date(conv.last_client_message_at).getTime()) / (1000 * 60 * 60)).toFixed(1)
-      : "?";
-    console.log(`[WHATSAPP] Mensaje libre enviado (ventana abierta, ${diffHours}h transcurridas)`);
-
     const sendResp = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
       method: "POST",
       headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
@@ -264,7 +222,6 @@ async function sendWhatsAppMessageSmart(
     return { sent: true, type: "free_form" };
   }
 
-  // Window closed — use template
   const templateType = getTemplateType(context);
   const { data: template } = await supabase
     .from("whatsapp_templates")
@@ -275,8 +232,6 @@ async function sendWhatsAppMessageSmart(
     .maybeSingle();
 
   if (!template || !template.meta_approved) {
-    // Template not approved — block
-    console.warn(`[WHATSAPP WARNING] Ventana cerrada y template '${templateType}' no aprobado por Meta. Conv ${conv.id}`);
     await supabase.from("conversations").update({
       whatsapp_window_blocked: true,
       whatsapp_window_blocked_at: new Date().toISOString(),
@@ -293,7 +248,6 @@ async function sendWhatsAppMessageSmart(
     return { sent: false, type: "blocked", reason: "template_not_approved" };
   }
 
-  // Template approved — build variables and send
   let contactName = "cliente";
   if (conv.contact_id) {
     const { data: contact } = await supabase.from("contacts").select("name").eq("id", conv.contact_id).single();
@@ -302,7 +256,6 @@ async function sendWhatsAppMessageSmart(
   const { data: clinic } = await supabase.from("clinics").select("name").eq("id", conv.clinic_id).single();
   const clinicName = clinic?.name || "nuestro negocio";
 
-  // Build template components with variables
   const components: any[] = [{
     type: "body",
     parameters: (template.template_variables as string[] || []).map((varName: string) => {
@@ -315,11 +268,6 @@ async function sendWhatsAppMessageSmart(
       }
     }),
   }];
-
-  const diffHours = conv.last_client_message_at
-    ? ((Date.now() - new Date(conv.last_client_message_at).getTime()) / (1000 * 60 * 60)).toFixed(1)
-    : "?";
-  console.log(`[WHATSAPP] Template HSM '${template.template_name}' enviado (ventana cerrada, última respuesta hace ${diffHours}h)`);
 
   const sendResp = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
     method: "POST",
@@ -335,13 +283,14 @@ async function sendWhatsAppMessageSmart(
   });
 
   if (!sendResp.ok) {
-    console.error(`[WHATSAPP] Template send failed for conv ${conv.id}`);
     return { sent: false, type: "error", reason: "template_send_failed" };
   }
 
   await clearWhatsAppBlockedState(supabase, conv.id);
   return { sent: true, type: "template" };
 }
+
+// =============== MAIN HANDLER ===============
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -352,8 +301,10 @@ Deno.serve(async (req) => {
 
   const startTime = Date.now();
   const errors: { conversation_id: string; error: string }[] = [];
-  let tarea1Count = 0, tarea2Sent = 0, tarea2NoResponden = 0, tarea3Fixed = 0;
+  let tarea1Count = 0, tarea2Enqueued = 0, tarea2NoResponden = 0, tarea3Fixed = 0;
   let tarea5Reminder1 = 0, tarea5Reminder2 = 0;
+  let tarea6Sent = 0, tarea6Retried = 0, tarea6Failed = 0, tarea6Cancelled = 0;
+  let tarea7Orphans = 0, tarea7Stale = 0, tarea7Cleaned = 0;
 
   // === ACQUIRE LOCK ===
   const { data: lockRow } = await supabase
@@ -397,8 +348,10 @@ Deno.serve(async (req) => {
     const maxAutoContacts = Number(rules["max_auto_contacts"]) || 10;
     const sendWindowStart = Number(rules["send_window_start_hour"]) || 7;
     const sendWindowEnd = Number(rules["send_window_end_hour"]) || 23;
-    const humanDelayEnabled = rules["human_delay_enabled"] !== "false" && rules["human_delay_enabled"] !== false;
-    const globalAgentName = (typeof rules["ai_agent_name"] === "string" ? rules["ai_agent_name"].replace(/^"|"$/g, "") : "Sofía") || "Sofía";
+    const globalAgentName = (typeof rules["ai_agent_name"] === "string" ? rules["ai_agent_name"].replace(/^\"|\"$/g, "") : "Sofía") || "Sofía";
+    const queueBatchSize = Number(rules["queue_batch_size"]) || 10;
+    const queueDelayBetweenSendsMs = Number(rules["queue_delay_between_sends_ms"]) || 2000;
+    const queueMaxRetryAttempts = Number(rules["queue_max_retry_attempts"]) || 3;
 
     // Build delay map for S1-S8
     const delayMap: Record<number, number> = {};
@@ -413,7 +366,8 @@ Deno.serve(async (req) => {
       .order("contact_number", { ascending: true });
     const strategiesMap: Record<number, any> = {};
     (strategiesRows || []).forEach((s: any) => { strategiesMap[s.contact_number] = s; });
-    // Cache clinic config to avoid repeated queries
+
+    // Cache clinic config
     const clinicTimezoneCache: Record<string, string> = {};
     const clinicDelayCache: Record<string, number> = {};
     const clinicAgentNameCache: Record<string, string> = {};
@@ -454,7 +408,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       const agentName = data?.rule_value
-        ? String(data.rule_value).replace(/^"|"$/g, "") || globalAgentName
+        ? String(data.rule_value).replace(/^\"|\"$/g, "") || globalAgentName
         : globalAgentName;
 
       clinicAgentNameCache[clinicId] = agentName;
@@ -471,10 +425,7 @@ Deno.serve(async (req) => {
       const diffMs = new Date(scheduledAt).getTime() - Date.now();
       if (diffMs <= 0) return false;
 
-      // Account for the overnight dead zone (e.g. 23:00 to 07:00 = 8 hours)
-      // When a timer is set near the end of the send window, it legitimately
-      // gets pushed to next morning, adding up to deadZoneHours extra time
-      const deadZoneHours = 24 - sendWindowEnd + sendWindowStart; // e.g. 24-23+7 = 8h
+      const deadZoneHours = 24 - sendWindowEnd + sendWindowStart;
       const deadZoneMs = deadZoneHours * 60 * 60 * 1000;
       const maxExpectedMs = Math.max(expectedDelayMinutes * 4, 60) * 60 * 1000 + deadZoneMs;
       return diffMs > maxExpectedMs;
@@ -538,36 +489,30 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ========== TAREA 2: Follow-up messages (S1-S10) ==========
-    console.log("[PIPELINE] TAREA 2: Sending follow-up messages...");
+    // ========== TAREA 2: ENQUEUE follow-ups (S1-S8) — NO LONGER SENDS ==========
+    console.log("[PIPELINE] TAREA 2: Enqueuing follow-up messages...");
     const now = new Date().toISOString();
     const seguimientoTabs = Array.from({ length: 10 }, (_, i) => `seguimiento_s${i + 1}`);
     const { data: followUpConvs } = await supabase
       .from("conversations")
-      .select("id, clinic_id, pipeline_tab, seguimiento_contact_number, seguimiento_last_completed_s, seguimiento_next_s, seguimiento_responded_at_s, seguimiento_is_recurrente, seguimiento_recurrente_count, contact_id, channel, visitor_contact, last_client_message_at, seguimiento_consecutive_read_no_reply, seguimiento_spam_protection_triggered")
+      .select("id, clinic_id, pipeline_tab, seguimiento_contact_number, seguimiento_next_contact_at, seguimiento_consecutive_read_no_reply, seguimiento_spam_protection_triggered, channel")
       .in("pipeline_tab", seguimientoTabs)
       .not("seguimiento_next_contact_at", "is", null)
       .lt("seguimiento_next_contact_at", now)
       .order("seguimiento_next_contact_at", { ascending: true });
 
-    const followUpQueueSize = followUpConvs?.length || 0;
-
     for (const conv of followUpConvs || []) {
       try {
-        // Check business hours per clinic timezone
         const clinicTz = await getClinicTimezone(conv.clinic_id);
         const clinicHour = getNowHourInTz(clinicTz);
         const isWithinSendWindow = clinicHour >= sendWindowStart && clinicHour < sendWindowEnd;
 
         if (!isWithinSendWindow) {
-          // Postpone to next window opening in clinic's timezone
           const nextWindow = getNextWindowStart(clinicTz, sendWindowStart);
-
           await supabase.from("conversations").update({
             seguimiento_next_contact_at: nextWindow.toISOString(),
           }).eq("id", conv.id);
-
-          console.log(`[PIPELINE] Outside send window (${sendWindowStart}-${sendWindowEnd} in ${clinicTz}, current=${clinicHour}h), postponed conv ${conv.id} to ${nextWindow.toISOString()}`);
+          console.log(`[PIPELINE] Outside send window, postponed conv ${conv.id}`);
           continue;
         }
 
@@ -577,9 +522,8 @@ Deno.serve(async (req) => {
         const contactNumber = fresh.seguimiento_contact_number || conv.seguimiento_contact_number || 1;
         const isManualStep = contactNumber >= 9;
 
-        // S9-S10 are manual — don't send auto messages
         if (isManualStep) {
-          console.log(`[PIPELINE] S${contactNumber} is manual, skipping auto-send for conv ${conv.id}`);
+          console.log(`[PIPELINE] S${contactNumber} is manual, skipping for conv ${conv.id}`);
           continue;
         }
 
@@ -587,7 +531,6 @@ Deno.serve(async (req) => {
         const spamLimit = Number(rules["spam_protection_read_no_reply_limit"]) || 4;
         const readNoReplyCount = fresh.seguimiento_consecutive_read_no_reply || 0;
         if (readNoReplyCount >= spamLimit) {
-          // Jump to S9 (manual) for spam protection
           await supabase.from("conversations").update({
             pipeline_tab: "seguimiento_s9",
             seguimiento_contact_number: 9,
@@ -601,260 +544,40 @@ Deno.serve(async (req) => {
             conversation_id: conv.id, clinic_id: conv.clinic_id,
             from_tab: `seguimiento_s${contactNumber}`, to_tab: "seguimiento_s9",
             moved_by: "system",
-            reason: `Protección anti-spam: cliente leyó ${readNoReplyCount} mensajes consecutivos sin responder. Saltó de S${contactNumber} a S9.`,
+            reason: `Protección anti-spam: ${readNoReplyCount} lecturas sin responder`,
           });
-
-          console.log(`[PIPELINE SPAM-PROTECTION] Conv ${conv.id} jumped from S${contactNumber} to S9 (${readNoReplyCount} reads without reply)`);
+          console.log(`[PIPELINE SPAM] Conv ${conv.id} jumped S${contactNumber} → S9`);
           continue;
         }
 
-        const sendContext = "seguimiento";
-        const templateType = getTemplateType(sendContext);
-        const windowOpen = conv.channel !== "whatsapp" || isWhatsAppWindowOpen(conv.last_client_message_at || null);
-
-        if (!windowOpen) {
-          const templateApproved = await hasApprovedTemplate(conv.clinic_id, templateType);
-          if (!templateApproved) {
-            const retryAt = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
-            await supabase.from("conversations").update({
-              whatsapp_window_blocked: true,
-              whatsapp_window_blocked_at: new Date().toISOString(),
-              whatsapp_window_blocked_reason: `template_${templateType}_not_approved`,
-              seguimiento_next_contact_at: retryAt,
-            }).eq("id", conv.id);
-            console.warn(`[PIPELINE] Pre-check blocked (template '${templateType}' not approved) for conv ${conv.id}, retrying at ${retryAt}`);
-            continue;
-          }
-        }
-
-        // Get strategy for this contact number
-        const strategy = strategiesMap[contactNumber];
-
-        // Get clinic agent name override
-        const agentName = await getClinicAgentName(conv.clinic_id);
-
-        // Get clinic name and AI agent config
-        const { data: clinic } = await supabase.from("clinics").select("name").eq("id", conv.clinic_id).single();
-        const clinicName = clinic?.name || "el negocio";
-
-        // Load clinic's AI agent config for service/price context
-        const { data: agentConfig } = await supabase.from("ai_agent_config")
-          .select("services, treatments_text, prices_text, locations_text, professionals_text, special_instructions")
-          .eq("clinic_id", conv.clinic_id).maybeSingle();
-
-        let clinicKnowledgeBlock = "";
-        if (agentConfig) {
-          const parts: string[] = [];
-          if (agentConfig.treatments_text) parts.push(`TRATAMIENTOS/SERVICIOS:\n${agentConfig.treatments_text}`);
-          if (agentConfig.prices_text) parts.push(`PRECIOS:\n${agentConfig.prices_text}`);
-          if (agentConfig.locations_text) parts.push(`UBICACIÓN:\n${agentConfig.locations_text}`);
-          if (agentConfig.professionals_text) parts.push(`PROFESIONALES:\n${agentConfig.professionals_text}`);
-          if (parts.length > 0) {
-            clinicKnowledgeBlock = `\nINFORMACIÓN REAL DEL NEGOCIO (SOLO usa estos datos, NUNCA inventes servicios ni precios):\n${parts.join("\n\n")}`;
-          }
-        }
-
-        // Get contact name
-        let contactName = "cliente";
-        if (conv.contact_id) {
-          const { data: contact } = await supabase.from("contacts").select("name").eq("id", conv.contact_id).single();
-          if (contact?.name) contactName = contact.name.split(" ")[0];
-        }
-
-        // Get last 20 messages for context
-        const { data: recentMessages } = await supabase
-          .from("messages").select("direction, content")
+        // === CHECK: already queued? ===
+        const { data: existingQueue } = await supabase
+          .from("pipeline_message_queue")
+          .select("id")
           .eq("conversation_id", conv.id)
-          .order("created_at", { ascending: false }).limit(20);
-        if (recentMessages) recentMessages.reverse();
-
-        const messagesContext = (recentMessages || [])
-          .map(m => `${m.direction === "inbound" ? "Cliente" : agentName}: ${m.content}`)
-          .join("\n");
-
-        // Check if last pipeline move was manual (for context)
-        let manualMoveContext = "";
-        const { data: lastMove } = await supabase
-          .from("conversation_pipeline_history")
-          .select("from_tab, to_tab, moved_by, reason, metadata")
-          .eq("conversation_id", conv.id)
-          .order("created_at", { ascending: false })
-          .limit(1)
+          .eq("contact_number", contactNumber)
+          .in("status", ["pending", "processing", "retry"])
           .maybeSingle();
 
-        if (lastMove && lastMove.moved_by !== "system") {
-          const meta = lastMove.metadata as Record<string, any> | null;
-          manualMoveContext = `
-CONTEXTO DE MOVIMIENTO:
-- Esta conversación fue movida manualmente por un agente de '${lastMove.from_tab}' a '${lastMove.to_tab}'
-- Razón: ${lastMove.reason || "Sin razón especificada"}
-- El agente que lo movió: ${meta?.agent_name || "Agente"}
-- Esto significa que debes adaptar tu mensaje al nuevo contexto sin ignorar la historia previa.`;
-        }
-
-        // Build strategy-enhanced prompt
-        let followUpPrompt: string;
-        if (strategy) {
-          followUpPrompt = `Eres ${agentName}, asistente de ${clinicName}. Estás dando seguimiento a un paciente que dejó de responder.
-
-CONVERSACIÓN COMPLETA (últimos 20 mensajes):
-${messagesContext}
-${clinicKnowledgeBlock}
-
-INFORMACIÓN DEL CONTACTO:
-- Nombre: ${contactName}
-- Es recurrente (ya pasó por seguimiento antes): ${conv.seguimiento_is_recurrente} (veces: ${conv.seguimiento_recurrente_count})
-- Respondió por última vez en S${conv.seguimiento_responded_at_s}
-${manualMoveContext}
-
-CONTACTO ACTUAL: S${contactNumber} de 10
-ESTRATEGIA: ${strategy.strategy_name} — ${strategy.strategy_description}
-INSTRUCCIÓN: ${strategy.prompt_instruction}
-REGLAS DE ESTA ESTRATEGIA: ${strategy.rules}
-BARRERA QUE DEBES RESOLVER: ${strategy.barrier_it_solves}
-PRINCIPIO PSICOLÓGICO: ${strategy.psychological_principle}
-
-REGLAS GLOBALES INQUEBRANTABLES:
-1. Genera UN solo mensaje corto (máximo 2 oraciones, máximo 160 caracteres)
-2. Adapta la estrategia al CONTEXTO REAL de la conversación
-3. Retoma lo ÚLTIMO que se habló, NUNCA repitas información ya dada
-4. Suena como una persona real llamada ${agentName}, NO como bot ni vendedora
-5. Usa el nombre del cliente: ${contactName}
-6. Si es S1: preséntate brevemente ("Hola ${contactName}, soy ${agentName} de ${clinicName}")
-7. Si es S2-S8: NO repitas tu nombre, ya te presentaste
-8. NUNCA menciones que eres bot, IA, sistema automatizado, o que esto es un "seguimiento automático"
-9. NUNCA uses frases como "sistema de seguimiento", "mensaje programado", "recordatorio automático"
-10. Si el cliente es recurrente, sé más directa y familiar (ya te conoce)
-11. Si es S7 o S8: el tono es empático y de despedida, SIN preguntas
-12. NUNCA sugieras "agendar una llamada" ni "llamar" — la comunicación es por MENSAJES. Ofrece agendar una CITA presencial o resolver dudas por este medio.
-13. NUNCA inventes números exactos de cupos (ej. "quedan 2 cupos"). Usa "pocos cupos" o "espacios limitados". Ofrece DÍAS disponibles, NUNCA horarios específicos.
-14. SOLO menciona servicios, tratamientos y precios que aparezcan en la INFORMACIÓN REAL DEL NEGOCIO. NUNCA inventes servicios que no existan (ej. NO digas "limpieza facial" si no está en la lista).
-
-Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aquí tienes el mensaje:".`;
-        } else {
-          followUpPrompt = `Genera un mensaje de seguimiento #${contactNumber} para ${contactName}. Contexto: ${messagesContext}. ${manualMoveContext} Máximo 2 oraciones.`;
-        }
-
-        // Generate with AI
-        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-        if (!LOVABLE_API_KEY) {
-          console.error("[PIPELINE] LOVABLE_API_KEY not configured, skipping AI generation");
+        if (existingQueue) {
+          console.log(`[PIPELINE] Already queued S${contactNumber} for conv ${conv.id}, skipping`);
           continue;
         }
 
-        const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: [
-              { role: "system", content: followUpPrompt },
-              { role: "user", content: "Genera el mensaje de seguimiento." },
-            ],
-            stream: false,
-            max_tokens: 200,
-          }),
-        });
-
-        if (!aiResp.ok) {
-          console.error(`[PIPELINE] AI generation failed for conv ${conv.id}:`, await aiResp.text());
-          continue;
-        }
-
-        const aiData = await aiResp.json();
-        const messageContent = aiData.choices?.[0]?.message?.content?.trim();
-        if (!messageContent) {
-          console.error(`[PIPELINE] Empty AI response for conv ${conv.id}`);
-          continue;
-        }
-
-        // Human delay
-        const delayMs = getBatchHumanDelayMs(messageContent, humanDelayEnabled, followUpQueueSize);
-        if (delayMs > 0) {
-          console.log(`[PIPELINE] Human delay: ${delayMs}ms for S${contactNumber} conv ${conv.id}`);
-          await sleep(delayMs);
-        }
-
-        // Send message with smart WhatsApp window check
-        const sendResult = await sendWhatsAppMessageSmart(
-          supabase, supabaseUrl, supabaseKey,
-          {
-            id: conv.id, clinic_id: conv.clinic_id,
-            channel: conv.channel || "whatsapp",
-            visitor_contact: conv.visitor_contact,
-            contact_id: conv.contact_id,
-            last_client_message_at: conv.last_client_message_at,
-          },
-          messageContent, sendContext, agentName,
-        );
-
-        if (!sendResult.sent) {
-          if (sendResult.type === "blocked") {
-            const retryAt = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
-            await supabase.from("conversations").update({
-              seguimiento_next_contact_at: retryAt,
-            }).eq("id", conv.id);
-            console.log(`[PIPELINE] Send blocked (template not approved) for conv ${conv.id}, retrying at ${retryAt}`);
-          }
-          continue;
-        }
-
-        tarea2Sent++;
-        console.log(`[PIPELINE] S${contactNumber} (${strategy?.strategy_name || "generic"}) sent as ${sendResult.type} for conv ${conv.id}`);
-
-        // Log token usage
-        const usage = aiData?.usage || {};
-        await supabase.from("ai_token_usage").insert({
+        // === ENQUEUE ===
+        const priority = 10 - contactNumber; // S1=9, S8=2
+        await supabase.from("pipeline_message_queue").insert({
+          conversation_id: conv.id,
           clinic_id: conv.clinic_id,
-          generator_type: "agent",
-          model: aiData?.model || "google/gemini-2.5-flash",
-          tokens_input: usage.prompt_tokens || 0,
-          tokens_output: usage.completion_tokens || 0,
-          cost_usd: 0,
-          action_label: `Seguimiento S${contactNumber} — ${strategy?.strategy_name || "generic"}${sendResult.type === "template" ? " (template)" : ""}`,
+          contact_number: contactNumber,
+          message_type: "seguimiento",
+          status: "pending",
+          priority,
+          scheduled_at: conv.seguimiento_next_contact_at,
         });
 
-        // Advance pipeline
-        const nextContactNumber = contactNumber + 1;
-        if (nextContactNumber > maxAutoContacts) {
-          await supabase.from("conversations").update({
-            pipeline_tab: "no_responden",
-            seguimiento_next_contact_at: null,
-            seguimiento_last_contact_at: now,
-            seguimiento_last_completed_s: contactNumber,
-          }).eq("id", conv.id);
-          await supabase.from("conversation_pipeline_history").insert({
-            conversation_id: conv.id, clinic_id: conv.clinic_id,
-            from_tab: `seguimiento_s${contactNumber}`, to_tab: "no_responden",
-            moved_by: "system", reason: `Sin respuesta después de ${maxAutoContacts} contactos`,
-          });
-          tarea2NoResponden++;
-        } else {
-          const actualDelay = await getClinicStageDelay(conv.clinic_id, nextContactNumber);
-
-          const nextContactDate = getScheduledContactTime(clinicTz, actualDelay, sendWindowStart, sendWindowEnd);
-          const nextLocalHour = getNowHourInTz(clinicTz);
-          console.log(`[PIPELINE] Next contact for S${nextContactNumber} scheduled at ${nextContactDate.toISOString()} (${clinicTz}, current=${nextLocalHour}h)`);
-
-          await supabase.from("conversations").update({
-            pipeline_tab: `seguimiento_s${nextContactNumber}`,
-            seguimiento_contact_number: nextContactNumber,
-            seguimiento_next_contact_at: nextContactDate.toISOString(),
-            seguimiento_last_contact_at: now,
-            seguimiento_last_completed_s: contactNumber,
-          }).eq("id", conv.id);
-
-          await supabase.from("conversation_pipeline_history").insert({
-            conversation_id: conv.id, clinic_id: conv.clinic_id,
-            from_tab: `seguimiento_s${contactNumber}`, to_tab: `seguimiento_s${nextContactNumber}`,
-            moved_by: "system", reason: `S${contactNumber} (${strategy?.strategy_name || "generic"}) enviado${sendResult.type === "template" ? " como template" : ""}`,
-          });
-        }
-
-        await supabase.from("conversations").update({ last_message_at: now, last_message_preview: messageContent.substring(0, 100) }).eq("id", conv.id);
+        tarea2Enqueued++;
+        console.log(`[QUEUE] S${contactNumber} enqueued for conv ${conv.id} (priority=${priority})`);
       } catch (e) {
         errors.push({ conversation_id: conv.id, error: e instanceof Error ? e.message : String(e) });
       }
@@ -872,7 +595,7 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
     for (const conv of inconsistent || []) {
       try {
         const stageNumber = conv.seguimiento_contact_number || getStageNumberFromPipelineTab(conv.pipeline_tab) || 1;
-        if (stageNumber >= 9) continue; // S9-S10 are manual, null next_contact_at is expected
+        if (stageNumber >= 9) continue;
 
         const delay = await getClinicStageDelay(conv.clinic_id, stageNumber);
         const missingTimer = !conv.seguimiento_next_contact_at;
@@ -888,7 +611,7 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
           seguimiento_next_contact_at: getScheduledContactTime(clinicTz, delay, sendWindowStart, sendWindowEnd, baseDate).toISOString(),
         }).eq("id", conv.id);
 
-        console.log(`[PIPELINE] Repaired ${missingTimer ? "missing" : "skewed"} timer for conv ${conv.id} (${conv.pipeline_tab}, delay=${delay}m)`);
+        console.log(`[PIPELINE] Repaired ${missingTimer ? "missing" : "skewed"} timer for conv ${conv.id}`);
         tarea3Fixed++;
       } catch (e) {
         errors.push({ conversation_id: conv.id, error: e instanceof Error ? e.message : String(e) });
@@ -898,13 +621,12 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
     // ========== TAREA 5: APPOINTMENT REMINDERS ==========
     console.log("[PIPELINE] TAREA 5: Appointment reminders...");
 
-    // Use first clinic's timezone for appointment reminders window check
     const defaultTz = Object.values(clinicTimezoneCache)[0] || "America/Guayaquil";
     const reminderHour = getNowHourInTz(defaultTz);
     const isWithinReminderWindow = reminderHour >= sendWindowStart && reminderHour < sendWindowEnd;
 
     if (!isWithinReminderWindow) {
-      console.log(`[PIPELINE] Outside send window (${sendWindowStart}-${sendWindowEnd} in ${defaultTz}, current=${reminderHour}h), skipping appointment reminders`);
+      console.log(`[PIPELINE] Outside send window, skipping appointment reminders`);
     } else {
       const { data: reminderConfigs } = await supabase
         .from("appointment_reminder_config")
@@ -940,6 +662,17 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
             const hoursUntil = (appointmentDate.getTime() - nowDate.getTime()) / (1000 * 60 * 60);
             if (hoursUntil > r1Config.hours_before_appointment) continue;
 
+            // Enqueue reminder instead of sending directly
+            const { data: existingReminder } = await supabase
+              .from("pipeline_message_queue")
+              .select("id")
+              .eq("conversation_id", conv.id)
+              .eq("message_type", "recordatorio_cita_1")
+              .in("status", ["pending", "processing", "retry"])
+              .maybeSingle();
+
+            if (existingReminder) continue;
+
             let contactName = "cliente";
             if (conv.contact_id) {
               const { data: contact } = await supabase.from("contacts").select("name").eq("id", conv.contact_id).single();
@@ -956,33 +689,15 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
               .replace(/\{\{hora\}\}/g, hora)
               .replace(/\{\{servicio\}\}/g, servicio);
 
-            // No artificial sleep in scheduled reminder batches to avoid timeout accumulation.
-
-            // Use smart send for reminders too
-            const sendResult = await sendWhatsAppMessageSmart(
-              supabase, supabaseUrl, supabaseKey,
-              {
-                id: conv.id, clinic_id: conv.clinic_id,
-                channel: conv.channel || "whatsapp",
-                visitor_contact: conv.visitor_contact,
-                contact_id: conv.contact_id,
-                last_client_message_at: conv.last_client_message_at,
-              },
-              message, "recordatorio_cita", globalAgentName,
-            );
-
-            if (!sendResult.sent) continue;
-
-            await supabase.from("conversations").update({
-              appointment_reminder_1_sent: true,
-              appointment_reminder_1_sent_at: nowDate.toISOString(),
-              appointment_status: "reminder_1_sent",
-            }).eq("id", conv.id);
-
-            await supabase.from("conversation_pipeline_history").insert({
-              conversation_id: conv.id, clinic_id: conv.clinic_id,
-              from_tab: "agendados", to_tab: "agendados",
-              moved_by: "system", reason: `Recordatorio 1 enviado${sendResult.type === "template" ? " (template)" : ""}`,
+            await supabase.from("pipeline_message_queue").insert({
+              conversation_id: conv.id,
+              clinic_id: conv.clinic_id,
+              contact_number: 0,
+              message_type: "recordatorio_cita_1",
+              status: "pending",
+              priority: 100,
+              scheduled_at: new Date().toISOString(),
+              generated_message: message,
             });
 
             tarea5Reminder1++;
@@ -1012,6 +727,16 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
             const hoursUntil = (appointmentDate.getTime() - nowDate.getTime()) / (1000 * 60 * 60);
             if (hoursUntil > r2Config.hours_before_appointment) continue;
 
+            const { data: existingReminder } = await supabase
+              .from("pipeline_message_queue")
+              .select("id")
+              .eq("conversation_id", conv.id)
+              .eq("message_type", "recordatorio_cita_2")
+              .in("status", ["pending", "processing", "retry"])
+              .maybeSingle();
+
+            if (existingReminder) continue;
+
             let contactName = "cliente";
             if (conv.contact_id) {
               const { data: contact } = await supabase.from("contacts").select("name").eq("id", conv.contact_id).single();
@@ -1028,32 +753,15 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
               .replace(/\{\{hora\}\}/g, hora)
               .replace(/\{\{servicio\}\}/g, servicio);
 
-            // No artificial sleep in scheduled reminder batches to avoid timeout accumulation.
-
-            const sendResult = await sendWhatsAppMessageSmart(
-              supabase, supabaseUrl, supabaseKey,
-              {
-                id: conv.id, clinic_id: conv.clinic_id,
-                channel: conv.channel || "whatsapp",
-                visitor_contact: conv.visitor_contact,
-                contact_id: conv.contact_id,
-                last_client_message_at: conv.last_client_message_at,
-              },
-              message, "recordatorio_cita", globalAgentName,
-            );
-
-            if (!sendResult.sent) continue;
-
-            await supabase.from("conversations").update({
-              appointment_reminder_2_sent: true,
-              appointment_reminder_2_sent_at: nowDate.toISOString(),
-              appointment_status: "reminder_2_sent",
-            }).eq("id", conv.id);
-
-            await supabase.from("conversation_pipeline_history").insert({
-              conversation_id: conv.id, clinic_id: conv.clinic_id,
-              from_tab: "agendados", to_tab: "agendados",
-              moved_by: "system", reason: `Recordatorio 2 enviado${sendResult.type === "template" ? " (template)" : ""}`,
+            await supabase.from("pipeline_message_queue").insert({
+              conversation_id: conv.id,
+              clinic_id: conv.clinic_id,
+              contact_number: 0,
+              message_type: "recordatorio_cita_2",
+              status: "pending",
+              priority: 100,
+              scheduled_at: new Date().toISOString(),
+              generated_message: message,
             });
 
             tarea5Reminder2++;
@@ -1062,6 +770,379 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
           }
         }
       }
+    }
+
+    // ========== TAREA 6: PROCESS QUEUE ==========
+    console.log("[PIPELINE] TAREA 6: Processing message queue...");
+
+    const { data: queueItems } = await supabase
+      .from("pipeline_message_queue")
+      .select("*")
+      .in("status", ["pending", "retry"])
+      .lte("scheduled_at", new Date().toISOString())
+      .order("priority", { ascending: false })
+      .order("scheduled_at", { ascending: true })
+      .limit(queueBatchSize);
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
+    for (let qi = 0; qi < (queueItems || []).length; qi++) {
+      const queueItem = queueItems![qi];
+
+      try {
+        // Mark as processing
+        await supabase.from("pipeline_message_queue").update({
+          status: "processing",
+          last_attempt_at: new Date().toISOString(),
+        }).eq("id", queueItem.id);
+
+        // Verify conversation still in correct state
+        const { data: convFresh } = await supabase
+          .from("conversations")
+          .select("id, clinic_id, pipeline_tab, seguimiento_contact_number, contact_id, channel, visitor_contact, last_client_message_at, seguimiento_last_completed_s, seguimiento_next_s, seguimiento_responded_at_s, seguimiento_is_recurrente, seguimiento_recurrente_count, seguimiento_consecutive_read_no_reply")
+          .eq("id", queueItem.conversation_id)
+          .single();
+
+        if (!convFresh) {
+          await supabase.from("pipeline_message_queue").update({ status: "cancelled", last_error: "Conversation not found" }).eq("id", queueItem.id);
+          tarea6Cancelled++;
+          continue;
+        }
+
+        // For seguimiento: check conversation is still in the right stage
+        if (queueItem.message_type === "seguimiento") {
+          const expectedTab = `seguimiento_s${queueItem.contact_number}`;
+          if (convFresh.pipeline_tab !== expectedTab) {
+            await supabase.from("pipeline_message_queue").update({ status: "cancelled", last_error: `Conv moved to ${convFresh.pipeline_tab}` }).eq("id", queueItem.id);
+            tarea6Cancelled++;
+            console.log(`[QUEUE] Cancelled S${queueItem.contact_number} for conv ${queueItem.conversation_id}: moved to ${convFresh.pipeline_tab}`);
+            continue;
+          }
+
+          // Anti-spam re-check
+          const spamLimit = Number(rules["spam_protection_read_no_reply_limit"]) || 4;
+          if ((convFresh.seguimiento_consecutive_read_no_reply || 0) >= spamLimit) {
+            await supabase.from("pipeline_message_queue").update({ status: "cancelled", last_error: "Spam protection triggered" }).eq("id", queueItem.id);
+            await supabase.from("conversations").update({
+              pipeline_tab: "seguimiento_s9",
+              seguimiento_contact_number: 9,
+              seguimiento_next_s: 9,
+              seguimiento_next_contact_at: null,
+              seguimiento_spam_protection_triggered: true,
+              seguimiento_spam_jumped_from_s: queueItem.contact_number,
+            }).eq("id", convFresh.id);
+            tarea6Cancelled++;
+            continue;
+          }
+        }
+
+        // Generate message if not pre-generated (reminders have generated_message)
+        let messageContent = queueItem.generated_message;
+
+        if (!messageContent && LOVABLE_API_KEY) {
+          const contactNumber = queueItem.contact_number;
+          const strategy = strategiesMap[contactNumber];
+          const agentName = await getClinicAgentName(convFresh.clinic_id);
+          const { data: clinic } = await supabase.from("clinics").select("name").eq("id", convFresh.clinic_id).single();
+          const clinicName = clinic?.name || "el negocio";
+
+          // Load AI agent config for context
+          const { data: agentConfig } = await supabase.from("ai_agent_config")
+            .select("services, treatments_text, prices_text, locations_text, professionals_text, special_instructions")
+            .eq("clinic_id", convFresh.clinic_id).maybeSingle();
+
+          let clinicKnowledgeBlock = "";
+          if (agentConfig) {
+            const parts: string[] = [];
+            if (agentConfig.treatments_text) parts.push(`TRATAMIENTOS/SERVICIOS:\n${agentConfig.treatments_text}`);
+            if (agentConfig.prices_text) parts.push(`PRECIOS:\n${agentConfig.prices_text}`);
+            if (agentConfig.locations_text) parts.push(`UBICACIÓN:\n${agentConfig.locations_text}`);
+            if (agentConfig.professionals_text) parts.push(`PROFESIONALES:\n${agentConfig.professionals_text}`);
+            if (parts.length > 0) {
+              clinicKnowledgeBlock = `\nINFORMACIÓN REAL DEL NEGOCIO (SOLO usa estos datos, NUNCA inventes servicios ni precios):\n${parts.join("\n\n")}`;
+            }
+          }
+
+          let contactName = "cliente";
+          if (convFresh.contact_id) {
+            const { data: contact } = await supabase.from("contacts").select("name").eq("id", convFresh.contact_id).single();
+            if (contact?.name) contactName = contact.name.split(" ")[0];
+          }
+
+          const { data: recentMessages } = await supabase
+            .from("messages").select("direction, content")
+            .eq("conversation_id", convFresh.id)
+            .order("created_at", { ascending: false }).limit(20);
+          if (recentMessages) recentMessages.reverse();
+
+          const messagesContext = (recentMessages || [])
+            .map(m => `${m.direction === "inbound" ? "Cliente" : agentName}: ${m.content}`)
+            .join("\n");
+
+          let manualMoveContext = "";
+          const { data: lastMove } = await supabase
+            .from("conversation_pipeline_history")
+            .select("from_tab, to_tab, moved_by, reason, metadata")
+            .eq("conversation_id", convFresh.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (lastMove && lastMove.moved_by !== "system") {
+            const meta = lastMove.metadata as Record<string, any> | null;
+            manualMoveContext = `\nCONTEXTO DE MOVIMIENTO:\n- Movida manualmente por agente de '${lastMove.from_tab}' a '${lastMove.to_tab}'\n- Razón: ${lastMove.reason || "Sin razón"}\n- Agente: ${meta?.agent_name || "Agente"}`;
+          }
+
+          let followUpPrompt: string;
+          if (strategy) {
+            followUpPrompt = `Eres ${agentName}, asistente de ${clinicName}. Estás dando seguimiento a un paciente que dejó de responder.\n\nCONVERSACIÓN COMPLETA (últimos 20 mensajes):\n${messagesContext}\n${clinicKnowledgeBlock}\n\nINFORMACIÓN DEL CONTACTO:\n- Nombre: ${contactName}\n- Es recurrente: ${convFresh.seguimiento_is_recurrente} (veces: ${convFresh.seguimiento_recurrente_count})\n- Respondió por última vez en S${convFresh.seguimiento_responded_at_s}\n${manualMoveContext}\n\nCONTACTO ACTUAL: S${contactNumber} de 10\nESTRATEGIA: ${strategy.strategy_name} — ${strategy.strategy_description}\nINSTRUCCIÓN: ${strategy.prompt_instruction}\nREGLAS DE ESTA ESTRATEGIA: ${strategy.rules}\nBARRERA QUE DEBES RESOLVER: ${strategy.barrier_it_solves}\nPRINCIPIO PSICOLÓGICO: ${strategy.psychological_principle}\n\nREGLAS GLOBALES INQUEBRANTABLES:\n1. Genera UN solo mensaje corto (máximo 2 oraciones, máximo 160 caracteres)\n2. Adapta la estrategia al CONTEXTO REAL de la conversación\n3. Retoma lo ÚLTIMO que se habló, NUNCA repitas información ya dada\n4. Suena como una persona real llamada ${agentName}, NO como bot ni vendedora\n5. Usa el nombre del cliente: ${contactName}\n6. Si es S1: preséntate brevemente ("Hola ${contactName}, soy ${agentName} de ${clinicName}")\n7. Si es S2-S8: NO repitas tu nombre, ya te presentaste\n8. NUNCA menciones que eres bot, IA, sistema automatizado, o que esto es un "seguimiento automático"\n9. NUNCA uses frases como "sistema de seguimiento", "mensaje programado", "recordatorio automático"\n10. Si el cliente es recurrente, sé más directa y familiar (ya te conoce)\n11. Si es S7 o S8: el tono es empático y de despedida, SIN preguntas\n12. NUNCA sugieras "agendar una llamada" ni "llamar" — la comunicación es por MENSAJES. Ofrece agendar una CITA presencial o resolver dudas por este medio.\n13. NUNCA inventes números exactos de cupos (ej. "quedan 2 cupos"). Usa "pocos cupos" o "espacios limitados". Ofrece DÍAS disponibles, NUNCA horarios específicos.\n14. SOLO menciona servicios, tratamientos y precios que aparezcan en la INFORMACIÓN REAL DEL NEGOCIO. NUNCA inventes servicios que no existan.\n\nResponde SOLO con el texto del mensaje. Sin comillas, sin explicación.`;
+          } else {
+            followUpPrompt = `Genera un mensaje de seguimiento #${contactNumber} para ${contactName}. Contexto: ${messagesContext}. ${manualMoveContext} Máximo 2 oraciones.`;
+          }
+
+          const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                { role: "system", content: followUpPrompt },
+                { role: "user", content: "Genera el mensaje de seguimiento." },
+              ],
+              stream: false,
+              max_tokens: 200,
+            }),
+          });
+
+          if (!aiResp.ok) {
+            const errText = await aiResp.text();
+            throw new Error(`AI generation failed: ${errText}`);
+          }
+
+          const aiData = await aiResp.json();
+          messageContent = aiData.choices?.[0]?.message?.content?.trim();
+
+          if (!messageContent) {
+            throw new Error("Empty AI response");
+          }
+
+          // Save generated message and log tokens
+          await supabase.from("pipeline_message_queue").update({ generated_message: messageContent }).eq("id", queueItem.id);
+
+          const usage = aiData?.usage || {};
+          await supabase.from("ai_token_usage").insert({
+            clinic_id: convFresh.clinic_id,
+            generator_type: "agent",
+            model: aiData?.model || "google/gemini-2.5-flash",
+            tokens_input: usage.prompt_tokens || 0,
+            tokens_output: usage.completion_tokens || 0,
+            cost_usd: 0,
+            action_label: `Seguimiento S${contactNumber} — ${strategy?.strategy_name || "generic"}`,
+          });
+        }
+
+        if (!messageContent) {
+          throw new Error("No message content to send");
+        }
+
+        // === SEND IMMEDIATELY (no humanized delay for queue) ===
+        const agentName = await getClinicAgentName(convFresh.clinic_id);
+        const sendContext = queueItem.message_type.startsWith("recordatorio_cita") ? "recordatorio_cita" : "seguimiento";
+
+        const sendResult = await sendWhatsAppMessageSmart(
+          supabase, supabaseUrl, supabaseKey,
+          {
+            id: convFresh.id, clinic_id: convFresh.clinic_id,
+            channel: convFresh.channel || "whatsapp",
+            visitor_contact: convFresh.visitor_contact,
+            contact_id: convFresh.contact_id,
+            last_client_message_at: convFresh.last_client_message_at,
+          },
+          messageContent, sendContext, agentName,
+        );
+
+        if (!sendResult.sent) {
+          if (sendResult.type === "blocked") {
+            // Template not approved — retry later
+            const retryAt = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
+            await supabase.from("conversations").update({ seguimiento_next_contact_at: retryAt }).eq("id", convFresh.id);
+          }
+          throw new Error(`Send failed: ${sendResult.reason || sendResult.type}`);
+        }
+
+        // === SUCCESS: Update queue and advance pipeline ===
+        const sentAt = new Date();
+        await supabase.from("pipeline_message_queue").update({
+          status: "sent",
+          sent_at: sentAt.toISOString(),
+        }).eq("id", queueItem.id);
+
+        tarea6Sent++;
+        console.log(`[QUEUE] S${queueItem.contact_number} sent as ${sendResult.type} for conv ${convFresh.id}`);
+
+        // Advance pipeline — cronómetro del siguiente S empieza AQUÍ (al enviar)
+        if (queueItem.message_type === "seguimiento") {
+          const contactNumber = queueItem.contact_number;
+          const nextContactNumber = contactNumber + 1;
+
+          if (nextContactNumber > maxAutoContacts) {
+            await supabase.from("conversations").update({
+              pipeline_tab: "no_responden",
+              seguimiento_next_contact_at: null,
+              seguimiento_last_contact_at: sentAt.toISOString(),
+              seguimiento_last_completed_s: contactNumber,
+            }).eq("id", convFresh.id);
+            await supabase.from("conversation_pipeline_history").insert({
+              conversation_id: convFresh.id, clinic_id: convFresh.clinic_id,
+              from_tab: `seguimiento_s${contactNumber}`, to_tab: "no_responden",
+              moved_by: "system", reason: `Sin respuesta después de ${maxAutoContacts} contactos`,
+            });
+            tarea2NoResponden++;
+          } else {
+            const clinicTz = await getClinicTimezone(convFresh.clinic_id);
+            const actualDelay = await getClinicStageDelay(convFresh.clinic_id, nextContactNumber);
+
+            // CRITICAL: next timer starts from sentAt (NOW), not from scheduled_at
+            const nextContactDate = getScheduledContactTime(clinicTz, actualDelay, sendWindowStart, sendWindowEnd, sentAt);
+
+            await supabase.from("conversations").update({
+              pipeline_tab: `seguimiento_s${nextContactNumber}`,
+              seguimiento_contact_number: nextContactNumber,
+              seguimiento_next_contact_at: nextContactDate.toISOString(),
+              seguimiento_last_contact_at: sentAt.toISOString(),
+              seguimiento_last_completed_s: contactNumber,
+            }).eq("id", convFresh.id);
+
+            await supabase.from("conversation_pipeline_history").insert({
+              conversation_id: convFresh.id, clinic_id: convFresh.clinic_id,
+              from_tab: `seguimiento_s${contactNumber}`, to_tab: `seguimiento_s${nextContactNumber}`,
+              moved_by: "system", reason: `S${contactNumber} (${strategiesMap[contactNumber]?.strategy_name || "generic"}) enviado${sendResult.type === "template" ? " como template" : ""}`,
+            });
+          }
+
+          await supabase.from("conversations").update({
+            last_message_at: sentAt.toISOString(),
+            last_message_preview: messageContent.substring(0, 100),
+          }).eq("id", convFresh.id);
+        }
+
+        // Handle reminders
+        if (queueItem.message_type === "recordatorio_cita_1") {
+          await supabase.from("conversations").update({
+            appointment_reminder_1_sent: true,
+            appointment_reminder_1_sent_at: sentAt.toISOString(),
+            appointment_status: "reminder_1_sent",
+          }).eq("id", convFresh.id);
+          await supabase.from("conversation_pipeline_history").insert({
+            conversation_id: convFresh.id, clinic_id: convFresh.clinic_id,
+            from_tab: "agendados", to_tab: "agendados",
+            moved_by: "system", reason: `Recordatorio 1 enviado${sendResult.type === "template" ? " (template)" : ""}`,
+          });
+        }
+        if (queueItem.message_type === "recordatorio_cita_2") {
+          await supabase.from("conversations").update({
+            appointment_reminder_2_sent: true,
+            appointment_reminder_2_sent_at: sentAt.toISOString(),
+            appointment_status: "reminder_2_sent",
+          }).eq("id", convFresh.id);
+          await supabase.from("conversation_pipeline_history").insert({
+            conversation_id: convFresh.id, clinic_id: convFresh.clinic_id,
+            from_tab: "agendados", to_tab: "agendados",
+            moved_by: "system", reason: `Recordatorio 2 enviado${sendResult.type === "template" ? " (template)" : ""}`,
+          });
+        }
+
+        // Wait between sends (rate limit)
+        if (qi < (queueItems!.length - 1)) {
+          await sleep(queueDelayBetweenSendsMs);
+        }
+
+      } catch (e) {
+        const errMsg = e instanceof Error ? e.message : String(e);
+        const newAttemptCount = (queueItem.attempt_count || 0) + 1;
+
+        if (newAttemptCount >= queueMaxRetryAttempts) {
+          await supabase.from("pipeline_message_queue").update({
+            status: "failed",
+            attempt_count: newAttemptCount,
+            last_error: errMsg,
+          }).eq("id", queueItem.id);
+          tarea6Failed++;
+          console.error(`[QUEUE] FAILED (${newAttemptCount}/${queueMaxRetryAttempts}) S${queueItem.contact_number} for conv ${queueItem.conversation_id}: ${errMsg}`);
+        } else {
+          await supabase.from("pipeline_message_queue").update({
+            status: "retry",
+            attempt_count: newAttemptCount,
+            last_error: errMsg,
+          }).eq("id", queueItem.id);
+          tarea6Retried++;
+          console.warn(`[QUEUE] Retry (${newAttemptCount}/${queueMaxRetryAttempts}) S${queueItem.contact_number} for conv ${queueItem.conversation_id}: ${errMsg}`);
+        }
+
+        errors.push({ conversation_id: queueItem.conversation_id, error: errMsg });
+      }
+    }
+
+    // ========== TAREA 7: QUEUE CLEANUP ==========
+    console.log("[PIPELINE] TAREA 7: Queue cleanup...");
+
+    // 7.1 Cancel orphans (conversation moved away from seguimiento)
+    const { data: orphanResult } = await supabase.rpc("pipeline_cancel_orphan_queue_items" as any).select();
+    // Fallback: manual query if RPC doesn't exist
+    const { data: orphanItems } = await supabase
+      .from("pipeline_message_queue")
+      .select("id, conversation_id")
+      .in("status", ["pending", "retry"])
+      .eq("message_type", "seguimiento");
+
+    for (const item of orphanItems || []) {
+      const { data: convCheck } = await supabase
+        .from("conversations")
+        .select("pipeline_tab")
+        .eq("id", item.conversation_id)
+        .single();
+
+      if (convCheck && !convCheck.pipeline_tab?.startsWith("seguimiento_s")) {
+        await supabase.from("pipeline_message_queue").update({
+          status: "cancelled",
+          last_error: `Conversation moved to ${convCheck.pipeline_tab}`,
+        }).eq("id", item.id);
+        tarea7Orphans++;
+      }
+    }
+
+    // 7.2 Release stale processing items (>10 min)
+    const staleThreshold = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data: staleItems } = await supabase
+      .from("pipeline_message_queue")
+      .select("id")
+      .eq("status", "processing")
+      .lt("last_attempt_at", staleThreshold);
+
+    for (const item of staleItems || []) {
+      await supabase.from("pipeline_message_queue").update({
+        status: "retry",
+        last_error: "Timeout: stuck in processing >10min",
+      }).eq("id", item.id);
+      tarea7Stale++;
+    }
+
+    // 7.3 Clean old completed items (>30 days)
+    const cleanThreshold = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const { count: cleanedCount } = await supabase
+      .from("pipeline_message_queue")
+      .delete()
+      .in("status", ["sent", "cancelled", "resolved_manually"])
+      .lt("created_at", cleanThreshold)
+      .select("id", { count: "exact", head: true });
+
+    tarea7Cleaned = cleanedCount || 0;
+
+    if (tarea7Orphans + tarea7Stale + tarea7Cleaned > 0) {
+      console.log(`[PIPELINE] Cleanup: ${tarea7Orphans} orphans, ${tarea7Stale} stale, ${tarea7Cleaned} old records`);
     }
 
   } finally {
@@ -1074,17 +1155,24 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
   const result = {
     executed_at: new Date().toISOString(),
     tarea1_moved_to_seguimiento: tarea1Count,
-    tarea2_messages_sent: tarea2Sent,
+    tarea2_enqueued: tarea2Enqueued,
     tarea2_moved_to_no_responden: tarea2NoResponden,
     tarea3_inconsistencies_fixed: tarea3Fixed,
-    tarea5_reminder1_sent: tarea5Reminder1,
-    tarea5_reminder2_sent: tarea5Reminder2,
+    tarea5_reminder1_enqueued: tarea5Reminder1,
+    tarea5_reminder2_enqueued: tarea5Reminder2,
+    tarea6_sent: tarea6Sent,
+    tarea6_retried: tarea6Retried,
+    tarea6_failed: tarea6Failed,
+    tarea6_cancelled: tarea6Cancelled,
+    tarea7_orphans_cancelled: tarea7Orphans,
+    tarea7_stale_released: tarea7Stale,
+    tarea7_old_cleaned: tarea7Cleaned,
     errors,
   };
 
   await supabase.from("pipeline_execution_log").insert({
     moved_to_seguimiento: tarea1Count,
-    messages_sent: tarea2Sent,
+    messages_sent: tarea6Sent,
     moved_to_no_responden: tarea2NoResponden,
     inconsistencies_fixed: tarea3Fixed,
     errors: errors.length > 0 ? JSON.stringify(errors) : "[]",
