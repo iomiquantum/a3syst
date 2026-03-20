@@ -2,10 +2,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import ConversationCard from "./ConversationCard";
 import MensajesChat from "./MensajesChat";
 import ContactInfoPanel from "./ContactInfoPanel";
+import { getSeguimientoRemainingSeconds } from "./SeguimientoCountdown";
 import type { PipelineConversation, PipelineTab } from "@/hooks/useConversationsByPipeline";
 
 const KANBAN_COLUMNS: { tab: PipelineTab | string; label: string; color: string }[] = [
@@ -30,6 +31,10 @@ const KANBAN_COLUMNS: { tab: PipelineTab | string; label: string; color: string 
   { tab: "perdidos", label: "Perdidos", color: "bg-pink-500" },
 ];
 
+const SEGUIMIENTO_TABS = new Set(
+  Array.from({ length: 10 }, (_, i) => `seguimiento_s${i + 1}`)
+);
+
 interface Props {
   conversations: PipelineConversation[];
   onActionComplete?: () => void;
@@ -51,6 +56,27 @@ const MensajesKanban = ({ conversations, onActionComplete }: Props) => {
     if (!open) setShowContactPanel(false);
   };
 
+  // Pre-sort seguimiento columns by time remaining (closest first)
+  const sortedConversations = useMemo(() => {
+    const grouped = new Map<string, PipelineConversation[]>();
+    for (const c of conversations) {
+      const tab = c.pipeline_tab || "resueltos_ia";
+      if (!grouped.has(tab)) grouped.set(tab, []);
+      grouped.get(tab)!.push(c);
+    }
+    // Sort seguimiento columns
+    for (const [tab, items] of grouped) {
+      if (SEGUIMIENTO_TABS.has(tab)) {
+        items.sort((a, b) => {
+          const aTime = getSeguimientoRemainingSeconds(a.seguimiento_next_contact_at, a.inactivity_timer_start, a.pipeline_tab);
+          const bTime = getSeguimientoRemainingSeconds(b.seguimiento_next_contact_at, b.inactivity_timer_start, b.pipeline_tab);
+          return aTime - bTime;
+        });
+      }
+    }
+    return grouped;
+  }, [conversations]);
+
   return (
     <>
       <div
@@ -58,7 +84,7 @@ const MensajesKanban = ({ conversations, onActionComplete }: Props) => {
         style={{ gridTemplateColumns: `repeat(${KANBAN_COLUMNS.length}, minmax(160px, 1fr))` }}
       >
         {KANBAN_COLUMNS.map(col => {
-          const items = conversations.filter(c => c.pipeline_tab === col.tab);
+          const items = sortedConversations.get(col.tab) || [];
           return (
             <div key={col.tab} className="flex flex-col min-w-0 rounded-lg border border-border bg-muted/30">
               <div className="p-2.5 border-b border-border flex items-center justify-between">
