@@ -45,6 +45,7 @@ interface ChatMessage {
 const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPanel, onToggleContactPanel }: Props) => {
   const { clinicId } = useClinic();
   const { user } = useAuth();
+  const { agentName } = useAgentName();
   const { moveConversation } = usePipelineAction();
   const { templateSlug } = useClinicTemplate();
   const [input, setInput] = useState("");
