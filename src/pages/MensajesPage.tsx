@@ -212,14 +212,25 @@ const MensajesPage = () => {
                 />
               </div>
 
-              <div className="flex-1 min-w-0 overflow-hidden">
+              <div className="flex-1 min-w-0 overflow-hidden relative">
                 {selectedConv ? (
-                  <MensajesChat
-                    conversation={selectedConv}
-                    onActionComplete={handleActionComplete}
-                    showContactPanel={showContactPanel}
-                    onToggleContactPanel={() => setShowContactPanel(p => !p)}
-                  />
+                  <>
+                    <MensajesChat
+                      conversation={selectedConv}
+                      onActionComplete={handleActionComplete}
+                      showContactPanel={showContactPanel}
+                      onToggleContactPanel={() => setShowContactPanel(p => !p)}
+                    />
+                    {showContactPanel && (
+                      <div className="absolute inset-y-0 right-0 w-[300px] border-l border-border bg-card shadow-lg z-20 hidden md:block">
+                        <ContactInfoPanel
+                          conversation={selectedConv}
+                          onActionComplete={handleActionComplete}
+                          onClose={() => setShowContactPanel(false)}
+                        />
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
                     <MessageSquare className="w-12 h-12 mb-3 opacity-30" />
@@ -230,16 +241,6 @@ const MensajesPage = () => {
                   </div>
                 )}
               </div>
-
-              {selectedConv && showContactPanel && (
-                <div className="w-[280px] border-l border-border shrink-0 overflow-hidden hidden md:block">
-                  <ContactInfoPanel
-                    conversation={selectedConv}
-                    onActionComplete={handleActionComplete}
-                    onClose={() => setShowContactPanel(false)}
-                  />
-                </div>
-              )}
             </>
           )}
         </div>
