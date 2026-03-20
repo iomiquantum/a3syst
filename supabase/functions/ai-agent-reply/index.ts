@@ -33,6 +33,9 @@ serve(async (req) => {
     if (!agentConfig || !agentConfig.enabled) {
       return new Response(JSON.stringify({ error: "AI agent not configured or disabled" }), {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Fetch clinic schedule info
     const { data: clinicInfo } = await supabase
@@ -40,9 +43,6 @@ serve(async (req) => {
       .select("name, working_days, opening_hour, closing_hour")
       .eq("id", clinic_id)
       .single();
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const { data: conversationData, error: conversationError } = await supabase
       .from("conversations")
