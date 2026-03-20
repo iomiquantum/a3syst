@@ -60,9 +60,16 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
   const [loadingMsgs, setLoadingMsgs] = useState(true);
   const [sending, setSending] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [windowJustClosed, setWindowJustClosed] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const isWhatsAppBlocked = c.channel === "whatsapp" && Boolean((c as any).whatsapp_window_blocked);
+
+  // Calculate window status from last_client_message_at OR explicit block flag
+  const lastClientAt = (c as any).last_client_message_at;
+  const windowExpiredByTime = c.channel === "whatsapp" && lastClientAt
+    ? (Date.now() - new Date(lastClientAt).getTime()) > 24 * 60 * 60 * 1000
+    : false;
+  const isWhatsAppBlocked = c.channel === "whatsapp" && (Boolean((c as any).whatsapp_window_blocked) || windowExpiredByTime || windowJustClosed);
 
   // Fetch real messages
   useEffect(() => {
