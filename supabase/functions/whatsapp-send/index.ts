@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
         const retryResult = await retryResponse.json();
         if (retryResponse.ok) {
           const waMessageId = retryResult?.messages?.[0]?.id;
-          await logOutboundMessage(supabase, connection, effectiveClinicId, targetNumber, msgType, msgContent, waMessageId, sent_by, conversation_id, template_name);
+          await logOutboundMessage(supabase, connection, effectiveClinicId, targetNumber, msgType, msgContent, waMessageId, sent_by, conversation_id, template_name, origin);
           return jsonResponse({ success: true, wa_message_id: waMessageId });
         }
         return jsonResponse({ error: "Failed to send", details: retryResult }, retryResponse.status);
