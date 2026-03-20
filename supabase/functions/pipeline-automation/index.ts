@@ -248,9 +248,51 @@ Deno.serve(async (req) => {
     const strategiesMap: Record<number, any> = {};
     (strategiesRows || []).forEach((s: any) => { strategiesMap[s.contact_number] = s; });
 
-    // Check business hours (7AM-11PM)
-    const nowHour = new Date().getHours();
-    const isWithinSendWindow = nowHour >= sendWindowStart && nowHour < sendWindowEnd;
+    // Helper: get current hour in a timezone
+    function getNowHourInTz(tz: string): number {
+      try {
+        const formatter = new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: tz });
+        return parseInt(formatter.format(new Date()), 10);
+      } catch {
+        return new Date().getUTCHours(); // fallback to UTC
+      }
+    }
+
+    // Helper: get next window opening in a timezone
+    function getNextWindowStart(tz: string, startHour: number): Date {
+      const now = new Date();
+      // Get today's date in the target timezone
+      const dateFormatter = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" });
+      const hourInTz = getNowHourInTz(tz);
+      const dateParts = dateFormatter.format(now); // YYYY-MM-DD
+      
+      // If current hour >= startHour, next window is tomorrow
+      const targetDate = hourInTz >= startHour ? new Date(now.getTime() + 24 * 60 * 60 * 1000) : now;
+      const targetDateStr = dateFormatter.format(targetDate);
+      
+      // Create a date string in the timezone and convert to UTC
+      const targetMs = new Date(`${targetDateStr}T${String(startHour).padStart(2, "0")}:00:00`).getTime();
+      // Adjust for timezone offset
+      const utcOffset = getTimezoneOffsetMs(tz);
+      return new Date(targetMs + utcOffset);
+    }
+
+    function getTimezoneOffsetMs(tz: string): number {
+      const now = new Date();
+      const utcStr = now.toLocaleString("en-US", { timeZone: "UTC" });
+      const tzStr = now.toLocaleString("en-US", { timeZone: tz });
+      return new Date(utcStr).getTime() - new Date(tzStr).getTime();
+    }
+
+    // Cache clinic timezones to avoid repeated queries
+    const clinicTimezoneCache: Record<string, string> = {};
+    async function getClinicTimezone(clinicId: string): Promise<string> {
+      if (clinicTimezoneCache[clinicId]) return clinicTimezoneCache[clinicId];
+      const { data } = await supabase.from("clinics").select("timezone").eq("id", clinicId).single();
+      const tz = data?.timezone || "America/Guayaquil";
+      clinicTimezoneCache[clinicId] = tz;
+      return tz;
+    }
 
     // ========== TAREA 1: Inactivity timeout ==========
     console.log("[PIPELINE] TAREA 1: Checking inactivity timeout...");
@@ -309,18 +351,20 @@ Deno.serve(async (req) => {
 
     for (const conv of followUpConvs || []) {
       try {
+        // Check business hours per clinic timezone
+        const clinicTz = await getClinicTimezone(conv.clinic_id);
+        const clinicHour = getNowHourInTz(clinicTz);
+        const isWithinSendWindow = clinicHour >= sendWindowStart && clinicHour < sendWindowEnd;
+
         if (!isWithinSendWindow) {
-          // Postpone to next window opening (7AM)
-          const tomorrow7am = new Date();
-          tomorrow7am.setDate(tomorrow7am.getDate() + (nowHour >= sendWindowEnd ? 1 : 0));
-          tomorrow7am.setHours(sendWindowStart, 0, 0, 0);
-          if (tomorrow7am.getTime() <= Date.now()) tomorrow7am.setDate(tomorrow7am.getDate() + 1);
+          // Postpone to next window opening in clinic's timezone
+          const nextWindow = getNextWindowStart(clinicTz, sendWindowStart);
 
           await supabase.from("conversations").update({
-            seguimiento_next_contact_at: tomorrow7am.toISOString(),
+            seguimiento_next_contact_at: nextWindow.toISOString(),
           }).eq("id", conv.id);
 
-          console.log(`[PIPELINE] Outside send window (${sendWindowStart}-${sendWindowEnd}), postponed conv ${conv.id} to ${tomorrow7am.toISOString()}`);
+          console.log(`[PIPELINE] Outside send window (${sendWindowStart}-${sendWindowEnd} in ${clinicTz}, current=${clinicHour}h), postponed conv ${conv.id} to ${nextWindow.toISOString()}`);
           continue;
         }
 
