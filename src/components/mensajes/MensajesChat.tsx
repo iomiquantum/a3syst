@@ -254,6 +254,16 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
       {/* Appointment Banner */}
       <AppointmentBanner conversation={c} onActionComplete={onActionComplete} />
 
+      {/* Anti-spam Banner */}
+      {c.pipeline_tab === "seguimiento_s9" && (c as any).seguimiento_spam_protection_triggered && (
+        <AntiSpamBadge
+          consecutiveReadNoReply={(c as any).seguimiento_consecutive_read_no_reply || 0}
+          spamProtectionTriggered={true}
+          spamJumpedFromS={(c as any).seguimiento_spam_jumped_from_s}
+          variant="banner"
+        />
+      )}
+
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3">
         <div className="space-y-3 max-w-2xl mx-auto">
@@ -278,9 +288,12 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                   </div>
                 )}
                 <p className="leading-relaxed whitespace-pre-wrap">{m.content}</p>
-                <p className={cn("text-[10px] mt-1 text-right", m.direction === "outbound" && !isBotMessage(m) ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                  {new Date(m.created_at).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
-                </p>
+                <div className={cn("flex items-center justify-end gap-1 mt-1", m.direction === "outbound" && !isBotMessage(m) ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                  <span className="text-[10px]">
+                    {new Date(m.created_at).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                  {m.direction === "outbound" && <MessageStatusIcon status={m.status} />}
+                </div>
               </div>
             </div>
           ))}
