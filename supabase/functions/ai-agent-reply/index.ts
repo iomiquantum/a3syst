@@ -537,9 +537,8 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
       action_label: isFollowUp ? `Seguimiento contacto ${(conversationData.follow_up_count || 0) + 1}` : `Respuesta automática agente`,
     });
 
-    // ====== POST-REPLY: Detect appointment intent (async, non-blocking) ======
-    if (!isFollowUp && triggered_by === "auto") {
-      // Get the inbound message that triggered this reply
+    // ====== POST-REPLY: Extract contact data (email, alternative phone) ======
+    if (!isFollowUp && !isDraft && conversationData.contact_id) {
       const { data: lastInbound } = await supabase
         .from("messages")
         .select("content")
@@ -549,26 +548,135 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
         .limit(1)
         .maybeSingle();
 
-      if (lastInbound?.content && convState?.pipeline_tab !== "agendados") {
+      if (lastInbound?.content) {
         try {
-          const detectResp = await fetch(`${supabaseUrl}/functions/v1/appointment-flow`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action: "detect_intent",
-              conversation_id,
-              clinic_id,
-              patient_message: lastInbound.content,
-            }),
-          });
+          const { data: currentContact } = await supabase
+            .from("contacts")
+            .select("phone, email, alternative_phone, notes")
+            .eq("id", conversationData.contact_id)
+            .single();
 
-          const detectResult = await detectResp.json();
-          console.log("Appointment intent detection:", JSON.stringify(detectResult));
+          if (currentContact) {
+            const extractResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: "google/gemini-2.5-flash-lite",
+                messages: [
+                  {
+                    role: "system",
+                    content: `Analiza el mensaje del paciente. ¿Contiene un correo electrónico o un número de teléfono diferente al que usa en WhatsApp?
 
-          // If needs_confirmation (medium confidence), we let the normal AI response go through
-          // The AI should naturally ask about scheduling based on context
+Teléfono actual de WhatsApp: ${currentContact.phone}
+
+Reglas:
+- Un email es cualquier texto con formato usuario@dominio.com
+- Un teléfono diferente es cualquier número que NO sea ${currentContact.phone}
+- Si el paciente dice "mi número es ${currentContact.phone}" (el mismo de WhatsApp), NO es diferente
+- Si menciona un número en contexto de servicio o precio (ej: "cuesta 25 dólares"), NO es teléfono
+- Si menciona un código postal, edad, cantidad, hora, NO es teléfono
+- El contexto del teléfono es para qué lo usa: "celular personal", "fijo de casa", "oficina", etc.`,
+                  },
+                  { role: "user", content: lastInbound.content },
+                ],
+                tools: [
+                  {
+                    type: "function",
+                    function: {
+                      name: "extract_contact_data",
+                      description: "Extract email and alternative phone from patient message",
+                      parameters: {
+                        type: "object",
+                        properties: {
+                          has_email: { type: "boolean" },
+                          email: { type: "string" },
+                          has_different_phone: { type: "boolean" },
+                          different_phone: { type: "string" },
+                          phone_context: { type: "string" },
+                        },
+                        required: ["has_email", "has_different_phone"],
+                        additionalProperties: false,
+                      },
+                    },
+                  },
+                ],
+                tool_choice: { type: "function", function: { name: "extract_contact_data" } },
+                stream: false,
+                max_tokens: 150,
+              }),
+            });
+
+            if (extractResp.ok) {
+              const extractData = await extractResp.json();
+              const toolCall = extractData.choices?.[0]?.message?.tool_calls?.[0];
+              if (toolCall?.function?.arguments) {
+                const parsed = JSON.parse(toolCall.function.arguments);
+                console.log("[CONTACT EXTRACT]", JSON.stringify(parsed));
+
+                const updates: Record<string, any> = {};
+
+                if (parsed.has_email && parsed.email) {
+                  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                  if (emailRegex.test(parsed.email)) {
+                    updates.email = parsed.email.toLowerCase().trim();
+                    console.log(`[CONTACT] Email updated: ${updates.email}`);
+                  }
+                }
+
+                if (parsed.has_different_phone && parsed.different_phone) {
+                  const cleanPhone = parsed.different_phone.replace(/[\s\-\(\)]/g, "");
+                  const currentClean = currentContact.phone.replace(/[\s\-\(\)]/g, "");
+                  
+                  if (cleanPhone !== currentClean && cleanPhone.length >= 7) {
+                    if (!currentContact.alternative_phone) {
+                      updates.alternative_phone = cleanPhone;
+                      updates.alternative_phone_label = parsed.phone_context || "Teléfono alternativo";
+                      console.log(`[CONTACT] Alternative phone saved: ${cleanPhone}`);
+                    } else {
+                      const existingClean = currentContact.alternative_phone.replace(/[\s\-\(\)]/g, "");
+                      if (existingClean !== cleanPhone) {
+                        const today = new Date().toISOString().split("T")[0];
+                        const noteEntry = `\n[${today}] Número adicional: ${cleanPhone} (${parsed.phone_context || "sin contexto"})`;
+                        updates.notes = (currentContact.notes || "") + noteEntry;
+                        console.log(`[CONTACT] Additional phone added to notes: ${cleanPhone}`);
+                      }
+                    }
+                  }
+                }
+
+                if (Object.keys(updates).length > 0) {
+                  updates.updated_at = new Date().toISOString();
+                  await supabase.from("contacts").update(updates).eq("id", conversationData.contact_id);
+                  console.log(`[CONTACT] Updated fields: ${Object.keys(updates).join(", ")}`);
+                }
+              }
+            }
+          }
         } catch (e) {
-          console.error("Appointment intent detection failed (non-blocking):", e);
+          console.error("[CONTACT EXTRACT] Non-blocking error:", e);
+        }
+
+        // ====== POST-REPLY: Detect appointment intent ======
+        if (triggered_by === "auto" && convState?.pipeline_tab !== "agendados") {
+          try {
+            const detectResp = await fetch(`${supabaseUrl}/functions/v1/appointment-flow`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action: "detect_intent",
+                conversation_id,
+                clinic_id,
+                patient_message: lastInbound.content,
+              }),
+            });
+            const detectResult = await detectResp.json();
+            console.log("Appointment intent detection:", JSON.stringify(detectResult));
+          } catch (e) {
+            console.error("Appointment intent detection failed (non-blocking):", e);
+          }
         }
       }
     }
