@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.whatsapp-verify-connection]
 verify_jwt = false
+
+[functions.pipeline-automation]
+verify_jwt = false
