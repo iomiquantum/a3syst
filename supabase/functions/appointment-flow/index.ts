@@ -288,7 +288,7 @@ Responde SOLO JSON válido:
 
       // If flow complete (patient confirmed all 3 and AI says complete)
       if (parsed.flow_complete && missingFields.length === 0) {
-        return await confirmAppointment(supabase, supabaseUrl, supabaseKey, conv, flowData, clinic_id, agentName, clinicName, branches);
+        return await confirmAppointment(supabase, supabaseUrl, supabaseKey, conv, flowData, clinic_id, agentName, clinicName, branches, agentConfig?.locations_text || null);
       }
 
       return jsonResponse({
@@ -315,7 +315,7 @@ Responde SOLO JSON válido:
       }
 
       const { data: agentConfig } = await supabase.from("ai_agent_config")
-        .select("agent_name").eq("clinic_id", clinic_id).maybeSingle();
+        .select("agent_name, locations_text").eq("clinic_id", clinic_id).maybeSingle();
       const { data: clinic } = await supabase.from("clinics").select("name").eq("id", clinic_id).single();
       const { data: branches } = await supabase.from("branches")
         .select("id, name, address, google_maps_url").eq("clinic_id", clinic_id).eq("active", true);
@@ -323,6 +323,7 @@ Responde SOLO JSON válido:
       return await confirmAppointment(
         supabase, supabaseUrl, supabaseKey, conv, flowData, clinic_id,
         agentConfig?.agent_name || "Asistente", clinic?.name || "el negocio", branches,
+        agentConfig?.locations_text || null,
       );
     }
 
@@ -373,29 +374,22 @@ Responde SOLO JSON: { "intent": "CONFIRMED|CANCEL|RESCHEDULE|OTHER" }`;
           appointment_status: "confirmado",
         }).eq("id", conversation_id);
 
-        // Send location info
-        const { data: branches } = await supabase.from("branches")
+        // Send location info — prioritize ai_agent_config.locations_text, fallback to branches
+        const { data: agentCfg } = await supabase.from("ai_agent_config")
+          .select("locations_text").eq("clinic_id", clinic_id).maybeSingle();
+        const { data: branchData } = await supabase.from("branches")
           .select("name, full_address, address, google_maps_url, arrival_instructions, preparation_notes")
-          .eq("clinic_id", clinic_id)
-          .eq("active", true)
-          .limit(1)
-          .maybeSingle();
+          .eq("clinic_id", clinic_id).eq("active", true).limit(1).maybeSingle();
 
-        let locationMsg = "¡Perfecto, te esperamos! 🎉";
-        if (branches) {
-          locationMsg = `¡Genial, tu cita está confirmada! 🎉\n\n📍 ${branches.name || "Nuestra ubicación"}`;
-          if (branches.full_address || branches.address) {
-            locationMsg += `\n${branches.full_address || branches.address}`;
-          }
-          if (branches.google_maps_url) {
-            locationMsg += `\n🗺️ ${branches.google_maps_url}`;
-          }
-          if (branches.arrival_instructions) {
-            locationMsg += `\n\n📌 ${branches.arrival_instructions}`;
-          }
-          if (branches.preparation_notes) {
-            locationMsg += `\n\n📋 ${branches.preparation_notes}`;
-          }
+        let locationMsg = "¡Genial, tu cita está confirmada! 🎉";
+        if (branchData) {
+          locationMsg += `\n\n📍 ${branchData.name || "Nuestra ubicación"}`;
+          if (branchData.full_address || branchData.address) locationMsg += `\n${branchData.full_address || branchData.address}`;
+          if (branchData.google_maps_url) locationMsg += `\n🗺️ ${branchData.google_maps_url}`;
+          if (branchData.arrival_instructions) locationMsg += `\n\n📌 ${branchData.arrival_instructions}`;
+          if (branchData.preparation_notes) locationMsg += `\n\n📋 ${branchData.preparation_notes}`;
+        } else if (agentCfg?.locations_text) {
+          locationMsg += `\n\n📍 ${agentCfg.locations_text}`;
         }
 
         await supabase.from("conversation_pipeline_history").insert({
@@ -495,6 +489,7 @@ async function confirmAppointment(
   agentName: string,
   clinicName: string,
   branches: any[] | null,
+  locationsText?: string | null,
 ) {
   const previousTab = conv.pipeline_tab;
   const branch = branches?.[0];
@@ -536,9 +531,16 @@ async function confirmAppointment(
     last_error: "Appointment confirmed, queue cleared",
   }).eq("conversation_id", conv.id).in("status", ["pending", "retry", "processing"]);
 
-  // 3. Build confirmation message
+  // 3. Build confirmation message with location from agent config or branches
   const dateFormatted = formatDateES(flowData.date);
-  const confirmMsg = `¡Listo ${contactName}! Tu cita está agendada 🎉\n\n📅 ${dateFormatted}\n🕐 ${flowData.time}\n💼 ${flowData.service}${branch ? `\n🏥 ${branch.name}` : ""}\n\nTe enviaremos un recordatorio antes de tu cita. ¡Te esperamos!`;
+  let locationLine = "";
+  if (branch) {
+    locationLine = `\n🏥 ${branch.name}`;
+    if (branch.address) locationLine += `\n📍 ${branch.address}`;
+  } else if (locationsText) {
+    locationLine = `\n📍 ${locationsText.split("\n")[0]}`; // First line of locations
+  }
+  const confirmMsg = `¡Listo ${contactName}! Tu cita está agendada 🎉\n\n📅 ${dateFormatted}\n🕐 ${flowData.time}\n💼 ${flowData.service}${locationLine}\n\nTe enviaremos un recordatorio antes de tu cita. ¡Te esperamos!`;
 
   // 4. Log history
   await supabase.from("conversation_pipeline_history").insert({
