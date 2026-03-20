@@ -351,18 +351,20 @@ Deno.serve(async (req) => {
 
     for (const conv of followUpConvs || []) {
       try {
+        // Check business hours per clinic timezone
+        const clinicTz = await getClinicTimezone(conv.clinic_id);
+        const clinicHour = getNowHourInTz(clinicTz);
+        const isWithinSendWindow = clinicHour >= sendWindowStart && clinicHour < sendWindowEnd;
+
         if (!isWithinSendWindow) {
-          // Postpone to next window opening (7AM)
-          const tomorrow7am = new Date();
-          tomorrow7am.setDate(tomorrow7am.getDate() + (nowHour >= sendWindowEnd ? 1 : 0));
-          tomorrow7am.setHours(sendWindowStart, 0, 0, 0);
-          if (tomorrow7am.getTime() <= Date.now()) tomorrow7am.setDate(tomorrow7am.getDate() + 1);
+          // Postpone to next window opening in clinic's timezone
+          const nextWindow = getNextWindowStart(clinicTz, sendWindowStart);
 
           await supabase.from("conversations").update({
-            seguimiento_next_contact_at: tomorrow7am.toISOString(),
+            seguimiento_next_contact_at: nextWindow.toISOString(),
           }).eq("id", conv.id);
 
-          console.log(`[PIPELINE] Outside send window (${sendWindowStart}-${sendWindowEnd}), postponed conv ${conv.id} to ${tomorrow7am.toISOString()}`);
+          console.log(`[PIPELINE] Outside send window (${sendWindowStart}-${sendWindowEnd} in ${clinicTz}, current=${clinicHour}h), postponed conv ${conv.id} to ${nextWindow.toISOString()}`);
           continue;
         }
 
