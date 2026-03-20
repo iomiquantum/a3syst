@@ -779,11 +779,7 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
           });
           tarea2NoResponden++;
         } else {
-          const nextDelay = delayMap[nextContactNumber] || 30;
-          const { data: clinicDelay } = await supabase
-            .from("clinic_pipeline_rules").select("rule_value")
-            .eq("clinic_id", conv.clinic_id).eq("rule_key", `s${nextContactNumber}_delay_minutes`).maybeSingle();
-          const actualDelay = clinicDelay ? Number(clinicDelay.rule_value) || nextDelay : nextDelay;
+          const actualDelay = await getClinicStageDelay(conv.clinic_id, nextContactNumber);
 
           const nextContactDate = getScheduledContactTime(clinicTz, actualDelay, sendWindowStart, sendWindowEnd);
           const nextLocalHour = getNowHourInTz(clinicTz);
