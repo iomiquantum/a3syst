@@ -185,12 +185,13 @@ async function logOutboundMessage(
   // Also sync to unified messages
   let convId = conversationId || null;
   if (!convId) {
+    // Try matching with and without + prefix
     const { data: conv } = await supabase
       .from("conversations")
       .select("id")
       .eq("clinic_id", clinicId)
       .eq("channel", "whatsapp")
-      .eq("visitor_contact", toNumber)
+      .or(`visitor_contact.eq.${toNumber},visitor_contact.eq.+${toNumber}`)
       .maybeSingle();
     convId = conv?.id || null;
   }
