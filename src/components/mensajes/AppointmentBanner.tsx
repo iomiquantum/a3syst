@@ -16,8 +16,6 @@ interface Props {
 
 const PROGRESS_STEPS = [
   { key: "agendado", label: "Agendado" },
-  { key: "reminder_1_sent", label: "R1" },
-  { key: "reminder_2_sent", label: "R2" },
   { key: "confirmado", label: "Confirmado" },
   { key: "asistio", label: "Asistió" },
   { key: "show_con_venta", label: "Venta" },
