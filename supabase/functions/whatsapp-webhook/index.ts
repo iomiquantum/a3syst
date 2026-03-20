@@ -296,7 +296,7 @@ async function syncToUnifiedMessaging(
   content: string,
   messageType: string,
   waMessageId: string
-): Promise<string | null> {
+): Promise<{ conversationId: string; isNew: boolean } | null> {
   try {
     let contactId: string | null = null;
     const { data: existingContact } = await supabase
@@ -328,9 +328,11 @@ async function syncToUnifiedMessaging(
       .maybeSingle();
 
     let conversationId = existingConv?.id;
+    let isNew = false;
     const nowIso = new Date().toISOString();
 
     if (!conversationId) {
+      isNew = true;
       const { data: newConv } = await supabase
         .from("conversations")
         .insert({
@@ -348,7 +350,6 @@ async function syncToUnifiedMessaging(
       conversationId = newConv?.id;
     } else {
       const { data: convData } = await supabase.from("conversations").select("unread_count").eq("id", conversationId).single();
-      // Update last_client_message_at + reset whatsapp window block
       await supabase.from("conversations").update({
         last_message_at: nowIso,
         last_message_preview: content.substring(0, 100),
@@ -371,7 +372,7 @@ async function syncToUnifiedMessaging(
       });
     }
 
-    return conversationId || null;
+    return conversationId ? { conversationId, isNew } : null;
   } catch (err) {
     console.error("[WA-Webhook] Sync to unified error:", err);
     return null;
