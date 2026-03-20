@@ -508,12 +508,7 @@ Deno.serve(async (req) => {
 
         const nextS = Math.max(fresh.seguimiento_next_s || 1, 1);
         const targetTab = `seguimiento_s${nextS}`;
-
-        let contactDelay = delayMap[nextS] || 15;
-        const { data: clinicRule } = await supabase
-          .from("clinic_pipeline_rules").select("rule_value")
-          .eq("clinic_id", conv.clinic_id).eq("rule_key", `s${nextS}_delay_minutes`).maybeSingle();
-        if (clinicRule) contactDelay = Number(clinicRule.rule_value) || contactDelay;
+        const contactDelay = await getClinicStageDelay(conv.clinic_id, nextS);
 
         const clinicTz = await getClinicTimezone(conv.clinic_id);
         const nextContactAt = getScheduledContactTime(clinicTz, contactDelay, sendWindowStart, sendWindowEnd).toISOString();
