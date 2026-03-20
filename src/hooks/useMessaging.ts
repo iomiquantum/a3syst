@@ -180,6 +180,7 @@ export const useMessaging = () => {
       message_type: "text",
       status: "sent",
       sent_by: user?.id || null,
+      origin: `human|${selectedConversation.pipeline_tab || "inbox"}`,
     };
 
     const { data, error } = await supabase.from("messages").insert(newMsg).select().single();
