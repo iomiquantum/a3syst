@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, MoreVertical, PanelRightOpen, PanelRightClose, LayoutTemplate } from "lucide-react";
+import { Send, Bot, MoreVertical, PanelRightOpen, PanelRightClose, LayoutTemplate, ShieldAlert, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
