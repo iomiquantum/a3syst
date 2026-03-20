@@ -1027,6 +1027,7 @@ export type Database = {
           primary_color: string | null
           secondary_color: string | null
           slug: string | null
+          timezone: string | null
           updated_at: string
           whatsapp: string | null
           working_days: string[] | null
@@ -1051,6 +1052,7 @@ export type Database = {
           primary_color?: string | null
           secondary_color?: string | null
           slug?: string | null
+          timezone?: string | null
           updated_at?: string
           whatsapp?: string | null
           working_days?: string[] | null
@@ -1075,6 +1077,7 @@ export type Database = {
           primary_color?: string | null
           secondary_color?: string | null
           slug?: string | null
+          timezone?: string | null
           updated_at?: string
           whatsapp?: string | null
           working_days?: string[] | null
@@ -1332,9 +1335,12 @@ export type Database = {
           pipeline_template_id: string | null
           seguimiento_contact_number: number | null
           seguimiento_is_recurrente: boolean | null
+          seguimiento_last_completed_s: number | null
           seguimiento_last_contact_at: string | null
           seguimiento_next_contact_at: string | null
+          seguimiento_next_s: number | null
           seguimiento_recurrente_count: number | null
+          seguimiento_responded_at_s: number | null
           status: string
           unread_count: number
           updated_at: string
@@ -1384,9 +1390,12 @@ export type Database = {
           pipeline_template_id?: string | null
           seguimiento_contact_number?: number | null
           seguimiento_is_recurrente?: boolean | null
+          seguimiento_last_completed_s?: number | null
           seguimiento_last_contact_at?: string | null
           seguimiento_next_contact_at?: string | null
+          seguimiento_next_s?: number | null
           seguimiento_recurrente_count?: number | null
+          seguimiento_responded_at_s?: number | null
           status?: string
           unread_count?: number
           updated_at?: string
@@ -1436,9 +1445,12 @@ export type Database = {
           pipeline_template_id?: string | null
           seguimiento_contact_number?: number | null
           seguimiento_is_recurrente?: boolean | null
+          seguimiento_last_completed_s?: number | null
           seguimiento_last_contact_at?: string | null
           seguimiento_next_contact_at?: string | null
+          seguimiento_next_s?: number | null
           seguimiento_recurrente_count?: number | null
+          seguimiento_responded_at_s?: number | null
           status?: string
           unread_count?: number
           updated_at?: string

@@ -1,44 +1,29 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
-import type { PipelineTab } from "@/hooks/useConversationsByPipeline";
-
-interface TabCounts {
-  todos: number;
-  resueltos_ia: number;
-  seguimiento_c1: number;
-  seguimiento_c2: number;
-  seguimiento_c3: number;
-  no_responden: number;
-  no_interesado: number;
-  escalados: number;
-  clientes: number;
-}
 
 interface ResumenStats {
   respondidos: number;
   escalados: number;
   convertidos: number;
-  seguimiento: { c1: number; c2: number; c3: number; total: number };
+  seguimiento: { total: number; s1_s8: number; s9_s10: number };
   noResponden: number;
 }
 
+const ALL_SEG_KEYS = Array.from({ length: 10 }, (_, i) => `seguimiento_s${i + 1}`);
+
 export const usePipelineStats = () => {
   const { clinicId } = useClinic();
-  const [tabCounts, setTabCounts] = useState<TabCounts>({
-    todos: 0, resueltos_ia: 0, seguimiento_c1: 0, seguimiento_c2: 0,
-    seguimiento_c3: 0, no_responden: 0, no_interesado: 0, escalados: 0, clientes: 0,
-  });
+  const [tabCounts, setTabCounts] = useState<Record<string, number>>({});
   const [resumenStats, setResumenStats] = useState<ResumenStats>({
     respondidos: 0, escalados: 0, convertidos: 0,
-    seguimiento: { c1: 0, c2: 0, c3: 0, total: 0 }, noResponden: 0,
+    seguimiento: { total: 0, s1_s8: 0, s9_s10: 0 }, noResponden: 0,
   });
   const [loading, setLoading] = useState(true);
 
   const fetchStats = async () => {
     if (!clinicId) return;
 
-    // Fetch all non-archived conversations for this clinic
     const { data, error } = await (supabase as any)
       .from("conversations")
       .select("pipeline_tab")
@@ -52,41 +37,32 @@ export const usePipelineStats = () => {
     }
 
     const rows = data || [];
-    const counts: TabCounts = {
-      todos: rows.length,
-      resueltos_ia: 0, seguimiento_c1: 0, seguimiento_c2: 0,
-      seguimiento_c3: 0, no_responden: 0, no_interesado: 0, escalados: 0, clientes: 0,
-    };
+    const counts: Record<string, number> = { todos: rows.length };
 
     rows.forEach((r: any) => {
-      const tab = r.pipeline_tab as PipelineTab;
-      if (tab in counts) {
-        counts[tab as keyof TabCounts] = (counts[tab as keyof TabCounts] as number) + 1;
-      }
+      const tab = r.pipeline_tab || "resueltos_ia";
+      counts[tab] = (counts[tab] || 0) + 1;
     });
 
     setTabCounts(counts);
 
-    const c1 = counts.seguimiento_c1;
-    const c2 = counts.seguimiento_c2;
-    const c3 = counts.seguimiento_c3;
+    const segTotal = ALL_SEG_KEYS.reduce((s, k) => s + (counts[k] || 0), 0);
+    const s1_s8 = ALL_SEG_KEYS.slice(0, 8).reduce((s, k) => s + (counts[k] || 0), 0);
+    const s9_s10 = (counts["seguimiento_s9"] || 0) + (counts["seguimiento_s10"] || 0);
 
     setResumenStats({
-      respondidos: counts.resueltos_ia + counts.clientes,
-      escalados: counts.escalados,
-      convertidos: counts.clientes,
-      seguimiento: { c1, c2, c3, total: c1 + c2 + c3 },
-      noResponden: counts.no_responden,
+      respondidos: (counts.resueltos_ia || 0) + (counts.pacientes || 0),
+      escalados: counts.escalados || 0,
+      convertidos: counts.pacientes || 0,
+      seguimiento: { total: segTotal, s1_s8, s9_s10 },
+      noResponden: counts.no_responden || 0,
     });
 
     setLoading(false);
   };
 
-  useEffect(() => {
-    fetchStats();
-  }, [clinicId]);
+  useEffect(() => { fetchStats(); }, [clinicId]);
 
-  // Realtime
   useEffect(() => {
     if (!clinicId) return;
     const channel = supabase

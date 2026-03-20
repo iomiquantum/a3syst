@@ -62,7 +62,7 @@ const MensajesPage = () => {
     periodStart: pipelineDates.from,
     periodEnd: pipelineDates.to,
     showArchived,
-    subFilter: (activeTab === "seguimiento_c1" || activeTab === "agendados") ? subFilter : undefined,
+    subFilter: (activeTab === "seguimiento_s1" || activeTab === "agendados") ? subFilter : undefined,
   });
 
   const handleActionComplete = () => {

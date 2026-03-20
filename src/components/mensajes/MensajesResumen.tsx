@@ -8,7 +8,7 @@ interface ResumenStats {
   respondidos: number;
   escalados: number;
   convertidos: number;
-  seguimiento: { c1: number; c2: number; c3: number; total: number };
+  seguimiento: { total: number; s1_s8: number; s9_s10: number };
   noResponden: number;
 }
 
@@ -26,7 +26,7 @@ const MensajesResumen = ({ stats, loading, period, onPeriodChange, dateRange, on
     { label: "Respondidos", sublabel: "clientes únicos", value: stats.respondidos, icon: MessageSquare, color: "text-violet-500", bg: "bg-violet-100 dark:bg-violet-500/20", tooltip: "Cantidad de clientes distintos que recibieron al menos una respuesta (IA o humano)" },
     { label: "Escalados", sublabel: "a humano", value: stats.escalados, icon: AlertTriangle, color: "text-orange-500", bg: "bg-orange-100 dark:bg-orange-500/20", tooltip: "Conversaciones escaladas a un agente humano" },
     { label: "Convertidos", sublabel: "nuevos clientes", value: stats.convertidos, icon: CheckCircle, color: "text-emerald-500", bg: "bg-emerald-100 dark:bg-emerald-500/20", tooltip: "Contactos convertidos a clientes" },
-    { label: "En seguimiento", sublabel: `C1: ${stats.seguimiento.c1} / C2: ${stats.seguimiento.c2} / C3: ${stats.seguimiento.c3}`, value: stats.seguimiento.total, icon: Clock, color: "text-blue-500", bg: "bg-blue-100 dark:bg-blue-500/20", tooltip: "Contactos en seguimiento automático" },
+    { label: "En seguimiento", sublabel: `Auto: ${stats.seguimiento.s1_s8} / Manual: ${stats.seguimiento.s9_s10}`, value: stats.seguimiento.total, icon: Clock, color: "text-blue-500", bg: "bg-blue-100 dark:bg-blue-500/20", tooltip: "Contactos en seguimiento automático (S1-S8) y manual (S9-S10)" },
     { label: "No responden", sublabel: "", value: stats.noResponden, icon: XCircle, color: "text-red-500", bg: "bg-red-100 dark:bg-red-500/20", tooltip: "Contactos sin respuesta después del seguimiento" },
   ];
 

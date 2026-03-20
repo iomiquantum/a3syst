@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+
 export const usePipelineAction = () => {
   const { clinicId } = useClinic();
   const { user } = useAuth();
@@ -14,7 +15,6 @@ export const usePipelineAction = () => {
   ) => {
     if (!clinicId || !user) return;
 
-    // Get current state
     const { data: current, error: fetchErr } = await (supabase as any)
       .from("conversations")
       .select("pipeline_tab")
@@ -32,7 +32,7 @@ export const usePipelineAction = () => {
     if (targetTab === "no_interesado") {
       updates.marked_no_interesado_by = user.id;
       updates.marked_no_interesado_at = new Date().toISOString();
-    } else if (targetTab === "clientes") {
+    } else if (targetTab === "pacientes") {
       updates.marked_cliente_by = user.id;
       updates.marked_cliente_at = new Date().toISOString();
     } else if (targetTab === "escalados") {
@@ -57,7 +57,6 @@ export const usePipelineAction = () => {
       return;
     }
 
-    // Log to history
     await (supabase as any)
       .from("conversation_pipeline_history")
       .insert({
@@ -71,11 +70,13 @@ export const usePipelineAction = () => {
 
     const labels: Record<string, string> = {
       resueltos_ia: "Resueltos IA",
-      seguimiento_c1: "Seguimiento C1",
+      seguimiento_s1: "Seguimiento S1",
       no_responden: "No responden",
       no_interesado: "No interesado",
       escalados: "Escalados",
-      clientes: "Clientes",
+      pacientes: "Pacientes",
+      agendados: "Agendados",
+      perdidos: "Perdidos",
     };
 
     toast.success(`Movido a ${labels[targetTab] || targetTab}`);

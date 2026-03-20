@@ -20,7 +20,6 @@ const ClinicChatActions = ({ pipelineTab, templateSlug, onMove, onGenerateAI }: 
 
   if (templateSlug !== "clinicas") return null;
 
-  // agendados: Show/No-show buttons (replaces seguimiento_venta)
   if (pipelineTab === "agendados") {
     const handleShowConfirm = () => {
       if (hadSale) {
@@ -67,7 +66,6 @@ const ClinicChatActions = ({ pipelineTab, templateSlug, onMove, onGenerateAI }: 
     );
   }
 
-  // pacientes: Next appointment + history
   if (pipelineTab === "pacientes") {
     return (
       <div className="flex items-center gap-1.5">
@@ -81,13 +79,12 @@ const ClinicChatActions = ({ pipelineTab, templateSlug, onMove, onGenerateAI }: 
     );
   }
 
-  // no_show: Reagendar
   if (pipelineTab === "no_show") {
     return (
       <div className="flex items-center gap-1.5">
         <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => {
-          onMove("seguimiento_c1", "Reagendar desde no-show");
-          toast.success("Reagendando → Seguimiento C1");
+          onMove("seguimiento_s1", "Reagendar desde no-show");
+          toast.success("Reagendando → Seguimiento S1");
         }}>
           <RotateCcw className="w-3 h-3" /> Reagendar
         </Button>
@@ -101,7 +98,6 @@ const ClinicChatActions = ({ pipelineTab, templateSlug, onMove, onGenerateAI }: 
     );
   }
 
-  // show_sin_venta: Flow badges + manual actions
   if (pipelineTab === "show_sin_venta") {
     return (
       <div className="flex items-center gap-1.5">
@@ -118,8 +114,8 @@ const ClinicChatActions = ({ pipelineTab, templateSlug, onMove, onGenerateAI }: 
     );
   }
 
-  // seguimiento_c4, c5: Manual input + AI generate + mark as lost
-  if (pipelineTab === "seguimiento_c4" || pipelineTab === "seguimiento_c5") {
+  // S9 & S10: Manual stages — AI generate + mark as lost
+  if (pipelineTab === "seguimiento_s9" || pipelineTab === "seguimiento_s10") {
     return (
       <div className="flex items-center gap-1.5">
         {onGenerateAI && (
@@ -137,7 +133,6 @@ const ClinicChatActions = ({ pipelineTab, templateSlug, onMove, onGenerateAI }: 
     );
   }
 
-  // perdidos: Reactivation
   if (pipelineTab === "perdidos") {
     return (
       <div className="flex items-center gap-1.5">

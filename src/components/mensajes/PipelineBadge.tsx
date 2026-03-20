@@ -1,13 +1,17 @@
 import { cn } from "@/lib/utils";
-import type { PipelineTab } from "@/hooks/useConversationsByPipeline";
 
 const CONFIG: Record<string, { label: string; bg: string; text: string }> = {
   resueltos_ia: { label: "IA", bg: "bg-violet-100 dark:bg-violet-500/20", text: "text-violet-700 dark:text-violet-300" },
-  seguimiento_c1: { label: "C1", bg: "bg-blue-100 dark:bg-blue-500/20", text: "text-blue-700 dark:text-blue-300" },
-  seguimiento_c2: { label: "C2", bg: "bg-blue-100 dark:bg-blue-500/20", text: "text-blue-700 dark:text-blue-300" },
-  seguimiento_c3: { label: "C3", bg: "bg-blue-100 dark:bg-blue-500/20", text: "text-blue-700 dark:text-blue-300" },
-  seguimiento_c4: { label: "C4", bg: "bg-amber-100 dark:bg-amber-500/20", text: "text-amber-700 dark:text-amber-300" },
-  seguimiento_c5: { label: "C5", bg: "bg-amber-100 dark:bg-amber-500/20", text: "text-amber-700 dark:text-amber-300" },
+  seguimiento_s1: { label: "S1", bg: "bg-blue-100 dark:bg-blue-500/20", text: "text-blue-700 dark:text-blue-300" },
+  seguimiento_s2: { label: "S2", bg: "bg-blue-100 dark:bg-blue-500/20", text: "text-blue-700 dark:text-blue-300" },
+  seguimiento_s3: { label: "S3", bg: "bg-blue-100 dark:bg-blue-500/20", text: "text-blue-700 dark:text-blue-300" },
+  seguimiento_s4: { label: "S4", bg: "bg-blue-100 dark:bg-blue-500/20", text: "text-blue-700 dark:text-blue-300" },
+  seguimiento_s5: { label: "S5", bg: "bg-blue-100 dark:bg-blue-500/20", text: "text-blue-700 dark:text-blue-300" },
+  seguimiento_s6: { label: "S6", bg: "bg-blue-100 dark:bg-blue-500/20", text: "text-blue-700 dark:text-blue-300" },
+  seguimiento_s7: { label: "S7", bg: "bg-blue-100 dark:bg-blue-500/20", text: "text-blue-700 dark:text-blue-300" },
+  seguimiento_s8: { label: "S8", bg: "bg-blue-100 dark:bg-blue-500/20", text: "text-blue-700 dark:text-blue-300" },
+  seguimiento_s9: { label: "S9", bg: "bg-amber-100 dark:bg-amber-500/20", text: "text-amber-700 dark:text-amber-300" },
+  seguimiento_s10: { label: "S10", bg: "bg-amber-100 dark:bg-amber-500/20", text: "text-amber-700 dark:text-amber-300" },
   no_responden: { label: "No resp.", bg: "bg-red-100 dark:bg-red-500/20", text: "text-red-700 dark:text-red-300" },
   no_interesado: { label: "No inter.", bg: "bg-amber-100 dark:bg-amber-500/20", text: "text-amber-700 dark:text-amber-300" },
   escalados: { label: "Escalado", bg: "bg-orange-100 dark:bg-orange-500/20", text: "text-orange-700 dark:text-orange-300" },
@@ -19,7 +23,7 @@ const CONFIG: Record<string, { label: string; bg: string; text: string }> = {
 };
 
 interface Props {
-  tab: PipelineTab | string;
+  tab: string;
   className?: string;
 }
 

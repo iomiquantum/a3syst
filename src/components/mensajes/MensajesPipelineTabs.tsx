@@ -27,7 +27,7 @@ interface Props {
 
 const MensajesPipelineTabs = ({ activeTab, onTabChange, tabs, period, onPeriodChange, dateRange, onDateRangeChange, subFilter, onSubFilterChange, subFilterCounts }: Props) => {
   const escaladosCount = tabs.find(t => t.key === "escalados")?.count || 0;
-  const showSeguimientoSubs = activeTab === "seguimiento_c1";
+  const showSeguimientoSubs = activeTab === "seguimiento_s1";
   const showAgendadosSubs = activeTab === "agendados";
 
   return (
