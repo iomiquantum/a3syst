@@ -635,8 +635,13 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
     // ========== TAREA 5: APPOINTMENT REMINDERS ==========
     console.log("[PIPELINE] TAREA 5: Appointment reminders...");
 
-    if (!isWithinSendWindow) {
-      console.log("[PIPELINE] Outside send window (7AM-11PM), skipping appointment reminders");
+    // Use first clinic's timezone for appointment reminders window check
+    const defaultTz = Object.values(clinicTimezoneCache)[0] || "America/Guayaquil";
+    const reminderHour = getNowHourInTz(defaultTz);
+    const isWithinReminderWindow = reminderHour >= sendWindowStart && reminderHour < sendWindowEnd;
+
+    if (!isWithinReminderWindow) {
+      console.log(`[PIPELINE] Outside send window (${sendWindowStart}-${sendWindowEnd} in ${defaultTz}, current=${reminderHour}h), skipping appointment reminders`);
     } else {
       const { data: reminderConfigs } = await supabase
         .from("appointment_reminder_config")
