@@ -1,6 +1,7 @@
 import { useState, useEffect, memo } from "react";
-import { Clock, Timer, User } from "lucide-react";
+import { Timer, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatElapsedTimeoutCountdown, formatTargetCountdown } from "./seguimientoTime";
 
 interface Props {
   pipelineTab: string | null;
@@ -33,39 +34,6 @@ function subscribe(cb: () => void) {
       tickInterval = null;
     }
   };
-}
-
-function formatCountdown(targetIso: string): { label: string; expired: boolean; totalSeconds: number } {
-  const remaining = (new Date(targetIso).getTime() - Date.now()) / 1000;
-  if (remaining <= 0) {
-    return remaining < -60
-      ? { label: "Pendiente", expired: true, totalSeconds: remaining }
-      : { label: "Procesando...", expired: true, totalSeconds: remaining };
-  }
-  const hh = Math.floor(remaining / 3600);
-  const mm = Math.floor((remaining % 3600) / 60);
-  const ss = Math.floor(remaining % 60);
-  const label = hh > 0
-    ? `${hh}h ${String(mm).padStart(2, "0")}m`
-    : `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
-  return { label, expired: false, totalSeconds: remaining };
-}
-
-function formatInactivityCountdown(startIso: string, timeoutMin: number): { label: string; expired: boolean; totalSeconds: number } {
-  const elapsed = (Date.now() - new Date(startIso).getTime()) / 1000;
-  const remaining = timeoutMin * 60 - elapsed;
-  if (remaining <= 0) {
-    return remaining < -60
-      ? { label: "Pendiente", expired: true, totalSeconds: remaining }
-      : { label: "Procesando...", expired: true, totalSeconds: remaining };
-  }
-  const hh = Math.floor(remaining / 3600);
-  const mm = Math.floor((remaining % 3600) / 60);
-  const ss = Math.floor(remaining % 60);
-  const label = hh > 0
-    ? `${hh}h ${String(mm).padStart(2, "0")}m`
-    : `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
-  return { label, expired: false, totalSeconds: remaining };
 }
 
 const SeguimientoCountdown = memo(({
@@ -130,7 +98,7 @@ const SeguimientoCountdown = memo(({
 
   // Case 2: In resueltos_ia waiting for inactivity timer → show countdown to next S
   if (isInResueltosIA && inactivityTimerStart) {
-    const { label, expired } = formatInactivityCountdown(inactivityTimerStart, inactivityTimeoutMinutes);
+    const { label, expired } = formatElapsedTimeoutCountdown(inactivityTimerStart, inactivityTimeoutMinutes);
     badges.push(
       <span
         key="timer"
@@ -151,7 +119,7 @@ const SeguimientoCountdown = memo(({
   // Case 3: In seguimiento S1-S8 (automatic) → show countdown
   if (isInSeguimiento && isAutomatic) {
     if (seguimientoNextContactAt) {
-      const { label, expired } = formatCountdown(seguimientoNextContactAt);
+      const { label, expired } = formatTargetCountdown(seguimientoNextContactAt);
       badges.push(
         <span
           key="timer"
