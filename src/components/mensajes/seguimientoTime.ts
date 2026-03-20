@@ -1,6 +1,6 @@
-// Constants for the send window (clinic local time)
-const WINDOW_START = 7;  // 7 AM
-const WINDOW_END = 23;   // 11 PM
+// Default constants for the send window (clinic local time)
+const DEFAULT_WINDOW_START = 7;  // 7 AM
+const DEFAULT_WINDOW_END = 23;   // 11 PM
 const DEFAULT_TZ = "America/Guayaquil";
 
 export interface CountdownState {
@@ -88,7 +88,12 @@ function formatTime(totalSeconds: number): string {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-export function formatTargetCountdown(targetIso: string, tz: string = DEFAULT_TZ): CountdownState {
+export function formatTargetCountdown(
+  targetIso: string,
+  tz: string = DEFAULT_TZ,
+  windowStart: number = DEFAULT_WINDOW_START,
+  windowEnd: number = DEFAULT_WINDOW_END,
+): CountdownState {
   const msRemaining = new Date(targetIso).getTime() - Date.now();
   const remainingSeconds = msRemaining / 1000;
 
@@ -101,27 +106,26 @@ export function formatTargetCountdown(targetIso: string, tz: string = DEFAULT_TZ
   }
 
   const localHour = getLocalHour(tz);
-  const isInPause = localHour >= WINDOW_END || localHour < WINDOW_START;
+  const isInPause = localHour >= windowEnd || localHour < windowStart;
 
   if (isInPause) {
-    // We're in the pause window (11PM-7AM)
-    const resumeTime = getNextLocalTime(tz, WINDOW_START);
+    // We're in the pause window
+    const resumeTime = getNextLocalTime(tz, windowStart);
     const msAfterResume = new Date(targetIso).getTime() - resumeTime.getTime();
 
+    const resumeLabel = `${windowStart}:00 AM`;
     if (msAfterResume > 0) {
-      // Time remaining after resume
       const afterResumeSeconds = msAfterResume / 1000;
       return {
-        label: `⏸ Pausado — reanuda 7:00 AM`,
+        label: `⏸ Pausado — reanuda ${resumeLabel}`,
         expired: false,
         totalSeconds: remainingSeconds,
         mode: "paused",
         subLabel: `quedan ${formatTime(afterResumeSeconds)}`,
       };
     } else {
-      // Will send right at resume
       return {
-        label: `⏸ Se envía a las 7:00 AM`,
+        label: `⏸ Se envía a las ${resumeLabel}`,
         expired: false,
         totalSeconds: remainingSeconds,
         mode: "sends_on_resume",
@@ -130,10 +134,8 @@ export function formatTargetCountdown(targetIso: string, tz: string = DEFAULT_TZ
   }
 
   // We're in the active window — check if countdown will cross the pause boundary
-  const pauseTime = getNextLocalTime(tz, WINDOW_END);
-  // But getNextLocalTime adds a day if localHour >= WINDOW_END. Since we're in active window,
-  // localHour < WINDOW_END, so it returns today's 11PM.
-  // Actually we need "today's 11PM", not "next 11PM". Since localHour < 23, getNextLocalTime(tz, 23) should work.
+  const pauseTime = getNextLocalTime(tz, windowEnd);
+  // Since we're in active window, localHour < windowEnd, so getNextLocalTime returns today's end hour.
   const msUntilPause = pauseTime.getTime() - Date.now();
 
   if (msRemaining <= msUntilPause) {
@@ -152,7 +154,7 @@ export function formatTargetCountdown(targetIso: string, tz: string = DEFAULT_TZ
     expired: false,
     totalSeconds: remainingSeconds,
     mode: "active_will_pause",
-    subLabel: "pausa a las 11 PM",
+    subLabel: `pausa a las ${windowEnd > 12 ? windowEnd - 12 : windowEnd} ${windowEnd >= 12 ? "PM" : "AM"}`,
   };
 }
 

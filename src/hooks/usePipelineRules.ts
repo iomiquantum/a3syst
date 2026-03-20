@@ -31,8 +31,8 @@ const DEFAULTS: PipelineRules = {
   s8_delay_minutes: 30,
   max_auto_contacts: 10,
   recurrente_max_cycles: 0,
-  send_window_start_hour: 8,
-  send_window_end_hour: 21,
+  send_window_start_hour: 7,
+  send_window_end_hour: 23,
 };
 
 export interface AutoMessage {
