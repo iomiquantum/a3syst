@@ -61,7 +61,8 @@ const SeguimientoCountdown = memo(({
   const isInSeguimiento = tab.startsWith("seguimiento_s");
   const isInResueltosIA = tab === "resueltos_ia";
   const currentS = isInSeguimiento ? parseInt(tab.replace("seguimiento_s", ""), 10) : 0;
-  const isAutomatic = currentS >= 1 && currentS <= 6;
+  const isAutomatic = currentS >= 1 && currentS <= 4;
+  const isManual = currentS >= 5 && currentS <= 6;
 
   // Case 1: In resueltos_ia with no S history AND no inactivity timer → truly new, no countdown
   if (isInResueltosIA && nextS <= 0 && !inactivityTimerStart) return null;
