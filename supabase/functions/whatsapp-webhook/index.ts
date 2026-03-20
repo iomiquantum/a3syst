@@ -238,7 +238,7 @@ Deno.serve(async (req) => {
             content: { body: content },
             text_content: content,
             wa_message_id: msg.id,
-            media_url: mediaUrl,
+            media_url: downloadedMediaUrl || mediaUrl,
             media_mime_type: mediaMimeType,
             media_caption: mediaCaption,
             status: "received",
