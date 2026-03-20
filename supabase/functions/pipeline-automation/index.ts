@@ -857,20 +857,30 @@ Deno.serve(async (req) => {
           const { data: clinic } = await supabase.from("clinics").select("name").eq("id", convFresh.clinic_id).single();
           const clinicName = clinic?.name || "el negocio";
 
-          // Load AI agent config for context
+          // Load AI agent config for context — ALL fields
           const { data: agentConfig } = await supabase.from("ai_agent_config")
-            .select("services, treatments_text, prices_text, locations_text, professionals_text, special_instructions")
+            .select("agent_name, objective, greeting, tone, language, special_instructions, services, treatments_text, prices_text, locations_text, professionals_text")
             .eq("clinic_id", convFresh.clinic_id).maybeSingle();
 
           let clinicKnowledgeBlock = "";
           if (agentConfig) {
             const parts: string[] = [];
+            if (agentConfig.objective) parts.push(`OBJETIVO DEL AGENTE:\n${agentConfig.objective}`);
+            if (agentConfig.tone) parts.push(`TONO DE COMUNICACIÓN: ${agentConfig.tone}`);
+            if (agentConfig.language) parts.push(`IDIOMA: ${agentConfig.language}`);
+            if (agentConfig.greeting) parts.push(`MENSAJE DE BIENVENIDA CONFIGURADO:\n${agentConfig.greeting}`);
+            if (agentConfig.special_instructions) parts.push(`INSTRUCCIONES ESPECIALES:\n${agentConfig.special_instructions}`);
             if (agentConfig.treatments_text) parts.push(`TRATAMIENTOS/SERVICIOS:\n${agentConfig.treatments_text}`);
             if (agentConfig.prices_text) parts.push(`PRECIOS:\n${agentConfig.prices_text}`);
             if (agentConfig.locations_text) parts.push(`UBICACIÓN:\n${agentConfig.locations_text}`);
             if (agentConfig.professionals_text) parts.push(`PROFESIONALES:\n${agentConfig.professionals_text}`);
+            const servicesArr = agentConfig.services as any[];
+            if (servicesArr && servicesArr.length > 0) {
+              const servicesList = servicesArr.map((s: any) => typeof s === "string" ? s : s.name || JSON.stringify(s)).join(", ");
+              parts.push(`SERVICIOS REGISTRADOS: ${servicesList}`);
+            }
             if (parts.length > 0) {
-              clinicKnowledgeBlock = `\nINFORMACIÓN REAL DEL NEGOCIO (SOLO usa estos datos, NUNCA inventes servicios ni precios):\n${parts.join("\n\n")}`;
+              clinicKnowledgeBlock = `\nCONFIGURACIÓN COMPLETA DEL AGENTE IA DEL NEGOCIO (SOLO usa estos datos, NUNCA inventes):\n${parts.join("\n\n")}`;
             }
           }
 
