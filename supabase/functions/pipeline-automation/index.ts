@@ -212,6 +212,28 @@ Deno.serve(async (req) => {
           .map(m => `${m.direction === "inbound" ? "Cliente" : agentName}: ${m.content}`)
           .join("\n");
 
+        // Check if last pipeline move was manual (for context)
+        let manualMoveContext = "";
+        const { data: lastMove } = await supabase
+          .from("conversation_pipeline_history")
+          .select("from_tab, to_tab, moved_by, reason, metadata")
+          .eq("conversation_id", conv.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (lastMove && lastMove.moved_by !== "system") {
+          const meta = lastMove.metadata as Record<string, any> | null;
+          manualMoveContext = `
+CONTEXTO DE MOVIMIENTO:
+- Esta conversación fue movida manualmente por un agente de '${lastMove.from_tab}' a '${lastMove.to_tab}'
+- Razón: ${lastMove.reason || "Sin razón especificada"}
+- El agente que lo movió: ${meta?.agent_name || "Agente"}
+- Esto significa que debes adaptar tu mensaje al nuevo contexto sin ignorar la historia previa.
+- Si el cliente ya fue atendido antes, reconócelo sutilmente.
+- Si el cliente ya visitó el negocio, no lo trates como nuevo.`;
+        }
+
         // Build strategy-enhanced prompt
         let followUpPrompt: string;
         if (strategy) {
@@ -224,6 +246,7 @@ INFORMACIÓN DEL CONTACTO:
 - Nombre: ${contactName}
 - Es recurrente (ya pasó por seguimiento antes): ${conv.seguimiento_is_recurrente} (veces: ${conv.seguimiento_recurrente_count})
 - Respondió por última vez en S${conv.seguimiento_responded_at_s}
+${manualMoveContext}
 
 CONTACTO ACTUAL: S${contactNumber} de 10
 ESTRATEGIA: ${strategy.strategy_name} — ${strategy.strategy_description}
@@ -247,7 +270,7 @@ REGLAS GLOBALES INQUEBRANTABLES:
 
 Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aquí tienes el mensaje:".`;
         } else {
-          followUpPrompt = `Genera un mensaje de seguimiento #${contactNumber} para ${contactName}. Contexto: ${messagesContext}. Máximo 2 oraciones.`;
+          followUpPrompt = `Genera un mensaje de seguimiento #${contactNumber} para ${contactName}. Contexto: ${messagesContext}. ${manualMoveContext} Máximo 2 oraciones.`;
         }
 
         // Generate with AI
