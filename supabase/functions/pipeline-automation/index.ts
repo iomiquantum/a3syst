@@ -619,7 +619,7 @@ Deno.serve(async (req) => {
     console.log("[PIPELINE] TAREA 3: Cleanup...");
     const { data: inconsistent } = await supabase
       .from("conversations")
-      .select("id, clinic_id, pipeline_tab, seguimiento_contact_number, seguimiento_last_contact_at, seguimiento_next_contact_at")
+      .select("id, clinic_id, pipeline_tab, seguimiento_contact_number, seguimiento_last_contact_at, seguimiento_next_contact_at, whatsapp_window_blocked")
       .like("pipeline_tab", "seguimiento_s%")
       .eq("archived", false)
       .eq("status", "open");
