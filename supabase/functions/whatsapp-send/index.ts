@@ -207,9 +207,17 @@ async function logOutboundMessage(
       status: "sent",
       sent_by: sentBy || null,
     });
-    await supabase.from("conversations").update({
+    const conversationUpdate: Record<string, unknown> = {
       last_message_at: new Date().toISOString(),
       last_message_preview: textContent.substring(0, 100),
-    }).eq("id", convId);
+    };
+
+    if (msgType === "template") {
+      conversationUpdate.whatsapp_window_blocked = false;
+      conversationUpdate.whatsapp_window_blocked_at = null;
+      conversationUpdate.whatsapp_window_blocked_reason = null;
+    }
+
+    await supabase.from("conversations").update(conversationUpdate).eq("id", convId);
   }
 }
