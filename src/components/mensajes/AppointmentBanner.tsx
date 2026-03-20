@@ -23,8 +23,6 @@ const PROGRESS_STEPS = [
 
 const STATUS_COLORS: Record<string, string> = {
   agendado: "bg-emerald-500",
-  reminder_1_sent: "bg-blue-500",
-  reminder_2_sent: "bg-blue-600",
   confirmado: "bg-emerald-600",
   asistio: "bg-teal-500",
   show_con_venta: "bg-emerald-700",
