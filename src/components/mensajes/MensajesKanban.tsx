@@ -10,17 +10,23 @@ import type { PipelineConversation, PipelineTab } from "@/hooks/useConversations
 
 const KANBAN_COLUMNS: { tab: PipelineTab | string; label: string; color: string }[] = [
   { tab: "resueltos_ia", label: "Resueltos IA", color: "bg-violet-500" },
-  { tab: "seguimiento_c1", label: "C1", color: "bg-blue-500" },
-  { tab: "seguimiento_c2", label: "C2", color: "bg-blue-400" },
-  { tab: "seguimiento_c3", label: "C3", color: "bg-blue-300" },
-  { tab: "seguimiento_c4", label: "C4", color: "bg-amber-500" },
-  { tab: "seguimiento_c5", label: "C5", color: "bg-amber-400" },
+  { tab: "seguimiento_s1", label: "S1", color: "bg-blue-500" },
+  { tab: "seguimiento_s2", label: "S2", color: "bg-blue-500" },
+  { tab: "seguimiento_s3", label: "S3", color: "bg-blue-400" },
+  { tab: "seguimiento_s4", label: "S4", color: "bg-blue-400" },
+  { tab: "seguimiento_s5", label: "S5", color: "bg-blue-300" },
+  { tab: "seguimiento_s6", label: "S6", color: "bg-blue-300" },
+  { tab: "seguimiento_s7", label: "S7", color: "bg-cyan-500" },
+  { tab: "seguimiento_s8", label: "S8", color: "bg-cyan-400" },
+  { tab: "seguimiento_s9", label: "S9 ✋", color: "bg-amber-500" },
+  { tab: "seguimiento_s10", label: "S10 ✋", color: "bg-amber-400" },
   { tab: "no_responden", label: "No responden", color: "bg-red-500" },
   { tab: "escalados", label: "Escalados", color: "bg-orange-500" },
   { tab: "agendados", label: "Agendados", color: "bg-emerald-500" },
   { tab: "no_show", label: "No-show", color: "bg-amber-500" },
   { tab: "show_sin_venta", label: "Show s/v", color: "bg-orange-400" },
   { tab: "pacientes", label: "Pacientes", color: "bg-teal-500" },
+  { tab: "no_interesado", label: "No interesado", color: "bg-gray-500" },
   { tab: "perdidos", label: "Perdidos", color: "bg-pink-500" },
 ];
 

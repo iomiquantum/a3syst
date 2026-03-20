@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Pin } from "lucide-react";
 import PipelineBadge from "./PipelineBadge";
+import InactivityTimer from "./InactivityTimer";
 import ChannelIcon from "@/components/messaging/ChannelIcon";
 import type { PipelineConversation, PipelineTab } from "@/hooks/useConversationsByPipeline";
 
@@ -45,21 +46,25 @@ const ConversationCard = ({ conversation: c, selected, onClick, variant = "list"
       >
         <p className="text-sm font-medium text-foreground leading-tight truncate">{c.contactName}</p>
         <p className="text-[11px] text-muted-foreground line-clamp-2">{c.last_message_preview}</p>
-        {c.contactTags.length > 0 && (
-          <div className="flex gap-1 flex-wrap">
-            {c.contactTags.slice(0, 2).map(t => (
-              <span key={t} className="text-[8px] bg-accent/20 text-accent-foreground px-1.5 py-0.5 rounded">{t}</span>
-            ))}
-          </div>
-        )}
+        {/* S-tracking badges for kanban */}
+        <div className="flex gap-1 flex-wrap">
+          {c.seguimiento_responded_at_s > 0 && c.seguimiento_next_s > 0 && (
+            <span className="text-[8px] bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded font-medium">
+              Vino de S{c.seguimiento_responded_at_s} → S{c.seguimiento_next_s}
+            </span>
+          )}
+          {c.seguimiento_is_recurrente && (
+            <span className="text-[8px] bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded font-medium">
+              Recurrente #{c.seguimiento_recurrente_count}
+            </span>
+          )}
+          {c.contactTags.slice(0, 2).map(t => (
+            <span key={t} className="text-[8px] bg-accent/20 text-accent-foreground px-1.5 py-0.5 rounded">{t}</span>
+          ))}
+        </div>
         <div className="flex items-center justify-between pt-1">
           <span className="text-[10px] text-muted-foreground">{relativeTime(c.last_message_at)}</span>
-          <div className="flex items-center gap-1">
-            <ChannelIcon channel={c.channel} size="sm" />
-            {c.seguimiento_is_recurrente && (
-              <span className="text-[9px] bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 px-1 rounded font-medium">↻ #{c.seguimiento_recurrente_count}</span>
-            )}
-          </div>
+          <ChannelIcon channel={c.channel} size="sm" />
         </div>
       </div>
     );
@@ -87,8 +92,26 @@ const ConversationCard = ({ conversation: c, selected, onClick, variant = "list"
           </div>
           <p className="text-[11px] text-muted-foreground truncate">{c.last_message_preview}</p>
           <div className="flex items-center justify-between mt-1">
-            <div className="flex gap-1 flex-wrap">
-              {c.contactTags.slice(0, 3).map(t => (
+            <div className="flex gap-1 flex-wrap items-center">
+              {c.pipeline_tab === "resueltos_ia" && c.seguimiento_next_s > 0 ? (
+                <span className="text-[8px] bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded font-medium">
+                  Vino de S{c.seguimiento_responded_at_s} → Próximo S{c.seguimiento_next_s}
+                </span>
+              ) : c.pipeline_tab === "resueltos_ia" ? (
+                <span className="text-[8px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">Nuevo</span>
+              ) : null}
+              {c.seguimiento_is_recurrente && (
+                <span className="text-[8px] bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded font-medium">
+                  Recurrente #{c.seguimiento_recurrente_count}
+                </span>
+              )}
+              {c.pipeline_tab === "resueltos_ia" && c.inactivity_timer_start && (
+                <InactivityTimer
+                  startTime={new Date(c.inactivity_timer_start)}
+                  timeoutMinutes={15}
+                />
+              )}
+              {c.contactTags.slice(0, 2).map(t => (
                 <span key={t} className="text-[8px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">{t}</span>
               ))}
             </div>

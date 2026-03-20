@@ -46,6 +46,7 @@ export interface PipelineConversation {
   contactPhone: string;
   contactTags: string[];
   contactEmail: string;
+  inactivity_timer_start: string | null;
   // Appointment fields
   appointment_date: string | null;
   appointment_time: string | null;
@@ -145,6 +146,7 @@ export const useConversationsByPipeline = (params: Params) => {
       seguimiento_next_s: c.seguimiento_next_s || 0,
       seguimiento_responded_at_s: c.seguimiento_responded_at_s || 0,
       pinned: c.pinned || false,
+      inactivity_timer_start: c.inactivity_timer_start || null,
       contactName: c.contacts?.name || c.visitor_name || "Sin nombre",
       contactPhone: c.contacts?.phone || c.visitor_contact || "",
       contactTags: c.contacts?.tags || [],
