@@ -184,8 +184,15 @@ Responde SOLO JSON válido:
 
       if (!servicesText) servicesText = "(sin servicios configurados)";
 
-      const branchesText = (branches || []).map(b => `• ${b.name}: ${b.address || ""}`)
-        .join("\n") || "(sin sucursales)";
+      // Use locations from ai_agent_config first, fallback to branches table
+      let locationsText = agentConfig?.locations_text || "";
+      if (!locationsText) {
+        locationsText = (branches || []).map(b => `• ${b.name}: ${b.address || ""}`).join("\n");
+      }
+      if (!locationsText) locationsText = "(sin ubicaciones configuradas)";
+
+      // Include professionals if available
+      const professionalsText = agentConfig?.professionals_text || "";
 
       const todayStr = new Date().toISOString().split("T")[0];
       const dayOfWeekStr = new Date().toLocaleDateString("es", { weekday: "long" });
@@ -202,8 +209,9 @@ DATOS RECOPILADOS HASTA AHORA:
 SERVICIOS DISPONIBLES:
 ${servicesText}
 
-SUCURSALES:
-${branchesText}
+UBICACIONES / DIRECCIÓN:
+${locationsText}
+${professionalsText ? `\nPROFESIONALES:\n${professionalsText}` : ""}
 
 PASO ACTUAL: ${conv.appointment_flow_step}
 MENSAJE DEL PACIENTE: "${patient_message}"
@@ -216,6 +224,8 @@ INSTRUCCIONES:
 5. No aceptes fechas en el pasado
 6. Tono cálido y breve (máximo 2-3 oraciones)
 7. IMPORTANTE: Si el paciente menciona una fecha relativa ("mañana", "el viernes", etc.), resuélvela a formato YYYY-MM-DD basándote en la fecha de hoy.
+8. Si el paciente pregunta por ubicación o dirección, USA la información de UBICACIONES arriba. NUNCA digas que no hay sucursales físicas si hay una dirección configurada.
+9. Usa los precios y servicios EXACTOS de la configuración. No inventes servicios ni precios.
 
 Responde SOLO JSON válido:
 {
