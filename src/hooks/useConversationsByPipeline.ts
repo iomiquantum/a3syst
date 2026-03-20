@@ -32,6 +32,7 @@ export interface PipelineConversation {
   status: string;
   last_message_at: string;
   last_message_preview: string;
+  last_outbound_status: string | null;
   unread_count: number;
   chatbot_active: boolean;
   pipeline_tab: PipelineTab;
@@ -42,6 +43,9 @@ export interface PipelineConversation {
   seguimiento_next_s: number;
   seguimiento_responded_at_s: number;
   seguimiento_next_contact_at: string | null;
+  seguimiento_consecutive_read_no_reply: number;
+  seguimiento_spam_protection_triggered: boolean;
+  seguimiento_spam_jumped_from_s: number | null;
   pinned: boolean;
   contactName: string;
   contactPhone: string;
