@@ -1323,6 +1323,7 @@ export type Database = {
           follow_up_count: number
           id: string
           inactivity_timer_start: string | null
+          last_client_message_at: string | null
           last_inbound_at: string | null
           last_message_at: string | null
           last_message_preview: string | null
@@ -1346,6 +1347,9 @@ export type Database = {
           updated_at: string
           visitor_contact: string | null
           visitor_name: string | null
+          whatsapp_window_blocked: boolean | null
+          whatsapp_window_blocked_at: string | null
+          whatsapp_window_blocked_reason: string | null
         }
         Insert: {
           appointment_attended?: boolean | null
@@ -1378,6 +1382,7 @@ export type Database = {
           follow_up_count?: number
           id?: string
           inactivity_timer_start?: string | null
+          last_client_message_at?: string | null
           last_inbound_at?: string | null
           last_message_at?: string | null
           last_message_preview?: string | null
@@ -1401,6 +1406,9 @@ export type Database = {
           updated_at?: string
           visitor_contact?: string | null
           visitor_name?: string | null
+          whatsapp_window_blocked?: boolean | null
+          whatsapp_window_blocked_at?: string | null
+          whatsapp_window_blocked_reason?: string | null
         }
         Update: {
           appointment_attended?: boolean | null
@@ -1433,6 +1441,7 @@ export type Database = {
           follow_up_count?: number
           id?: string
           inactivity_timer_start?: string | null
+          last_client_message_at?: string | null
           last_inbound_at?: string | null
           last_message_at?: string | null
           last_message_preview?: string | null
@@ -1456,6 +1465,9 @@ export type Database = {
           updated_at?: string
           visitor_contact?: string | null
           visitor_name?: string | null
+          whatsapp_window_blocked?: boolean | null
+          whatsapp_window_blocked_at?: string | null
+          whatsapp_window_blocked_reason?: string | null
         }
         Relationships: [
           {
@@ -3445,6 +3457,59 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "whatsapp_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_templates: {
+        Row: {
+          clinic_id: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          meta_approved: boolean | null
+          meta_template_id: string | null
+          template_body: string
+          template_language: string | null
+          template_name: string
+          template_type: string
+          template_variables: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          meta_approved?: boolean | null
+          meta_template_id?: string | null
+          template_body: string
+          template_language?: string | null
+          template_name: string
+          template_type: string
+          template_variables?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          meta_approved?: boolean | null
+          meta_template_id?: string | null
+          template_body?: string
+          template_language?: string | null
+          template_name?: string
+          template_type?: string
+          template_variables?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_templates_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
