@@ -184,8 +184,15 @@ Responde SOLO JSON válido:
 
       if (!servicesText) servicesText = "(sin servicios configurados)";
 
-      const branchesText = (branches || []).map(b => `• ${b.name}: ${b.address || ""}`)
-        .join("\n") || "(sin sucursales)";
+      // Use locations from ai_agent_config first, fallback to branches table
+      let locationsText = agentConfig?.locations_text || "";
+      if (!locationsText) {
+        locationsText = (branches || []).map(b => `• ${b.name}: ${b.address || ""}`).join("\n");
+      }
+      if (!locationsText) locationsText = "(sin ubicaciones configuradas)";
+
+      // Include professionals if available
+      const professionalsText = agentConfig?.professionals_text || "";
 
       const todayStr = new Date().toISOString().split("T")[0];
       const dayOfWeekStr = new Date().toLocaleDateString("es", { weekday: "long" });
