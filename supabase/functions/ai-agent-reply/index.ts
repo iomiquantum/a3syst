@@ -96,13 +96,13 @@ serve(async (req) => {
             const sendResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
               method: "POST",
               headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
-               body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: reply, conversation_id, origin: "appointment_flow" }),
+               body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: reply, conversation_id, origin: `appointment_flow|${conversationData.pipeline_tab || "inbox"}` }),
             });
             savedMsg = await sendResponse.json().catch(() => null);
           }
         } else {
           const { data: insertedMessage } = await supabase.from("messages").insert({
-            conversation_id, clinic_id, direction: "outbound", content: reply, message_type: "text", status: "sent", origin: "appointment_flow",
+            conversation_id, clinic_id, direction: "outbound", content: reply, message_type: "text", status: "sent", origin: `appointment_flow|${conversationData.pipeline_tab || "inbox"}`,
           }).select().single();
           savedMsg = insertedMessage;
           await supabase.from("conversations").update({
@@ -135,12 +135,12 @@ serve(async (req) => {
             await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
               method: "POST",
               headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
-              body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: cancelReply, conversation_id, origin: "appointment_flow" }),
+              body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: cancelReply, conversation_id, origin: `appointment_flow|${conversationData.pipeline_tab || "inbox"}` }),
             });
           }
         } else {
           await supabase.from("messages").insert({
-            conversation_id, clinic_id, direction: "outbound", content: cancelReply, message_type: "text", status: "sent", origin: "appointment_flow",
+            conversation_id, clinic_id, direction: "outbound", content: cancelReply, message_type: "text", status: "sent", origin: `appointment_flow|${conversationData.pipeline_tab || "inbox"}`,
           });
           await supabase.from("conversations").update({
             last_message_at: new Date().toISOString(), last_message_preview: cancelReply.substring(0, 100),
