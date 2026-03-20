@@ -7,9 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Save, ArrowRight, Clock, MessageSquare, Ban, UserCheck } from "lucide-react";
-import { usePipelineRules, type AutoMessage } from "@/hooks/usePipelineRules";
+import { Save, ArrowRight, Clock, MessageSquare, Ban, UserCheck, Brain, Shield, Lightbulb } from "lucide-react";
+import { usePipelineRules } from "@/hooks/usePipelineRules";
+import { useSeguimientoStrategies } from "@/hooks/useSeguimientoStrategies";
+import { useAgentName } from "@/hooks/useAgentName";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useClinic } from "@/hooks/useClinic";
+import { toast } from "sonner";
 
 const RULE_KEYS = [
   { key: "inactivity_timeout_minutes", label: "Tiempo de inactividad", desc: "Tiempo sin respuesta del cliente antes de iniciar seguimiento" },
@@ -32,21 +37,23 @@ function formatMinutes(min: number): string {
   return `${min} min`;
 }
 
-const DEFAULT_TEMPLATES = [
-  "¡Hola {{nombre}}! 👋 Vi que estabas interesado/a en nuestros servicios. ¿Te puedo ayudar con algo?",
-  "Hola {{nombre}}, quería saber si aún tienes interés en lo que conversamos. Estamos aquí para ayudarte 😊",
-  "{{nombre}}, última oportunidad 🔔 Tenemos disponibilidad limitada. ¿Te gustaría agendar?",
-];
-
 const PipelineConfigPage = () => {
+  const { clinicId } = useClinic();
   const {
-    globalRules, clinicOverrides, effectiveRules, autoMessages,
-    loading, saveClinicOverride, removeClinicOverride, saveAutoMessage,
+    globalRules, clinicOverrides, effectiveRules,
+    loading, saveClinicOverride, removeClinicOverride,
   } = usePipelineRules();
+  const { strategies } = useSeguimientoStrategies();
+  const { agentName } = useAgentName();
 
   const [overrideToggles, setOverrideToggles] = useState<Record<string, boolean>>({});
   const [localValues, setLocalValues] = useState<Record<string, number>>({});
-  const [localMessages, setLocalMessages] = useState<{ contact_number: number; message_template: string; is_active: boolean }[]>([]);
+  const [localAgentName, setLocalAgentName] = useState("");
+  const [humanDelayEnabled, setHumanDelayEnabled] = useState(true);
+
+  useEffect(() => {
+    setLocalAgentName(agentName);
+  }, [agentName]);
 
   useEffect(() => {
     const toggles: Record<string, boolean> = {};
@@ -60,22 +67,6 @@ const PipelineConfigPage = () => {
     setLocalValues(vals);
   }, [globalRules, clinicOverrides]);
 
-  useEffect(() => {
-    if (autoMessages.length > 0) {
-      setLocalMessages(autoMessages.map(m => ({
-        contact_number: m.contact_number,
-        message_template: m.message_template,
-        is_active: m.is_active,
-      })));
-    } else {
-      setLocalMessages([1, 2, 3].map((n, i) => ({
-        contact_number: n,
-        message_template: DEFAULT_TEMPLATES[i],
-        is_active: true,
-      })));
-    }
-  }, [autoMessages]);
-
   const handleToggleOverride = async (key: string, useGlobal: boolean) => {
     setOverrideToggles(prev => ({ ...prev, [key]: !useGlobal }));
     if (useGlobal) {
@@ -88,45 +79,102 @@ const PipelineConfigPage = () => {
     await saveClinicOverride(key, localValues[key]);
   };
 
-  const handleSaveMessages = async () => {
-    for (const msg of localMessages) {
-      await saveAutoMessage(msg.contact_number, msg.message_template, msg.is_active);
-    }
+  const handleSaveAgentName = async () => {
+    if (!clinicId) return;
+    await supabase.from("clinic_pipeline_rules").upsert({
+      clinic_id: clinicId,
+      rule_key: "ai_agent_name",
+      rule_value: JSON.stringify(localAgentName) as any,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "clinic_id,rule_key" });
+    toast.success("Nombre del agente actualizado");
   };
 
   if (loading) return <AppLayout><div className="p-8 text-center text-muted-foreground">Cargando...</div></AppLayout>;
-
-  const S_STEPS = [
-    { key: "s1", label: "S1", type: "auto" },
-    { key: "s2", label: "S2", type: "auto" },
-    { key: "s3", label: "S3", type: "auto" },
-    { key: "s4", label: "S4", type: "auto" },
-    { key: "s5", label: "S5", type: "auto" },
-    { key: "s6", label: "S6", type: "auto" },
-    { key: "s7", label: "S7", type: "auto" },
-    { key: "s8", label: "S8", type: "auto" },
-    { key: "s9", label: "S9", type: "manual" },
-    { key: "s10", label: "S10", type: "manual" },
-  ];
 
   return (
     <AppLayout>
       <div className="p-4 md:p-6 space-y-6 max-w-4xl mx-auto">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Pipeline de mensajes</h1>
-          <p className="text-sm text-muted-foreground mt-1">Personaliza los tiempos y mensajes de seguimiento automático para tu negocio</p>
+          <p className="text-sm text-muted-foreground mt-1">Personaliza los tiempos, estrategias y comportamiento del seguimiento automático</p>
         </div>
 
-        {/* Section 1: Timing Rules */}
+        {/* Agent Name */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Nombre del agente IA</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-3">
+              <Input
+                value={localAgentName}
+                onChange={e => setLocalAgentName(e.target.value)}
+                className="w-48"
+                placeholder="Sofía"
+              />
+              <Button size="sm" variant="outline" onClick={handleSaveAgentName}>
+                <Save className="w-3 h-3 mr-1" />Guardar
+              </Button>
+            </div>
+            <div className="bg-muted rounded-lg px-3 py-2 text-xs text-muted-foreground">
+              Preview: "Hola María, soy <strong className="text-foreground">{localAgentName}</strong> de tu negocio..."
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Send Window + Delay */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Horarios y delay humanizado</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label className="text-sm">Hora inicio envío</Label>
+                <Input
+                  type="number" min={0} max={23}
+                  value={localValues["send_window_start_hour"] ?? 8}
+                  onChange={e => setLocalValues(prev => ({ ...prev, send_window_start_hour: parseInt(e.target.value) || 8 }))}
+                  className="w-24"
+                />
+                <p className="text-[10px] text-muted-foreground">AM (0-23)</p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-sm">Hora fin envío</Label>
+                <Input
+                  type="number" min={0} max={23}
+                  value={localValues["send_window_end_hour"] ?? 21}
+                  onChange={e => setLocalValues(prev => ({ ...prev, send_window_end_hour: parseInt(e.target.value) || 21 }))}
+                  className="w-24"
+                />
+                <p className="text-[10px] text-muted-foreground">PM (0-23)</p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Los mensajes fuera de esta ventana se posponen automáticamente</p>
+
+            <div className="border-t border-border pt-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-medium">Delay humanizado</Label>
+                  <p className="text-xs text-muted-foreground">Las respuestas tardarán entre 5 y 45 segundos simulando escritura humana</p>
+                </div>
+                <Switch checked={humanDelayEnabled} onCheckedChange={setHumanDelayEnabled} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Timing Rules */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Tiempos de seguimiento</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
-            {RULE_KEYS.map(r => {
+            {RULE_KEYS.filter(r => !r.key.includes("hour")).map(r => {
               const isCustom = overrideToggles[r.key];
               const globalVal = globalRules[r.key as keyof typeof globalRules];
-              const unit = r.key.includes("minutes") ? "minutes" : r.key.includes("hour") ? "hour" : "count";
+              const unit = r.key.includes("minutes") ? "minutes" : "count";
 
               return (
                 <div key={r.key} className="space-y-2 pb-3 border-b border-border last:border-0 last:pb-0">
@@ -155,7 +203,7 @@ const PipelineConfigPage = () => {
                       className="w-24"
                     />
                     <span className="text-xs text-muted-foreground">
-                      {unit === "minutes" ? (localValues[r.key] >= 60 ? "horas" : "minutos") : unit === "hour" ? "h" : ""}
+                      {unit === "minutes" ? (localValues[r.key] >= 60 ? "horas" : "minutos") : ""}
                     </span>
                     {!isCustom && (
                       <Badge variant="outline" className="text-xs">
@@ -174,59 +222,80 @@ const PipelineConfigPage = () => {
           </CardContent>
         </Card>
 
-        {/* Section 2: Auto Messages */}
+        {/* Strategies */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Mensajes de seguimiento</CardTitle>
+            <CardTitle className="text-lg">Los 10 seguimientos — Estrategias psicológicas</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-5">
-            {localMessages.map((msg, idx) => {
-              const delayKey = `s${msg.contact_number}_delay_minutes` as keyof typeof effectiveRules;
-              const delay = effectiveRules[delayKey] || 60;
+          <CardContent className="space-y-4">
+            {strategies.map(s => {
+              const delayKey = `s${s.contact_number}_delay_minutes` as keyof typeof effectiveRules;
+              const delay = effectiveRules[delayKey];
+              const isManual = s.contact_number >= 9;
 
               return (
-                <div key={msg.contact_number} className="space-y-2 pb-4 border-b border-border last:border-0 last:pb-0">
-                  <div className="flex items-center justify-between">
+                <div key={s.id} className="border border-border rounded-lg p-4 space-y-2">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">S{msg.contact_number}</span>
-                      <Badge variant="outline" className="text-xs">{formatMinutes(delay)} después</Badge>
-                      <Badge className="bg-blue-500/20 text-blue-600 text-[10px]">Automático (IA)</Badge>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">{msg.is_active ? "Activo" : "Inactivo"}</span>
-                      <Switch
-                        checked={msg.is_active}
-                        onCheckedChange={v => {
-                          setLocalMessages(prev => prev.map((m, i) => i === idx ? { ...m, is_active: v } : m));
-                        }}
-                      />
+                      <span className="text-sm font-bold">S{s.contact_number}</span>
+                      <span className="text-sm font-medium text-foreground">— {s.strategy_name}</span>
+                      {delay && (
+                        <Badge variant="outline" className="text-[10px]">+{formatMinutes(delay)}</Badge>
+                      )}
+                      <Badge className={cn(
+                        "text-[10px]",
+                        isManual
+                          ? "bg-amber-500/20 text-amber-600"
+                          : "bg-blue-500/20 text-blue-600"
+                      )}>
+                        {isManual ? "Manual ✋" : "Automático IA"}
+                      </Badge>
                     </div>
                   </div>
-                  <Textarea
-                    value={msg.message_template}
-                    onChange={e => {
-                      setLocalMessages(prev => prev.map((m, i) => i === idx ? { ...m, message_template: e.target.value } : m));
-                    }}
-                    rows={2}
-                    className="text-sm"
-                  />
-                  <p className="text-[11px] text-muted-foreground">Usa <code className="bg-muted px-1 rounded">{"{{nombre}}"}</code> para el nombre del cliente</p>
-                  {msg.message_template.includes("{{nombre}}") && (
-                    <div className="bg-muted rounded-lg px-3 py-2 text-xs">
-                      <span className="text-muted-foreground">Preview:</span>{" "}
-                      {msg.message_template.replace(/\{\{nombre\}\}/g, "María")}
+                  <p className="text-xs text-muted-foreground">{s.strategy_description}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px]">
+                    <div className="flex items-start gap-1.5 bg-muted/50 rounded px-2 py-1.5">
+                      <Brain className="w-3 h-3 text-violet-500 mt-0.5 shrink-0" />
+                      <div>
+                        <span className="font-medium text-foreground">Principio:</span>{" "}
+                        <span className="text-muted-foreground">{s.psychological_principle}</span>
+                      </div>
                     </div>
+                    <div className="flex items-start gap-1.5 bg-muted/50 rounded px-2 py-1.5">
+                      <Shield className="w-3 h-3 text-amber-500 mt-0.5 shrink-0" />
+                      <div>
+                        <span className="font-medium text-foreground">Barrera:</span>{" "}
+                        <span className="text-muted-foreground">{s.barrier_it_solves}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-1.5 bg-muted/50 rounded px-2 py-1.5">
+                      <Lightbulb className="w-3 h-3 text-emerald-500 mt-0.5 shrink-0" />
+                      <div>
+                        <span className="font-medium text-foreground">Reglas:</span>{" "}
+                        <span className="text-muted-foreground">{s.rules}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {isManual && (
+                    <p className="text-[10px] text-amber-600 italic">
+                      Este contacto lo envía un agente humano. S9: se presenta como compañero de {localAgentName}. S10: cierre con valor.
+                    </p>
+                  )}
+                  {!isManual && (
+                    <p className="text-[10px] text-muted-foreground italic">
+                      El mensaje se genera por IA basándose en el contexto del chat y esta estrategia.
+                    </p>
                   )}
                 </div>
               );
             })}
-            <Button onClick={handleSaveMessages}>
-              <Save className="w-4 h-4 mr-1.5" />Guardar mensajes
-            </Button>
+            {strategies.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">Cargando estrategias...</p>
+            )}
           </CardContent>
         </Card>
 
-        {/* Section 3: Flow Preview */}
+        {/* Flow Preview */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Vista previa del flujo</CardTitle>
@@ -235,25 +304,27 @@ const PipelineConfigPage = () => {
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <div className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-600 rounded-lg px-3 py-2">
                 <MessageSquare className="w-4 h-4" />
-                <span className="font-medium">IA responde</span>
+                <span className="font-medium">{localAgentName} responde</span>
               </div>
               <ArrowRight className="w-4 h-4 text-muted-foreground" />
               <Badge variant="outline" className="text-xs">{formatMinutes(effectiveRules.inactivity_timeout_minutes)}</Badge>
               <ArrowRight className="w-4 h-4 text-muted-foreground" />
 
-              {S_STEPS.map((s, i) => {
-                const delayKey = `${s.key}_delay_minutes` as keyof typeof effectiveRules;
+              {Array.from({ length: 10 }, (_, i) => i + 1).map((n, i) => {
+                const isManual = n >= 9;
+                const delayKey = `s${n}_delay_minutes` as keyof typeof effectiveRules;
                 const delay = effectiveRules[delayKey];
+                const strategy = strategies.find(s => s.contact_number === n);
                 return (
-                  <div key={s.key} className="contents">
+                  <div key={n} className="contents">
                     <div className={cn(
                       "flex items-center gap-1.5 rounded-lg px-3 py-2",
-                      s.type === "auto" ? "bg-blue-500/10 text-blue-600" : "bg-amber-500/10 text-amber-600"
-                    )}>
-                      {s.type === "auto" ? <Clock className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                      <span>{s.label}</span>
+                      isManual ? "bg-amber-500/10 text-amber-600" : "bg-blue-500/10 text-blue-600"
+                    )} title={strategy?.strategy_name}>
+                      {isManual ? <UserCheck className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+                      <span>S{n}</span>
                     </div>
-                    {i < S_STEPS.length - 1 && (
+                    {i < 9 && (
                       <>
                         <ArrowRight className="w-4 h-4 text-muted-foreground" />
                         {delay && <Badge variant="outline" className="text-xs">{formatMinutes(delay)}</Badge>}
@@ -271,7 +342,7 @@ const PipelineConfigPage = () => {
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-3">
-              S1-S8 son automáticos (IA). S9-S10 son manuales (agente humano). Si el cliente responde, avanza al siguiente S sin retroceder.
+              S1-S8 son automáticos (IA como {localAgentName}). S9-S10 son manuales (agente humano). Si el cliente responde, avanza al siguiente S sin retroceder.
             </p>
           </CardContent>
         </Card>

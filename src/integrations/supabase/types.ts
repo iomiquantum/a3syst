@@ -2841,6 +2841,39 @@ export type Database = {
           },
         ]
       }
+      seguimiento_strategies: {
+        Row: {
+          barrier_it_solves: string
+          contact_number: number
+          id: string
+          prompt_instruction: string
+          psychological_principle: string
+          rules: string
+          strategy_description: string
+          strategy_name: string
+        }
+        Insert: {
+          barrier_it_solves: string
+          contact_number: number
+          id?: string
+          prompt_instruction: string
+          psychological_principle: string
+          rules: string
+          strategy_description: string
+          strategy_name: string
+        }
+        Update: {
+          barrier_it_solves?: string
+          contact_number?: number
+          id?: string
+          prompt_instruction?: string
+          psychological_principle?: string
+          rules?: string
+          strategy_description?: string
+          strategy_name?: string
+        }
+        Relationships: []
+      }
       social_media_connections: {
         Row: {
           access_token: string

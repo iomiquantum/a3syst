@@ -13,6 +13,7 @@ import ChatToolbar from "./ChatToolbar";
 import { usePipelineAction } from "@/hooks/usePipelineAction";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
+import { useAgentName } from "@/hooks/useAgentName";
 import { useAuth } from "@/hooks/useAuth";
 import { useClinicTemplate } from "@/hooks/useClinicTemplate";
 import ClinicChatActions from "./ClinicChatActions";
@@ -44,6 +45,7 @@ interface ChatMessage {
 const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPanel, onToggleContactPanel }: Props) => {
   const { clinicId } = useClinic();
   const { user } = useAuth();
+  const { agentName } = useAgentName();
   const { moveConversation } = usePipelineAction();
   const { templateSlug } = useClinicTemplate();
   const [input, setInput] = useState("");
@@ -254,7 +256,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                 {isBotMessage(m) && (
                   <div className="flex items-center gap-1 mb-1">
                     <Bot className="w-3 h-3 text-violet-500" />
-                    <span className="text-[10px] font-medium text-violet-500">Asistente IA</span>
+                    <span className="text-[9px] font-medium text-violet-500">{agentName}</span>
                   </div>
                 )}
                 <p className="leading-relaxed whitespace-pre-wrap">{m.content}</p>
