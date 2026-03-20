@@ -315,7 +315,7 @@ Responde SOLO JSON válido:
       }
 
       const { data: agentConfig } = await supabase.from("ai_agent_config")
-        .select("agent_name").eq("clinic_id", clinic_id).maybeSingle();
+        .select("agent_name, locations_text").eq("clinic_id", clinic_id).maybeSingle();
       const { data: clinic } = await supabase.from("clinics").select("name").eq("id", clinic_id).single();
       const { data: branches } = await supabase.from("branches")
         .select("id, name, address, google_maps_url").eq("clinic_id", clinic_id).eq("active", true);
@@ -323,6 +323,7 @@ Responde SOLO JSON válido:
       return await confirmAppointment(
         supabase, supabaseUrl, supabaseKey, conv, flowData, clinic_id,
         agentConfig?.agent_name || "Asistente", clinic?.name || "el negocio", branches,
+        agentConfig?.locations_text || null,
       );
     }
 
