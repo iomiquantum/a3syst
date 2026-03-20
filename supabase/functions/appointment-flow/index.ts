@@ -54,7 +54,12 @@ serve(async (req) => {
         `${m.direction === "inbound" ? "Cliente" : "Agente"}: ${m.content}`
       ).join("\n");
 
+      const today = new Date().toISOString().split("T")[0];
+      const dayOfWeek = new Date().toLocaleDateString("es", { weekday: "long" });
+
       const detectPrompt = `Analiza el mensaje del paciente en contexto de la conversación.
+
+FECHA DE HOY: ${today} (${dayOfWeek})
 
 CONVERSACIÓN:
 ${msgContext}
@@ -68,6 +73,9 @@ SÍ: "Quiero agendar", "Me gustaría una cita", "¿Puedo ir mañana?",
 
 NO: Solo preguntar precios, pedir info general, "lo voy a pensar",
 preguntar horarios sin intención de reservar
+
+IMPORTANTE: Si el paciente menciona una fecha relativa ("mañana", "el viernes", "la próxima semana"),
+DEBES resolverla a formato YYYY-MM-DD basándote en la fecha de hoy.
 
 Responde SOLO JSON válido:
 {
