@@ -282,6 +282,7 @@ async function sendWhatsAppMessageSmart(
       template_language: template.template_language || "es",
       template_components: components,
       conversation_id: conv.id,
+      origin: origin || "system",
     }),
   });
 
