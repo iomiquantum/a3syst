@@ -357,10 +357,10 @@ Deno.serve(async (req) => {
     const queueDelayBetweenSendsMs = Number(rules["queue_delay_between_sends_ms"]) || 2000;
     const queueMaxRetryAttempts = Number(rules["queue_max_retry_attempts"]) || 3;
 
-    // Build delay map for S1-S8
+    // Build delay map for S1-S4 (S5-S6 are manual, no delays needed)
     const delayMap: Record<number, number> = {};
-    for (let i = 1; i <= 8; i++) {
-      delayMap[i] = Number(rules[`s${i}_delay_minutes`]) || [15, 30, 240, 720, 120, 240, 720, 30][i - 1];
+    for (let i = 1; i <= 4; i++) {
+      delayMap[i] = Number(rules[`s${i}_delay_minutes`]) || [15, 30, 240, 720][i - 1];
     }
 
     // === LOAD STRATEGIES ===
