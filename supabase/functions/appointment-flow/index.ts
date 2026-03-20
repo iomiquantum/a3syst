@@ -209,8 +209,9 @@ DATOS RECOPILADOS HASTA AHORA:
 SERVICIOS DISPONIBLES:
 ${servicesText}
 
-SUCURSALES:
-${branchesText}
+UBICACIONES / DIRECCIÓN:
+${locationsText}
+${professionalsText ? `\nPROFESIONALES:\n${professionalsText}` : ""}
 
 PASO ACTUAL: ${conv.appointment_flow_step}
 MENSAJE DEL PACIENTE: "${patient_message}"
