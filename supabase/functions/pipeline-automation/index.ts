@@ -633,9 +633,26 @@ Deno.serve(async (req) => {
         // Get clinic agent name override
         const agentName = await getClinicAgentName(conv.clinic_id);
 
-        // Get clinic name
+        // Get clinic name and AI agent config
         const { data: clinic } = await supabase.from("clinics").select("name").eq("id", conv.clinic_id).single();
         const clinicName = clinic?.name || "el negocio";
+
+        // Load clinic's AI agent config for service/price context
+        const { data: agentConfig } = await supabase.from("ai_agent_config")
+          .select("services, treatments_text, prices_text, locations_text, professionals_text, special_instructions")
+          .eq("clinic_id", conv.clinic_id).maybeSingle();
+
+        let clinicKnowledgeBlock = "";
+        if (agentConfig) {
+          const parts: string[] = [];
+          if (agentConfig.treatments_text) parts.push(`TRATAMIENTOS/SERVICIOS:\n${agentConfig.treatments_text}`);
+          if (agentConfig.prices_text) parts.push(`PRECIOS:\n${agentConfig.prices_text}`);
+          if (agentConfig.locations_text) parts.push(`UBICACIÓN:\n${agentConfig.locations_text}`);
+          if (agentConfig.professionals_text) parts.push(`PROFESIONALES:\n${agentConfig.professionals_text}`);
+          if (parts.length > 0) {
+            clinicKnowledgeBlock = `\nINFORMACIÓN REAL DEL NEGOCIO (SOLO usa estos datos, NUNCA inventes servicios ni precios):\n${parts.join("\n\n")}`;
+          }
+        }
 
         // Get contact name
         let contactName = "cliente";
@@ -682,6 +699,7 @@ CONTEXTO DE MOVIMIENTO:
 
 CONVERSACIÓN COMPLETA (últimos 20 mensajes):
 ${messagesContext}
+${clinicKnowledgeBlock}
 
 INFORMACIÓN DEL CONTACTO:
 - Nombre: ${contactName}
@@ -710,6 +728,7 @@ REGLAS GLOBALES INQUEBRANTABLES:
 11. Si es S7 o S8: el tono es empático y de despedida, SIN preguntas
 12. NUNCA sugieras "agendar una llamada" ni "llamar" — la comunicación es por MENSAJES. Ofrece agendar una CITA presencial o resolver dudas por este medio.
 13. NUNCA inventes números exactos de cupos (ej. "quedan 2 cupos"). Usa "pocos cupos" o "espacios limitados". Ofrece DÍAS disponibles, NUNCA horarios específicos.
+14. SOLO menciona servicios, tratamientos y precios que aparezcan en la INFORMACIÓN REAL DEL NEGOCIO. NUNCA inventes servicios que no existan (ej. NO digas "limpieza facial" si no está en la lista).
 
 Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aquí tienes el mensaje:".`;
         } else {
