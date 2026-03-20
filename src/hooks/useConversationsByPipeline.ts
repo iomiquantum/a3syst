@@ -4,11 +4,16 @@ import { useClinic } from "@/hooks/useClinic";
 
 export type PipelineTab =
   | "resueltos_ia"
-  | "seguimiento_c1"
-  | "seguimiento_c2"
-  | "seguimiento_c3"
-  | "seguimiento_c4"
-  | "seguimiento_c5"
+  | "seguimiento_s1"
+  | "seguimiento_s2"
+  | "seguimiento_s3"
+  | "seguimiento_s4"
+  | "seguimiento_s5"
+  | "seguimiento_s6"
+  | "seguimiento_s7"
+  | "seguimiento_s8"
+  | "seguimiento_s9"
+  | "seguimiento_s10"
   | "no_responden"
   | "no_interesado"
   | "escalados"
@@ -33,6 +38,9 @@ export interface PipelineConversation {
   seguimiento_contact_number: number;
   seguimiento_is_recurrente: boolean;
   seguimiento_recurrente_count: number;
+  seguimiento_last_completed_s: number;
+  seguimiento_next_s: number;
+  seguimiento_responded_at_s: number;
   pinned: boolean;
   contactName: string;
   contactPhone: string;
@@ -60,6 +68,11 @@ interface Params {
   subFilter?: string;
 }
 
+const ALL_SEGUIMIENTO_TABS = [
+  "seguimiento_s1", "seguimiento_s2", "seguimiento_s3", "seguimiento_s4", "seguimiento_s5",
+  "seguimiento_s6", "seguimiento_s7", "seguimiento_s8", "seguimiento_s9", "seguimiento_s10",
+];
+
 export const useConversationsByPipeline = (params: Params) => {
   const { clinicId } = useClinic();
   const [conversations, setConversations] = useState<PipelineConversation[]>([]);
@@ -78,13 +91,12 @@ export const useConversationsByPipeline = (params: Params) => {
 
     // Pipeline filter
     if (params.pipelineTab !== "todos") {
-      if (params.pipelineTab === "seguimiento_c1") {
-        // "Seguimiento" tab groups C1-C5
-        const seguimientoTabs = ["seguimiento_c1", "seguimiento_c2", "seguimiento_c3", "seguimiento_c4", "seguimiento_c5"];
+      if (params.pipelineTab === "seguimiento_s1") {
+        // "Seguimiento" tab groups S1-S10
         if (params.subFilter && params.subFilter !== "todos") {
           query = query.eq("pipeline_tab", params.subFilter);
         } else {
-          query = query.in("pipeline_tab", seguimientoTabs);
+          query = query.in("pipeline_tab", ALL_SEGUIMIENTO_TABS);
         }
       } else if (params.pipelineTab === "agendados") {
         query = query.eq("pipeline_tab", "agendados");
@@ -129,6 +141,9 @@ export const useConversationsByPipeline = (params: Params) => {
       seguimiento_contact_number: c.seguimiento_contact_number || 0,
       seguimiento_is_recurrente: c.seguimiento_is_recurrente || false,
       seguimiento_recurrente_count: c.seguimiento_recurrente_count || 0,
+      seguimiento_last_completed_s: c.seguimiento_last_completed_s || 0,
+      seguimiento_next_s: c.seguimiento_next_s || 0,
+      seguimiento_responded_at_s: c.seguimiento_responded_at_s || 0,
       pinned: c.pinned || false,
       contactName: c.contacts?.name || c.visitor_name || "Sin nombre",
       contactPhone: c.contacts?.phone || c.visitor_contact || "",

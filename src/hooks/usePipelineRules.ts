@@ -5,20 +5,34 @@ import { toast } from "sonner";
 
 export interface PipelineRules {
   inactivity_timeout_minutes: number;
-  c1_delay_minutes: number;
-  c2_delay_minutes: number;
-  c3_delay_minutes: number;
+  s1_delay_minutes: number;
+  s2_delay_minutes: number;
+  s3_delay_minutes: number;
+  s4_delay_minutes: number;
+  s5_delay_minutes: number;
+  s6_delay_minutes: number;
+  s7_delay_minutes: number;
+  s8_delay_minutes: number;
   max_auto_contacts: number;
   recurrente_max_cycles: number;
+  send_window_start_hour: number;
+  send_window_end_hour: number;
 }
 
 const DEFAULTS: PipelineRules = {
-  inactivity_timeout_minutes: 30,
-  c1_delay_minutes: 60,
-  c2_delay_minutes: 240,
-  c3_delay_minutes: 720,
-  max_auto_contacts: 3,
+  inactivity_timeout_minutes: 15,
+  s1_delay_minutes: 15,
+  s2_delay_minutes: 30,
+  s3_delay_minutes: 30,
+  s4_delay_minutes: 60,
+  s5_delay_minutes: 120,
+  s6_delay_minutes: 240,
+  s7_delay_minutes: 720,
+  s8_delay_minutes: 30,
+  max_auto_contacts: 10,
   recurrente_max_cycles: 0,
+  send_window_start_hour: 8,
+  send_window_end_hour: 21,
 };
 
 export interface AutoMessage {
@@ -42,7 +56,6 @@ export const usePipelineRules = () => {
   const fetchRules = async () => {
     setLoading(true);
 
-    // Fetch global rules
     const { data: globalRows } = await supabase
       .from("pipeline_global_rules")
       .select("rule_key, rule_value");
@@ -56,7 +69,6 @@ export const usePipelineRules = () => {
     });
     setGlobalRules(globals);
 
-    // Fetch clinic overrides
     const overrides: Partial<PipelineRules> = {};
     if (clinicId) {
       const { data: clinicRows } = await supabase
@@ -73,7 +85,6 @@ export const usePipelineRules = () => {
     }
     setClinicOverrides(overrides);
 
-    // Compute effective
     const effective = { ...globals };
     Object.keys(overrides).forEach((k) => {
       const key = k as keyof PipelineRules;
@@ -83,7 +94,6 @@ export const usePipelineRules = () => {
     });
     setEffectiveRules(effective);
 
-    // Fetch auto messages
     if (clinicId) {
       const { data: msgs } = await (supabase as any)
         .from("seguimiento_auto_messages")

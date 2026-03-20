@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Phone, Mail, MapPin, Tag, FileText, ExternalLink, UserPlus, Calendar, Pencil, Check, X, Plus, Pin, Archive, Copy, PanelRightClose } from "lucide-react";
+import { Phone, Mail, MapPin, Tag, FileText, ExternalLink, UserPlus, Calendar, Pencil, Check, X, Plus, Pin, Archive, Copy } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,11 +13,16 @@ import type { PipelineConversation } from "@/hooks/useConversationsByPipeline";
 
 const PIPELINE_STAGES = [
   { key: "resueltos_ia", label: "Resueltos IA" },
-  { key: "seguimiento_c1", label: "Seguimiento C1" },
-  { key: "seguimiento_c2", label: "Seguimiento C2" },
-  { key: "seguimiento_c3", label: "Seguimiento C3" },
-  { key: "seguimiento_c4", label: "Seguimiento C4" },
-  { key: "seguimiento_c5", label: "Seguimiento C5" },
+  { key: "seguimiento_s1", label: "Seguimiento S1" },
+  { key: "seguimiento_s2", label: "Seguimiento S2" },
+  { key: "seguimiento_s3", label: "Seguimiento S3" },
+  { key: "seguimiento_s4", label: "Seguimiento S4" },
+  { key: "seguimiento_s5", label: "Seguimiento S5" },
+  { key: "seguimiento_s6", label: "Seguimiento S6" },
+  { key: "seguimiento_s7", label: "Seguimiento S7" },
+  { key: "seguimiento_s8", label: "Seguimiento S8" },
+  { key: "seguimiento_s9", label: "Seguimiento S9" },
+  { key: "seguimiento_s10", label: "Seguimiento S10" },
   { key: "no_responden", label: "No responden" },
   { key: "no_interesado", label: "No interesado" },
   { key: "escalados", label: "Escalados" },
@@ -94,7 +99,6 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props)
   };
 
   const updateStage = async (stage: string) => {
-    // Update the pipeline_tab on the conversation, not the contact funnel_stage
     await (supabase as any).from("conversations").update({ pipeline_tab: stage }).eq("id", c.id);
     toast.success("Etapa actualizada");
     onActionComplete?.();
@@ -318,7 +322,7 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props)
             await supabase.from("conversations").update({ archived: true }).eq("id", c.id);
             toast.success("Conversación archivada");
             onActionComplete?.();
-          }} className="w-full h-8 rounded-lg border border-border text-foreground text-xs font-medium flex items-center justify-center gap-2 hover:bg-muted transition-colors">
+          }} className="w-full h-8 rounded-lg border border-border text-xs font-medium flex items-center justify-center gap-2 hover:bg-muted transition-colors text-muted-foreground">
             <Archive className="w-3.5 h-3.5" /> Archivar Conversación
           </button>
         </div>
