@@ -146,6 +146,7 @@ async function logOutboundMessage(
   sentBy: string | undefined,
   conversationId: string | undefined,
   templateName: string | undefined,
+  origin: string | undefined,
 ) {
   const textContent = msgType === "template"
     ? `📋 Template: ${templateName}`
