@@ -523,7 +523,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ========== TAREA 2: ENQUEUE follow-ups (S1-S8) — NO LONGER SENDS ==========
+    // ========== TAREA 2: ENQUEUE follow-ups (S1-S4) ==========
     console.log("[PIPELINE] TAREA 2: Enqueuing follow-up messages...");
     const now = new Date().toISOString();
     const seguimientoTabs = Array.from({ length: 4 }, (_, i) => `seguimiento_s${i + 1}`);
