@@ -195,6 +195,7 @@ async function sendWhatsAppMessageSmart(
     await supabase.from("messages").insert({
       conversation_id: conv.id, clinic_id: conv.clinic_id,
       direction: "outbound", content: messageContent, message_type: "text", status: "sent",
+      origin: origin || "system",
     });
     return { sent: true, type: "free_form" };
   }
