@@ -183,6 +183,11 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
               <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                 <ChannelIcon channel={c.channel} size="sm" /> {c.channel === "whatsapp" ? "WhatsApp" : c.channel === "web" ? "Web" : c.channel}
               </span>
+              <WhatsAppWindowBadge
+                lastClientMessageAt={(c as any).last_client_message_at}
+                channel={c.channel}
+                isBlocked={(c as any).whatsapp_window_blocked}
+              />
               {c.contactTags.slice(0, 3).map(t => (
                 <span key={t} className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">{t}</span>
               ))}
