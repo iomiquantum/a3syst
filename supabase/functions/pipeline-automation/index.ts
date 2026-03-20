@@ -977,9 +977,22 @@ Deno.serve(async (req) => {
 
         if (!sendResult.sent) {
           if (sendResult.type === "blocked") {
-            // Template not approved — retry later
-            const retryAt = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
-            await supabase.from("conversations").update({ seguimiento_next_contact_at: retryAt }).eq("id", convFresh.id);
+            // Window closed — pause seguimiento, agent must send template manually
+            await supabase.from("conversations").update({
+              seguimiento_next_contact_at: null,
+              whatsapp_window_blocked: true,
+              whatsapp_window_blocked_at: new Date().toISOString(),
+              whatsapp_window_blocked_reason: "ventana_cerrada_requiere_template_manual",
+            }).eq("id", convFresh.id);
+
+            // Mark queue item as needing manual resolution
+            await supabase.from("pipeline_message_queue").update({
+              status: "pending_manual",
+              last_error: "Ventana WhatsApp cerrada. El agente debe enviar un template aprobado manualmente.",
+            }).eq("id", queueItem.id);
+
+            console.log(`[QUEUE] Conv ${convFresh.id} paused — window closed, needs manual template`);
+            continue; // Skip to next queue item, don't throw
           }
           throw new Error(`Send failed: ${sendResult.reason || sendResult.type}`);
         }
