@@ -539,7 +539,7 @@ Deno.serve(async (req) => {
     const seguimientoTabs = Array.from({ length: 10 }, (_, i) => `seguimiento_s${i + 1}`);
     const { data: followUpConvs } = await supabase
       .from("conversations")
-      .select("id, clinic_id, pipeline_tab, seguimiento_contact_number, seguimiento_last_completed_s, seguimiento_next_s, seguimiento_responded_at_s, seguimiento_is_recurrente, seguimiento_recurrente_count, contact_id, channel, visitor_contact, last_client_message_at")
+      .select("id, clinic_id, pipeline_tab, seguimiento_contact_number, seguimiento_last_completed_s, seguimiento_next_s, seguimiento_responded_at_s, seguimiento_is_recurrente, seguimiento_recurrente_count, contact_id, channel, visitor_contact, last_client_message_at, seguimiento_consecutive_read_no_reply, seguimiento_spam_protection_triggered")
       .in("pipeline_tab", seguimientoTabs)
       .not("seguimiento_next_contact_at", "is", null)
       .lt("seguimiento_next_contact_at", now)
