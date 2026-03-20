@@ -219,5 +219,14 @@ async function logOutboundMessage(
     }
 
     await supabase.from("conversations").update(conversationUpdate).eq("id", convId);
+
+    // If template was sent manually, resolve any pending queue items and resume seguimiento
+    if (msgType === "template" && convId) {
+      await supabase.from("pipeline_message_queue").update({
+        status: "resolved_manually",
+        resolved_manually_at: new Date().toISOString(),
+        resolved_manually_by: sentBy || "agent",
+      }).eq("conversation_id", convId).eq("status", "pending_manual");
+    }
   }
 }

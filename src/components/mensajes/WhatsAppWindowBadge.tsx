@@ -30,12 +30,14 @@ const WhatsAppWindowBadge = ({ lastClientMessageAt, channel, isBlocked, blockedR
   if (channel !== "whatsapp") return null;
 
   if (isBlocked) {
-    const label = blockedReason?.includes("template_")
-      ? "WA: template no aprobado"
-      : "WA: envío bloqueado";
+    const label = blockedReason?.includes("requiere_template_manual")
+      ? "⚠ Enviar template manual"
+      : blockedReason?.includes("template_")
+        ? "WA: template no aprobado"
+        : "WA: envío bloqueado";
 
     return (
-      <span className="inline-flex items-center gap-1 text-[9px] font-medium bg-destructive/10 text-destructive px-1.5 py-0.5 rounded">
+      <span className="inline-flex items-center gap-1 text-[9px] font-medium bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded animate-pulse">
         <AlertTriangle className="w-2.5 h-2.5" />
         {label}
       </span>
