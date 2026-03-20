@@ -44,6 +44,7 @@ interface ChatMessage {
   message_type: string;
   created_at: string;
   status: string;
+  origin: string | null;
 }
 
 const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPanel, onToggleContactPanel }: Props) => {
@@ -173,7 +174,22 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
     setTimeout(() => textareaRef.current?.focus(), 50);
   };
 
-  const isBotMessage = (m: ChatMessage) => m.direction === "outbound" && !m.sent_by;
+  const isBotMessage = (m: ChatMessage) => m.direction === "outbound" && (!m.sent_by || (m.origin && m.origin !== "human"));
+
+  const getOriginLabel = (m: ChatMessage): { text: string; color: string } | null => {
+    if (m.direction !== "outbound") return null;
+    const origin = m.origin || (m.sent_by ? "human" : "ai_agent");
+    if (origin === "human") return { text: "👤 Humano", color: "text-blue-500" };
+    if (origin === "ai_agent") return { text: `🤖 ${agentName}`, color: "text-violet-500" };
+    if (origin.startsWith("follow_up_s")) {
+      const num = origin.replace("follow_up_s", "");
+      return { text: `🔄 Seguimiento S${num}`, color: "text-amber-500" };
+    }
+    if (origin === "appointment_flow") return { text: "📅 Flujo de cita", color: "text-emerald-500" };
+    if (origin === "reminder") return { text: "⏰ Recordatorio", color: "text-orange-500" };
+    if (origin === "system") return { text: "⚙️ Sistema", color: "text-muted-foreground" };
+    return { text: `🤖 ${agentName}`, color: "text-violet-500" };
+  };
 
   // Auto-resize textarea
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -291,12 +307,14 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                     : "bg-primary text-primary-foreground"
                   : "bg-muted"
               )}>
-                {isBotMessage(m) && (
-                  <div className="flex items-center gap-1 mb-1">
-                    <Bot className="w-3 h-3 text-violet-500" />
-                    <span className="text-[9px] font-medium text-violet-500">{agentName}</span>
-                  </div>
-                )}
+                {m.direction === "outbound" && (() => {
+                  const label = getOriginLabel(m);
+                  return label ? (
+                    <div className="flex items-center gap-1 mb-1">
+                      <span className={`text-[9px] font-medium ${label.color}`}>{label.text}</span>
+                    </div>
+                  ) : null;
+                })()}
                 <p className="leading-relaxed whitespace-pre-wrap">{m.content}</p>
                 <div className={cn("flex items-center justify-end gap-1 mt-1", m.direction === "outbound" && !isBotMessage(m) ? "text-primary-foreground/70" : "text-muted-foreground")}>
                   <span className="text-[10px]">

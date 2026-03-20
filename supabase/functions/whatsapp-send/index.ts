@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
       type = "text", message_type,
       connection_id, conversation_id,
       template_name, template_language, template_components,
-      sent_by,
+      sent_by, origin,
     } = body;
 
     const targetNumber = (to || to_number || "").replace(/[^0-9]/g, "");
@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
         const retryResult = await retryResponse.json();
         if (retryResponse.ok) {
           const waMessageId = retryResult?.messages?.[0]?.id;
-          await logOutboundMessage(supabase, connection, effectiveClinicId, targetNumber, msgType, msgContent, waMessageId, sent_by, conversation_id, template_name);
+          await logOutboundMessage(supabase, connection, effectiveClinicId, targetNumber, msgType, msgContent, waMessageId, sent_by, conversation_id, template_name, origin);
           return jsonResponse({ success: true, wa_message_id: waMessageId });
         }
         return jsonResponse({ error: "Failed to send", details: retryResult }, retryResponse.status);
@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
     }
 
     const waMessageId = metaResult?.messages?.[0]?.id;
-    await logOutboundMessage(supabase, connection, effectiveClinicId, targetNumber, msgType, msgContent, waMessageId, sent_by, conversation_id, template_name);
+    await logOutboundMessage(supabase, connection, effectiveClinicId, targetNumber, msgType, msgContent, waMessageId, sent_by, conversation_id, template_name, origin);
 
     return jsonResponse({ success: true, wa_message_id: waMessageId });
   } catch (err) {
@@ -146,6 +146,7 @@ async function logOutboundMessage(
   sentBy: string | undefined,
   conversationId: string | undefined,
   templateName: string | undefined,
+  origin: string | undefined,
 ) {
   const textContent = msgType === "template"
     ? `📋 Template: ${templateName}`
@@ -206,6 +207,7 @@ async function logOutboundMessage(
       whatsapp_message_id: waMessageId,
       status: "sent",
       sent_by: sentBy || null,
+      origin: origin || (sentBy ? "human" : "ai_agent"),
     });
     const conversationUpdate: Record<string, unknown> = {
       last_message_at: new Date().toISOString(),

@@ -187,6 +187,7 @@ async function sendWhatsAppMessageSmart(
   messageContent: string,
   context: string,
   agentName: string,
+  origin?: string,
 ): Promise<{ sent: boolean; type: string; reason?: string }> {
   const channel = conv.channel || "whatsapp";
 
@@ -194,6 +195,7 @@ async function sendWhatsAppMessageSmart(
     await supabase.from("messages").insert({
       conversation_id: conv.id, clinic_id: conv.clinic_id,
       direction: "outbound", content: messageContent, message_type: "text", status: "sent",
+      origin: origin || "system",
     });
     return { sent: true, type: "free_form" };
   }
@@ -211,6 +213,7 @@ async function sendWhatsAppMessageSmart(
       body: JSON.stringify({
         clinic_id: conv.clinic_id, to_number: conv.visitor_contact,
         message_type: "text", content: messageContent, conversation_id: conv.id,
+        origin: origin || "system",
       }),
     });
     if (!sendResp.ok) {
@@ -279,6 +282,7 @@ async function sendWhatsAppMessageSmart(
       template_language: template.template_language || "es",
       template_components: components,
       conversation_id: conv.id,
+      origin: origin || "system",
     }),
   });
 
@@ -962,6 +966,11 @@ Deno.serve(async (req) => {
         // === SEND IMMEDIATELY (no humanized delay for queue) ===
         const agentName = await getClinicAgentName(convFresh.clinic_id);
         const sendContext = queueItem.message_type.startsWith("recordatorio_cita") ? "recordatorio_cita" : "seguimiento";
+        const messageOrigin = queueItem.message_type === "seguimiento"
+          ? `follow_up_s${queueItem.contact_number}`
+          : queueItem.message_type.startsWith("recordatorio_cita")
+            ? "reminder"
+            : "system";
 
         const sendResult = await sendWhatsAppMessageSmart(
           supabase, supabaseUrl, supabaseKey,
@@ -972,7 +981,7 @@ Deno.serve(async (req) => {
             contact_id: convFresh.contact_id,
             last_client_message_at: convFresh.last_client_message_at,
           },
-          messageContent, sendContext, agentName,
+          messageContent, sendContext, agentName, messageOrigin,
         );
 
         if (!sendResult.sent) {
