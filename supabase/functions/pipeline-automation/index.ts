@@ -470,22 +470,52 @@ Deno.serve(async (req) => {
         if (fresh?.pipeline_tab !== "resueltos_ia") continue;
 
         const nextS = Math.max(fresh.seguimiento_next_s || 1, 1);
-        const targetTab = `seguimiento_s${nextS}`;
-        const contactDelay = await getClinicStageDelay(conv.clinic_id, nextS);
 
-        const clinicTz = await getClinicTimezone(conv.clinic_id);
-        const nextContactAt = getScheduledContactTime(clinicTz, contactDelay, sendWindowStart, sendWindowEnd).toISOString();
-        await supabase.from("conversations").update({
-          pipeline_tab: targetTab,
-          seguimiento_contact_number: nextS,
-          seguimiento_next_contact_at: nextContactAt,
-          inactivity_timer_start: null,
-        }).eq("id", conv.id);
+        // S7+ means all stages exhausted → move to no_responden
+        if (nextS > 6) {
+          await supabase.from("conversations").update({
+            pipeline_tab: "no_responden",
+            seguimiento_next_contact_at: null,
+            inactivity_timer_start: null,
+            seguimiento_last_completed_s: 6,
+          }).eq("id", conv.id);
+          await supabase.from("conversation_pipeline_history").insert({
+            conversation_id: conv.id, clinic_id: conv.clinic_id,
+            from_tab: "resueltos_ia", to_tab: "no_responden",
+            moved_by: "system", reason: `Inactividad → todas las etapas S1-S6 agotadas`,
+          });
+          tarea1Count++;
+          continue;
+        }
+
+        const targetTab = `seguimiento_s${nextS}`;
+        const isManualStep = nextS >= 5;
+
+        if (isManualStep) {
+          // S5/S6 are manual — move there WITHOUT a timer
+          await supabase.from("conversations").update({
+            pipeline_tab: targetTab,
+            seguimiento_contact_number: nextS,
+            seguimiento_next_contact_at: null,
+            inactivity_timer_start: null,
+          }).eq("id", conv.id);
+        } else {
+          // S1-S4 are automatic — set timer
+          const contactDelay = await getClinicStageDelay(conv.clinic_id, nextS);
+          const clinicTz = await getClinicTimezone(conv.clinic_id);
+          const nextContactAt = getScheduledContactTime(clinicTz, contactDelay, sendWindowStart, sendWindowEnd).toISOString();
+          await supabase.from("conversations").update({
+            pipeline_tab: targetTab,
+            seguimiento_contact_number: nextS,
+            seguimiento_next_contact_at: nextContactAt,
+            inactivity_timer_start: null,
+          }).eq("id", conv.id);
+        }
 
         await supabase.from("conversation_pipeline_history").insert({
           conversation_id: conv.id, clinic_id: conv.clinic_id,
           from_tab: "resueltos_ia", to_tab: targetTab,
-          moved_by: "system", reason: `Inactividad de ${inactivityTimeout} minutos → S${nextS}`,
+          moved_by: "system", reason: `Inactividad de ${inactivityTimeout} minutos → S${nextS}${isManualStep ? " (manual/humano)" : ""}`,
         });
         tarea1Count++;
       } catch (e) {
