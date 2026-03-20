@@ -95,8 +95,39 @@ Deno.serve(async (req) => {
     console.log("[WA-Send] Meta response:", metaResponse.status, JSON.stringify(metaResult));
 
     if (!metaResponse.ok) {
+      const errCode = metaResult?.error?.code;
+      const errSubCode = metaResult?.error?.error_subcode;
+
+      // Detect WhatsApp 24h window closed (error 131047 or subcode 131047)
+      const isWindowClosed = errCode === 131047 || errSubCode === 131047 ||
+        metaResult?.error?.error_data?.details?.includes("Re-engagement message");
+
+      if (isWindowClosed) {
+        console.warn("[WA-Send] Window closed for", targetNumber);
+        // Block conversation and return specific error
+        const convId = conversationId || null;
+        if (!convId) {
+          const { data: conv } = await supabase.from("conversations").select("id").eq("clinic_id", effectiveClinicId).eq("channel", "whatsapp")
+            .or(`visitor_contact.eq.${targetNumber},visitor_contact.eq.+${targetNumber}`).maybeSingle();
+          if (conv) {
+            await supabase.from("conversations").update({
+              whatsapp_window_blocked: true,
+              whatsapp_window_blocked_at: new Date().toISOString(),
+              whatsapp_window_blocked_reason: "ventana_cerrada_requiere_template_manual",
+            }).eq("id", conv.id);
+          }
+        } else {
+          await supabase.from("conversations").update({
+            whatsapp_window_blocked: true,
+            whatsapp_window_blocked_at: new Date().toISOString(),
+            whatsapp_window_blocked_reason: "ventana_cerrada_requiere_template_manual",
+          }).eq("id", convId);
+        }
+        return jsonResponse({ error: "window_closed", message: "La ventana de 24h de WhatsApp está cerrada. Debes enviar un template aprobado." }, 403);
+      }
+
       // If token is expired, try env fallback
-      if (accessToken === dbToken && envToken && envToken !== dbToken && metaResult?.error?.code === 190) {
+      if (accessToken === dbToken && envToken && envToken !== dbToken && errCode === 190) {
         console.warn("[WA-Send] DB token expired, trying env fallback");
         const retryResponse = await fetch(graphUrl, {
           method: "POST",
@@ -106,13 +137,13 @@ Deno.serve(async (req) => {
         const retryResult = await retryResponse.json();
         if (retryResponse.ok) {
           const waMessageId = retryResult?.messages?.[0]?.id;
-          await logOutboundMessage(supabase, connection, effectiveClinicId, targetNumber, msgType, msgContent, waMessageId, sent_by, conversation_id, template_name, origin);
+          await logOutboundMessage(supabase, connection, effectiveClinicId, targetNumber, msgType, msgContent, waMessageId, sent_by, conversationId, template_name, origin);
           return jsonResponse({ success: true, wa_message_id: waMessageId });
         }
         return jsonResponse({ error: "Failed to send", details: retryResult }, retryResponse.status);
       }
 
-      if (metaResult?.error?.code === 190) {
+      if (errCode === 190) {
         await supabase.from("whatsapp_connections").update({ status: "error", last_error: "Token expirado o inválido" }).eq("id", connection.id);
       }
       return jsonResponse({ error: "Failed to send", details: metaResult }, metaResponse.status);
