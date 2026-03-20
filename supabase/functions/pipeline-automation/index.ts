@@ -1090,7 +1090,6 @@ Deno.serve(async (req) => {
     console.log("[PIPELINE] TAREA 7: Queue cleanup...");
 
     // 7.1 Cancel orphans (conversation moved away from seguimiento)
-    const { data: orphanResult } = await supabase.rpc("pipeline_cancel_orphan_queue_items" as any).select();
     // Fallback: manual query if RPC doesn't exist
     const { data: orphanItems } = await supabase
       .from("pipeline_message_queue")
