@@ -407,7 +407,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
           )}
 
           {/* WhatsApp window closed alert for manual stages */}
-          {c.channel === "whatsapp" && (c.pipeline_tab === "seguimiento_s9" || c.pipeline_tab === "seguimiento_s10") && (c as any).whatsapp_window_blocked && (
+          {c.channel === "whatsapp" && (c.pipeline_tab === "seguimiento_s5" || c.pipeline_tab === "seguimiento_s6") && (c as any).whatsapp_window_blocked && (
             <div className="mx-auto max-w-sm bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg p-3 text-center space-y-2">
               <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
                 ⚠️ La ventana de WhatsApp está cerrada.
