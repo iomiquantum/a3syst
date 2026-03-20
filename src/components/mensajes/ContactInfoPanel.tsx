@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { Phone, Mail, MapPin, Tag, FileText, ExternalLink, UserPlus, Calendar, Pencil, Check, X, Plus, Pin, Archive, Copy } from "lucide-react";
+import { Phone, Mail, MapPin, Tag, FileText, ExternalLink, UserPlus, Calendar, Pencil, Check, X, Plus, Pin, Archive, Copy, PhoneCall } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,6 +39,8 @@ interface ContactData {
   phone: string;
   phone2: string | null;
   email: string | null;
+  alternative_phone: string | null;
+  alternative_phone_label: string | null;
   location: string | null;
   funnel_stage: string;
   patient_id: string | null;
@@ -54,7 +56,7 @@ interface Props {
   onClose?: () => void;
 }
 
-type EditField = "name" | "phone" | "phone2" | "email" | "location" | "notes" | null;
+type EditField = "name" | "phone" | "phone2" | "email" | "location" | "notes" | "alternative_phone" | "alternative_phone_label" | null;
 
 const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props) => {
   const [contact, setContact] = useState<ContactData | null>(null);
@@ -62,22 +64,52 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props)
   const [editField, setEditField] = useState<EditField>(null);
   const [editValue, setEditValue] = useState("");
   const [tagInput, setTagInput] = useState("");
+  const [highlightedField, setHighlightedField] = useState<string | null>(null);
 
-  const fetchContact = async () => {
+  const fetchContact = useCallback(async () => {
     if (!c.contact_id) return;
     const { data } = await supabase
       .from("contacts")
-      .select("id, name, phone, phone2, email, location, funnel_stage, patient_id, tags, notes, source, branch_id")
+      .select("id, name, phone, phone2, email, alternative_phone, alternative_phone_label, location, funnel_stage, patient_id, tags, notes, source, branch_id")
       .eq("id", c.contact_id)
       .single();
-    if (data) setContact(data as ContactData);
+    if (data) {
+      setContact(prev => {
+        if (prev) {
+          // Detect which fields changed for highlight
+          const changedFields: string[] = [];
+          if (prev.email !== (data as any).email && (data as any).email) changedFields.push("email");
+          if (prev.alternative_phone !== (data as any).alternative_phone && (data as any).alternative_phone) changedFields.push("alternative_phone");
+          if (prev.notes !== (data as any).notes && (data as any).notes) changedFields.push("notes");
+          if (changedFields.length > 0) {
+            setHighlightedField(changedFields[0]);
+            setTimeout(() => setHighlightedField(null), 2500);
+          }
+        }
+        return data as ContactData;
+      });
+    }
     setLoading(false);
-  };
+  }, [c.contact_id]);
 
   useEffect(() => {
     setLoading(true);
     fetchContact();
-  }, [c.contact_id]);
+  }, [c.contact_id, fetchContact]);
+
+  // Realtime subscription for contact updates
+  useEffect(() => {
+    if (!c.contact_id) return;
+    const channel = supabase
+      .channel(`contact-${c.contact_id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "contacts", filter: `id=eq.${c.contact_id}` },
+        () => { fetchContact(); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [c.contact_id, fetchContact]);
 
   if (loading || !contact) return null;
 
@@ -95,7 +127,7 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props)
     setContact(prev => prev ? { ...prev, [field]: editValue.trim() || null } : prev);
     setEditField(null);
     setEditValue("");
-    toast.success("Actualizado");
+    toast.success("Información actualizada");
   };
 
   const updateStage = async (stage: string) => {
@@ -128,10 +160,13 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props)
     window.open(`https://wa.me/${num}`, "_blank");
   };
 
-  const EditableField = ({ field, label, value, icon: Icon, copyable }: { field: EditField; label: string; value: string | null; icon: any; copyable?: boolean }) => {
+  const EditableField = ({ field, label, value, icon: Icon, copyable, placeholder, isHighlighted }: { field: EditField; label: string; value: string | null; icon: any; copyable?: boolean; placeholder?: string; isHighlighted?: boolean }) => {
     const isEditing = editField === field;
     return (
-      <div className="flex items-start gap-3 group">
+      <div className={cn(
+        "flex items-start gap-3 group rounded-md px-1 py-0.5 transition-colors duration-500",
+        isHighlighted && "bg-yellow-100 dark:bg-yellow-900/30"
+      )}>
         <Icon className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-[11px] text-muted-foreground">{label}</p>
@@ -156,7 +191,9 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props)
             </div>
           ) : (
             <div className="flex items-center gap-1">
-              <p className="text-sm text-foreground truncate">{value || <span className="text-muted-foreground italic text-xs">—</span>}</p>
+              <p className="text-sm text-foreground truncate">
+                {value || <span className="text-muted-foreground italic text-xs">{placeholder || "—"}</span>}
+              </p>
               {copyable && value && (
                 <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 shrink-0" onClick={() => copyText(value)}>
                   <Copy className="w-3 h-3 text-muted-foreground" />
@@ -175,6 +212,12 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props)
       </div>
     );
   };
+
+  const altPhoneDisplay = contact.alternative_phone
+    ? contact.alternative_phone_label
+      ? `${contact.alternative_phone} (${contact.alternative_phone_label})`
+      : contact.alternative_phone
+    : null;
 
   return (
     <ScrollArea className="h-full">
@@ -228,8 +271,25 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props)
 
         {/* Fields */}
         <div className="space-y-3">
-          <EditableField field="phone" label="Teléfono" value={contact.phone} icon={Phone} copyable />
-          <EditableField field="email" label="Email" value={contact.email} icon={Mail} copyable />
+          <EditableField field="phone" label="📱 WhatsApp" value={contact.phone} icon={Phone} copyable />
+          <EditableField
+            field="alternative_phone"
+            label="📞 Teléfono alternativo"
+            value={altPhoneDisplay}
+            icon={PhoneCall}
+            copyable
+            placeholder="Sin teléfono alternativo"
+            isHighlighted={highlightedField === "alternative_phone"}
+          />
+          <EditableField
+            field="email"
+            label="📧 Email"
+            value={contact.email}
+            icon={Mail}
+            copyable
+            placeholder="Sin correo"
+            isHighlighted={highlightedField === "email"}
+          />
           <EditableField field="location" label="Ubicación" value={contact.location} icon={MapPin} />
 
           {/* Pipeline Stage */}
@@ -275,10 +335,13 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props)
           </div>
 
           {/* Notes */}
-          <div className="flex items-start gap-3 group">
+          <div className={cn(
+            "flex items-start gap-3 group rounded-md px-1 py-0.5 transition-colors duration-500",
+            highlightedField === "notes" && "bg-yellow-100 dark:bg-yellow-900/30"
+          )}>
             <FileText className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
             <div className="flex-1">
-              <p className="text-[11px] text-muted-foreground">Notas</p>
+              <p className="text-[11px] text-muted-foreground">📝 Notas</p>
               {editField === "notes" ? (
                 <div className="mt-0.5 space-y-1">
                   <Textarea value={editValue} onChange={e => setEditValue(e.target.value)} className="text-sm min-h-[60px]" autoFocus />
@@ -289,7 +352,7 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props)
                 </div>
               ) : (
                 <div className="flex items-start gap-1">
-                  <p className="text-sm text-foreground whitespace-pre-wrap">{contact.notes || <span className="text-muted-foreground italic text-xs">Añadir Notas</span>}</p>
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{contact.notes || <span className="text-muted-foreground italic text-xs">Sin notas</span>}</p>
                   <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 shrink-0" onClick={() => startEdit("notes", contact.notes || "")}>
                     <Pencil className="w-3 h-3 text-muted-foreground" />
                   </Button>
@@ -316,7 +379,7 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props)
             toast.success(newPinned ? "Conversación fijada" : "Conversación desfijada");
             onActionComplete?.();
           }} className={cn("w-full h-8 rounded-lg border border-border text-xs font-medium flex items-center justify-center gap-2 hover:bg-muted transition-colors", c.pinned ? "text-primary bg-primary/10 border-primary/30" : "text-foreground")}>
-            <Pin className="w-3.5 h-3.5" /> {c.pinned ? "Desfiar Conversación" : "Fijar Conversación"}
+            <Pin className="w-3.5 h-3.5" /> {c.pinned ? "Desfijar Conversación" : "Fijar Conversación"}
           </button>
           <button onClick={async () => {
             await supabase.from("conversations").update({ archived: true }).eq("id", c.id);
