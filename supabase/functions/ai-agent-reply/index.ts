@@ -33,6 +33,13 @@ serve(async (req) => {
     if (!agentConfig || !agentConfig.enabled) {
       return new Response(JSON.stringify({ error: "AI agent not configured or disabled" }), {
         status: 400,
+
+    // Fetch clinic schedule info
+    const { data: clinicInfo } = await supabase
+      .from("clinics")
+      .select("name, working_days, opening_hour, closing_hour")
+      .eq("id", clinic_id)
+      .single();
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -276,6 +283,10 @@ serve(async (req) => {
 Idioma: ${langLabel}
 Tono: ${agentConfig.tone}
 
+NEGOCIO: ${clinicInfo?.name || ""}
+HORARIO DE ATENCIÓN: ${(clinicInfo?.working_days || []).length > 0 ? `${(clinicInfo.working_days as string[]).join(", ")}. ${clinicInfo.opening_hour || ""} a ${clinicInfo.closing_hour || ""}` : "(sin horario configurado)"}
+FECHA DE HOY: ${new Date().toISOString().split("T")[0]} (${new Date().toLocaleDateString("es", { weekday: "long" })})
+
 OBJETIVO:
 ${agentConfig.objective}
 
@@ -302,6 +313,7 @@ IMPORTANTE:
 - Usa emojis con moderación.
 - Si no sabes algo, sugiere contactar al negocio directamente.
 - Nunca inventes información sobre servicios o precios que no estén listados arriba.
+- NUNCA ofrezcas citas en días fuera del horario de atención configurado. Si el cliente pide un día no laborable, sugiere el siguiente día hábil.
 - Si el cliente ya recibió un mensaje de bienvenida, NO repitas el saludo ni te presentes de nuevo. Ve directo a responder su pregunta o consulta.
 - Cuando el cliente pregunte sobre un servicio o tema específico, responde directamente sobre eso. No des respuestas genéricas.`;
 
