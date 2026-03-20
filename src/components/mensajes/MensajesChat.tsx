@@ -142,7 +142,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
       }
 
       try {
-        const { error } = await supabase.functions.invoke("whatsapp-send", {
+        const { data, error } = await supabase.functions.invoke("whatsapp-send", {
           body: {
             clinic_id: clinicId,
             to_number: c.contactPhone,
@@ -154,6 +154,15 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
           },
         });
         if (error) throw error;
+        // Check for window_closed error from edge function
+        if (data?.error === "window_closed") {
+          setWindowJustClosed(true);
+          toast.error("⚠️ La ventana de 24h está cerrada. El mensaje no se pudo enviar. Usa un template aprobado.", { duration: 6000 });
+          setTemplateDialogOpen(true);
+          setSending(false);
+          return;
+        }
+        if (data?.error) throw new Error(data.error);
       } catch (e: any) {
         toast.error(e.message || "Error al enviar");
       }
