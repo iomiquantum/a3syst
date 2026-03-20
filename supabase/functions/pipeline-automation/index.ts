@@ -597,7 +597,7 @@ Deno.serve(async (req) => {
     for (const conv of inconsistent || []) {
       try {
         const stageNumber = conv.seguimiento_contact_number || getStageNumberFromPipelineTab(conv.pipeline_tab) || 1;
-        if (stageNumber > 6) continue;
+        if (stageNumber > 4) continue; // S5-S6 are manual, skip cleanup
 
         const delay = await getClinicStageDelay(conv.clinic_id, stageNumber);
         const missingTimer = !conv.seguimiento_next_contact_at;
