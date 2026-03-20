@@ -5,6 +5,7 @@ import SeguimientoCountdown from "./SeguimientoCountdown";
 import ChannelIcon from "@/components/messaging/ChannelIcon";
 import MessageStatusIcon from "./MessageStatusIcon";
 import AntiSpamBadge from "./AntiSpamBadge";
+import WhatsAppWindowBadge from "./WhatsAppWindowBadge";
 import type { PipelineConversation } from "@/hooks/useConversationsByPipeline";
 
 interface Props {
@@ -26,7 +27,7 @@ function relativeTime(iso: string): string {
 }
 
 function getInitials(name: string): string {
-  return name.split(" ").slice(0, 2).map(w => w[0] || "").join("").toUpperCase();
+  return name.split(" ").slice(0, 2).map((w) => w[0] || "").join("").toUpperCase();
 }
 
 function hashColor(name: string): string {
@@ -62,6 +63,15 @@ const SpamBadge = ({ c }: { c: PipelineConversation }) => (
 const ConversationCard = ({ conversation: c, selected, onClick, variant = "list" }: Props) => {
   const isSpamProtected = c.seguimiento_spam_protection_triggered && c.pipeline_tab === "seguimiento_s9";
 
+  const windowBadge = (
+    <WhatsAppWindowBadge
+      lastClientMessageAt={c.last_client_message_at}
+      channel={c.channel}
+      isBlocked={c.whatsapp_window_blocked}
+      blockedReason={c.whatsapp_window_blocked_reason}
+    />
+  );
+
   if (variant === "kanban") {
     return (
       <div
@@ -78,8 +88,9 @@ const ConversationCard = ({ conversation: c, selected, onClick, variant = "list"
         </div>
         <CountdownBadges c={c} />
         <SpamBadge c={c} />
+        {windowBadge}
         <div className="flex gap-1 flex-wrap">
-          {c.contactTags.slice(0, 2).map(t => (
+          {c.contactTags.slice(0, 2).map((t) => (
             <span key={t} className="text-[8px] bg-accent/20 text-accent-foreground px-1.5 py-0.5 rounded">{t}</span>
           ))}
         </div>
@@ -119,7 +130,8 @@ const ConversationCard = ({ conversation: c, selected, onClick, variant = "list"
             <div className="flex gap-1 flex-wrap items-center">
               <CountdownBadges c={c} />
               <SpamBadge c={c} />
-              {c.contactTags.slice(0, 2).map(t => (
+              {windowBadge}
+              {c.contactTags.slice(0, 2).map((t) => (
                 <span key={t} className="text-[8px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">{t}</span>
               ))}
             </div>

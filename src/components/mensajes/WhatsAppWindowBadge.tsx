@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 import { Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface Props {
   lastClientMessageAt: string | null | undefined;
   channel: string;
   isBlocked?: boolean;
+  blockedReason?: string | null;
 }
 
-const WhatsAppWindowBadge = ({ lastClientMessageAt, channel, isBlocked }: Props) => {
+const WhatsAppWindowBadge = ({ lastClientMessageAt, channel, isBlocked, blockedReason }: Props) => {
   const [hoursRemaining, setHoursRemaining] = useState<number | null>(null);
 
   useEffect(() => {
@@ -30,10 +30,14 @@ const WhatsAppWindowBadge = ({ lastClientMessageAt, channel, isBlocked }: Props)
   if (channel !== "whatsapp") return null;
 
   if (isBlocked) {
+    const label = blockedReason?.includes("template_")
+      ? "WA: template no aprobado"
+      : "WA: envío bloqueado";
+
     return (
       <span className="inline-flex items-center gap-1 text-[9px] font-medium bg-destructive/10 text-destructive px-1.5 py-0.5 rounded">
         <AlertTriangle className="w-2.5 h-2.5" />
-        WA: template pendiente
+        {label}
       </span>
     );
   }
@@ -51,7 +55,7 @@ const WhatsAppWindowBadge = ({ lastClientMessageAt, channel, isBlocked }: Props)
     return (
       <span className="inline-flex items-center gap-1 text-[9px] font-medium bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded">
         <AlertTriangle className="w-2.5 h-2.5" />
-        WA: ventana cerrada — se usará template
+        WA: ventana cerrada
       </span>
     );
   }
