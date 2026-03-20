@@ -10,7 +10,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { conversation_id, clinic_id, triggered_by = "manual", channel: requestChannel, draft_only = false, custom_prompt } = await req.json();
+    const { conversation_id, clinic_id, triggered_by = "manual", channel: requestChannel, draft_only = false, custom_prompt, skip_already_replied = false } = await req.json();
     const isFollowUp = triggered_by === "follow_up";
     const isDraft = draft_only === true;
     console.log("ai-agent-reply called:", { conversation_id, clinic_id, triggered_by, isFollowUp, isDraft, requestChannel });
