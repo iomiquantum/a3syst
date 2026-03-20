@@ -351,6 +351,7 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
           to_number: toNumber,
           message_type: "text",
           content: reply,
+          conversation_id,
         }),
       });
 
