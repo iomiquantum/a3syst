@@ -380,7 +380,8 @@ async function syncToUnifiedMessaging(
   contactName: string,
   content: string,
   messageType: string,
-  waMessageId: string
+  waMessageId: string,
+  mediaUrl?: string | null
 ): Promise<{ conversationId: string; isNew: boolean } | null> {
   try {
     let contactId: string | null = null;
