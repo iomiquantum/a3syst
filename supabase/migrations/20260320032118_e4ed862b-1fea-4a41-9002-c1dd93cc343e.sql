@@ -1,0 +1,1 @@
+UPDATE ai_agent_channel_prompts SET enabled = true WHERE clinic_id = 'bce9a13d-14e0-4f64-83fd-6fb7282257a4' AND channel = 'whatsapp';
