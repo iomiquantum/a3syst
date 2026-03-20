@@ -7,16 +7,23 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Save, ArrowRight, Clock, MessageSquare, Ban, UserCheck, AlertTriangle } from "lucide-react";
+import { Save, ArrowRight, Clock, MessageSquare, Ban, UserCheck } from "lucide-react";
 import { usePipelineRules, type AutoMessage } from "@/hooks/usePipelineRules";
 import { cn } from "@/lib/utils";
 
 const RULE_KEYS = [
   { key: "inactivity_timeout_minutes", label: "Tiempo de inactividad", desc: "Tiempo sin respuesta del cliente antes de iniciar seguimiento" },
-  { key: "c1_delay_minutes", label: "Delay Contacto 1", desc: "Tiempo para enviar primer seguimiento" },
-  { key: "c2_delay_minutes", label: "Delay Contacto 2", desc: "Tiempo para enviar segundo seguimiento" },
-  { key: "c3_delay_minutes", label: "Delay Contacto 3", desc: "Tiempo para enviar tercer seguimiento" },
+  { key: "s1_delay_minutes", label: "Delay S1", desc: "Tiempo para enviar primer seguimiento automático" },
+  { key: "s2_delay_minutes", label: "Delay S2", desc: "Tiempo para enviar segundo seguimiento" },
+  { key: "s3_delay_minutes", label: "Delay S3", desc: "Tiempo para enviar tercer seguimiento" },
+  { key: "s4_delay_minutes", label: "Delay S4", desc: "Tiempo para enviar cuarto seguimiento" },
+  { key: "s5_delay_minutes", label: "Delay S5", desc: "Tiempo para enviar quinto seguimiento" },
+  { key: "s6_delay_minutes", label: "Delay S6", desc: "Tiempo para enviar sexto seguimiento" },
+  { key: "s7_delay_minutes", label: "Delay S7", desc: "Tiempo para enviar séptimo seguimiento" },
+  { key: "s8_delay_minutes", label: "Delay S8", desc: "Tiempo para enviar octavo seguimiento (último IA)" },
   { key: "max_auto_contacts", label: "Contactos máximos", desc: "Intentos antes de mover a 'No responden'" },
+  { key: "send_window_start_hour", label: "Hora inicio envío", desc: "Hora desde la que se envían mensajes" },
+  { key: "send_window_end_hour", label: "Hora fin envío", desc: "Hora hasta la que se envían mensajes" },
 ] as const;
 
 function formatMinutes(min: number): string {
@@ -89,6 +96,19 @@ const PipelineConfigPage = () => {
 
   if (loading) return <AppLayout><div className="p-8 text-center text-muted-foreground">Cargando...</div></AppLayout>;
 
+  const S_STEPS = [
+    { key: "s1", label: "S1", type: "auto" },
+    { key: "s2", label: "S2", type: "auto" },
+    { key: "s3", label: "S3", type: "auto" },
+    { key: "s4", label: "S4", type: "auto" },
+    { key: "s5", label: "S5", type: "auto" },
+    { key: "s6", label: "S6", type: "auto" },
+    { key: "s7", label: "S7", type: "auto" },
+    { key: "s8", label: "S8", type: "auto" },
+    { key: "s9", label: "S9", type: "manual" },
+    { key: "s10", label: "S10", type: "manual" },
+  ];
+
   return (
     <AppLayout>
       <div className="p-4 md:p-6 space-y-6 max-w-4xl mx-auto">
@@ -106,7 +126,7 @@ const PipelineConfigPage = () => {
             {RULE_KEYS.map(r => {
               const isCustom = overrideToggles[r.key];
               const globalVal = globalRules[r.key as keyof typeof globalRules];
-              const unit = r.key.includes("minutes") ? "minutes" : "count";
+              const unit = r.key.includes("minutes") ? "minutes" : r.key.includes("hour") ? "hour" : "count";
 
               return (
                 <div key={r.key} className="space-y-2 pb-3 border-b border-border last:border-0 last:pb-0">
@@ -135,10 +155,12 @@ const PipelineConfigPage = () => {
                       className="w-24"
                     />
                     <span className="text-xs text-muted-foreground">
-                      {unit === "minutes" ? (localValues[r.key] >= 60 ? "horas" : "minutos") : ""}
+                      {unit === "minutes" ? (localValues[r.key] >= 60 ? "horas" : "minutos") : unit === "hour" ? "h" : ""}
                     </span>
                     {!isCustom && (
-                      <Badge variant="outline" className="text-xs">Default: {unit === "minutes" ? formatMinutes(globalVal) : globalVal}</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Default: {unit === "minutes" ? formatMinutes(globalVal) : globalVal}
+                      </Badge>
                     )}
                     {isCustom && (
                       <Button size="sm" variant="outline" onClick={() => handleSaveOverride(r.key)}>
@@ -159,14 +181,14 @@ const PipelineConfigPage = () => {
           </CardHeader>
           <CardContent className="space-y-5">
             {localMessages.map((msg, idx) => {
-              const delayKey = `c${msg.contact_number}_delay_minutes` as keyof typeof effectiveRules;
+              const delayKey = `s${msg.contact_number}_delay_minutes` as keyof typeof effectiveRules;
               const delay = effectiveRules[delayKey] || 60;
 
               return (
                 <div key={msg.contact_number} className="space-y-2 pb-4 border-b border-border last:border-0 last:pb-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">Contacto {msg.contact_number}</span>
+                      <span className="text-sm font-semibold">S{msg.contact_number}</span>
                       <Badge variant="outline" className="text-xs">{formatMinutes(delay)} después</Badge>
                       <Badge className="bg-blue-500/20 text-blue-600 text-[10px]">Automático (IA)</Badge>
                     </div>
@@ -218,34 +240,38 @@ const PipelineConfigPage = () => {
               <ArrowRight className="w-4 h-4 text-muted-foreground" />
               <Badge variant="outline" className="text-xs">{formatMinutes(effectiveRules.inactivity_timeout_minutes)}</Badge>
               <ArrowRight className="w-4 h-4 text-muted-foreground" />
-              <div className="flex items-center gap-1.5 bg-blue-500/10 text-blue-600 rounded-lg px-3 py-2">
-                <Clock className="w-4 h-4" />
-                <span>C1</span>
-              </div>
+
+              {S_STEPS.map((s, i) => {
+                const delayKey = `${s.key}_delay_minutes` as keyof typeof effectiveRules;
+                const delay = effectiveRules[delayKey];
+                return (
+                  <div key={s.key} className="contents">
+                    <div className={cn(
+                      "flex items-center gap-1.5 rounded-lg px-3 py-2",
+                      s.type === "auto" ? "bg-blue-500/10 text-blue-600" : "bg-amber-500/10 text-amber-600"
+                    )}>
+                      {s.type === "auto" ? <Clock className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                      <span>{s.label}</span>
+                    </div>
+                    {i < S_STEPS.length - 1 && (
+                      <>
+                        <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                        {delay && <Badge variant="outline" className="text-xs">{formatMinutes(delay)}</Badge>}
+                        {delay && <ArrowRight className="w-4 h-4 text-muted-foreground" />}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+
               <ArrowRight className="w-4 h-4 text-muted-foreground" />
-              <Badge variant="outline" className="text-xs">{formatMinutes(effectiveRules.c1_delay_minutes)}</Badge>
-              <ArrowRight className="w-4 h-4 text-muted-foreground" />
-              <div className="flex items-center gap-1.5 bg-blue-500/10 text-blue-600 rounded-lg px-3 py-2">
-                <Clock className="w-4 h-4" />
-                <span>C2</span>
-              </div>
-              <ArrowRight className="w-4 h-4 text-muted-foreground" />
-              <Badge variant="outline" className="text-xs">{formatMinutes(effectiveRules.c2_delay_minutes)}</Badge>
-              <ArrowRight className="w-4 h-4 text-muted-foreground" />
-              <div className="flex items-center gap-1.5 bg-blue-500/10 text-blue-600 rounded-lg px-3 py-2">
-                <Clock className="w-4 h-4" />
-                <span>C3</span>
-              </div>
-              <ArrowRight className="w-4 h-4 text-muted-foreground" />
-              <Badge variant="outline" className="text-xs">{formatMinutes(effectiveRules.c3_delay_minutes)}</Badge>
-              <ArrowRight className="w-4 h-4 text-muted-foreground" />
-              <div className="flex items-center gap-1.5 bg-amber-500/10 text-amber-600 rounded-lg px-3 py-2">
+              <div className="flex items-center gap-1.5 bg-red-500/10 text-red-600 rounded-lg px-3 py-2">
                 <Ban className="w-4 h-4" />
                 <span>No responden</span>
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-3">
-              Si el cliente responde en cualquier momento, vuelve a "Resueltos IA" y el ciclo se reinicia.
+              S1-S8 son automáticos (IA). S9-S10 son manuales (agente humano). Si el cliente responde, avanza al siguiente S sin retroceder.
             </p>
           </CardContent>
         </Card>
