@@ -641,15 +641,17 @@ Deno.serve(async (req) => {
         }
 
         const nowDate = new Date();
+        const todayStart = new Date(nowDate);
+        todayStart.setUTCHours(0, 0, 0, 0);
 
-        // REMINDER 1
+        // REMINDER 1 - use gte to include today's appointments
         const { data: reminder1Convs } = await supabase
           .from("conversations")
           .select("id, clinic_id, contact_id, channel, visitor_contact, appointment_date, appointment_time, appointment_service, appointment_confirmed, last_client_message_at")
           .eq("pipeline_tab", "agendados")
           .eq("appointment_reminder_1_sent", false)
           .not("appointment_date", "is", null)
-          .gt("appointment_date", nowDate.toISOString());
+          .gte("appointment_date", todayStart.toISOString());
 
         for (const conv of reminder1Convs || []) {
           try {
