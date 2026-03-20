@@ -810,20 +810,31 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
     console.log("[PIPELINE] TAREA 3: Cleanup...");
     const { data: inconsistent } = await supabase
       .from("conversations")
-      .select("id, clinic_id, pipeline_tab, seguimiento_contact_number, seguimiento_last_contact_at")
-      .like("pipeline_tab", "seguimiento_%")
-      .is("seguimiento_next_contact_at", null);
+      .select("id, clinic_id, pipeline_tab, seguimiento_contact_number, seguimiento_last_contact_at, seguimiento_next_contact_at")
+      .like("pipeline_tab", "seguimiento_s%")
+      .eq("archived", false)
+      .eq("status", "open");
 
     for (const conv of inconsistent || []) {
       try {
-        const cn = conv.seguimiento_contact_number || 1;
-        if (cn >= 9) continue; // S9-S10 are manual, null next_contact_at is expected
-        const delay = delayMap[cn] || 15;
-        const base = conv.seguimiento_last_contact_at || new Date().toISOString();
+        const stageNumber = conv.seguimiento_contact_number || getStageNumberFromPipelineTab(conv.pipeline_tab) || 1;
+        if (stageNumber >= 9) continue; // S9-S10 are manual, null next_contact_at is expected
+
+        const delay = await getClinicStageDelay(conv.clinic_id, stageNumber);
+        const missingTimer = !conv.seguimiento_next_contact_at;
+        const skewedTimer = hasSuspiciousFutureTimer(conv.seguimiento_next_contact_at, delay);
+        if (!missingTimer && !skewedTimer) continue;
+
         const clinicTz = await getClinicTimezone(conv.clinic_id);
+        const baseDate = missingTimer
+          ? new Date(conv.seguimiento_last_contact_at || new Date().toISOString())
+          : new Date();
+
         await supabase.from("conversations").update({
-          seguimiento_next_contact_at: getScheduledContactTime(clinicTz, delay, sendWindowStart, sendWindowEnd, new Date(base)).toISOString(),
+          seguimiento_next_contact_at: getScheduledContactTime(clinicTz, delay, sendWindowStart, sendWindowEnd, baseDate).toISOString(),
         }).eq("id", conv.id);
+
+        console.log(`[PIPELINE] Repaired ${missingTimer ? "missing" : "skewed"} timer for conv ${conv.id} (${conv.pipeline_tab}, delay=${delay}m)`);
         tarea3Fixed++;
       } catch (e) {
         errors.push({ conversation_id: conv.id, error: e instanceof Error ? e.message : String(e) });
