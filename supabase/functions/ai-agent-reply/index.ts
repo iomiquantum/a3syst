@@ -140,7 +140,7 @@ serve(async (req) => {
           }
         } else {
           await supabase.from("messages").insert({
-            conversation_id, clinic_id, direction: "outbound", content: cancelReply, message_type: "text", status: "sent",
+            conversation_id, clinic_id, direction: "outbound", content: cancelReply, message_type: "text", status: "sent", origin: "appointment_flow",
           });
           await supabase.from("conversations").update({
             last_message_at: new Date().toISOString(), last_message_preview: cancelReply.substring(0, 100),
