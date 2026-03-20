@@ -305,7 +305,7 @@ const AdminPipelinePage = () => {
                         return (
                           <TableRow key={log.id}>
                             <TableCell className="text-xs">{timeAgo(log.executed_at)}</TableCell>
-                            <TableCell className="text-xs font-mono">{log.moved_to_c1}</TableCell>
+                            <TableCell className="text-xs font-mono">{log.moved_to_seguimiento || log.moved_to_c1}</TableCell>
                             <TableCell className="text-xs font-mono">{log.messages_sent}</TableCell>
                             <TableCell className="text-xs font-mono">{log.moved_to_no_responden}</TableCell>
                             <TableCell className="text-xs font-mono">{log.inconsistencies_fixed}</TableCell>
