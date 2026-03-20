@@ -117,7 +117,7 @@ const MensajesPage = () => {
       <AppLayout>
         <div className="h-[calc(100vh-4rem)] -m-6 flex flex-col border border-border rounded-lg overflow-hidden bg-card">
           <div className="px-3 py-2 border-b border-border shrink-0 space-y-2">
-            <MensajesHeader viewMode={viewMode} onViewModeChange={setViewMode} />
+            <MensajesHeader viewMode={viewMode} onViewModeChange={setViewMode} selectedChannel={selectedChannel} />
           </div>
           <div className="px-3 py-2 border-b border-border shrink-0">
             <MensajesPipelineTabs
@@ -155,7 +155,7 @@ const MensajesPage = () => {
     <AppLayout>
       <div className="h-[calc(100vh-7rem)] -m-6 flex flex-col border border-border rounded-lg overflow-hidden bg-card">
         <div className="px-4 py-3 border-b border-border shrink-0">
-          <MensajesHeader viewMode={viewMode} onViewModeChange={setViewMode} />
+          <MensajesHeader viewMode={viewMode} onViewModeChange={setViewMode} selectedChannel={selectedChannel} />
         </div>
 
         <div className="px-4 py-2.5 border-b border-border shrink-0">
