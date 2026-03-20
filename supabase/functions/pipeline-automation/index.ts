@@ -27,6 +27,156 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/** Check if WhatsApp 24h session window is open */
+function isWhatsAppWindowOpen(lastClientMessageAt: string | null): boolean {
+  if (!lastClientMessageAt) return false;
+  const diffHours = (Date.now() - new Date(lastClientMessageAt).getTime()) / (1000 * 60 * 60);
+  return diffHours < 23.5; // 23.5h safety margin
+}
+
+/** Determine which template type to use based on context */
+function getTemplateType(context: string): string {
+  if (context === "recordatorio_cita") return "recordatorio_cita";
+  if (context === "reactivacion") return "reactivacion";
+  if (context === "oferta") return "oferta_valor";
+  return "seguimiento_general";
+}
+
+/** Send a WhatsApp message, using template if 24h window is closed */
+async function sendWhatsAppMessageSmart(
+  supabase: ReturnType<typeof createClient>,
+  supabaseUrl: string,
+  supabaseKey: string,
+  conv: {
+    id: string;
+    clinic_id: string;
+    channel: string;
+    visitor_contact: string | null;
+    contact_id: string | null;
+    last_client_message_at?: string | null;
+  },
+  messageContent: string,
+  context: string,
+  agentName: string,
+): Promise<{ sent: boolean; type: string; reason?: string }> {
+  const channel = conv.channel || "whatsapp";
+
+  // Non-WhatsApp: send freely
+  if (channel !== "whatsapp") {
+    await supabase.from("messages").insert({
+      conversation_id: conv.id, clinic_id: conv.clinic_id,
+      direction: "outbound", content: messageContent, message_type: "text", status: "sent",
+    });
+    return { sent: true, type: "free_form" };
+  }
+
+  if (!conv.visitor_contact) {
+    return { sent: false, type: "error", reason: "no_phone" };
+  }
+
+  // Check 24h window
+  const windowOpen = isWhatsAppWindowOpen(conv.last_client_message_at || null);
+
+  if (windowOpen) {
+    // Send as free-form message
+    const diffHours = conv.last_client_message_at
+      ? ((Date.now() - new Date(conv.last_client_message_at).getTime()) / (1000 * 60 * 60)).toFixed(1)
+      : "?";
+    console.log(`[WHATSAPP] Mensaje libre enviado (ventana abierta, ${diffHours}h transcurridas)`);
+
+    const sendResp = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clinic_id: conv.clinic_id, to_number: conv.visitor_contact,
+        message_type: "text", content: messageContent, conversation_id: conv.id,
+      }),
+    });
+    if (!sendResp.ok) {
+      console.error(`[WHATSAPP] Send failed for conv ${conv.id}`);
+      return { sent: false, type: "error", reason: "send_failed" };
+    }
+    return { sent: true, type: "free_form" };
+  }
+
+  // Window closed — use template
+  const templateType = getTemplateType(context);
+  const { data: template } = await supabase
+    .from("whatsapp_templates")
+    .select("*")
+    .eq("clinic_id", conv.clinic_id)
+    .eq("template_type", templateType)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (!template || !template.meta_approved) {
+    // Template not approved — block
+    console.warn(`[WHATSAPP WARNING] Ventana cerrada y template '${templateType}' no aprobado por Meta. Conv ${conv.id}`);
+    await supabase.from("conversations").update({
+      whatsapp_window_blocked: true,
+      whatsapp_window_blocked_at: new Date().toISOString(),
+      whatsapp_window_blocked_reason: `template_${templateType}_not_approved`,
+    }).eq("id", conv.id);
+
+    await supabase.from("conversation_pipeline_history").insert({
+      conversation_id: conv.id, clinic_id: conv.clinic_id,
+      from_tab: "system", to_tab: "system",
+      moved_by: "system",
+      reason: `Mensaje no enviado: ventana WhatsApp cerrada y template '${templateType}' no aprobado`,
+    });
+
+    return { sent: false, type: "blocked", reason: "template_not_approved" };
+  }
+
+  // Template approved — build variables and send
+  let contactName = "cliente";
+  if (conv.contact_id) {
+    const { data: contact } = await supabase.from("contacts").select("name").eq("id", conv.contact_id).single();
+    if (contact?.name) contactName = contact.name.split(" ")[0];
+  }
+  const { data: clinic } = await supabase.from("clinics").select("name").eq("id", conv.clinic_id).single();
+  const clinicName = clinic?.name || "nuestro negocio";
+
+  // Build template components with variables
+  const components: any[] = [{
+    type: "body",
+    parameters: (template.template_variables as string[] || []).map((varName: string) => {
+      switch (varName) {
+        case "nombre_cliente": return { type: "text", text: contactName };
+        case "nombre_agente": return { type: "text", text: agentName };
+        case "nombre_negocio": return { type: "text", text: clinicName };
+        case "servicio_consultado": return { type: "text", text: "nuestros servicios" };
+        default: return { type: "text", text: "" };
+      }
+    }),
+  }];
+
+  const diffHours = conv.last_client_message_at
+    ? ((Date.now() - new Date(conv.last_client_message_at).getTime()) / (1000 * 60 * 60)).toFixed(1)
+    : "?";
+  console.log(`[WHATSAPP] Template HSM '${template.template_name}' enviado (ventana cerrada, última respuesta hace ${diffHours}h)`);
+
+  const sendResp = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      clinic_id: conv.clinic_id, to_number: conv.visitor_contact,
+      message_type: "template", type: "template",
+      template_name: template.meta_template_id || template.template_name,
+      template_language: template.template_language || "es",
+      template_components: components,
+      conversation_id: conv.id,
+    }),
+  });
+
+  if (!sendResp.ok) {
+    console.error(`[WHATSAPP] Template send failed for conv ${conv.id}`);
+    return { sent: false, type: "error", reason: "template_send_failed" };
+  }
+
+  return { sent: true, type: "template" };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -79,8 +229,8 @@ Deno.serve(async (req) => {
 
     const inactivityTimeout = Number(rules["inactivity_timeout_minutes"]) || 15;
     const maxAutoContacts = Number(rules["max_auto_contacts"]) || 10;
-    const sendWindowStart = Number(rules["send_window_start_hour"]) || 8;
-    const sendWindowEnd = Number(rules["send_window_end_hour"]) || 21;
+    const sendWindowStart = Number(rules["send_window_start_hour"]) || 7;
+    const sendWindowEnd = Number(rules["send_window_end_hour"]) || 23;
     const humanDelayEnabled = rules["human_delay_enabled"] !== "false" && rules["human_delay_enabled"] !== false;
     const globalAgentName = (typeof rules["ai_agent_name"] === "string" ? rules["ai_agent_name"].replace(/^"|"$/g, "") : "Sofía") || "Sofía";
 
@@ -98,7 +248,7 @@ Deno.serve(async (req) => {
     const strategiesMap: Record<number, any> = {};
     (strategiesRows || []).forEach((s: any) => { strategiesMap[s.contact_number] = s; });
 
-    // Check business hours
+    // Check business hours (7AM-11PM)
     const nowHour = new Date().getHours();
     const isWithinSendWindow = nowHour >= sendWindowStart && nowHour < sendWindowEnd;
 
@@ -118,11 +268,9 @@ Deno.serve(async (req) => {
         const { data: fresh } = await supabase.from("conversations").select("pipeline_tab, seguimiento_next_s").eq("id", conv.id).single();
         if (fresh?.pipeline_tab !== "resueltos_ia") continue;
 
-        // Determine which S to move to (never retrocede)
         const nextS = Math.max(fresh.seguimiento_next_s || 1, 1);
         const targetTab = `seguimiento_s${nextS}`;
 
-        // Get delay for this S from clinic overrides or global
         let contactDelay = delayMap[nextS] || 15;
         const { data: clinicRule } = await supabase
           .from("clinic_pipeline_rules").select("rule_value")
@@ -154,7 +302,7 @@ Deno.serve(async (req) => {
     const seguimientoTabs = Array.from({ length: 10 }, (_, i) => `seguimiento_s${i + 1}`);
     const { data: followUpConvs } = await supabase
       .from("conversations")
-      .select("id, clinic_id, pipeline_tab, seguimiento_contact_number, seguimiento_last_completed_s, seguimiento_next_s, seguimiento_responded_at_s, seguimiento_is_recurrente, seguimiento_recurrente_count, contact_id, channel, visitor_contact")
+      .select("id, clinic_id, pipeline_tab, seguimiento_contact_number, seguimiento_last_completed_s, seguimiento_next_s, seguimiento_responded_at_s, seguimiento_is_recurrente, seguimiento_recurrente_count, contact_id, channel, visitor_contact, last_client_message_at")
       .in("pipeline_tab", seguimientoTabs)
       .not("seguimiento_next_contact_at", "is", null)
       .lt("seguimiento_next_contact_at", now);
@@ -162,7 +310,17 @@ Deno.serve(async (req) => {
     for (const conv of followUpConvs || []) {
       try {
         if (!isWithinSendWindow) {
-          console.log(`[PIPELINE] Outside send window (${sendWindowStart}-${sendWindowEnd}), skipping conv ${conv.id}`);
+          // Postpone to next window opening (7AM)
+          const tomorrow7am = new Date();
+          tomorrow7am.setDate(tomorrow7am.getDate() + (nowHour >= sendWindowEnd ? 1 : 0));
+          tomorrow7am.setHours(sendWindowStart, 0, 0, 0);
+          if (tomorrow7am.getTime() <= Date.now()) tomorrow7am.setDate(tomorrow7am.getDate() + 1);
+
+          await supabase.from("conversations").update({
+            seguimiento_next_contact_at: tomorrow7am.toISOString(),
+          }).eq("id", conv.id);
+
+          console.log(`[PIPELINE] Outside send window (${sendWindowStart}-${sendWindowEnd}), postponed conv ${conv.id} to ${tomorrow7am.toISOString()}`);
           continue;
         }
 
@@ -172,7 +330,7 @@ Deno.serve(async (req) => {
         const contactNumber = fresh.seguimiento_contact_number || conv.seguimiento_contact_number || 1;
         const isManualStep = contactNumber >= 9;
 
-        // S9-S10 are manual — don't send auto messages, just wait
+        // S9-S10 are manual — don't send auto messages
         if (isManualStep) {
           console.log(`[PIPELINE] S${contactNumber} is manual, skipping auto-send for conv ${conv.id}`);
           continue;
@@ -229,9 +387,7 @@ CONTEXTO DE MOVIMIENTO:
 - Esta conversación fue movida manualmente por un agente de '${lastMove.from_tab}' a '${lastMove.to_tab}'
 - Razón: ${lastMove.reason || "Sin razón especificada"}
 - El agente que lo movió: ${meta?.agent_name || "Agente"}
-- Esto significa que debes adaptar tu mensaje al nuevo contexto sin ignorar la historia previa.
-- Si el cliente ya fue atendido antes, reconócelo sutilmente.
-- Si el cliente ya visitó el negocio, no lo trates como nuevo.`;
+- Esto significa que debes adaptar tu mensaje al nuevo contexto sin ignorar la historia previa.`;
         }
 
         // Build strategy-enhanced prompt
@@ -316,26 +472,32 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
           await sleep(delayMs);
         }
 
-        // Send message
-        const channel = conv.channel || "whatsapp";
-        if (channel === "whatsapp" && conv.visitor_contact) {
-          const sendResp = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
-            body: JSON.stringify({ clinic_id: conv.clinic_id, to_number: conv.visitor_contact, message_type: "text", content: messageContent, conversation_id: conv.id }),
-          });
-          if (!sendResp.ok) {
-            console.error(`[PIPELINE] WhatsApp send failed for conv ${conv.id}`);
+        // Send message with smart WhatsApp window check
+        const sendResult = await sendWhatsAppMessageSmart(
+          supabase, supabaseUrl, supabaseKey,
+          {
+            id: conv.id, clinic_id: conv.clinic_id,
+            channel: conv.channel || "whatsapp",
+            visitor_contact: conv.visitor_contact,
+            contact_id: conv.contact_id,
+            last_client_message_at: conv.last_client_message_at,
+          },
+          messageContent, "seguimiento", agentName,
+        );
+
+        if (!sendResult.sent) {
+          if (sendResult.type === "blocked") {
+            // Don't advance pipeline, retry in 1 hour
+            await supabase.from("conversations").update({
+              seguimiento_next_contact_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+            }).eq("id", conv.id);
+            console.log(`[PIPELINE] Send blocked (template not approved) for conv ${conv.id}, retrying in 1h`);
           }
-        } else {
-          await supabase.from("messages").insert({
-            conversation_id: conv.id, clinic_id: conv.clinic_id,
-            direction: "outbound", content: messageContent, message_type: "text", status: "sent",
-          });
+          continue;
         }
 
         tarea2Sent++;
-        console.log(`[PIPELINE] S${contactNumber} (${strategy?.strategy_name || "generic"}) sent for conv ${conv.id}`);
+        console.log(`[PIPELINE] S${contactNumber} (${strategy?.strategy_name || "generic"}) sent as ${sendResult.type} for conv ${conv.id}`);
 
         // Log token usage
         const usage = aiData?.usage || {};
@@ -346,7 +508,7 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
           tokens_input: usage.prompt_tokens || 0,
           tokens_output: usage.completion_tokens || 0,
           cost_usd: 0,
-          action_label: `Seguimiento S${contactNumber} — ${strategy?.strategy_name || "generic"}`,
+          action_label: `Seguimiento S${contactNumber} — ${strategy?.strategy_name || "generic"}${sendResult.type === "template" ? " (template)" : ""}`,
         });
 
         // Advance pipeline
@@ -371,10 +533,21 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
             .eq("clinic_id", conv.clinic_id).eq("rule_key", `s${nextContactNumber}_delay_minutes`).maybeSingle();
           const actualDelay = clinicDelay ? Number(clinicDelay.rule_value) || nextDelay : nextDelay;
 
+          // Ensure next contact falls within send window (7AM-11PM)
+          let nextContactDate = new Date(Date.now() + actualDelay * 60 * 1000);
+          const nextHour = nextContactDate.getHours();
+          if (nextHour >= sendWindowEnd || nextHour < sendWindowStart) {
+            // Postpone to next day 7AM
+            nextContactDate.setDate(nextContactDate.getDate() + (nextHour >= sendWindowEnd ? 1 : 0));
+            nextContactDate.setHours(sendWindowStart, 0, 0, 0);
+            if (nextContactDate.getTime() <= Date.now()) nextContactDate.setDate(nextContactDate.getDate() + 1);
+            console.log(`[PIPELINE] Next contact for S${nextContactNumber} postponed to ${nextContactDate.toISOString()} (outside send window)`);
+          }
+
           await supabase.from("conversations").update({
             pipeline_tab: `seguimiento_s${nextContactNumber}`,
             seguimiento_contact_number: nextContactNumber,
-            seguimiento_next_contact_at: new Date(Date.now() + actualDelay * 60 * 1000).toISOString(),
+            seguimiento_next_contact_at: nextContactDate.toISOString(),
             seguimiento_last_contact_at: now,
             seguimiento_last_completed_s: contactNumber,
           }).eq("id", conv.id);
@@ -382,7 +555,7 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
           await supabase.from("conversation_pipeline_history").insert({
             conversation_id: conv.id, clinic_id: conv.clinic_id,
             from_tab: `seguimiento_s${contactNumber}`, to_tab: `seguimiento_s${nextContactNumber}`,
-            moved_by: "system", reason: `S${contactNumber} (${strategy?.strategy_name || "generic"}) enviado`,
+            moved_by: "system", reason: `S${contactNumber} (${strategy?.strategy_name || "generic"}) enviado${sendResult.type === "template" ? " como template" : ""}`,
           });
         }
 
@@ -403,6 +576,7 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
     for (const conv of inconsistent || []) {
       try {
         const cn = conv.seguimiento_contact_number || 1;
+        if (cn >= 9) continue; // S9-S10 are manual, null next_contact_at is expected
         const delay = delayMap[cn] || 15;
         const base = conv.seguimiento_last_contact_at || new Date().toISOString();
         await supabase.from("conversations").update({
@@ -418,7 +592,7 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
     console.log("[PIPELINE] TAREA 5: Appointment reminders...");
 
     if (!isWithinSendWindow) {
-      console.log("[PIPELINE] Outside send window, skipping appointment reminders");
+      console.log("[PIPELINE] Outside send window (7AM-11PM), skipping appointment reminders");
     } else {
       const { data: reminderConfigs } = await supabase
         .from("appointment_reminder_config")
@@ -437,7 +611,7 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
         // REMINDER 1
         const { data: reminder1Convs } = await supabase
           .from("conversations")
-          .select("id, clinic_id, contact_id, channel, visitor_contact, appointment_date, appointment_time, appointment_service, appointment_confirmed")
+          .select("id, clinic_id, contact_id, channel, visitor_contact, appointment_date, appointment_time, appointment_service, appointment_confirmed, last_client_message_at")
           .eq("pipeline_tab", "agendados")
           .eq("appointment_reminder_1_sent", false)
           .not("appointment_date", "is", null)
@@ -472,18 +646,20 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
 
             if (humanDelayEnabled) await sleep(calculateHumanDelay(message));
 
-            if (conv.channel === "whatsapp" && conv.visitor_contact) {
-              await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
-                method: "POST",
-                headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
-                body: JSON.stringify({ clinic_id: conv.clinic_id, to_number: conv.visitor_contact, message_type: "text", content: message, conversation_id: conv.id }),
-              });
-            } else {
-              await supabase.from("messages").insert({
-                conversation_id: conv.id, clinic_id: conv.clinic_id,
-                direction: "outbound", content: message, message_type: "text", status: "sent",
-              });
-            }
+            // Use smart send for reminders too
+            const sendResult = await sendWhatsAppMessageSmart(
+              supabase, supabaseUrl, supabaseKey,
+              {
+                id: conv.id, clinic_id: conv.clinic_id,
+                channel: conv.channel || "whatsapp",
+                visitor_contact: conv.visitor_contact,
+                contact_id: conv.contact_id,
+                last_client_message_at: conv.last_client_message_at,
+              },
+              message, "recordatorio_cita", globalAgentName,
+            );
+
+            if (!sendResult.sent) continue;
 
             await supabase.from("conversations").update({
               appointment_reminder_1_sent: true,
@@ -494,7 +670,7 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
             await supabase.from("conversation_pipeline_history").insert({
               conversation_id: conv.id, clinic_id: conv.clinic_id,
               from_tab: "agendados", to_tab: "agendados",
-              moved_by: "system", reason: "Recordatorio 1 enviado",
+              moved_by: "system", reason: `Recordatorio 1 enviado${sendResult.type === "template" ? " (template)" : ""}`,
             });
 
             tarea5Reminder1++;
@@ -506,7 +682,7 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
         // REMINDER 2
         const { data: reminder2Convs } = await supabase
           .from("conversations")
-          .select("id, clinic_id, contact_id, channel, visitor_contact, appointment_date, appointment_time, appointment_service, appointment_confirmed")
+          .select("id, clinic_id, contact_id, channel, visitor_contact, appointment_date, appointment_time, appointment_service, appointment_confirmed, last_client_message_at")
           .eq("pipeline_tab", "agendados")
           .eq("appointment_reminder_1_sent", true)
           .eq("appointment_reminder_2_sent", false)
@@ -542,18 +718,19 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
 
             if (humanDelayEnabled) await sleep(calculateHumanDelay(message));
 
-            if (conv.channel === "whatsapp" && conv.visitor_contact) {
-              await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
-                method: "POST",
-                headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
-                body: JSON.stringify({ clinic_id: conv.clinic_id, to_number: conv.visitor_contact, message_type: "text", content: message, conversation_id: conv.id }),
-              });
-            } else {
-              await supabase.from("messages").insert({
-                conversation_id: conv.id, clinic_id: conv.clinic_id,
-                direction: "outbound", content: message, message_type: "text", status: "sent",
-              });
-            }
+            const sendResult = await sendWhatsAppMessageSmart(
+              supabase, supabaseUrl, supabaseKey,
+              {
+                id: conv.id, clinic_id: conv.clinic_id,
+                channel: conv.channel || "whatsapp",
+                visitor_contact: conv.visitor_contact,
+                contact_id: conv.contact_id,
+                last_client_message_at: conv.last_client_message_at,
+              },
+              message, "recordatorio_cita", globalAgentName,
+            );
+
+            if (!sendResult.sent) continue;
 
             await supabase.from("conversations").update({
               appointment_reminder_2_sent: true,
@@ -564,7 +741,7 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
             await supabase.from("conversation_pipeline_history").insert({
               conversation_id: conv.id, clinic_id: conv.clinic_id,
               from_tab: "agendados", to_tab: "agendados",
-              moved_by: "system", reason: "Recordatorio 2 enviado",
+              moved_by: "system", reason: `Recordatorio 2 enviado${sendResult.type === "template" ? " (template)" : ""}`,
             });
 
             tarea5Reminder2++;

@@ -134,8 +134,8 @@ const PipelineConfigPage = () => {
                 <Label className="text-sm">Hora inicio envío</Label>
                 <Input
                   type="number" min={0} max={23}
-                  value={localValues["send_window_start_hour"] ?? 8}
-                  onChange={e => setLocalValues(prev => ({ ...prev, send_window_start_hour: parseInt(e.target.value) || 8 }))}
+                  value={localValues["send_window_start_hour"] ?? 7}
+                  onChange={e => setLocalValues(prev => ({ ...prev, send_window_start_hour: parseInt(e.target.value) || 7 }))}
                   className="w-24"
                 />
                 <p className="text-[10px] text-muted-foreground">AM (0-23)</p>
@@ -144,8 +144,8 @@ const PipelineConfigPage = () => {
                 <Label className="text-sm">Hora fin envío</Label>
                 <Input
                   type="number" min={0} max={23}
-                  value={localValues["send_window_end_hour"] ?? 21}
-                  onChange={e => setLocalValues(prev => ({ ...prev, send_window_end_hour: parseInt(e.target.value) || 21 }))}
+                  value={localValues["send_window_end_hour"] ?? 23}
+                  onChange={e => setLocalValues(prev => ({ ...prev, send_window_end_hour: parseInt(e.target.value) || 23 }))}
                   className="w-24"
                 />
                 <p className="text-[10px] text-muted-foreground">PM (0-23)</p>

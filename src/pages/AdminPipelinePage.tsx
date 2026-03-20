@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Monitor, Save, RotateCcw, AlertCircle, CheckCircle2, Clock } from "lucide-react";
+import { Settings, Monitor, Save, RotateCcw, AlertCircle, CheckCircle2, Clock, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -77,15 +77,17 @@ const AdminPipelinePage = () => {
   const [lockStatus, setLockStatus] = useState<{ is_running: boolean; last_completed_at: string | null }>({ is_running: false, last_completed_at: null });
   const [execLogs, setExecLogs] = useState<any[]>([]);
   const [pipelineCounts, setPipelineCounts] = useState<Record<string, number>>({});
+  const [waTemplates, setWaTemplates] = useState<any[]>([]);
 
   const fetchAll = async () => {
     setLoading(true);
 
-    const [rulesRes, lockRes, logsRes, countsRes] = await Promise.all([
+    const [rulesRes, lockRes, logsRes, countsRes, templatesRes] = await Promise.all([
       supabase.from("pipeline_global_rules").select("rule_key, rule_value"),
       supabase.from("pipeline_execution_lock").select("*").eq("id", 1).single(),
       (supabase as any).from("pipeline_execution_log").select("*").order("executed_at", { ascending: false }).limit(20),
       supabase.from("conversations").select("pipeline_tab").not("pipeline_tab", "is", null),
+      (supabase as any).from("whatsapp_templates").select("*").order("template_type"),
     ]);
 
     const r: Record<string, number> = {};
@@ -94,16 +96,13 @@ const AdminPipelinePage = () => {
 
     if (lockRes.data) setLockStatus(lockRes.data as any);
     setExecLogs(logsRes.data || []);
+    setWaTemplates(templatesRes.data || []);
 
     const counts: Record<string, number> = {};
     (countsRes.data || []).forEach((c: any) => {
       counts[c.pipeline_tab] = (counts[c.pipeline_tab] || 0) + 1;
     });
     setPipelineCounts(counts);
-
-    // Fetch default messages (using a known admin clinic or null clinic approach)
-    // For global defaults, we check seguimiento_auto_messages with no specific clinic filter
-    // Actually global defaults are just the templates — we'll show a simple editor
 
     setLoading(false);
   };
@@ -189,6 +188,7 @@ const AdminPipelinePage = () => {
         <Tabs defaultValue="reglas">
           <TabsList>
             <TabsTrigger value="reglas" className="gap-1.5"><Settings className="w-3.5 h-3.5" />Reglas</TabsTrigger>
+            <TabsTrigger value="templates" className="gap-1.5"><MessageSquare className="w-3.5 h-3.5" />WhatsApp Templates</TabsTrigger>
             <TabsTrigger value="monitor" className="gap-1.5"><Monitor className="w-3.5 h-3.5" />Monitor</TabsTrigger>
           </TabsList>
 
@@ -291,7 +291,7 @@ const AdminPipelinePage = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Fecha</TableHead>
-                        <TableHead>→ C1</TableHead>
+                        <TableHead>→ Seg.</TableHead>
                         <TableHead>Msgs</TableHead>
                         <TableHead>→ No resp.</TableHead>
                         <TableHead>Fixes</TableHead>
@@ -305,7 +305,7 @@ const AdminPipelinePage = () => {
                         return (
                           <TableRow key={log.id}>
                             <TableCell className="text-xs">{timeAgo(log.executed_at)}</TableCell>
-                            <TableCell className="text-xs font-mono">{log.moved_to_c1}</TableCell>
+                            <TableCell className="text-xs font-mono">{log.moved_to_seguimiento || log.moved_to_c1}</TableCell>
                             <TableCell className="text-xs font-mono">{log.messages_sent}</TableCell>
                             <TableCell className="text-xs font-mono">{log.moved_to_no_responden}</TableCell>
                             <TableCell className="text-xs font-mono">{log.inconsistencies_fixed}</TableCell>
@@ -323,6 +323,98 @@ const AdminPipelinePage = () => {
                     </TableBody>
                   </Table>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* WhatsApp Templates Tab */}
+          <TabsContent value="templates" className="space-y-6 mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Estado de WhatsApp Templates</CardTitle>
+                <CardDescription>Templates HSM utilizados cuando la ventana de 24h de WhatsApp está cerrada</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {(() => {
+                  const unapproved = waTemplates.filter(t => !t.meta_approved);
+                  if (unapproved.length > 0) {
+                    return (
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
+                        <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                        <p className="text-sm text-amber-700 dark:text-amber-300">
+                          Tienes <strong>{unapproved.length}</strong> templates pendientes de aprobación en Meta. Sin ellos, los mensajes no se pueden enviar a contactos cuya ventana de 24h haya expirado.
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {waTemplates.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No hay templates configurados</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nombre</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Estado</TableHead>
+                        <TableHead>Meta Template ID</TableHead>
+                        <TableHead>Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {waTemplates.map((t: any) => (
+                        <TableRow key={t.id}>
+                          <TableCell className="text-sm font-medium">{t.template_name}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{t.template_type}</TableCell>
+                          <TableCell>
+                            {t.meta_approved ? (
+                              <Badge className="bg-emerald-500/20 text-emerald-600 text-xs"><CheckCircle2 className="w-3 h-3 mr-1" />Aprobado</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-amber-600 text-xs"><Clock className="w-3 h-3 mr-1" />Pendiente</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              placeholder="ej: seguimiento_consulta_es"
+                              defaultValue={t.meta_template_id || ""}
+                              className="w-48 text-xs"
+                              onBlur={async (e) => {
+                                const val = e.target.value.trim();
+                                if (val !== (t.meta_template_id || "")) {
+                                  await (supabase as any).from("whatsapp_templates").update({ meta_template_id: val, updated_at: new Date().toISOString() }).eq("id", t.id);
+                                  toast.success("Template ID actualizado");
+                                }
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant={t.meta_approved ? "outline" : "default"}
+                              onClick={async () => {
+                                await (supabase as any).from("whatsapp_templates").update({ meta_approved: !t.meta_approved, updated_at: new Date().toISOString() }).eq("id", t.id);
+                                toast.success(t.meta_approved ? "Marcado como pendiente" : "Marcado como aprobado");
+                                fetchAll();
+                              }}
+                            >
+                              {t.meta_approved ? "Desmarcar" : "✓ Marcar aprobado"}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+
+                <div className="border-t border-border pt-4">
+                  <p className="text-xs text-muted-foreground">
+                    <strong>¿Cómo funciona?</strong> Cuando un contacto no ha enviado un mensaje en más de 24 horas, WhatsApp no permite enviar mensajes libres.
+                    En ese caso, el sistema envía un Template Message (HSM) previamente aprobado por Meta para reabrir la conversación.
+                    Ventana de envío: <strong>7:00 AM — 11:00 PM</strong>.
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
