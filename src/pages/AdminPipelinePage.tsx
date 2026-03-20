@@ -96,16 +96,13 @@ const AdminPipelinePage = () => {
 
     if (lockRes.data) setLockStatus(lockRes.data as any);
     setExecLogs(logsRes.data || []);
+    setWaTemplates(templatesRes.data || []);
 
     const counts: Record<string, number> = {};
     (countsRes.data || []).forEach((c: any) => {
       counts[c.pipeline_tab] = (counts[c.pipeline_tab] || 0) + 1;
     });
     setPipelineCounts(counts);
-
-    // Fetch default messages (using a known admin clinic or null clinic approach)
-    // For global defaults, we check seguimiento_auto_messages with no specific clinic filter
-    // Actually global defaults are just the templates — we'll show a simple editor
 
     setLoading(false);
   };
