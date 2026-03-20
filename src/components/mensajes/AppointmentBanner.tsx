@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { CalendarCheck, CheckCircle, XCircle, DollarSign, UserX } from "lucide-react";
+import { CalendarCheck, CheckCircle, XCircle, DollarSign, UserX, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useClinic } from "@/hooks/useClinic";
 import { toast } from "sonner";
 import type { PipelineConversation } from "@/hooks/useConversationsByPipeline";
 
@@ -21,14 +23,29 @@ const PROGRESS_STEPS = [
   { key: "show_con_venta", label: "Venta" },
 ];
 
+const STATUS_COLORS: Record<string, string> = {
+  agendado: "bg-emerald-500",
+  reminder_1_sent: "bg-blue-500",
+  reminder_2_sent: "bg-blue-600",
+  confirmado: "bg-emerald-600",
+  asistio: "bg-teal-500",
+  show_con_venta: "bg-emerald-700",
+  show_sin_venta: "bg-orange-500",
+  no_show: "bg-red-500",
+};
+
 const AppointmentBanner = ({ conversation: c, onActionComplete }: Props) => {
   const { user } = useAuth();
+  const { clinicId } = useClinic();
   const [step, setStep] = useState<"attendance" | "sale" | null>(null);
+  const [sendingReengage, setSendingReengage] = useState(false);
 
-  if (c.pipeline_tab !== "agendados" || !c.appointment_date) return null;
+  // Show for agendados, no_show, show_sin_venta
+  const showBanner = (c.pipeline_tab === "agendados" || c.pipeline_tab === "no_show" || c.pipeline_tab === "show_sin_venta") && c.appointment_date;
+  if (!showBanner) return null;
 
-  const appointmentPassed = new Date(c.appointment_date) < new Date();
-  const showAttendanceBanner = appointmentPassed && c.appointment_attended === null;
+  const appointmentPassed = new Date(c.appointment_date!) < new Date();
+  const showAttendanceBanner = c.pipeline_tab === "agendados" && appointmentPassed && c.appointment_attended === null;
   const currentStepIdx = PROGRESS_STEPS.findIndex(s => s.key === c.appointment_status);
 
   const handleAttended = async (attended: boolean) => {
@@ -52,12 +69,31 @@ const AppointmentBanner = ({ conversation: c, onActionComplete }: Props) => {
 
       await supabase.from("conversation_pipeline_history").insert({
         conversation_id: c.id,
-        clinic_id: "",
+        clinic_id: clinicId || "",
         from_tab: "agendados",
         to_tab: "no_show",
         moved_by: "manual",
         reason: "No-show marcado por agente",
       });
+
+      // Send no-show re-engagement message
+      if (clinicId) {
+        try {
+          setSendingReengage(true);
+          await supabase.functions.invoke("ai-agent-reply", {
+            body: {
+              conversation_id: c.id,
+              clinic_id: clinicId,
+              triggered_by: "manual",
+              custom_prompt: `El paciente ${c.contactName} no asistió a su cita de ${c.appointment_service || "consulta"} del ${c.appointment_date}. Envía un mensaje amable preguntando si le gustaría reagendar. No seas insistente.`,
+            },
+          });
+        } catch (e) {
+          console.error("Re-engagement message failed:", e);
+        } finally {
+          setSendingReengage(false);
+        }
+      }
 
       toast.success("Marcado como No-show");
       setStep(null);
@@ -74,6 +110,16 @@ const AppointmentBanner = ({ conversation: c, onActionComplete }: Props) => {
         appointment_status: "show_con_venta",
         pipeline_tab: "pacientes",
       }).eq("id", c.id);
+
+      await supabase.from("conversation_pipeline_history").insert({
+        conversation_id: c.id,
+        clinic_id: clinicId || "",
+        from_tab: "agendados",
+        to_tab: "pacientes",
+        moved_by: "manual",
+        reason: "Show con venta",
+      });
+
       toast.success("¡Venta registrada! Movido a Pacientes");
     } else {
       await (supabase as any).from("conversations").update({
@@ -81,6 +127,16 @@ const AppointmentBanner = ({ conversation: c, onActionComplete }: Props) => {
         appointment_status: "show_sin_venta",
         pipeline_tab: "show_sin_venta",
       }).eq("id", c.id);
+
+      await supabase.from("conversation_pipeline_history").insert({
+        conversation_id: c.id,
+        clinic_id: clinicId || "",
+        from_tab: "agendados",
+        to_tab: "show_sin_venta",
+        moved_by: "manual",
+        reason: "Show sin venta",
+      });
+
       toast.success("Movido a Show sin venta");
     }
     setStep(null);
@@ -92,50 +148,85 @@ const AppointmentBanner = ({ conversation: c, onActionComplete }: Props) => {
     catch { return d; }
   };
 
+  const statusColor = STATUS_COLORS[c.appointment_status || "agendado"] || "bg-muted";
+
   return (
     <div className="px-4 py-2 border-b border-border bg-muted/30 space-y-2">
       {/* Appointment info card */}
       <div className="flex items-center gap-3 flex-wrap text-xs">
         <span className="flex items-center gap-1">
           <CalendarCheck className="w-3.5 h-3.5 text-emerald-500" />
-          <strong>Cita:</strong> {formatDate(c.appointment_date)} {c.appointment_time && `a las ${c.appointment_time}`}
+          <strong>Cita:</strong> {formatDate(c.appointment_date!)} {c.appointment_time && `a las ${c.appointment_time}`}
         </span>
         {c.appointment_service && (
-          <span className="text-muted-foreground">🏥 {c.appointment_service}</span>
+          <span className="text-muted-foreground">💼 {c.appointment_service}</span>
         )}
-        <span className="text-muted-foreground capitalize">
-          Estado: {c.appointment_status?.replace(/_/g, " ") || "agendado"}
-        </span>
+        <Badge variant="outline" className={cn("text-[10px] h-5 text-white border-0", statusColor)}>
+          {(c.appointment_status || "agendado").replace(/_/g, " ")}
+        </Badge>
+        {c.appointment_confirmed && (
+          <Badge variant="outline" className="text-[10px] h-5 text-emerald-600 border-emerald-200 bg-emerald-50">
+            ✅ Confirmado
+          </Badge>
+        )}
       </div>
 
-      {/* Progress bar */}
-      <div className="flex items-center gap-0.5">
-        {PROGRESS_STEPS.map((s, i) => (
-          <div key={s.key} className="flex items-center gap-0.5">
-            <div className={cn(
-              "h-1.5 rounded-full flex-1 min-w-[20px]",
-              i <= currentStepIdx ? "bg-emerald-500" : "bg-border"
-            )} />
-            <span className={cn(
-              "text-[8px]",
-              i <= currentStepIdx ? "text-emerald-600 font-medium" : "text-muted-foreground"
-            )}>
-              {s.label}
-            </span>
-          </div>
-        ))}
-      </div>
+      {/* Progress bar - only for agendados */}
+      {c.pipeline_tab === "agendados" && (
+        <div className="flex items-center gap-0.5">
+          {PROGRESS_STEPS.map((s, i) => (
+            <div key={s.key} className="flex items-center gap-0.5">
+              <div className={cn(
+                "h-1.5 rounded-full flex-1 min-w-[20px]",
+                i <= currentStepIdx ? "bg-emerald-500" : "bg-border"
+              )} />
+              <span className={cn(
+                "text-[8px]",
+                i <= currentStepIdx ? "text-emerald-600 font-medium" : "text-muted-foreground"
+              )}>
+                {s.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* No-show banner */}
+      {c.pipeline_tab === "no_show" && (
+        <div className="flex items-center gap-2 p-2 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20">
+          <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+          <span className="text-xs text-red-700 dark:text-red-300 flex-1">
+            <strong>{c.contactName}</strong> no asistió a su cita del {formatDate(c.appointment_date!)}
+          </span>
+          <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => {
+            // TODO: trigger reschedule flow
+            toast.info("El paciente puede responder para reagendar");
+          }}>
+            <RefreshCw className="w-3 h-3" /> Reagendar
+          </Button>
+        </div>
+      )}
+
+      {/* Show sin venta banner */}
+      {c.pipeline_tab === "show_sin_venta" && (
+        <div className="flex items-center gap-2 p-2 rounded-lg bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20">
+          <UserX className="w-4 h-4 text-orange-500 flex-shrink-0" />
+          <span className="text-xs text-orange-700 dark:text-orange-300 flex-1">
+            <strong>{c.contactName}</strong> asistió pero sin venta
+          </span>
+        </div>
+      )}
 
       {/* Attendance banner */}
       {showAttendanceBanner && step !== "sale" && (
         <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
           <span className="text-xs text-amber-700 dark:text-amber-300 flex-1">
-            La cita de <strong>{c.contactName}</strong> era {formatDate(c.appointment_date)} {c.appointment_time && `a las ${c.appointment_time}`}. ¿Asistió?
+            La cita de <strong>{c.contactName}</strong> era {formatDate(c.appointment_date!)} {c.appointment_time && `a las ${c.appointment_time}`}. ¿Asistió?
           </span>
           <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-emerald-600 border-emerald-200" onClick={() => handleAttended(true)}>
             <CheckCircle className="w-3 h-3" /> Sí, asistió
           </Button>
-          <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-red-600 border-red-200" onClick={() => handleAttended(false)}>
+          <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-red-600 border-red-200" onClick={() => handleAttended(false)} disabled={sendingReengage}>
             <XCircle className="w-3 h-3" /> No asistió
           </Button>
         </div>

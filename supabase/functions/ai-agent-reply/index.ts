@@ -39,13 +39,182 @@ serve(async (req) => {
 
     const { data: conversationData, error: conversationError } = await supabase
       .from("conversations")
-      .select("id, channel, visitor_contact, contact_id, chatbot_active, follow_up_count, last_inbound_at")
+      .select("id, channel, visitor_contact, contact_id, chatbot_active, follow_up_count, last_inbound_at, appointment_flow_active, appointment_flow_step, appointment_flow_data, pipeline_tab, appointment_confirmed")
       .eq("id", conversation_id)
       .eq("clinic_id", clinic_id)
       .single();
 
     if (conversationError || !conversationData) throw conversationError || new Error("Conversation not found");
 
+    // ====== APPOINTMENT FLOW: If active, delegate to appointment-flow function ======
+    if (conversationData.appointment_flow_active && !isDraft && !isFollowUp) {
+      // Get the latest inbound message
+      const { data: lastInbound } = await supabase
+        .from("messages")
+        .select("content")
+        .eq("conversation_id", conversation_id)
+        .eq("direction", "inbound")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const patientMessage = lastInbound?.content || "";
+
+      const flowResp = await fetch(`${supabaseUrl}/functions/v1/appointment-flow`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "guided_flow",
+          conversation_id,
+          clinic_id,
+          patient_message: patientMessage,
+        }),
+      });
+
+      const flowResult = await flowResp.json();
+      console.log("Appointment flow result:", JSON.stringify(flowResult));
+
+      if (flowResult.response_text) {
+        // Send the appointment flow response
+        const reply = flowResult.response_text;
+        let savedMsg: unknown = null;
+
+        if (conversationData.channel === "whatsapp") {
+          let toNumber = conversationData.visitor_contact;
+          if (!toNumber && conversationData.contact_id) {
+            const { data: contactData } = await supabase.from("contacts").select("phone").eq("id", conversationData.contact_id).maybeSingle();
+            toNumber = contactData?.phone || null;
+          }
+          if (toNumber) {
+            const sendResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
+              body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: reply, conversation_id }),
+            });
+            savedMsg = await sendResponse.json().catch(() => null);
+          }
+        } else {
+          const { data: insertedMessage } = await supabase.from("messages").insert({
+            conversation_id, clinic_id, direction: "outbound", content: reply, message_type: "text", status: "sent",
+          }).select().single();
+          savedMsg = insertedMessage;
+          await supabase.from("conversations").update({
+            last_message_at: new Date().toISOString(),
+            last_message_preview: reply.substring(0, 100),
+          }).eq("id", conversation_id);
+        }
+
+        // If flow completed (confirmed appointment), the appointment-flow function already updated the conversation
+        return new Response(JSON.stringify({
+          reply,
+          message: savedMsg,
+          appointment_flow: true,
+          flow_complete: flowResult.confirmed || false,
+          appointment: flowResult.appointment || null,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // If flow returned error or no text, fall through to normal AI
+      if (flowResult.flow_cancelled) {
+        const cancelReply = flowResult.response_text || "Sin problema. Cuando quieras agendar, aquí estoy. 😊";
+        // Send cancel message and continue normal flow
+        if (conversationData.channel === "whatsapp") {
+          let toNumber = conversationData.visitor_contact;
+          if (!toNumber && conversationData.contact_id) {
+            const { data: contactData } = await supabase.from("contacts").select("phone").eq("id", conversationData.contact_id).maybeSingle();
+            toNumber = contactData?.phone || null;
+          }
+          if (toNumber) {
+            await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
+              body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: cancelReply, conversation_id }),
+            });
+          }
+        } else {
+          await supabase.from("messages").insert({
+            conversation_id, clinic_id, direction: "outbound", content: cancelReply, message_type: "text", status: "sent",
+          });
+          await supabase.from("conversations").update({
+            last_message_at: new Date().toISOString(), last_message_preview: cancelReply.substring(0, 100),
+          }).eq("id", conversation_id);
+        }
+        return new Response(JSON.stringify({ reply: cancelReply, appointment_flow: true, flow_cancelled: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // ====== APPOINTMENT CONFIRMATION DETECTION (for agendados) ======
+    if (conversationData.pipeline_tab === "agendados" && !conversationData.appointment_confirmed && !isDraft && !isFollowUp) {
+      const { data: lastInbound } = await supabase
+        .from("messages")
+        .select("content")
+        .eq("conversation_id", conversation_id)
+        .eq("direction", "inbound")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (lastInbound?.content) {
+        const detectResp = await fetch(`${supabaseUrl}/functions/v1/appointment-flow`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "detect_response",
+            conversation_id,
+            clinic_id,
+            patient_message: lastInbound.content,
+          }),
+        });
+
+        const detectResult = await detectResp.json();
+        console.log("Appointment response detection:", JSON.stringify(detectResult));
+
+        if (detectResult.send_response && detectResult.response_text) {
+          const reply = detectResult.response_text;
+
+          if (conversationData.channel === "whatsapp") {
+            let toNumber = conversationData.visitor_contact;
+            if (!toNumber && conversationData.contact_id) {
+              const { data: contactData } = await supabase.from("contacts").select("phone").eq("id", conversationData.contact_id).maybeSingle();
+              toNumber = contactData?.phone || null;
+            }
+            if (toNumber) {
+              await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
+                body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: reply, conversation_id }),
+              });
+            }
+          } else {
+            await supabase.from("messages").insert({
+              conversation_id, clinic_id, direction: "outbound", content: reply, message_type: "text", status: "sent",
+            });
+            await supabase.from("conversations").update({
+              last_message_at: new Date().toISOString(), last_message_preview: reply.substring(0, 100),
+            }).eq("id", conversation_id);
+          }
+
+          // If reschedule was triggered, the flow is now active — return
+          if (detectResult.flow_reactivated) {
+            return new Response(JSON.stringify({ reply, appointment_flow: true, reschedule: true }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+
+          // For CONFIRMED and CANCEL, return the response
+          if (detectResult.intent === "CONFIRMED" || detectResult.intent === "CANCEL") {
+            return new Response(JSON.stringify({ reply, appointment_flow: true, intent: detectResult.intent }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        }
+        // For OTHER intent, fall through to normal AI reply
+      }
+    }
+
+    // ====== NORMAL AI REPLY FLOW (unchanged) ======
     if (!isManualTrigger) {
       const { data: claimed, error: claimError } = await supabase
         .from("conversations")
@@ -97,7 +266,6 @@ serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(6);
 
-    // Reverse to chronological order
     if (recentMessages) recentMessages.reverse();
 
     // Build system prompt from agent config
@@ -114,7 +282,6 @@ ${agentConfig.objective}
 SERVICIOS DISPONIBLES:
 ${services.map(s => `• ${s.name} — $${s.price} — ${s.description}`).join("\n") || "(sin servicios configurados)"}`;
 
-    // Add health/clinic specific fields if populated
     if (agentConfig.treatments_text) {
       systemPrompt += `\n\nTRATAMIENTOS DISPONIBLES:\n${agentConfig.treatments_text}`;
     }
@@ -138,17 +305,17 @@ IMPORTANTE:
 - Si el cliente ya recibió un mensaje de bienvenida, NO repitas el saludo ni te presentes de nuevo. Ve directo a responder su pregunta o consulta.
 - Cuando el cliente pregunte sobre un servicio o tema específico, responde directamente sobre eso. No des respuestas genéricas.`;
 
-    // Follow-up mode: add specific instructions
+    // Follow-up mode
     if (isFollowUp) {
       const followUpCount = (conversationData.follow_up_count || 0) + 1;
       const lastInbound = conversationData.last_inbound_at;
-      const timeSince = lastInbound 
+      const timeSince = lastInbound
         ? Math.floor((Date.now() - new Date(lastInbound).getTime()) / 60000)
         : 0;
-      const timeLabel = timeSince >= 1440 
-        ? `${Math.floor(timeSince / 1440)} días` 
-        : timeSince >= 60 
-          ? `${Math.floor(timeSince / 60)} horas` 
+      const timeLabel = timeSince >= 1440
+        ? `${Math.floor(timeSince / 1440)} días`
+        : timeSince >= 60
+          ? `${Math.floor(timeSince / 60)} horas`
           : `${timeSince} minutos`;
 
       systemPrompt += `\n\n=== MODO SEGUIMIENTO (Contacto ${followUpCount}) ===
@@ -176,19 +343,16 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
       systemPrompt += `\n\nIMPORTANTE: Responde en máximo ${channelPrompt.max_response_length} caracteres.`;
     }
 
-    // If custom prompt provided (human-guided AI), add it
     if (custom_prompt) {
       systemPrompt += `\n\n=== INSTRUCCIÓN DEL OPERADOR ===\nEl operador humano te pide que generes una respuesta con estas indicaciones: "${custom_prompt}"\nGenera una respuesta apropiada basándote en el contexto del chat y estas instrucciones.`;
     }
 
     // Build messages array, consolidating consecutive same-role messages
-    // (Gemini rejects consecutive messages from the same role)
     const rawMsgs = (recentMessages || []).map((m) => ({
       role: m.direction === "inbound" ? "user" as const : "assistant" as const,
       content: m.content || "",
     }));
 
-    // Consolidate consecutive same-role messages
     const consolidatedMsgs: { role: string; content: string }[] = [];
     for (const msg of rawMsgs) {
       if (!msg.content.trim()) continue;
@@ -205,7 +369,6 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
       ...consolidatedMsgs,
     ];
 
-    // In draft mode, ensure the last message is from "user" so the model generates a response
     const lastRole = aiMessages[aiMessages.length - 1]?.role;
     if (lastRole !== "user") {
       aiMessages.push({
@@ -215,12 +378,10 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
           : "[Instrucción del sistema]: Genera un mensaje de seguimiento corto y apropiado para este cliente, basándote en el contexto de la conversación anterior. Responde directamente con el mensaje, sin explicaciones.",
       });
     } else if (custom_prompt) {
-      // Last message is already from user, add the custom prompt as context
       aiMessages.push({
         role: "user",
         content: `[Instrucción adicional del operador]: ${custom_prompt}`,
       });
-      // Need to consolidate again
       const prev = aiMessages[aiMessages.length - 2];
       if (prev && prev.role === "user") {
         prev.content += "\n" + aiMessages.pop()!.content;
@@ -229,7 +390,7 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
 
     console.log("AI messages count:", aiMessages.length, "last role:", aiMessages[aiMessages.length - 1]?.role, "isDraft:", isDraft);
 
-    // Try primary model, fallback to gemini-2.5-flash if null response
+    // Try primary model, fallback if null response
     const tryModel = async (model: string): Promise<{ reply: string | null; data: any }> => {
       const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -237,22 +398,13 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
           Authorization: `Bearer ${LOVABLE_API_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          model,
-          messages: aiMessages,
-          stream: false,
-          max_tokens: 500,
-        }),
+        body: JSON.stringify({ model, messages: aiMessages, stream: false, max_tokens: 500 }),
       });
 
       if (!resp.ok) {
         const status = resp.status;
-        if (status === 429) {
-          throw { status: 429, message: "Rate limit exceeded. Try again later." };
-        }
-        if (status === 402) {
-          throw { status: 402, message: "AI credits exhausted. Add funds in Settings." };
-        }
+        if (status === 429) throw { status: 429, message: "Rate limit exceeded. Try again later." };
+        if (status === 402) throw { status: 402, message: "AI credits exhausted. Add funds in Settings." };
         const errorText = await resp.text();
         console.error("AI gateway error:", status, errorText);
         throw { status: 500, message: "AI gateway error" };
@@ -266,7 +418,6 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
     let reply: string | null = null;
     let aiData: any = null;
 
-    // Try primary model
     try {
       const result = await tryModel("google/gemini-2.5-flash");
       reply = result.reply;
@@ -281,7 +432,6 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
       throw e;
     }
 
-    // Fallback to different model if null
     if (!reply) {
       console.warn("Primary model returned null, trying fallback model...");
       try {
@@ -293,7 +443,6 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
       }
     }
 
-    // CRITICAL: If AI couldn't generate a response, return error to operator
     if (!reply) {
       console.error("AI returned empty response after retry:", JSON.stringify(aiData));
       return new Response(JSON.stringify({ error: "La IA no pudo generar una respuesta. Intenta de nuevo o responde manualmente." }), {
@@ -307,15 +456,11 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
     const tokensOutput = usage.completion_tokens || 0;
     const modelUsed = aiData?.model || "google/gemini-2.5-flash";
 
-    // Draft mode: return reply without sending or saving message
+    // Draft mode
     if (isDraft) {
       await supabase.from("ai_agent_usage").insert({
-        clinic_id,
-        conversation_id,
-        tokens_input: tokensInput,
-        tokens_output: tokensOutput,
-        model: modelUsed,
-        triggered_by: "manual_draft",
+        clinic_id, conversation_id, tokens_input: tokensInput, tokens_output: tokensOutput,
+        model: modelUsed, triggered_by: "manual_draft",
       });
       return new Response(JSON.stringify({ reply, draft: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -326,55 +471,28 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
 
     if (conversationData.channel === "whatsapp") {
       let toNumber = conversationData.visitor_contact;
-
       if (!toNumber && conversationData.contact_id) {
-        const { data: contactData } = await supabase
-          .from("contacts")
-          .select("phone")
-          .eq("id", conversationData.contact_id)
-          .maybeSingle();
-
+        const { data: contactData } = await supabase.from("contacts").select("phone").eq("id", conversationData.contact_id).maybeSingle();
         toNumber = contactData?.phone || null;
       }
-
-      if (!toNumber) {
-        throw new Error("WhatsApp conversation has no destination phone number");
-      }
+      if (!toNumber) throw new Error("WhatsApp conversation has no destination phone number");
 
       const sendResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${supabaseKey}`,
-          apikey: supabaseKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          clinic_id,
-          to_number: toNumber,
-          message_type: "text",
-          content: reply,
-          conversation_id,
-        }),
+        headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: reply, conversation_id }),
       });
 
       const sendPayload = await sendResponse.json().catch(() => null);
       console.log("AI reply delivery response:", JSON.stringify(sendPayload));
-
       if (!sendResponse.ok || sendPayload?.error) {
         throw new Error(`WhatsApp send failed: ${JSON.stringify(sendPayload || { status: sendResponse.status })}`);
       }
-
       savedMsg = sendPayload;
     } else {
       const { data: insertedMessage, error: msgError } = await supabase.from("messages").insert({
-        conversation_id,
-        clinic_id,
-        direction: "outbound",
-        content: reply,
-        message_type: "text",
-        status: "sent",
+        conversation_id, clinic_id, direction: "outbound", content: reply, message_type: "text", status: "sent",
       }).select().single();
-
       if (msgError) throw msgError;
       savedMsg = insertedMessage;
 
@@ -395,46 +513,70 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
       await supabase.from("conversations").update({
         inactivity_timer_start: new Date().toISOString(),
       }).eq("id", conversation_id);
-      console.log(`[PIPELINE] Inactivity timer started for conv ${conversation_id}`);
     }
 
     // If follow-up, update follow_up_count and contact funnel_stage
     if (isFollowUp) {
       const newCount = (conversationData.follow_up_count || 0) + 1;
       await supabase.from("conversations").update({ follow_up_count: newCount }).eq("id", conversation_id);
-      
-      // Update contact funnel stage to contacto_N
       if (conversationData.contact_id && newCount <= 5) {
         await supabase.from("contacts").update({ funnel_stage: `contacto_${newCount}` }).eq("id", conversationData.contact_id);
       }
     }
 
-    // Log usage to ai_agent_usage
+    // Log usage
     await supabase.from("ai_agent_usage").insert({
-      clinic_id,
-      conversation_id,
-      tokens_input: tokensInput,
-      tokens_output: tokensOutput,
-      model: modelUsed,
-      triggered_by: triggered_by || "manual",
+      clinic_id, conversation_id, tokens_input: tokensInput, tokens_output: tokensOutput,
+      model: modelUsed, triggered_by: triggered_by || "manual",
     });
 
-    // Also log to ai_token_usage for unified cost tracking
     const costUsd = estimateTokenCost(modelUsed, tokensInput, tokensOutput);
     await supabase.from("ai_token_usage").insert({
-      clinic_id,
-      user_id: null,
-      generator_type: "agent",
-      model: modelUsed,
-      tokens_input: tokensInput,
-      tokens_output: tokensOutput,
-      cost_usd: costUsd,
+      clinic_id, user_id: null, generator_type: "agent", model: modelUsed,
+      tokens_input: tokensInput, tokens_output: tokensOutput, cost_usd: costUsd,
       action_label: isFollowUp ? `Seguimiento contacto ${(conversationData.follow_up_count || 0) + 1}` : `Respuesta automática agente`,
     });
 
-    return new Response(JSON.stringify({ reply, message: savedMsg, follow_up_count: isFollowUp ? (conversationData.follow_up_count || 0) + 1 : undefined }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // ====== POST-REPLY: Detect appointment intent (async, non-blocking) ======
+    if (!isFollowUp && triggered_by === "auto") {
+      // Get the inbound message that triggered this reply
+      const { data: lastInbound } = await supabase
+        .from("messages")
+        .select("content")
+        .eq("conversation_id", conversation_id)
+        .eq("direction", "inbound")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (lastInbound?.content && convState?.pipeline_tab !== "agendados") {
+        try {
+          const detectResp = await fetch(`${supabaseUrl}/functions/v1/appointment-flow`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "detect_intent",
+              conversation_id,
+              clinic_id,
+              patient_message: lastInbound.content,
+            }),
+          });
+
+          const detectResult = await detectResp.json();
+          console.log("Appointment intent detection:", JSON.stringify(detectResult));
+
+          // If needs_confirmation (medium confidence), we let the normal AI response go through
+          // The AI should naturally ask about scheduling based on context
+        } catch (e) {
+          console.error("Appointment intent detection failed (non-blocking):", e);
+        }
+      }
+    }
+
+    return new Response(JSON.stringify({
+      reply, message: savedMsg,
+      follow_up_count: isFollowUp ? (conversationData.follow_up_count || 0) + 1 : undefined,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("ai-agent-reply error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
