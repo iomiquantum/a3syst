@@ -496,7 +496,7 @@ Deno.serve(async (req) => {
     // ========== TAREA 2: ENQUEUE follow-ups (S1-S8) — NO LONGER SENDS ==========
     console.log("[PIPELINE] TAREA 2: Enqueuing follow-up messages...");
     const now = new Date().toISOString();
-    const seguimientoTabs = Array.from({ length: 6 }, (_, i) => `seguimiento_s${i + 1}`);
+    const seguimientoTabs = Array.from({ length: 4 }, (_, i) => `seguimiento_s${i + 1}`);
     const { data: followUpConvs } = await supabase
       .from("conversations")
       .select("id, clinic_id, pipeline_tab, seguimiento_contact_number, seguimiento_next_contact_at, seguimiento_consecutive_read_no_reply, seguimiento_spam_protection_triggered, channel")
@@ -524,10 +524,10 @@ Deno.serve(async (req) => {
         if (!fresh || !fresh.pipeline_tab?.startsWith("seguimiento_s")) continue;
 
         const contactNumber = fresh.seguimiento_contact_number || conv.seguimiento_contact_number || 1;
-        const isManualStep = contactNumber > 6;
+        const isManualStep = contactNumber >= 5;
 
         if (isManualStep) {
-          console.log(`[PIPELINE] S${contactNumber} beyond S6, skipping for conv ${conv.id}`);
+          console.log(`[PIPELINE] S${contactNumber} is manual (human), skipping for conv ${conv.id}`);
           continue;
         }
 
@@ -597,7 +597,7 @@ Deno.serve(async (req) => {
     for (const conv of inconsistent || []) {
       try {
         const stageNumber = conv.seguimiento_contact_number || getStageNumberFromPipelineTab(conv.pipeline_tab) || 1;
-        if (stageNumber > 6) continue;
+        if (stageNumber > 4) continue; // S5-S6 are manual, skip cleanup
 
         const delay = await getClinicStageDelay(conv.clinic_id, stageNumber);
         const missingTimer = !conv.seguimiento_next_contact_at;
@@ -1031,6 +1031,21 @@ Deno.serve(async (req) => {
               moved_by: "system", reason: `Sin respuesta después de ${maxAutoContacts} contactos`,
             });
             tarea2NoResponden++;
+          } else if (nextContactNumber >= 5) {
+            // S5 and S6 are manual (human) — move there but NO timer
+            await supabase.from("conversations").update({
+              pipeline_tab: `seguimiento_s${nextContactNumber}`,
+              seguimiento_contact_number: nextContactNumber,
+              seguimiento_next_contact_at: null,
+              seguimiento_last_contact_at: sentAt.toISOString(),
+              seguimiento_last_completed_s: contactNumber,
+            }).eq("id", convFresh.id);
+
+            await supabase.from("conversation_pipeline_history").insert({
+              conversation_id: convFresh.id, clinic_id: convFresh.clinic_id,
+              from_tab: `seguimiento_s${contactNumber}`, to_tab: `seguimiento_s${nextContactNumber}`,
+              moved_by: "system", reason: `S${contactNumber} enviado → S${nextContactNumber} (manual/humano)`,
+            });
           } else {
             const clinicTz = await getClinicTimezone(convFresh.clinic_id);
             const actualDelay = await getClinicStageDelay(convFresh.clinic_id, nextContactNumber);

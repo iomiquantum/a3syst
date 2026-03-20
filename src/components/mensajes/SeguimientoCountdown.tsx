@@ -1,5 +1,5 @@
 import { useState, useEffect, memo } from "react";
-import { Timer, Pause } from "lucide-react";
+import { Timer, User, Pause } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatElapsedTimeoutCountdown, formatTargetCountdown } from "./seguimientoTime";
 
@@ -61,7 +61,8 @@ const SeguimientoCountdown = memo(({
   const isInSeguimiento = tab.startsWith("seguimiento_s");
   const isInResueltosIA = tab === "resueltos_ia";
   const currentS = isInSeguimiento ? parseInt(tab.replace("seguimiento_s", ""), 10) : 0;
-  const isAutomatic = currentS >= 1 && currentS <= 6;
+  const isAutomatic = currentS >= 1 && currentS <= 4;
+  const isManual = currentS >= 5 && currentS <= 6;
 
   // Case 1: In resueltos_ia with no S history AND no inactivity timer → truly new, no countdown
   if (isInResueltosIA && nextS <= 0 && !inactivityTimerStart) return null;
@@ -180,6 +181,20 @@ const SeguimientoCountdown = memo(({
         );
       }
     }
+    return <div className="flex gap-1 flex-wrap items-center">{badges}</div>;
+  }
+
+  // Case 4: In S5-S6 (manual/human) → no countdown, show "Esperando agente"
+  if (isInSeguimiento && isManual) {
+    badges.push(
+      <span
+        key="manual"
+        className="inline-flex items-center gap-0.5 text-[8px] font-medium bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded leading-none"
+      >
+        <User className="w-2.5 h-2.5" />
+        Esperando agente · S{currentS}
+      </span>
+    );
     return <div className="flex gap-1 flex-wrap items-center">{badges}</div>;
   }
 
