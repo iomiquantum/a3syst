@@ -254,7 +254,7 @@ const AdminPipelinePage = () => {
                 {/* Pipeline Counts */}
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Conversaciones en el pipeline</p>
-                  {["resueltos_ia", "seguimiento_c1", "seguimiento_c2", "seguimiento_c3", "no_responden", "no_interesado", "escalados", "clientes"].map(tab => (
+                  {["resueltos_ia", "seguimiento_s1", "seguimiento_s2", "seguimiento_s3", "seguimiento_s4", "seguimiento_s5", "seguimiento_s6", "seguimiento_s7", "seguimiento_s8", "seguimiento_s9", "seguimiento_s10", "no_responden", "agendados", "no_show", "show_sin_venta", "no_interesado", "escalados", "pacientes", "perdidos"].map(tab => (
                     <div key={tab} className="flex items-center gap-2">
                       <span className="text-xs w-32 text-muted-foreground capitalize">{tab.replace(/_/g, " ")}</span>
                       <div className="flex-1 bg-muted rounded-full h-4 overflow-hidden">
