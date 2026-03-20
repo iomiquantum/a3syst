@@ -102,7 +102,7 @@ serve(async (req) => {
           }
         } else {
           const { data: insertedMessage } = await supabase.from("messages").insert({
-            conversation_id, clinic_id, direction: "outbound", content: reply, message_type: "text", status: "sent",
+            conversation_id, clinic_id, direction: "outbound", content: reply, message_type: "text", status: "sent", origin: "appointment_flow",
           }).select().single();
           savedMsg = insertedMessage;
           await supabase.from("conversations").update({
