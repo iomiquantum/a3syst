@@ -9,10 +9,6 @@ export interface PipelineRules {
   s2_delay_minutes: number;
   s3_delay_minutes: number;
   s4_delay_minutes: number;
-  s5_delay_minutes: number;
-  s6_delay_minutes: number;
-  s7_delay_minutes: number;
-  s8_delay_minutes: number;
   max_auto_contacts: number;
   recurrente_max_cycles: number;
   send_window_start_hour: number;
@@ -25,11 +21,7 @@ const DEFAULTS: PipelineRules = {
   s2_delay_minutes: 30,
   s3_delay_minutes: 240,
   s4_delay_minutes: 720,
-  s5_delay_minutes: 120,
-  s6_delay_minutes: 240,
-  s7_delay_minutes: 720,
-  s8_delay_minutes: 30,
-  max_auto_contacts: 6,
+  max_auto_contacts: 4,
   recurrente_max_cycles: 0,
   send_window_start_hour: 7,
   send_window_end_hour: 23,

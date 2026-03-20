@@ -19,11 +19,11 @@ const PipelineProgressBar = ({ lastCompletedS, nextS, currentTab, isRecurrente, 
   const getLabel = () => {
     if (currentTab?.startsWith("seguimiento_s")) {
       const n = parseInt(currentTab.replace("seguimiento_s", ""));
-      if (n >= 9) return `Esperando agente (S${n} manual)`;
+      if (n >= 5) return `Esperando agente (S${n} manual)`;
       return `Enviando S${n}...`;
     }
     if (currentTab === "resueltos_ia" && nextS > 0) {
-      if (nextS > 10) return "Ciclo completado";
+      if (nextS > 6) return "Ciclo completado";
       return `S${lastCompletedS} completado → Próximo: S${nextS}`;
     }
     return "";
@@ -33,9 +33,9 @@ const PipelineProgressBar = ({ lastCompletedS, nextS, currentTab, isRecurrente, 
     <div className="flex flex-col gap-0.5" style={{ maxHeight: 30 }}>
       <TooltipProvider delayDuration={200}>
         <div className="flex items-center gap-[3px]">
-          {Array.from({ length: 10 }, (_, i) => i + 1).map(index => {
+          {Array.from({ length: 6 }, (_, i) => i + 1).map(index => {
             const status = getStatus(index);
-            const isManual = index >= 9;
+            const isManual = index >= 5;
             const baseColor = isManual
               ? "bg-amber-500"
               : "bg-blue-500";
@@ -62,6 +62,7 @@ const PipelineProgressBar = ({ lastCompletedS, nextS, currentTab, isRecurrente, 
                 </TooltipTrigger>
                 <TooltipContent side="top" className="text-[10px] py-0.5 px-1.5">
                   S{index} — {status === "completed" ? "completado" : status === "current" ? "próximo" : "pendiente"}
+                  {isManual ? " (manual)" : " (auto)"}
                 </TooltipContent>
               </Tooltip>
             );
@@ -76,7 +77,7 @@ const PipelineProgressBar = ({ lastCompletedS, nextS, currentTab, isRecurrente, 
             <span className="ml-1 text-emerald-600 font-medium">↻ Recurrente #{recurrenteCount}</span>
           )}
         </span>
-        <span className="text-[8px] text-muted-foreground">S10</span>
+        <span className="text-[8px] text-muted-foreground">S6</span>
       </div>
     </div>
   );
