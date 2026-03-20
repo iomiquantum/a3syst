@@ -160,7 +160,7 @@ Responde SOLO JSON válido:
 
       const { data: clinic } = await supabase
         .from("clinics")
-        .select("name")
+        .select("name, working_days, opening_hour, closing_hour")
         .eq("id", clinic_id)
         .single();
 
@@ -197,9 +197,20 @@ Responde SOLO JSON válido:
       const todayStr = new Date().toISOString().split("T")[0];
       const dayOfWeekStr = new Date().toLocaleDateString("es", { weekday: "long" });
 
+      // Build working days / schedule info
+      const workingDays = (clinic as any)?.working_days || [];
+      const openingHour = (clinic as any)?.opening_hour || "";
+      const closingHour = (clinic as any)?.closing_hour || "";
+      const scheduleText = workingDays.length > 0
+        ? `Días de atención: ${workingDays.join(", ")}. Horario: ${openingHour || "?"} a ${closingHour || "?"}.`
+        : "(sin horario configurado)";
+
       const guidedPrompt = `Eres ${agentName} de ${clinicName}. Ayudas a agendar una cita.
 
 FECHA DE HOY: ${todayStr} (${dayOfWeekStr})
+
+HORARIO DE ATENCIÓN:
+${scheduleText}
 
 DATOS RECOPILADOS HASTA AHORA:
 - Servicio: ${flowData.service || "❌ Sin definir"}
@@ -222,10 +233,12 @@ INSTRUCCIONES:
 3. Si falta algún dato: pregunta SOLO lo que falta de forma amable
 4. Si el paciente quiere cancelar el agendamiento: respétalo
 5. No aceptes fechas en el pasado
-6. Tono cálido y breve (máximo 2-3 oraciones)
-7. IMPORTANTE: Si el paciente menciona una fecha relativa ("mañana", "el viernes", etc.), resuélvela a formato YYYY-MM-DD basándote en la fecha de hoy.
-8. Si el paciente pregunta por ubicación o dirección, USA la información de UBICACIONES arriba. NUNCA digas que no hay sucursales físicas si hay una dirección configurada.
-9. Usa los precios y servicios EXACTOS de la configuración. No inventes servicios ni precios.
+6. NUNCA ofrezcas ni aceptes citas en días que NO estén en el HORARIO DE ATENCIÓN. Si el paciente pide un día no laborable, sugiere el siguiente día hábil disponible.
+7. Solo ofrece horarios dentro del rango de apertura y cierre configurado.
+8. Tono cálido y breve (máximo 2-3 oraciones)
+9. IMPORTANTE: Si el paciente menciona una fecha relativa ("mañana", "el viernes", etc.), resuélvela a formato YYYY-MM-DD basándote en la fecha de hoy.
+10. Si el paciente pregunta por ubicación o dirección, USA la información de UBICACIONES arriba. NUNCA digas que no hay sucursales físicas si hay una dirección configurada.
+11. Usa los precios y servicios EXACTOS de la configuración. No inventes servicios ni precios.
 
 Responde SOLO JSON válido:
 {
