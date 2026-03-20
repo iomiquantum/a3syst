@@ -360,7 +360,7 @@ Deno.serve(async (req) => {
     // Build delay map for S1-S8
     const delayMap: Record<number, number> = {};
     for (let i = 1; i <= 8; i++) {
-      delayMap[i] = Number(rules[`s${i}_delay_minutes`]) || [15, 30, 30, 60, 120, 240, 720, 30][i - 1];
+      delayMap[i] = Number(rules[`s${i}_delay_minutes`]) || [15, 30, 240, 720, 120, 240, 720, 30][i - 1];
     }
 
     // === LOAD STRATEGIES ===
@@ -496,7 +496,7 @@ Deno.serve(async (req) => {
     // ========== TAREA 2: ENQUEUE follow-ups (S1-S8) — NO LONGER SENDS ==========
     console.log("[PIPELINE] TAREA 2: Enqueuing follow-up messages...");
     const now = new Date().toISOString();
-    const seguimientoTabs = Array.from({ length: 10 }, (_, i) => `seguimiento_s${i + 1}`);
+    const seguimientoTabs = Array.from({ length: 6 }, (_, i) => `seguimiento_s${i + 1}`);
     const { data: followUpConvs } = await supabase
       .from("conversations")
       .select("id, clinic_id, pipeline_tab, seguimiento_contact_number, seguimiento_next_contact_at, seguimiento_consecutive_read_no_reply, seguimiento_spam_protection_triggered, channel")
@@ -524,10 +524,10 @@ Deno.serve(async (req) => {
         if (!fresh || !fresh.pipeline_tab?.startsWith("seguimiento_s")) continue;
 
         const contactNumber = fresh.seguimiento_contact_number || conv.seguimiento_contact_number || 1;
-        const isManualStep = contactNumber >= 9;
+        const isManualStep = contactNumber > 6;
 
         if (isManualStep) {
-          console.log(`[PIPELINE] S${contactNumber} is manual, skipping for conv ${conv.id}`);
+          console.log(`[PIPELINE] S${contactNumber} beyond S6, skipping for conv ${conv.id}`);
           continue;
         }
 
@@ -536,9 +536,7 @@ Deno.serve(async (req) => {
         const readNoReplyCount = fresh.seguimiento_consecutive_read_no_reply || 0;
         if (readNoReplyCount >= spamLimit) {
           await supabase.from("conversations").update({
-            pipeline_tab: "seguimiento_s9",
-            seguimiento_contact_number: 9,
-            seguimiento_next_s: 9,
+            pipeline_tab: "no_responden",
             seguimiento_next_contact_at: null,
             seguimiento_spam_protection_triggered: true,
             seguimiento_spam_jumped_from_s: contactNumber,
@@ -546,11 +544,11 @@ Deno.serve(async (req) => {
 
           await supabase.from("conversation_pipeline_history").insert({
             conversation_id: conv.id, clinic_id: conv.clinic_id,
-            from_tab: `seguimiento_s${contactNumber}`, to_tab: "seguimiento_s9",
+            from_tab: `seguimiento_s${contactNumber}`, to_tab: "no_responden",
             moved_by: "system",
             reason: `Protección anti-spam: ${readNoReplyCount} lecturas sin responder`,
           });
-          console.log(`[PIPELINE SPAM] Conv ${conv.id} jumped S${contactNumber} → S9`);
+          console.log(`[PIPELINE SPAM] Conv ${conv.id} jumped S${contactNumber} → no_responden`);
           continue;
         }
 
@@ -599,7 +597,7 @@ Deno.serve(async (req) => {
     for (const conv of inconsistent || []) {
       try {
         const stageNumber = conv.seguimiento_contact_number || getStageNumberFromPipelineTab(conv.pipeline_tab) || 1;
-        if (stageNumber >= 9) continue;
+        if (stageNumber > 6) continue;
 
         const delay = await getClinicStageDelay(conv.clinic_id, stageNumber);
         const missingTimer = !conv.seguimiento_next_contact_at;
@@ -839,9 +837,7 @@ Deno.serve(async (req) => {
           if ((convFresh.seguimiento_consecutive_read_no_reply || 0) >= spamLimit) {
             await supabase.from("pipeline_message_queue").update({ status: "cancelled", last_error: "Spam protection triggered" }).eq("id", queueItem.id);
             await supabase.from("conversations").update({
-              pipeline_tab: "seguimiento_s9",
-              seguimiento_contact_number: 9,
-              seguimiento_next_s: 9,
+              pipeline_tab: "no_responden",
               seguimiento_next_contact_at: null,
               seguimiento_spam_protection_triggered: true,
               seguimiento_spam_jumped_from_s: queueItem.contact_number,
@@ -910,7 +906,7 @@ Deno.serve(async (req) => {
 
           let followUpPrompt: string;
           if (strategy) {
-            followUpPrompt = `Eres ${agentName}, asistente de ${clinicName}. Estás dando seguimiento a un paciente que dejó de responder.\n\nCONVERSACIÓN COMPLETA (últimos 20 mensajes):\n${messagesContext}\n${clinicKnowledgeBlock}\n\nINFORMACIÓN DEL CONTACTO:\n- Nombre: ${contactName}\n- Es recurrente: ${convFresh.seguimiento_is_recurrente} (veces: ${convFresh.seguimiento_recurrente_count})\n- Respondió por última vez en S${convFresh.seguimiento_responded_at_s}\n${manualMoveContext}\n\nCONTACTO ACTUAL: S${contactNumber} de 10\nESTRATEGIA: ${strategy.strategy_name} — ${strategy.strategy_description}\nINSTRUCCIÓN: ${strategy.prompt_instruction}\nREGLAS DE ESTA ESTRATEGIA: ${strategy.rules}\nBARRERA QUE DEBES RESOLVER: ${strategy.barrier_it_solves}\nPRINCIPIO PSICOLÓGICO: ${strategy.psychological_principle}\n\nREGLAS GLOBALES INQUEBRANTABLES:\n1. Genera UN solo mensaje corto (máximo 2 oraciones, máximo 160 caracteres)\n2. Adapta la estrategia al CONTEXTO REAL de la conversación\n3. Retoma lo ÚLTIMO que se habló, NUNCA repitas información ya dada\n4. Suena como una persona real llamada ${agentName}, NO como bot ni vendedora\n5. Usa el nombre del cliente: ${contactName}\n6. Si es S1: preséntate brevemente ("Hola ${contactName}, soy ${agentName} de ${clinicName}")\n7. Si es S2-S8: NO repitas tu nombre, ya te presentaste\n8. NUNCA menciones que eres bot, IA, sistema automatizado, o que esto es un "seguimiento automático"\n9. NUNCA uses frases como "sistema de seguimiento", "mensaje programado", "recordatorio automático"\n10. Si el cliente es recurrente, sé más directa y familiar (ya te conoce)\n11. Si es S7 o S8: el tono es empático y de despedida, SIN preguntas\n12. NUNCA sugieras "agendar una llamada" ni "llamar" — la comunicación es por MENSAJES. Ofrece agendar una CITA presencial o resolver dudas por este medio.\n13. NUNCA inventes números exactos de cupos (ej. "quedan 2 cupos"). Usa "pocos cupos" o "espacios limitados". Ofrece DÍAS disponibles, NUNCA horarios específicos.\n14. SOLO menciona servicios, tratamientos y precios que aparezcan en la INFORMACIÓN REAL DEL NEGOCIO. NUNCA inventes servicios que no existan.\n\nResponde SOLO con el texto del mensaje. Sin comillas, sin explicación.`;
+            followUpPrompt = `Eres ${agentName}, asistente de ${clinicName}. Estás dando seguimiento a un paciente que dejó de responder.\n\nCONVERSACIÓN COMPLETA (últimos 20 mensajes):\n${messagesContext}\n${clinicKnowledgeBlock}\n\nINFORMACIÓN DEL CONTACTO:\n- Nombre: ${contactName}\n- Es recurrente: ${convFresh.seguimiento_is_recurrente} (veces: ${convFresh.seguimiento_recurrente_count})\n- Respondió por última vez en S${convFresh.seguimiento_responded_at_s}\n${manualMoveContext}\n\nCONTACTO ACTUAL: S${contactNumber} de 6\nESTRATEGIA: ${strategy.strategy_name} — ${strategy.strategy_description}\nINSTRUCCIÓN: ${strategy.prompt_instruction}\nREGLAS DE ESTA ESTRATEGIA: ${strategy.rules}\nBARRERA QUE DEBES RESOLVER: ${strategy.barrier_it_solves}\nPRINCIPIO PSICOLÓGICO: ${strategy.psychological_principle}\n\nREGLAS GLOBALES INQUEBRANTABLES:\n1. Genera UN solo mensaje corto (máximo 2 oraciones, máximo 160 caracteres)\n2. Adapta la estrategia al CONTEXTO REAL de la conversación\n3. Retoma lo ÚLTIMO que se habló, NUNCA repitas información ya dada\n4. Suena como una persona real llamada ${agentName}, NO como bot ni vendedora\n5. Usa el nombre del cliente: ${contactName}\n6. Si es S1: preséntate brevemente ("Hola ${contactName}, soy ${agentName} de ${clinicName}")\n7. Si es S2-S6: NO repitas tu nombre, ya te presentaste\n8. NUNCA menciones que eres bot, IA, sistema automatizado, o que esto es un "seguimiento automático"\n9. NUNCA uses frases como "sistema de seguimiento", "mensaje programado", "recordatorio automático"\n10. Si el cliente es recurrente, sé más directa y familiar (ya te conoce)\n11. Si es S5 o S6: el tono es empático y de despedida, SIN preguntas\n12. NUNCA sugieras "agendar una llamada" ni "llamar" — la comunicación es por MENSAJES. Ofrece agendar una CITA presencial o resolver dudas por este medio.\n13. NUNCA inventes números exactos de cupos (ej. "quedan 2 cupos"). Usa "pocos cupos" o "espacios limitados". Ofrece DÍAS disponibles, NUNCA horarios específicos.\n14. SOLO menciona servicios, tratamientos y precios que aparezcan en la INFORMACIÓN REAL DEL NEGOCIO. NUNCA inventes servicios que no existan.\n\nResponde SOLO con el texto del mensaje. Sin comillas, sin explicación.`;
           } else {
             followUpPrompt = `Genera un mensaje de seguimiento #${contactNumber} para ${contactName}. Contexto: ${messagesContext}. ${manualMoveContext} Máximo 2 oraciones.`;
           }
