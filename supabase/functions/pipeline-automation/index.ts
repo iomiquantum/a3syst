@@ -837,9 +837,7 @@ Deno.serve(async (req) => {
           if ((convFresh.seguimiento_consecutive_read_no_reply || 0) >= spamLimit) {
             await supabase.from("pipeline_message_queue").update({ status: "cancelled", last_error: "Spam protection triggered" }).eq("id", queueItem.id);
             await supabase.from("conversations").update({
-              pipeline_tab: "seguimiento_s9",
-              seguimiento_contact_number: 9,
-              seguimiento_next_s: 9,
+              pipeline_tab: "no_responden",
               seguimiento_next_contact_at: null,
               seguimiento_spam_protection_triggered: true,
               seguimiento_spam_jumped_from_s: queueItem.contact_number,

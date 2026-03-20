@@ -183,20 +183,6 @@ const SeguimientoCountdown = memo(({
     return <div className="flex gap-1 flex-wrap items-center">{badges}</div>;
   }
 
-  // Case 4: In S9-S10 (manual) → no countdown, show "Esperando agente"
-  if (isInSeguimiento && isManual) {
-    badges.push(
-      <span
-        key="manual"
-        className="inline-flex items-center gap-0.5 text-[8px] font-medium bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded leading-none"
-      >
-        <User className="w-2.5 h-2.5" />
-        Esperando agente
-      </span>
-    );
-    return <div className="flex gap-1 flex-wrap items-center">{badges}</div>;
-  }
-
   // If we have badges but no timer (e.g. resueltos_ia with nextS but no inactivity timer yet)
   if (badges.length > 0) {
     return <div className="flex gap-1 flex-wrap items-center">{badges}</div>;
