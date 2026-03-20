@@ -46,6 +46,7 @@ export interface PipelineConversation {
   contactPhone: string;
   contactTags: string[];
   contactEmail: string;
+  inactivity_timer_start: string | null;
   // Appointment fields
   appointment_date: string | null;
   appointment_time: string | null;
