@@ -597,7 +597,7 @@ Deno.serve(async (req) => {
         }
 
         // === ENQUEUE ===
-        const priority = 10 - contactNumber; // S1=9, S8=2
+        const priority = 10 - contactNumber; // S1=9, S4=6
         await supabase.from("pipeline_message_queue").insert({
           conversation_id: conv.id,
           clinic_id: conv.clinic_id,
