@@ -1031,6 +1031,21 @@ Deno.serve(async (req) => {
               moved_by: "system", reason: `Sin respuesta después de ${maxAutoContacts} contactos`,
             });
             tarea2NoResponden++;
+          } else if (nextContactNumber >= 5) {
+            // S5 and S6 are manual (human) — move there but NO timer
+            await supabase.from("conversations").update({
+              pipeline_tab: `seguimiento_s${nextContactNumber}`,
+              seguimiento_contact_number: nextContactNumber,
+              seguimiento_next_contact_at: null,
+              seguimiento_last_contact_at: sentAt.toISOString(),
+              seguimiento_last_completed_s: contactNumber,
+            }).eq("id", convFresh.id);
+
+            await supabase.from("conversation_pipeline_history").insert({
+              conversation_id: convFresh.id, clinic_id: convFresh.clinic_id,
+              from_tab: `seguimiento_s${contactNumber}`, to_tab: `seguimiento_s${nextContactNumber}`,
+              moved_by: "system", reason: `S${contactNumber} enviado → S${nextContactNumber} (manual/humano)`,
+            });
           } else {
             const clinicTz = await getClinicTimezone(convFresh.clinic_id);
             const actualDelay = await getClinicStageDelay(convFresh.clinic_id, nextContactNumber);
