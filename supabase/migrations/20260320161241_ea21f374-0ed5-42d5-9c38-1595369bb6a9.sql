@@ -1,0 +1,2 @@
+UPDATE public.messages SET origin = 'ai_agent' WHERE direction = 'outbound' AND sent_by IS NULL AND (origin = 'human' OR origin IS NULL);
+UPDATE public.messages SET origin = 'human' WHERE direction = 'outbound' AND sent_by IS NOT NULL AND (origin = 'human' OR origin IS NULL);
