@@ -82,11 +82,12 @@ const AdminPipelinePage = () => {
   const fetchAll = async () => {
     setLoading(true);
 
-    const [rulesRes, lockRes, logsRes, countsRes] = await Promise.all([
+    const [rulesRes, lockRes, logsRes, countsRes, templatesRes] = await Promise.all([
       supabase.from("pipeline_global_rules").select("rule_key, rule_value"),
       supabase.from("pipeline_execution_lock").select("*").eq("id", 1).single(),
       (supabase as any).from("pipeline_execution_log").select("*").order("executed_at", { ascending: false }).limit(20),
       supabase.from("conversations").select("pipeline_tab").not("pipeline_tab", "is", null),
+      (supabase as any).from("whatsapp_templates").select("*").order("template_type"),
     ]);
 
     const r: Record<string, number> = {};
