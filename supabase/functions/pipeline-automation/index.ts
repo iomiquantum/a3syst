@@ -722,7 +722,7 @@ Deno.serve(async (req) => {
           .eq("appointment_reminder_2_sent", false)
           .eq("appointment_confirmed", false)
           .not("appointment_date", "is", null)
-          .gt("appointment_date", nowDate.toISOString());
+          .gte("appointment_date", todayStart.toISOString());
 
         for (const conv of reminder2Convs || []) {
           try {
@@ -731,8 +731,12 @@ Deno.serve(async (req) => {
             if (!r2Config) continue;
 
             const appointmentDate = new Date(conv.appointment_date);
+            if (conv.appointment_time) {
+              const [hh, mm] = conv.appointment_time.split(":").map(Number);
+              appointmentDate.setUTCHours(hh || 0, mm || 0, 0, 0);
+            }
             const hoursUntil = (appointmentDate.getTime() - nowDate.getTime()) / (1000 * 60 * 60);
-            if (hoursUntil > r2Config.hours_before_appointment) continue;
+            if (hoursUntil <= 0 || hoursUntil > r2Config.hours_before_appointment) continue;
 
             const { data: existingReminder } = await supabase
               .from("pipeline_message_queue")
