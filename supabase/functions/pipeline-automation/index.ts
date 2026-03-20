@@ -598,13 +598,7 @@ Deno.serve(async (req) => {
         const strategy = strategiesMap[contactNumber];
 
         // Get clinic agent name override
-        let agentName = globalAgentName;
-        const { data: nameOverride } = await supabase
-          .from("clinic_pipeline_rules").select("rule_value")
-          .eq("clinic_id", conv.clinic_id).eq("rule_key", "ai_agent_name").maybeSingle();
-        if (nameOverride?.rule_value) {
-          agentName = String(nameOverride.rule_value).replace(/^"|"$/g, "") || agentName;
-        }
+        const agentName = await getClinicAgentName(conv.clinic_id);
 
         // Get clinic name
         const { data: clinic } = await supabase.from("clinics").select("name").eq("id", conv.clinic_id).single();
