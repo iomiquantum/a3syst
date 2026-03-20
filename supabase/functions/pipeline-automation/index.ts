@@ -524,10 +524,10 @@ Deno.serve(async (req) => {
         if (!fresh || !fresh.pipeline_tab?.startsWith("seguimiento_s")) continue;
 
         const contactNumber = fresh.seguimiento_contact_number || conv.seguimiento_contact_number || 1;
-        const isManualStep = contactNumber >= 9;
+        const isManualStep = contactNumber > 6;
 
         if (isManualStep) {
-          console.log(`[PIPELINE] S${contactNumber} is manual, skipping for conv ${conv.id}`);
+          console.log(`[PIPELINE] S${contactNumber} beyond S6, skipping for conv ${conv.id}`);
           continue;
         }
 
