@@ -1911,6 +1911,7 @@ export type Database = {
           id: string
           media_url: string | null
           message_type: string
+          origin: string | null
           sent_by: string | null
           status: string
           whatsapp_message_id: string | null
@@ -1925,6 +1926,7 @@ export type Database = {
           id?: string
           media_url?: string | null
           message_type?: string
+          origin?: string | null
           sent_by?: string | null
           status?: string
           whatsapp_message_id?: string | null
@@ -1939,6 +1941,7 @@ export type Database = {
           id?: string
           media_url?: string | null
           message_type?: string
+          origin?: string | null
           sent_by?: string | null
           status?: string
           whatsapp_message_id?: string | null
