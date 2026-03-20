@@ -248,9 +248,51 @@ Deno.serve(async (req) => {
     const strategiesMap: Record<number, any> = {};
     (strategiesRows || []).forEach((s: any) => { strategiesMap[s.contact_number] = s; });
 
-    // Check business hours (7AM-11PM)
-    const nowHour = new Date().getHours();
-    const isWithinSendWindow = nowHour >= sendWindowStart && nowHour < sendWindowEnd;
+    // Helper: get current hour in a timezone
+    function getNowHourInTz(tz: string): number {
+      try {
+        const formatter = new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: tz });
+        return parseInt(formatter.format(new Date()), 10);
+      } catch {
+        return new Date().getUTCHours(); // fallback to UTC
+      }
+    }
+
+    // Helper: get next window opening in a timezone
+    function getNextWindowStart(tz: string, startHour: number): Date {
+      const now = new Date();
+      // Get today's date in the target timezone
+      const dateFormatter = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" });
+      const hourInTz = getNowHourInTz(tz);
+      const dateParts = dateFormatter.format(now); // YYYY-MM-DD
+      
+      // If current hour >= startHour, next window is tomorrow
+      const targetDate = hourInTz >= startHour ? new Date(now.getTime() + 24 * 60 * 60 * 1000) : now;
+      const targetDateStr = dateFormatter.format(targetDate);
+      
+      // Create a date string in the timezone and convert to UTC
+      const targetMs = new Date(`${targetDateStr}T${String(startHour).padStart(2, "0")}:00:00`).getTime();
+      // Adjust for timezone offset
+      const utcOffset = getTimezoneOffsetMs(tz);
+      return new Date(targetMs + utcOffset);
+    }
+
+    function getTimezoneOffsetMs(tz: string): number {
+      const now = new Date();
+      const utcStr = now.toLocaleString("en-US", { timeZone: "UTC" });
+      const tzStr = now.toLocaleString("en-US", { timeZone: tz });
+      return new Date(utcStr).getTime() - new Date(tzStr).getTime();
+    }
+
+    // Cache clinic timezones to avoid repeated queries
+    const clinicTimezoneCache: Record<string, string> = {};
+    async function getClinicTimezone(clinicId: string): Promise<string> {
+      if (clinicTimezoneCache[clinicId]) return clinicTimezoneCache[clinicId];
+      const { data } = await supabase.from("clinics").select("timezone").eq("id", clinicId).single();
+      const tz = data?.timezone || "America/Guayaquil";
+      clinicTimezoneCache[clinicId] = tz;
+      return tz;
+    }
 
     // ========== TAREA 1: Inactivity timeout ==========
     console.log("[PIPELINE] TAREA 1: Checking inactivity timeout...");
