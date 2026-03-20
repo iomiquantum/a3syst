@@ -10,7 +10,7 @@ interface ResumenStats {
   noResponden: number;
 }
 
-const ALL_SEG_KEYS = Array.from({ length: 10 }, (_, i) => `seguimiento_s${i + 1}`);
+const ALL_SEG_KEYS = Array.from({ length: 6 }, (_, i) => `seguimiento_s${i + 1}`);
 
 export const usePipelineStats = () => {
   const { clinicId } = useClinic();
