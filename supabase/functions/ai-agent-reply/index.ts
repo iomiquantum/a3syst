@@ -96,13 +96,13 @@ serve(async (req) => {
             const sendResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
               method: "POST",
               headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
-               body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: reply, conversation_id, origin: "appointment_flow" }),
+               body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: reply, conversation_id, origin: `appointment_flow|${conversationData.pipeline_tab || "inbox"}` }),
             });
             savedMsg = await sendResponse.json().catch(() => null);
           }
         } else {
           const { data: insertedMessage } = await supabase.from("messages").insert({
-            conversation_id, clinic_id, direction: "outbound", content: reply, message_type: "text", status: "sent", origin: "appointment_flow",
+            conversation_id, clinic_id, direction: "outbound", content: reply, message_type: "text", status: "sent", origin: `appointment_flow|${conversationData.pipeline_tab || "inbox"}`,
           }).select().single();
           savedMsg = insertedMessage;
           await supabase.from("conversations").update({
@@ -135,12 +135,12 @@ serve(async (req) => {
             await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
               method: "POST",
               headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
-              body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: cancelReply, conversation_id, origin: "appointment_flow" }),
+              body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: cancelReply, conversation_id, origin: `appointment_flow|${conversationData.pipeline_tab || "inbox"}` }),
             });
           }
         } else {
           await supabase.from("messages").insert({
-            conversation_id, clinic_id, direction: "outbound", content: cancelReply, message_type: "text", status: "sent", origin: "appointment_flow",
+            conversation_id, clinic_id, direction: "outbound", content: cancelReply, message_type: "text", status: "sent", origin: `appointment_flow|${conversationData.pipeline_tab || "inbox"}`,
           });
           await supabase.from("conversations").update({
             last_message_at: new Date().toISOString(), last_message_preview: cancelReply.substring(0, 100),
@@ -191,12 +191,12 @@ serve(async (req) => {
               await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
                 method: "POST",
                 headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
-              body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: reply, conversation_id, origin: "ai_agent" }),
+              body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: reply, conversation_id, origin: `ai_auto|${conversationData.pipeline_tab || "inbox"}` }),
               });
             }
           } else {
             await supabase.from("messages").insert({
-              conversation_id, clinic_id, direction: "outbound", content: reply, message_type: "text", status: "sent", origin: "ai_agent",
+              conversation_id, clinic_id, direction: "outbound", content: reply, message_type: "text", status: "sent", origin: `ai_auto|${conversationData.pipeline_tab || "inbox"}`,
             });
             await supabase.from("conversations").update({
               last_message_at: new Date().toISOString(), last_message_preview: reply.substring(0, 100),
@@ -507,7 +507,7 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
       const sendResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
         method: "POST",
         headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: reply, conversation_id, origin: isFollowUp ? `follow_up_s${(conversationData.follow_up_count || 0) + 1}` : "ai_agent" }),
+        body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: reply, conversation_id, origin: isFollowUp ? `follow_up_s${(conversationData.follow_up_count || 0) + 1}|${conversationData.pipeline_tab || "inbox"}` : `ai_auto|${conversationData.pipeline_tab || "inbox"}` }),
       });
 
       const sendPayload = await sendResponse.json().catch(() => null);
@@ -519,7 +519,7 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
     } else {
       const { data: insertedMessage, error: msgError } = await supabase.from("messages").insert({
         conversation_id, clinic_id, direction: "outbound", content: reply, message_type: "text", status: "sent",
-        origin: isFollowUp ? `follow_up_s${(conversationData.follow_up_count || 0) + 1}` : "ai_agent",
+        origin: isFollowUp ? `follow_up_s${(conversationData.follow_up_count || 0) + 1}|${conversationData.pipeline_tab || "inbox"}` : `ai_auto|${conversationData.pipeline_tab || "inbox"}`,
       }).select().single();
       if (msgError) throw msgError;
       savedMsg = insertedMessage;

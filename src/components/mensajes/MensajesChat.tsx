@@ -142,6 +142,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
             content: input.trim(),
             sent_by: user?.id || null,
             conversation_id: c.id,
+            origin: `human|${c.pipeline_tab || "inbox"}`,
           },
         });
         if (error) throw error;
@@ -157,6 +158,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
         message_type: "text",
         status: "sent",
         sent_by: user?.id || null,
+        origin: `human|${c.pipeline_tab || "inbox"}`,
       });
     }
 
@@ -174,21 +176,46 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
     setTimeout(() => textareaRef.current?.focus(), 50);
   };
 
-  const isBotMessage = (m: ChatMessage) => m.direction === "outbound" && (!m.sent_by || (m.origin && m.origin !== "human"));
+  const isBotMessage = (m: ChatMessage) => {
+    if (m.direction !== "outbound") return false;
+    const origin = m.origin || "";
+    const sender = origin.split("|")[0] || (m.sent_by ? "human" : "ai_auto");
+    return sender !== "human";
+  };
+
+  const formatPipelineTab = (tab: string): string => {
+    if (!tab || tab === "inbox") return "";
+    if (tab.startsWith("seguimiento_s")) return tab.replace("seguimiento_s", "S");
+    const labels: Record<string, string> = {
+      resueltos_ia: "Resueltos IA",
+      no_responden: "No responden",
+      no_interesado: "No interesado",
+      agendados: "Agendados",
+      pacientes: "Pacientes",
+      perdidos: "Perdidos",
+      escalados: "Escalados",
+    };
+    return labels[tab] || tab;
+  };
 
   const getOriginLabel = (m: ChatMessage): { text: string; color: string } | null => {
     if (m.direction !== "outbound") return null;
-    const origin = m.origin || (m.sent_by ? "human" : "ai_agent");
-    if (origin === "human") return { text: "👤 Humano", color: "text-blue-500" };
-    if (origin === "ai_agent") return { text: `🤖 ${agentName}`, color: "text-violet-500" };
-    if (origin.startsWith("follow_up_s")) {
-      const num = origin.replace("follow_up_s", "");
-      return { text: `🔄 Seguimiento S${num}`, color: "text-amber-500" };
+    const raw = m.origin || (m.sent_by ? `human|unknown` : `ai_auto|unknown`);
+    const [sender, stage] = raw.split("|");
+    const stageLabel = formatPipelineTab(stage || "");
+    const stageTag = stageLabel ? ` · ${stageLabel}` : "";
+
+    if (sender === "human") return { text: `👤 Humano${stageTag}`, color: "text-blue-500" };
+    if (sender === "ai_auto") return { text: `🤖 ${agentName}${stageTag}`, color: "text-violet-500" };
+    if (sender === "ai_agent") return { text: `🤖 ${agentName}${stageTag}`, color: "text-violet-500" };
+    if (sender.startsWith("follow_up_s")) {
+      const num = sender.replace("follow_up_s", "");
+      return { text: `🔄 Seguimiento S${num}${stageTag}`, color: "text-amber-500" };
     }
-    if (origin === "appointment_flow") return { text: "📅 Flujo de cita", color: "text-emerald-500" };
-    if (origin === "reminder") return { text: "⏰ Recordatorio", color: "text-orange-500" };
-    if (origin === "system") return { text: "⚙️ Sistema", color: "text-muted-foreground" };
-    return { text: `🤖 ${agentName}`, color: "text-violet-500" };
+    if (sender === "appointment_flow") return { text: `📅 Flujo de cita${stageTag}`, color: "text-emerald-500" };
+    if (sender === "reminder") return { text: `⏰ Recordatorio${stageTag}`, color: "text-orange-500" };
+    if (sender === "system") return { text: `⚙️ Sistema${stageTag}`, color: "text-muted-foreground" };
+    return { text: `🤖 ${agentName}${stageTag}`, color: "text-violet-500" };
   };
 
   // Auto-resize textarea

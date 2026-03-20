@@ -966,11 +966,12 @@ Deno.serve(async (req) => {
         // === SEND IMMEDIATELY (no humanized delay for queue) ===
         const agentName = await getClinicAgentName(convFresh.clinic_id);
         const sendContext = queueItem.message_type.startsWith("recordatorio_cita") ? "recordatorio_cita" : "seguimiento";
+        const pipelineTab = convFresh.pipeline_tab || "inbox";
         const messageOrigin = queueItem.message_type === "seguimiento"
-          ? `follow_up_s${queueItem.contact_number}`
+          ? `follow_up_s${queueItem.contact_number}|${pipelineTab}`
           : queueItem.message_type.startsWith("recordatorio_cita")
-            ? "reminder"
-            : "system";
+            ? `reminder|${pipelineTab}`
+            : `system|${pipelineTab}`;
 
         const sendResult = await sendWhatsAppMessageSmart(
           supabase, supabaseUrl, supabaseKey,
