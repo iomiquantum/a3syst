@@ -29,20 +29,16 @@ const RULE_FIELDS: RuleField[] = [
   { key: "inactivity_timeout_minutes", label: "Tiempo de inactividad", description: "Después de que la IA responde, si el cliente no escribe en este tiempo, pasa a S1", default: 15, unit: "minutes" },
   { key: "s1_delay_minutes", label: "Delay S1", description: "Tiempo para enviar primer seguimiento automático", default: 15, unit: "minutes" },
   { key: "s2_delay_minutes", label: "Delay S2", description: "Tiempo después de S1 sin respuesta", default: 30, unit: "minutes" },
-  { key: "s3_delay_minutes", label: "Delay S3", description: "Tiempo después de S2 sin respuesta", default: 30, unit: "minutes" },
-  { key: "s4_delay_minutes", label: "Delay S4", description: "Tiempo después de S3 sin respuesta", default: 60, unit: "minutes" },
-  { key: "s5_delay_minutes", label: "Delay S5", description: "Tiempo después de S4 sin respuesta", default: 120, unit: "minutes" },
-  { key: "s6_delay_minutes", label: "Delay S6", description: "Tiempo después de S5 sin respuesta", default: 240, unit: "minutes" },
-  { key: "s7_delay_minutes", label: "Delay S7", description: "Tiempo después de S6 sin respuesta", default: 720, unit: "minutes" },
-  { key: "s8_delay_minutes", label: "Delay S8", description: "Último seguimiento automático IA", default: 30, unit: "minutes" },
-  { key: "max_auto_contacts", label: "Contactos automáticos máximos", description: "Después de este número sin respuesta, se mueve a 'No responden'", default: 10, unit: "count", min: 1, max: 10 },
+  { key: "s3_delay_minutes", label: "Delay S3", description: "Tiempo después de S2 sin respuesta", default: 240, unit: "minutes" },
+  { key: "s4_delay_minutes", label: "Delay S4", description: "Tiempo después de S3 sin respuesta", default: 720, unit: "minutes" },
+  { key: "max_auto_contacts", label: "Contactos automáticos máximos", description: "Después de este número sin respuesta, pasa a S5 (manual)", default: 4, unit: "count", min: 1, max: 6 },
   { key: "recurrente_max_cycles", label: "Ciclos recurrentes máximos", description: "Cuántas veces un contacto puede reingresar al seguimiento. 0 = sin límite", default: 0, unit: "count", min: 0 },
 ];
 
 const PIPELINE_STATES = [
   { state: "Resueltos IA", desc: "La IA respondió y el timer de inactividad está corriendo", movedBy: "Sistema (automático)", goesTo: "Seguimiento S1" },
-  { state: "Seguimiento S1-S8", desc: "Seguimiento automático con estrategias psicológicas (IA)", movedBy: "Sistema (timer)", goesTo: "Siguiente S o No responden" },
-  { state: "Seguimiento S9-S10", desc: "Seguimiento manual por agente humano", movedBy: "Agente humano", goesTo: "Agendados o Perdidos" },
+  { state: "Seguimiento S1-S4", desc: "Seguimiento automático con contenido de valor (IA)", movedBy: "Sistema (timer)", goesTo: "Siguiente S o S5 manual" },
+  { state: "Seguimiento S5-S6", desc: "Seguimiento manual por agente humano", movedBy: "Agente humano", goesTo: "Agendados o Perdidos" },
   { state: "No responden", desc: "Sin respuesta después de todos los contactos", movedBy: "Sistema", goesTo: "Resueltos IA (si responde)" },
   { state: "Agendados", desc: "Cita programada con recordatorios automáticos", movedBy: "Operador manual", goesTo: "Show/No-show" },
   { state: "No-show", desc: "No asistió a la cita, reinicia seguimiento", movedBy: "Operador manual", goesTo: "Seguimiento S1 (recurrente)" },
@@ -262,7 +258,7 @@ const AdminPipelinePage = () => {
                 {/* Pipeline Counts */}
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Conversaciones en el pipeline</p>
-                  {["resueltos_ia", "seguimiento_s1", "seguimiento_s2", "seguimiento_s3", "seguimiento_s4", "seguimiento_s5", "seguimiento_s6", "seguimiento_s7", "seguimiento_s8", "seguimiento_s9", "seguimiento_s10", "no_responden", "agendados", "no_show", "show_sin_venta", "no_interesado", "escalados", "pacientes", "perdidos"].map(tab => (
+                  {["resueltos_ia", "seguimiento_s1", "seguimiento_s2", "seguimiento_s3", "seguimiento_s4", "seguimiento_s5", "seguimiento_s6", "no_responden", "agendados", "no_show", "show_sin_venta", "no_interesado", "escalados", "pacientes", "perdidos"].map(tab => (
                     <div key={tab} className="flex items-center gap-2">
                       <span className="text-xs w-32 text-muted-foreground capitalize">{tab.replace(/_/g, " ")}</span>
                       <div className="flex-1 bg-muted rounded-full h-4 overflow-hidden">

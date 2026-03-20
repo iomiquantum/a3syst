@@ -327,7 +327,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
       <AppointmentBanner conversation={c} onActionComplete={onActionComplete} />
 
       {/* Anti-spam Banner */}
-      {c.pipeline_tab === "seguimiento_s9" && (c as any).seguimiento_spam_protection_triggered && (
+      {c.pipeline_tab === "no_responden" && (c as any).seguimiento_spam_protection_triggered && (
         <AntiSpamBadge
           consecutiveReadNoReply={(c as any).seguimiento_consecutive_read_no_reply || 0}
           spamProtectionTriggered={true}
@@ -407,7 +407,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
           )}
 
           {/* WhatsApp window closed alert for manual stages */}
-          {c.channel === "whatsapp" && (c.pipeline_tab === "seguimiento_s9" || c.pipeline_tab === "seguimiento_s10") && (c as any).whatsapp_window_blocked && (
+          {c.channel === "whatsapp" && (c.pipeline_tab === "seguimiento_s5" || c.pipeline_tab === "seguimiento_s6") && (c as any).whatsapp_window_blocked && (
             <div className="mx-auto max-w-sm bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg p-3 text-center space-y-2">
               <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
                 ⚠️ La ventana de WhatsApp está cerrada.

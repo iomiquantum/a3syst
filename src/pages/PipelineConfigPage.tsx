@@ -21,12 +21,8 @@ const RULE_KEYS = [
   { key: "s1_delay_minutes", label: "Delay S1", desc: "Tiempo para enviar primer seguimiento automático" },
   { key: "s2_delay_minutes", label: "Delay S2", desc: "Tiempo para enviar segundo seguimiento" },
   { key: "s3_delay_minutes", label: "Delay S3", desc: "Tiempo para enviar tercer seguimiento" },
-  { key: "s4_delay_minutes", label: "Delay S4", desc: "Tiempo para enviar cuarto seguimiento" },
-  { key: "s5_delay_minutes", label: "Delay S5", desc: "Tiempo para enviar quinto seguimiento" },
-  { key: "s6_delay_minutes", label: "Delay S6", desc: "Tiempo para enviar sexto seguimiento" },
-  { key: "s7_delay_minutes", label: "Delay S7", desc: "Tiempo para enviar séptimo seguimiento" },
-  { key: "s8_delay_minutes", label: "Delay S8", desc: "Tiempo para enviar octavo seguimiento (último IA)" },
-  { key: "max_auto_contacts", label: "Contactos máximos", desc: "Intentos antes de mover a 'No responden'" },
+  { key: "s4_delay_minutes", label: "Delay S4", desc: "Tiempo para enviar cuarto seguimiento (último automático)" },
+  { key: "max_auto_contacts", label: "Contactos máximos", desc: "Intentos antes de pasar a S5 manual" },
   { key: "send_window_start_hour", label: "Hora inicio envío", desc: "Hora desde la que se envían mensajes" },
   { key: "send_window_end_hour", label: "Hora fin envío", desc: "Hora hasta la que se envían mensajes" },
 ] as const;
@@ -278,7 +274,7 @@ const PipelineConfigPage = () => {
                   </div>
                   {isManual && (
                     <p className="text-[10px] text-amber-600 italic">
-                      Este contacto lo envía un agente humano. S9: se presenta como compañero de {localAgentName}. S10: cierre con valor.
+                      Este contacto lo envía un agente humano. S5: se presenta como compañero de {localAgentName}. S6: cierre con valor.
                     </p>
                   )}
                   {!isManual && (
@@ -310,10 +306,10 @@ const PipelineConfigPage = () => {
               <Badge variant="outline" className="text-xs">{formatMinutes(effectiveRules.inactivity_timeout_minutes)}</Badge>
               <ArrowRight className="w-4 h-4 text-muted-foreground" />
 
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((n, i) => {
-                const isManual = n >= 9;
+              {Array.from({ length: 6 }, (_, i) => i + 1).map((n, i) => {
+                const isManual = n >= 5;
                 const delayKey = `s${n}_delay_minutes` as keyof typeof effectiveRules;
-                const delay = effectiveRules[delayKey];
+                const delay = !isManual ? effectiveRules[delayKey] : undefined;
                 const strategy = strategies.find(s => s.contact_number === n);
                 return (
                   <div key={n} className="contents">
@@ -324,7 +320,7 @@ const PipelineConfigPage = () => {
                       {isManual ? <UserCheck className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
                       <span>S{n}</span>
                     </div>
-                    {i < 9 && (
+                    {i < 5 && (
                       <>
                         <ArrowRight className="w-4 h-4 text-muted-foreground" />
                         {delay && <Badge variant="outline" className="text-xs">{formatMinutes(delay)}</Badge>}
@@ -342,7 +338,7 @@ const PipelineConfigPage = () => {
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-3">
-              S1-S8 son automáticos (IA como {localAgentName}). S9-S10 son manuales (agente humano). Si el cliente responde, avanza al siguiente S sin retroceder.
+              S1-S4 son automáticos (IA como {localAgentName}). S5-S6 son manuales (agente humano). Si el cliente responde, avanza al siguiente S sin retroceder.
             </p>
           </CardContent>
         </Card>

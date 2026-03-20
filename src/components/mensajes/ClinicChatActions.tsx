@@ -235,8 +235,8 @@ const ClinicChatActions = ({ pipelineTab, templateSlug, onMove, onGenerateAI, ap
     );
   }
 
-  // S9 & S10: Manual stages
-  if (pipelineTab === "seguimiento_s9" || pipelineTab === "seguimiento_s10") {
+  // S5 & S6: Manual stages
+  if (pipelineTab === "seguimiento_s5" || pipelineTab === "seguimiento_s6") {
     return (
       <div className="flex items-center gap-1.5">
         {onGenerateAI && (

@@ -31,7 +31,7 @@ const AntiSpamBadge = ({ consecutiveReadNoReply, spamProtectionTriggered, spamJu
     );
   }
 
-  // Badge for S9 protection triggered
+  // Badge for anti-spam protection triggered
   if (spamProtectionTriggered && spamJumpedFromS) {
     return (
       <span className="inline-flex items-center gap-0.5 text-[8px] font-medium bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded leading-none">

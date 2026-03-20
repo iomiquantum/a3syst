@@ -61,7 +61,7 @@ const SpamBadge = ({ c }: { c: PipelineConversation }) => (
 );
 
 const ConversationCard = ({ conversation: c, selected, onClick, variant = "list" }: Props) => {
-  const isSpamProtected = c.seguimiento_spam_protection_triggered && c.pipeline_tab === "seguimiento_s9";
+  const isSpamProtected = c.seguimiento_spam_protection_triggered && c.pipeline_tab === "no_responden";
 
   const windowBadge = (
     <WhatsAppWindowBadge

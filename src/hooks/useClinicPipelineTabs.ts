@@ -31,19 +31,15 @@ const CLINIC_TEMPLATE_TABS: Omit<PipelineTab, "count">[] = [
   { key: "perdidos", label: "Perdidos", icon: "Archive", color: "bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-300", isTemplate: true },
 ];
 
-// Sub-filter definitions for Seguimiento (S1-S10)
+// Sub-filter definitions for Seguimiento (S1-S6)
 export const SEGUIMIENTO_SUB_FILTERS = [
   { key: "todos", label: "Todos" },
   { key: "seguimiento_s1", label: "S1", badge: "IA", badgeColor: "bg-blue-100 text-blue-700" },
   { key: "seguimiento_s2", label: "S2", badge: "IA", badgeColor: "bg-blue-100 text-blue-700" },
   { key: "seguimiento_s3", label: "S3", badge: "IA", badgeColor: "bg-blue-100 text-blue-700" },
   { key: "seguimiento_s4", label: "S4", badge: "IA", badgeColor: "bg-blue-100 text-blue-700" },
-  { key: "seguimiento_s5", label: "S5", badge: "IA", badgeColor: "bg-blue-100 text-blue-700" },
-  { key: "seguimiento_s6", label: "S6", badge: "IA", badgeColor: "bg-blue-100 text-blue-700" },
-  { key: "seguimiento_s7", label: "S7", badge: "IA", badgeColor: "bg-blue-100 text-blue-700" },
-  { key: "seguimiento_s8", label: "S8", badge: "IA", badgeColor: "bg-blue-100 text-blue-700" },
-  { key: "seguimiento_s9", label: "S9", badge: "Manual", badgeColor: "bg-amber-100 text-amber-700" },
-  { key: "seguimiento_s10", label: "S10", badge: "Manual", badgeColor: "bg-amber-100 text-amber-700" },
+  { key: "seguimiento_s5", label: "S5", badge: "Humano", badgeColor: "bg-amber-100 text-amber-700" },
+  { key: "seguimiento_s6", label: "S6", badge: "Humano", badgeColor: "bg-amber-100 text-amber-700" },
 ];
 
 export const AGENDADOS_SUB_FILTERS = [

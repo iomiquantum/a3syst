@@ -36,8 +36,8 @@ export const usePipelineAction = () => {
     const seguimientoMatch = targetTab.match(/^seguimiento_s(\d+)$/);
     if (seguimientoMatch) {
       const n = parseInt(seguimientoMatch[1]);
-      if (n > 10) {
-        toast.error("El seguimiento máximo es S10");
+      if (n > 6) {
+        toast.error("El seguimiento máximo es S6");
         return;
       }
       updates.seguimiento_contact_number = n;
@@ -174,10 +174,6 @@ export const usePipelineAction = () => {
       seguimiento_s4: "Seguimiento S4",
       seguimiento_s5: "Seguimiento S5",
       seguimiento_s6: "Seguimiento S6",
-      seguimiento_s7: "Seguimiento S7",
-      seguimiento_s8: "Seguimiento S8",
-      seguimiento_s9: "Seguimiento S9",
-      seguimiento_s10: "Seguimiento S10",
       no_responden: "No responden",
       no_interesado: "No interesado",
       escalados: "Escalados",

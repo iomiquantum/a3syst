@@ -357,10 +357,10 @@ Deno.serve(async (req) => {
     const queueDelayBetweenSendsMs = Number(rules["queue_delay_between_sends_ms"]) || 2000;
     const queueMaxRetryAttempts = Number(rules["queue_max_retry_attempts"]) || 3;
 
-    // Build delay map for S1-S8
+    // Build delay map for S1-S4 (S5-S6 are manual, no delays needed)
     const delayMap: Record<number, number> = {};
-    for (let i = 1; i <= 8; i++) {
-      delayMap[i] = Number(rules[`s${i}_delay_minutes`]) || [15, 30, 240, 720, 120, 240, 720, 30][i - 1];
+    for (let i = 1; i <= 4; i++) {
+      delayMap[i] = Number(rules[`s${i}_delay_minutes`]) || [15, 30, 240, 720][i - 1];
     }
 
     // === LOAD STRATEGIES ===
@@ -523,7 +523,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ========== TAREA 2: ENQUEUE follow-ups (S1-S8) — NO LONGER SENDS ==========
+    // ========== TAREA 2: ENQUEUE follow-ups (S1-S4) ==========
     console.log("[PIPELINE] TAREA 2: Enqueuing follow-up messages...");
     const now = new Date().toISOString();
     const seguimientoTabs = Array.from({ length: 4 }, (_, i) => `seguimiento_s${i + 1}`);
@@ -597,7 +597,7 @@ Deno.serve(async (req) => {
         }
 
         // === ENQUEUE ===
-        const priority = 10 - contactNumber; // S1=9, S8=2
+        const priority = 10 - contactNumber; // S1=9, S4=6
         await supabase.from("pipeline_message_queue").insert({
           conversation_id: conv.id,
           clinic_id: conv.clinic_id,

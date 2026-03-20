@@ -116,7 +116,7 @@ const SeguimientoCountdown = memo(({
     return <div className="flex gap-1 flex-wrap items-center">{badges}</div>;
   }
 
-  // Case 3: In seguimiento S1-S8 (automatic) → show countdown with pause awareness
+  // Case 3: In seguimiento S1-S4 (automatic) → show countdown with pause awareness
   if (isInSeguimiento && isAutomatic) {
     if (seguimientoNextContactAt) {
       const state = formatTargetCountdown(seguimientoNextContactAt);

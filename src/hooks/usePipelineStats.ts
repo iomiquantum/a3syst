@@ -6,18 +6,18 @@ interface ResumenStats {
   respondidos: number;
   escalados: number;
   convertidos: number;
-  seguimiento: { total: number; s1_s8: number; s9_s10: number };
+  seguimiento: { total: number; s1_s4: number; s5_s6: number };
   noResponden: number;
 }
 
-const ALL_SEG_KEYS = Array.from({ length: 10 }, (_, i) => `seguimiento_s${i + 1}`);
+const ALL_SEG_KEYS = Array.from({ length: 6 }, (_, i) => `seguimiento_s${i + 1}`);
 
 export const usePipelineStats = () => {
   const { clinicId } = useClinic();
   const [tabCounts, setTabCounts] = useState<Record<string, number>>({});
   const [resumenStats, setResumenStats] = useState<ResumenStats>({
     respondidos: 0, escalados: 0, convertidos: 0,
-    seguimiento: { total: 0, s1_s8: 0, s9_s10: 0 }, noResponden: 0,
+    seguimiento: { total: 0, s1_s4: 0, s5_s6: 0 }, noResponden: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -47,14 +47,14 @@ export const usePipelineStats = () => {
     setTabCounts(counts);
 
     const segTotal = ALL_SEG_KEYS.reduce((s, k) => s + (counts[k] || 0), 0);
-    const s1_s8 = ALL_SEG_KEYS.slice(0, 8).reduce((s, k) => s + (counts[k] || 0), 0);
-    const s9_s10 = (counts["seguimiento_s9"] || 0) + (counts["seguimiento_s10"] || 0);
+    const s1_s4 = ALL_SEG_KEYS.slice(0, 4).reduce((s, k) => s + (counts[k] || 0), 0);
+    const s5_s6 = (counts["seguimiento_s5"] || 0) + (counts["seguimiento_s6"] || 0);
 
     setResumenStats({
       respondidos: (counts.resueltos_ia || 0) + (counts.pacientes || 0),
       escalados: counts.escalados || 0,
       convertidos: counts.pacientes || 0,
-      seguimiento: { total: segTotal, s1_s8, s9_s10 },
+      seguimiento: { total: segTotal, s1_s4, s5_s6 },
       noResponden: counts.no_responden || 0,
     });
 
