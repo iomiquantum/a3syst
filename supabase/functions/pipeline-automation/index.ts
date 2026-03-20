@@ -496,7 +496,7 @@ Deno.serve(async (req) => {
     // ========== TAREA 2: ENQUEUE follow-ups (S1-S8) — NO LONGER SENDS ==========
     console.log("[PIPELINE] TAREA 2: Enqueuing follow-up messages...");
     const now = new Date().toISOString();
-    const seguimientoTabs = Array.from({ length: 10 }, (_, i) => `seguimiento_s${i + 1}`);
+    const seguimientoTabs = Array.from({ length: 6 }, (_, i) => `seguimiento_s${i + 1}`);
     const { data: followUpConvs } = await supabase
       .from("conversations")
       .select("id, clinic_id, pipeline_tab, seguimiento_contact_number, seguimiento_next_contact_at, seguimiento_consecutive_read_no_reply, seguimiento_spam_protection_triggered, channel")
