@@ -519,7 +519,7 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
     } else {
       const { data: insertedMessage, error: msgError } = await supabase.from("messages").insert({
         conversation_id, clinic_id, direction: "outbound", content: reply, message_type: "text", status: "sent",
-        origin: isFollowUp ? `follow_up_s${(conversationData.follow_up_count || 0) + 1}` : "ai_agent",
+        origin: isFollowUp ? `follow_up_s${(conversationData.follow_up_count || 0) + 1}|${conversationData.pipeline_tab || "inbox"}` : `ai_auto|${conversationData.pipeline_tab || "inbox"}`,
       }).select().single();
       if (msgError) throw msgError;
       savedMsg = insertedMessage;
