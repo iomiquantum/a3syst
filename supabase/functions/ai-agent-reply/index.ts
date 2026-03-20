@@ -196,7 +196,7 @@ serve(async (req) => {
             }
           } else {
             await supabase.from("messages").insert({
-              conversation_id, clinic_id, direction: "outbound", content: reply, message_type: "text", status: "sent", origin: "ai_agent",
+              conversation_id, clinic_id, direction: "outbound", content: reply, message_type: "text", status: "sent", origin: `ai_auto|${conversationData.pipeline_tab || "inbox"}`,
             });
             await supabase.from("conversations").update({
               last_message_at: new Date().toISOString(), last_message_preview: reply.substring(0, 100),
