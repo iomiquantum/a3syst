@@ -94,7 +94,46 @@ Deno.serve(async (req) => {
             updateData.error_message = s.errors[0].title || s.errors[0].message;
           }
           await supabase.from("whatsapp_messages").update(updateData).eq("wa_message_id", s.id);
-          await supabase.from("messages").update({ status: s.status }).eq("whatsapp_message_id", s.id);
+
+          // Update unified messages table with status + timestamp
+          await supabase.from("messages").update({
+            status: s.status,
+            delivery_status_updated_at: new Date().toISOString(),
+          }).eq("whatsapp_message_id", s.id);
+
+          // Anti-spam: when a seguimiento outbound message is READ, increment counter
+          if (s.status === "read") {
+            try {
+              const { data: readMsg } = await supabase
+                .from("messages")
+                .select("id, conversation_id, direction")
+                .eq("whatsapp_message_id", s.id)
+                .eq("direction", "outbound")
+                .maybeSingle();
+
+              if (readMsg?.conversation_id) {
+                const { data: conv } = await supabase
+                  .from("conversations")
+                  .select("pipeline_tab, seguimiento_contact_number, seguimiento_consecutive_read_no_reply")
+                  .eq("id", readMsg.conversation_id)
+                  .single();
+
+                // Only count for conversations in seguimiento S1-S8
+                if (conv?.pipeline_tab?.startsWith("seguimiento_s")) {
+                  const currentS = conv.seguimiento_contact_number || 0;
+                  if (currentS >= 1 && currentS <= 8) {
+                    const newCount = (conv.seguimiento_consecutive_read_no_reply || 0) + 1;
+                    await supabase.from("conversations").update({
+                      seguimiento_consecutive_read_no_reply: newCount,
+                    }).eq("id", readMsg.conversation_id);
+                    console.log(`[WA-Webhook] Anti-spam counter incremented to ${newCount} for conv ${readMsg.conversation_id} (S${currentS})`);
+                  }
+                }
+              }
+            } catch (spamErr) {
+              console.error("[WA-Webhook] Anti-spam counter error:", spamErr);
+            }
+          }
         }
       }
 

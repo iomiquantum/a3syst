@@ -3,6 +3,8 @@ import { Pin } from "lucide-react";
 import PipelineBadge from "./PipelineBadge";
 import SeguimientoCountdown from "./SeguimientoCountdown";
 import ChannelIcon from "@/components/messaging/ChannelIcon";
+import MessageStatusIcon from "./MessageStatusIcon";
+import AntiSpamBadge from "./AntiSpamBadge";
 import type { PipelineConversation } from "@/hooks/useConversationsByPipeline";
 
 interface Props {
@@ -49,16 +51,33 @@ const CountdownBadges = ({ c }: { c: PipelineConversation }) => (
   />
 );
 
+const SpamBadge = ({ c }: { c: PipelineConversation }) => (
+  <AntiSpamBadge
+    consecutiveReadNoReply={c.seguimiento_consecutive_read_no_reply}
+    spamProtectionTriggered={c.seguimiento_spam_protection_triggered}
+    spamJumpedFromS={c.seguimiento_spam_jumped_from_s}
+  />
+);
+
 const ConversationCard = ({ conversation: c, selected, onClick, variant = "list" }: Props) => {
+  const isSpamProtected = c.seguimiento_spam_protection_triggered && c.pipeline_tab === "seguimiento_s9";
+
   if (variant === "kanban") {
     return (
       <div
         onClick={onClick}
-        className="rounded-md border border-border bg-card p-3 cursor-pointer transition-all hover:shadow-md space-y-1.5"
+        className={cn(
+          "rounded-md border bg-card p-3 cursor-pointer transition-all hover:shadow-md space-y-1.5",
+          isSpamProtected ? "border-l-4 border-l-orange-400 border-t-border border-r-border border-b-border" : "border-border"
+        )}
       >
         <p className="text-sm font-medium text-foreground leading-tight truncate">{c.contactName}</p>
-        <p className="text-[11px] text-muted-foreground line-clamp-2">{c.last_message_preview}</p>
+        <div className="flex items-center gap-1">
+          {c.last_outbound_status && <MessageStatusIcon status={c.last_outbound_status} />}
+          <p className="text-[11px] text-muted-foreground line-clamp-2">{c.last_message_preview}</p>
+        </div>
         <CountdownBadges c={c} />
+        <SpamBadge c={c} />
         <div className="flex gap-1 flex-wrap">
           {c.contactTags.slice(0, 2).map(t => (
             <span key={t} className="text-[8px] bg-accent/20 text-accent-foreground px-1.5 py-0.5 rounded">{t}</span>
@@ -92,10 +111,14 @@ const ConversationCard = ({ conversation: c, selected, onClick, variant = "list"
             </p>
             <span className="text-[10px] text-muted-foreground shrink-0">{relativeTime(c.last_message_at)}</span>
           </div>
-          <p className="text-[11px] text-muted-foreground truncate">{c.last_message_preview}</p>
+          <div className="flex items-center gap-1">
+            {c.last_outbound_status && <MessageStatusIcon status={c.last_outbound_status} />}
+            <p className="text-[11px] text-muted-foreground truncate">{c.last_message_preview}</p>
+          </div>
           <div className="flex items-center justify-between mt-1">
             <div className="flex gap-1 flex-wrap items-center">
               <CountdownBadges c={c} />
+              <SpamBadge c={c} />
               {c.contactTags.slice(0, 2).map(t => (
                 <span key={t} className="text-[8px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">{t}</span>
               ))}

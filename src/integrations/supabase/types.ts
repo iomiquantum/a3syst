@@ -1334,6 +1334,7 @@ export type Database = {
           pinned: boolean
           pipeline_tab: string | null
           pipeline_template_id: string | null
+          seguimiento_consecutive_read_no_reply: number | null
           seguimiento_contact_number: number | null
           seguimiento_is_recurrente: boolean | null
           seguimiento_last_completed_s: number | null
@@ -1342,6 +1343,8 @@ export type Database = {
           seguimiento_next_s: number | null
           seguimiento_recurrente_count: number | null
           seguimiento_responded_at_s: number | null
+          seguimiento_spam_jumped_from_s: number | null
+          seguimiento_spam_protection_triggered: boolean | null
           status: string
           unread_count: number
           updated_at: string
@@ -1393,6 +1396,7 @@ export type Database = {
           pinned?: boolean
           pipeline_tab?: string | null
           pipeline_template_id?: string | null
+          seguimiento_consecutive_read_no_reply?: number | null
           seguimiento_contact_number?: number | null
           seguimiento_is_recurrente?: boolean | null
           seguimiento_last_completed_s?: number | null
@@ -1401,6 +1405,8 @@ export type Database = {
           seguimiento_next_s?: number | null
           seguimiento_recurrente_count?: number | null
           seguimiento_responded_at_s?: number | null
+          seguimiento_spam_jumped_from_s?: number | null
+          seguimiento_spam_protection_triggered?: boolean | null
           status?: string
           unread_count?: number
           updated_at?: string
@@ -1452,6 +1458,7 @@ export type Database = {
           pinned?: boolean
           pipeline_tab?: string | null
           pipeline_template_id?: string | null
+          seguimiento_consecutive_read_no_reply?: number | null
           seguimiento_contact_number?: number | null
           seguimiento_is_recurrente?: boolean | null
           seguimiento_last_completed_s?: number | null
@@ -1460,6 +1467,8 @@ export type Database = {
           seguimiento_next_s?: number | null
           seguimiento_recurrente_count?: number | null
           seguimiento_responded_at_s?: number | null
+          seguimiento_spam_jumped_from_s?: number | null
+          seguimiento_spam_protection_triggered?: boolean | null
           status?: string
           unread_count?: number
           updated_at?: string
@@ -1841,6 +1850,7 @@ export type Database = {
           content: string
           conversation_id: string
           created_at: string
+          delivery_status_updated_at: string | null
           direction: string
           id: string
           media_url: string | null
@@ -1854,6 +1864,7 @@ export type Database = {
           content?: string
           conversation_id: string
           created_at?: string
+          delivery_status_updated_at?: string | null
           direction?: string
           id?: string
           media_url?: string | null
@@ -1867,6 +1878,7 @@ export type Database = {
           content?: string
           conversation_id?: string
           created_at?: string
+          delivery_status_updated_at?: string | null
           direction?: string
           id?: string
           media_url?: string | null
