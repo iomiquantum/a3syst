@@ -306,10 +306,10 @@ const PipelineConfigPage = () => {
               <Badge variant="outline" className="text-xs">{formatMinutes(effectiveRules.inactivity_timeout_minutes)}</Badge>
               <ArrowRight className="w-4 h-4 text-muted-foreground" />
 
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((n, i) => {
-                const isManual = n >= 9;
+              {Array.from({ length: 6 }, (_, i) => i + 1).map((n, i) => {
+                const isManual = n >= 5;
                 const delayKey = `s${n}_delay_minutes` as keyof typeof effectiveRules;
-                const delay = effectiveRules[delayKey];
+                const delay = !isManual ? effectiveRules[delayKey] : undefined;
                 const strategy = strategies.find(s => s.contact_number === n);
                 return (
                   <div key={n} className="contents">
@@ -320,7 +320,7 @@ const PipelineConfigPage = () => {
                       {isManual ? <UserCheck className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
                       <span>S{n}</span>
                     </div>
-                    {i < 9 && (
+                    {i < 5 && (
                       <>
                         <ArrowRight className="w-4 h-4 text-muted-foreground" />
                         {delay && <Badge variant="outline" className="text-xs">{formatMinutes(delay)}</Badge>}
@@ -338,7 +338,7 @@ const PipelineConfigPage = () => {
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-3">
-              S1-S8 son automáticos (IA como {localAgentName}). S9-S10 son manuales (agente humano). Si el cliente responde, avanza al siguiente S sin retroceder.
+              S1-S4 son automáticos (IA como {localAgentName}). S5-S6 son manuales (agente humano). Si el cliente responde, avanza al siguiente S sin retroceder.
             </p>
           </CardContent>
         </Card>
