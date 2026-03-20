@@ -141,6 +141,7 @@ export const useConversationsByPipeline = (params: Params) => {
       status: c.status,
       last_message_at: c.last_message_at,
       last_message_preview: c.last_message_preview || "",
+      last_outbound_status: null, // will be populated below if needed
       unread_count: c.unread_count || 0,
       chatbot_active: c.chatbot_active,
       pipeline_tab: c.pipeline_tab || "resueltos_ia",
@@ -151,6 +152,9 @@ export const useConversationsByPipeline = (params: Params) => {
       seguimiento_next_s: c.seguimiento_next_s || 0,
       seguimiento_responded_at_s: c.seguimiento_responded_at_s || 0,
       seguimiento_next_contact_at: c.seguimiento_next_contact_at || null,
+      seguimiento_consecutive_read_no_reply: c.seguimiento_consecutive_read_no_reply || 0,
+      seguimiento_spam_protection_triggered: c.seguimiento_spam_protection_triggered || false,
+      seguimiento_spam_jumped_from_s: c.seguimiento_spam_jumped_from_s ?? null,
       pinned: c.pinned || false,
       inactivity_timer_start: c.inactivity_timer_start || null,
       contactName: c.contacts?.name || c.visitor_name || "Sin nombre",
