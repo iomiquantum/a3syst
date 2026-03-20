@@ -410,14 +410,66 @@ Deno.serve(async (req) => {
       .order("contact_number", { ascending: true });
     const strategiesMap: Record<number, any> = {};
     (strategiesRows || []).forEach((s: any) => { strategiesMap[s.contact_number] = s; });
-    // Cache clinic timezones to avoid repeated queries
+    // Cache clinic config to avoid repeated queries
     const clinicTimezoneCache: Record<string, string> = {};
+    const clinicDelayCache: Record<string, number> = {};
+    const clinicAgentNameCache: Record<string, string> = {};
+
     async function getClinicTimezone(clinicId: string): Promise<string> {
       if (clinicTimezoneCache[clinicId]) return clinicTimezoneCache[clinicId];
       const { data } = await supabase.from("clinics").select("timezone").eq("id", clinicId).single();
       const tz = data?.timezone || "America/Guayaquil";
       clinicTimezoneCache[clinicId] = tz;
       return tz;
+    }
+
+    async function getClinicStageDelay(clinicId: string, stageNumber: number): Promise<number> {
+      const cacheKey = `${clinicId}:s${stageNumber}`;
+      if (cacheKey in clinicDelayCache) return clinicDelayCache[cacheKey];
+
+      const fallbackDelay = delayMap[stageNumber] || 15;
+      const { data } = await supabase
+        .from("clinic_pipeline_rules")
+        .select("rule_value")
+        .eq("clinic_id", clinicId)
+        .eq("rule_key", `s${stageNumber}_delay_minutes`)
+        .maybeSingle();
+
+      const delay = data ? Number(data.rule_value) || fallbackDelay : fallbackDelay;
+      clinicDelayCache[cacheKey] = delay;
+      return delay;
+    }
+
+    async function getClinicAgentName(clinicId: string): Promise<string> {
+      if (clinicAgentNameCache[clinicId]) return clinicAgentNameCache[clinicId];
+
+      const { data } = await supabase
+        .from("clinic_pipeline_rules")
+        .select("rule_value")
+        .eq("clinic_id", clinicId)
+        .eq("rule_key", "ai_agent_name")
+        .maybeSingle();
+
+      const agentName = data?.rule_value
+        ? String(data.rule_value).replace(/^"|"$/g, "") || globalAgentName
+        : globalAgentName;
+
+      clinicAgentNameCache[clinicId] = agentName;
+      return agentName;
+    }
+
+    function getStageNumberFromPipelineTab(pipelineTab: string | null | undefined): number | null {
+      const match = pipelineTab?.match(/^seguimiento_s(\d{1,2})$/);
+      return match ? Number(match[1]) : null;
+    }
+
+    function hasSuspiciousFutureTimer(scheduledAt: string | null, expectedDelayMinutes: number): boolean {
+      if (!scheduledAt) return false;
+      const diffMs = new Date(scheduledAt).getTime() - Date.now();
+      if (diffMs <= 0) return false;
+
+      const maxExpectedMs = Math.max(expectedDelayMinutes * 4, 60) * 60 * 1000;
+      return diffMs > maxExpectedMs;
     }
 
     const templateApprovalCache: Record<string, boolean> = {};
@@ -456,12 +508,7 @@ Deno.serve(async (req) => {
 
         const nextS = Math.max(fresh.seguimiento_next_s || 1, 1);
         const targetTab = `seguimiento_s${nextS}`;
-
-        let contactDelay = delayMap[nextS] || 15;
-        const { data: clinicRule } = await supabase
-          .from("clinic_pipeline_rules").select("rule_value")
-          .eq("clinic_id", conv.clinic_id).eq("rule_key", `s${nextS}_delay_minutes`).maybeSingle();
-        if (clinicRule) contactDelay = Number(clinicRule.rule_value) || contactDelay;
+        const contactDelay = await getClinicStageDelay(conv.clinic_id, nextS);
 
         const clinicTz = await getClinicTimezone(conv.clinic_id);
         const nextContactAt = getScheduledContactTime(clinicTz, contactDelay, sendWindowStart, sendWindowEnd).toISOString();
@@ -551,13 +598,7 @@ Deno.serve(async (req) => {
         const strategy = strategiesMap[contactNumber];
 
         // Get clinic agent name override
-        let agentName = globalAgentName;
-        const { data: nameOverride } = await supabase
-          .from("clinic_pipeline_rules").select("rule_value")
-          .eq("clinic_id", conv.clinic_id).eq("rule_key", "ai_agent_name").maybeSingle();
-        if (nameOverride?.rule_value) {
-          agentName = String(nameOverride.rule_value).replace(/^"|"$/g, "") || agentName;
-        }
+        const agentName = await getClinicAgentName(conv.clinic_id);
 
         // Get clinic name
         const { data: clinic } = await supabase.from("clinics").select("name").eq("id", conv.clinic_id).single();
@@ -738,11 +779,7 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
           });
           tarea2NoResponden++;
         } else {
-          const nextDelay = delayMap[nextContactNumber] || 30;
-          const { data: clinicDelay } = await supabase
-            .from("clinic_pipeline_rules").select("rule_value")
-            .eq("clinic_id", conv.clinic_id).eq("rule_key", `s${nextContactNumber}_delay_minutes`).maybeSingle();
-          const actualDelay = clinicDelay ? Number(clinicDelay.rule_value) || nextDelay : nextDelay;
+          const actualDelay = await getClinicStageDelay(conv.clinic_id, nextContactNumber);
 
           const nextContactDate = getScheduledContactTime(clinicTz, actualDelay, sendWindowStart, sendWindowEnd);
           const nextLocalHour = getNowHourInTz(clinicTz);
@@ -773,20 +810,31 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
     console.log("[PIPELINE] TAREA 3: Cleanup...");
     const { data: inconsistent } = await supabase
       .from("conversations")
-      .select("id, clinic_id, pipeline_tab, seguimiento_contact_number, seguimiento_last_contact_at")
-      .like("pipeline_tab", "seguimiento_%")
-      .is("seguimiento_next_contact_at", null);
+      .select("id, clinic_id, pipeline_tab, seguimiento_contact_number, seguimiento_last_contact_at, seguimiento_next_contact_at")
+      .like("pipeline_tab", "seguimiento_s%")
+      .eq("archived", false)
+      .eq("status", "open");
 
     for (const conv of inconsistent || []) {
       try {
-        const cn = conv.seguimiento_contact_number || 1;
-        if (cn >= 9) continue; // S9-S10 are manual, null next_contact_at is expected
-        const delay = delayMap[cn] || 15;
-        const base = conv.seguimiento_last_contact_at || new Date().toISOString();
+        const stageNumber = conv.seguimiento_contact_number || getStageNumberFromPipelineTab(conv.pipeline_tab) || 1;
+        if (stageNumber >= 9) continue; // S9-S10 are manual, null next_contact_at is expected
+
+        const delay = await getClinicStageDelay(conv.clinic_id, stageNumber);
+        const missingTimer = !conv.seguimiento_next_contact_at;
+        const skewedTimer = hasSuspiciousFutureTimer(conv.seguimiento_next_contact_at, delay);
+        if (!missingTimer && !skewedTimer) continue;
+
         const clinicTz = await getClinicTimezone(conv.clinic_id);
+        const baseDate = missingTimer
+          ? new Date(conv.seguimiento_last_contact_at || new Date().toISOString())
+          : new Date();
+
         await supabase.from("conversations").update({
-          seguimiento_next_contact_at: getScheduledContactTime(clinicTz, delay, sendWindowStart, sendWindowEnd, new Date(base)).toISOString(),
+          seguimiento_next_contact_at: getScheduledContactTime(clinicTz, delay, sendWindowStart, sendWindowEnd, baseDate).toISOString(),
         }).eq("id", conv.id);
+
+        console.log(`[PIPELINE] Repaired ${missingTimer ? "missing" : "skewed"} timer for conv ${conv.id} (${conv.pipeline_tab}, delay=${delay}m)`);
         tarea3Fixed++;
       } catch (e) {
         errors.push({ conversation_id: conv.id, error: e instanceof Error ? e.message : String(e) });
