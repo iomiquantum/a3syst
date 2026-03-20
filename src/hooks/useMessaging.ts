@@ -31,6 +31,7 @@ export interface Conversation {
   visitor_contact: string | null;
   follow_up_count: number;
   last_inbound_at: string | null;
+  pipeline_tab: string | null;
   contact?: Contact;
 }
 
