@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
       type = "text", message_type,
       connection_id, conversation_id,
       template_name, template_language, template_components,
-      sent_by,
+      sent_by, origin,
     } = body;
 
     const targetNumber = (to || to_number || "").replace(/[^0-9]/g, "");
