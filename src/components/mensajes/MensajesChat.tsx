@@ -307,12 +307,14 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                     : "bg-primary text-primary-foreground"
                   : "bg-muted"
               )}>
-                {isBotMessage(m) && (
-                  <div className="flex items-center gap-1 mb-1">
-                    <Bot className="w-3 h-3 text-violet-500" />
-                    <span className="text-[9px] font-medium text-violet-500">{agentName}</span>
-                  </div>
-                )}
+                {m.direction === "outbound" && (() => {
+                  const label = getOriginLabel(m);
+                  return label ? (
+                    <div className="flex items-center gap-1 mb-1">
+                      <span className={`text-[9px] font-medium ${label.color}`}>{label.text}</span>
+                    </div>
+                  ) : null;
+                })()}
                 <p className="leading-relaxed whitespace-pre-wrap">{m.content}</p>
                 <div className={cn("flex items-center justify-end gap-1 mt-1", m.direction === "outbound" && !isBotMessage(m) ? "text-primary-foreground/70" : "text-muted-foreground")}>
                   <span className="text-[10px]">
