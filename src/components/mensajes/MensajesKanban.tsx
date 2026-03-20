@@ -32,10 +32,17 @@ interface Props {
 const MensajesKanban = ({ conversations, onActionComplete }: Props) => {
   const [selectedConv, setSelectedConv] = useState<PipelineConversation | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [showContactPanel, setShowContactPanel] = useState(false);
 
   const handleSelect = (c: PipelineConversation) => {
     setSelectedConv(c);
+    setShowContactPanel(false);
     setSheetOpen(true);
+  };
+
+  const handleSheetChange = (open: boolean) => {
+    setSheetOpen(open);
+    if (!open) setShowContactPanel(false);
   };
 
   return (
@@ -70,16 +77,28 @@ const MensajesKanban = ({ conversations, onActionComplete }: Props) => {
         })}
       </div>
 
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="right" className="w-full sm:w-[720px] p-0">
+      <Sheet open={sheetOpen} onOpenChange={handleSheetChange}>
+        <SheetContent side="right" className="w-full sm:max-w-[1100px] p-0">
           {selectedConv && (
-            <div className="flex h-full">
+            <div className="relative flex h-full">
               <div className="flex-1 min-w-0 overflow-hidden">
-                <MensajesChat conversation={selectedConv} onActionComplete={onActionComplete} />
+                <MensajesChat
+                  conversation={selectedConv}
+                  onActionComplete={onActionComplete}
+                  showContactPanel={showContactPanel}
+                  onToggleContactPanel={() => setShowContactPanel((prev) => !prev)}
+                />
               </div>
-              <div className="w-[250px] border-l border-border shrink-0 overflow-hidden hidden sm:block">
-                <ContactInfoPanel conversation={selectedConv} onActionComplete={onActionComplete} />
-              </div>
+
+              {showContactPanel && (
+                <div className="absolute inset-y-0 right-0 z-20 hidden w-[320px] border-l border-border bg-card shadow-lg md:block">
+                  <ContactInfoPanel
+                    conversation={selectedConv}
+                    onActionComplete={onActionComplete}
+                    onClose={() => setShowContactPanel(false)}
+                  />
+                </div>
+              )}
             </div>
           )}
         </SheetContent>
