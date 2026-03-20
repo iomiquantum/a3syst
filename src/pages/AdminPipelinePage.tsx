@@ -291,7 +291,7 @@ const AdminPipelinePage = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Fecha</TableHead>
-                        <TableHead>→ C1</TableHead>
+                        <TableHead>→ Seg.</TableHead>
                         <TableHead>Msgs</TableHead>
                         <TableHead>→ No resp.</TableHead>
                         <TableHead>Fixes</TableHead>
