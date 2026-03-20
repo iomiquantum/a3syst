@@ -5,6 +5,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const LOCK_STALE_MS = 4 * 60 * 1000;
+const MAX_BATCH_HUMAN_DELAY_MS = 1200;
+const MAX_BATCH_SIZE_FOR_HUMAN_DELAY = 3;
+
 function calculateHumanDelay(responseText: string): number {
   const length = responseText.length;
   let base: number, range: number;
@@ -25,6 +29,146 @@ function calculateHumanDelay(responseText: string): number {
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function getBatchHumanDelayMs(messageContent: string, enabled: boolean, workload: number): number {
+  if (!enabled || workload > MAX_BATCH_SIZE_FOR_HUMAN_DELAY) return 0;
+  return Math.min(calculateHumanDelay(messageContent), MAX_BATCH_HUMAN_DELAY_MS);
+}
+
+interface ZonedDateParts {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+}
+
+function getDateTimePartsInTz(date: Date, timeZone: string): ZonedDateParts {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+
+  const lookup = Object.fromEntries(
+    parts
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, part.value]),
+  );
+
+  return {
+    year: Number(lookup.year),
+    month: Number(lookup.month),
+    day: Number(lookup.day),
+    hour: Number(lookup.hour),
+    minute: Number(lookup.minute),
+    second: Number(lookup.second),
+  };
+}
+
+function shiftLocalDate(year: number, month: number, day: number, days: number) {
+  const shifted = new Date(Date.UTC(year, month - 1, day + days, 12, 0, 0));
+  return {
+    year: shifted.getUTCFullYear(),
+    month: shifted.getUTCMonth() + 1,
+    day: shifted.getUTCDate(),
+  };
+}
+
+function zonedTimeToUtc(
+  timeZone: string,
+  year: number,
+  month: number,
+  day: number,
+  hour = 0,
+  minute = 0,
+  second = 0,
+): Date {
+  let utcMs = Date.UTC(year, month - 1, day, hour, minute, second);
+  const desiredMs = Date.UTC(year, month - 1, day, hour, minute, second);
+
+  for (let i = 0; i < 4; i++) {
+    const current = getDateTimePartsInTz(new Date(utcMs), timeZone);
+    const currentMs = Date.UTC(
+      current.year,
+      current.month - 1,
+      current.day,
+      current.hour,
+      current.minute,
+      current.second,
+    );
+    const diff = desiredMs - currentMs;
+    utcMs += diff;
+    if (diff === 0) break;
+  }
+
+  return new Date(utcMs);
+}
+
+function getNowHourInTz(tz: string): number {
+  try {
+    return getDateTimePartsInTz(new Date(), tz).hour;
+  } catch {
+    return new Date().getUTCHours();
+  }
+}
+
+function getNextWindowStart(tz: string, startHour: number, from = new Date()): Date {
+  const localNow = getDateTimePartsInTz(from, tz);
+  const targetDate = localNow.hour >= startHour
+    ? shiftLocalDate(localNow.year, localNow.month, localNow.day, 1)
+    : { year: localNow.year, month: localNow.month, day: localNow.day };
+
+  return zonedTimeToUtc(tz, targetDate.year, targetDate.month, targetDate.day, startHour, 0, 0);
+}
+
+function getScheduledContactTime(
+  tz: string,
+  delayMinutes: number,
+  sendWindowStart: number,
+  sendWindowEnd: number,
+  from = new Date(),
+): Date {
+  const localNow = getDateTimePartsInTz(from, tz);
+  const delayedLocalAsUtc = new Date(
+    Date.UTC(localNow.year, localNow.month - 1, localNow.day, localNow.hour, localNow.minute, localNow.second)
+      + delayMinutes * 60 * 1000,
+  );
+
+  const delayedLocal = {
+    year: delayedLocalAsUtc.getUTCFullYear(),
+    month: delayedLocalAsUtc.getUTCMonth() + 1,
+    day: delayedLocalAsUtc.getUTCDate(),
+    hour: delayedLocalAsUtc.getUTCHours(),
+    minute: delayedLocalAsUtc.getUTCMinutes(),
+    second: delayedLocalAsUtc.getUTCSeconds(),
+  };
+
+  if (delayedLocal.hour >= sendWindowEnd) {
+    const nextDay = shiftLocalDate(delayedLocal.year, delayedLocal.month, delayedLocal.day, 1);
+    return zonedTimeToUtc(tz, nextDay.year, nextDay.month, nextDay.day, sendWindowStart, 0, 0);
+  }
+
+  if (delayedLocal.hour < sendWindowStart) {
+    return zonedTimeToUtc(tz, delayedLocal.year, delayedLocal.month, delayedLocal.day, sendWindowStart, 0, 0);
+  }
+
+  return zonedTimeToUtc(
+    tz,
+    delayedLocal.year,
+    delayedLocal.month,
+    delayedLocal.day,
+    delayedLocal.hour,
+    delayedLocal.minute,
+    delayedLocal.second,
+  );
 }
 
 /** Check if WhatsApp 24h session window is open */
@@ -208,7 +352,7 @@ Deno.serve(async (req) => {
 
     if (staleLock?.started_at) {
       const elapsed = Date.now() - new Date(staleLock.started_at).getTime();
-      if (elapsed > 10 * 60 * 1000) {
+      if (elapsed > LOCK_STALE_MS) {
         console.warn("[PIPELINE] Stale lock detected, forcing unlock");
         await supabase.from("pipeline_execution_lock").update({ is_running: true, started_at: new Date().toISOString() }).eq("id", 1);
       } else {
@@ -247,43 +391,6 @@ Deno.serve(async (req) => {
       .order("contact_number", { ascending: true });
     const strategiesMap: Record<number, any> = {};
     (strategiesRows || []).forEach((s: any) => { strategiesMap[s.contact_number] = s; });
-
-    // Helper: get current hour in a timezone
-    function getNowHourInTz(tz: string): number {
-      try {
-        const formatter = new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: tz });
-        return parseInt(formatter.format(new Date()), 10);
-      } catch {
-        return new Date().getUTCHours(); // fallback to UTC
-      }
-    }
-
-    // Helper: get next window opening in a timezone
-    function getNextWindowStart(tz: string, startHour: number): Date {
-      const now = new Date();
-      // Get today's date in the target timezone
-      const dateFormatter = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" });
-      const hourInTz = getNowHourInTz(tz);
-      const dateParts = dateFormatter.format(now); // YYYY-MM-DD
-      
-      // If current hour >= startHour, next window is tomorrow
-      const targetDate = hourInTz >= startHour ? new Date(now.getTime() + 24 * 60 * 60 * 1000) : now;
-      const targetDateStr = dateFormatter.format(targetDate);
-      
-      // Create a date string in the timezone and convert to UTC
-      const targetMs = new Date(`${targetDateStr}T${String(startHour).padStart(2, "0")}:00:00`).getTime();
-      // Adjust for timezone offset
-      const utcOffset = getTimezoneOffsetMs(tz);
-      return new Date(targetMs + utcOffset);
-    }
-
-    function getTimezoneOffsetMs(tz: string): number {
-      const now = new Date();
-      const utcStr = now.toLocaleString("en-US", { timeZone: "UTC" });
-      const tzStr = now.toLocaleString("en-US", { timeZone: tz });
-      return new Date(utcStr).getTime() - new Date(tzStr).getTime();
-    }
-
     // Cache clinic timezones to avoid repeated queries
     const clinicTimezoneCache: Record<string, string> = {};
     async function getClinicTimezone(clinicId: string): Promise<string> {
@@ -319,7 +426,8 @@ Deno.serve(async (req) => {
           .eq("clinic_id", conv.clinic_id).eq("rule_key", `s${nextS}_delay_minutes`).maybeSingle();
         if (clinicRule) contactDelay = Number(clinicRule.rule_value) || contactDelay;
 
-        const nextContactAt = new Date(Date.now() + contactDelay * 60 * 1000).toISOString();
+        const clinicTz = await getClinicTimezone(conv.clinic_id);
+        const nextContactAt = getScheduledContactTime(clinicTz, contactDelay, sendWindowStart, sendWindowEnd).toISOString();
         await supabase.from("conversations").update({
           pipeline_tab: targetTab,
           seguimiento_contact_number: nextS,
@@ -347,7 +455,10 @@ Deno.serve(async (req) => {
       .select("id, clinic_id, pipeline_tab, seguimiento_contact_number, seguimiento_last_completed_s, seguimiento_next_s, seguimiento_responded_at_s, seguimiento_is_recurrente, seguimiento_recurrente_count, contact_id, channel, visitor_contact, last_client_message_at")
       .in("pipeline_tab", seguimientoTabs)
       .not("seguimiento_next_contact_at", "is", null)
-      .lt("seguimiento_next_contact_at", now);
+      .lt("seguimiento_next_contact_at", now)
+      .order("seguimiento_next_contact_at", { ascending: true });
+
+    const followUpQueueSize = followUpConvs?.length || 0;
 
     for (const conv of followUpConvs || []) {
       try {
@@ -510,8 +621,8 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
         }
 
         // Human delay
-        if (humanDelayEnabled) {
-          const delayMs = calculateHumanDelay(messageContent);
+        const delayMs = getBatchHumanDelayMs(messageContent, humanDelayEnabled, followUpQueueSize);
+        if (delayMs > 0) {
           console.log(`[PIPELINE] Human delay: ${delayMs}ms for S${contactNumber} conv ${conv.id}`);
           await sleep(delayMs);
         }
@@ -577,16 +688,9 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
             .eq("clinic_id", conv.clinic_id).eq("rule_key", `s${nextContactNumber}_delay_minutes`).maybeSingle();
           const actualDelay = clinicDelay ? Number(clinicDelay.rule_value) || nextDelay : nextDelay;
 
-          // Ensure next contact falls within send window (7AM-11PM)
-          let nextContactDate = new Date(Date.now() + actualDelay * 60 * 1000);
-          const nextHour = nextContactDate.getHours();
-          if (nextHour >= sendWindowEnd || nextHour < sendWindowStart) {
-            // Postpone to next day 7AM
-            nextContactDate.setDate(nextContactDate.getDate() + (nextHour >= sendWindowEnd ? 1 : 0));
-            nextContactDate.setHours(sendWindowStart, 0, 0, 0);
-            if (nextContactDate.getTime() <= Date.now()) nextContactDate.setDate(nextContactDate.getDate() + 1);
-            console.log(`[PIPELINE] Next contact for S${nextContactNumber} postponed to ${nextContactDate.toISOString()} (outside send window)`);
-          }
+          const nextContactDate = getScheduledContactTime(clinicTz, actualDelay, sendWindowStart, sendWindowEnd);
+          const nextLocalHour = getNowHourInTz(clinicTz);
+          console.log(`[PIPELINE] Next contact for S${nextContactNumber} scheduled at ${nextContactDate.toISOString()} (${clinicTz}, current=${nextLocalHour}h)`);
 
           await supabase.from("conversations").update({
             pipeline_tab: `seguimiento_s${nextContactNumber}`,
@@ -623,8 +727,9 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
         if (cn >= 9) continue; // S9-S10 are manual, null next_contact_at is expected
         const delay = delayMap[cn] || 15;
         const base = conv.seguimiento_last_contact_at || new Date().toISOString();
+        const clinicTz = await getClinicTimezone(conv.clinic_id);
         await supabase.from("conversations").update({
-          seguimiento_next_contact_at: new Date(new Date(base).getTime() + delay * 60 * 1000).toISOString(),
+          seguimiento_next_contact_at: getScheduledContactTime(clinicTz, delay, sendWindowStart, sendWindowEnd, new Date(base)).toISOString(),
         }).eq("id", conv.id);
         tarea3Fixed++;
       } catch (e) {
@@ -693,7 +798,7 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
               .replace(/\{\{hora\}\}/g, hora)
               .replace(/\{\{servicio\}\}/g, servicio);
 
-            if (humanDelayEnabled) await sleep(calculateHumanDelay(message));
+            // No artificial sleep in scheduled reminder batches to avoid timeout accumulation.
 
             // Use smart send for reminders too
             const sendResult = await sendWhatsAppMessageSmart(
@@ -765,7 +870,7 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
               .replace(/\{\{hora\}\}/g, hora)
               .replace(/\{\{servicio\}\}/g, servicio);
 
-            if (humanDelayEnabled) await sleep(calculateHumanDelay(message));
+            // No artificial sleep in scheduled reminder batches to avoid timeout accumulation.
 
             const sendResult = await sendWhatsAppMessageSmart(
               supabase, supabaseUrl, supabaseKey,
