@@ -89,7 +89,7 @@ const ConversationCard = ({ conversation: c, selected, onClick, variant = "list"
         <CountdownBadges c={c} />
         <SpamBadge c={c} />
         {windowBadge}
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex flex-col items-start gap-1">
           {c.contactTags.slice(0, 2).map((t) => (
             <span key={t} className="text-[8px] bg-accent/20 text-accent-foreground px-1.5 py-0.5 rounded">{t}</span>
           ))}
@@ -134,7 +134,7 @@ const ConversationCard = ({ conversation: c, selected, onClick, variant = "list"
             <SpamBadge c={c} />
             {windowBadge}
             {c.contactTags.length > 0 && (
-              <div className="flex gap-1 flex-wrap">
+              <div className="flex flex-col items-start gap-1">
                 {c.contactTags.slice(0, 2).map((t) => (
                   <span key={t} className="text-[8px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">{t}</span>
                 ))}

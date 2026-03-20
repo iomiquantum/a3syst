@@ -113,7 +113,7 @@ const SeguimientoCountdown = memo(({
         {state.expired ? state.label : `${state.label} → S${effectiveNextS}`}
       </span>
     );
-    return <div className="flex gap-1 flex-wrap items-center">{badges}</div>;
+    return <div className="flex flex-col items-start gap-1">{badges}</div>;
   }
 
   // Case 3: In seguimiento S1-S4 (automatic) → show countdown with pause awareness
@@ -181,7 +181,7 @@ const SeguimientoCountdown = memo(({
         );
       }
     }
-    return <div className="flex gap-1 flex-wrap items-center">{badges}</div>;
+    return <div className="flex flex-col items-start gap-1">{badges}</div>;
   }
 
   // Case 4: In S5-S6 (manual/human) → no countdown, show "Esperando agente"
@@ -195,12 +195,12 @@ const SeguimientoCountdown = memo(({
         Esperando agente · S{currentS}
       </span>
     );
-    return <div className="flex gap-1 flex-wrap items-center">{badges}</div>;
+    return <div className="flex flex-col items-start gap-1">{badges}</div>;
   }
 
   // If we have badges but no timer (e.g. resueltos_ia with nextS but no inactivity timer yet)
   if (badges.length > 0) {
-    return <div className="flex gap-1 flex-wrap items-center">{badges}</div>;
+    return <div className="flex flex-col items-start gap-1">{badges}</div>;
   }
 
   return null;
