@@ -126,16 +126,20 @@ const ConversationCard = ({ conversation: c, selected, onClick, variant = "list"
             {c.last_outbound_status && <MessageStatusIcon status={c.last_outbound_status} />}
             <p className="text-[11px] text-muted-foreground truncate">{c.last_message_preview}</p>
           </div>
-          <div className="flex items-center justify-between mt-1">
-            <div className="flex gap-1 flex-wrap items-center">
+          <div className="flex flex-col gap-0.5 mt-1">
+            <div className="flex items-center justify-between">
               <CountdownBadges c={c} />
-              <SpamBadge c={c} />
-              {windowBadge}
-              {c.contactTags.slice(0, 2).map((t) => (
-                <span key={t} className="text-[8px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">{t}</span>
-              ))}
+              <PipelineBadge tab={c.pipeline_tab} />
             </div>
-            <PipelineBadge tab={c.pipeline_tab} />
+            <SpamBadge c={c} />
+            {windowBadge}
+            {c.contactTags.length > 0 && (
+              <div className="flex gap-1 flex-wrap">
+                {c.contactTags.slice(0, 2).map((t) => (
+                  <span key={t} className="text-[8px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">{t}</span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
