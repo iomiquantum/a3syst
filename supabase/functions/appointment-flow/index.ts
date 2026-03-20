@@ -373,29 +373,22 @@ Responde SOLO JSON: { "intent": "CONFIRMED|CANCEL|RESCHEDULE|OTHER" }`;
           appointment_status: "confirmado",
         }).eq("id", conversation_id);
 
-        // Send location info
-        const { data: branches } = await supabase.from("branches")
+        // Send location info — prioritize ai_agent_config.locations_text, fallback to branches
+        const { data: agentCfg } = await supabase.from("ai_agent_config")
+          .select("locations_text").eq("clinic_id", clinic_id).maybeSingle();
+        const { data: branchData } = await supabase.from("branches")
           .select("name, full_address, address, google_maps_url, arrival_instructions, preparation_notes")
-          .eq("clinic_id", clinic_id)
-          .eq("active", true)
-          .limit(1)
-          .maybeSingle();
+          .eq("clinic_id", clinic_id).eq("active", true).limit(1).maybeSingle();
 
-        let locationMsg = "¡Perfecto, te esperamos! 🎉";
-        if (branches) {
-          locationMsg = `¡Genial, tu cita está confirmada! 🎉\n\n📍 ${branches.name || "Nuestra ubicación"}`;
-          if (branches.full_address || branches.address) {
-            locationMsg += `\n${branches.full_address || branches.address}`;
-          }
-          if (branches.google_maps_url) {
-            locationMsg += `\n🗺️ ${branches.google_maps_url}`;
-          }
-          if (branches.arrival_instructions) {
-            locationMsg += `\n\n📌 ${branches.arrival_instructions}`;
-          }
-          if (branches.preparation_notes) {
-            locationMsg += `\n\n📋 ${branches.preparation_notes}`;
-          }
+        let locationMsg = "¡Genial, tu cita está confirmada! 🎉";
+        if (branchData) {
+          locationMsg += `\n\n📍 ${branchData.name || "Nuestra ubicación"}`;
+          if (branchData.full_address || branchData.address) locationMsg += `\n${branchData.full_address || branchData.address}`;
+          if (branchData.google_maps_url) locationMsg += `\n🗺️ ${branchData.google_maps_url}`;
+          if (branchData.arrival_instructions) locationMsg += `\n\n📌 ${branchData.arrival_instructions}`;
+          if (branchData.preparation_notes) locationMsg += `\n\n📋 ${branchData.preparation_notes}`;
+        } else if (agentCfg?.locations_text) {
+          locationMsg += `\n\n📍 ${agentCfg.locations_text}`;
         }
 
         await supabase.from("conversation_pipeline_history").insert({
