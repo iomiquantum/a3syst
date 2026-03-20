@@ -427,57 +427,79 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
       {/* Input area */}
       <div className="px-4 py-3 border-t border-border shrink-0 space-y-2">
         {/* Autopilot banner — informational only, does NOT block input */}
-        {autopilot && (
+        {autopilot && !isWhatsAppBlocked && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 text-xs">
             <Bot className="w-3.5 h-3.5 shrink-0" />
             <span>La IA está respondiendo esta conversación. Puedes enviar mensajes como humano sin desactivarla.</span>
           </div>
         )}
 
-        {c.channel === "whatsapp" && (
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2">
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-foreground">Templates aprobados de WhatsApp</p>
-              <p className="text-[11px] text-muted-foreground">
-                {isWhatsAppBlocked
-                  ? "La ventana de 24 horas está cerrada. Selecciona un template aprobado para responder."
-                  : "Consulta y envía templates aprobados del negocio activo desde el buzón."}
-              </p>
+        {/* WhatsApp window BLOCKED — replace entire input with template-only mode */}
+        {isWhatsAppBlocked ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-destructive/30 bg-destructive/5 text-destructive text-xs">
+              <Lock className="w-4 h-4 shrink-0" />
+              <div>
+                <p className="font-medium">🔒 Ventana de WhatsApp cerrada — No puedes enviar mensajes normales</p>
+                <p className="text-[11px] opacity-80 mt-0.5">
+                  Han pasado más de 24h desde el último mensaje del contacto. Envía un template aprobado para reabrir la conversación.
+                </p>
+              </div>
             </div>
             <Button
-              type="button"
-              variant={isWhatsAppBlocked ? "default" : "outline"}
-              size="sm"
-              className="shrink-0"
+              className="w-full"
               onClick={() => setTemplateDialogOpen(true)}
             >
-              <LayoutTemplate className="w-4 h-4" />
-              {isWhatsAppBlocked ? "Usar template" : "Ver templates"}
+              <LayoutTemplate className="w-4 h-4 mr-2" />
+              Enviar template aprobado para reabrir conversación
             </Button>
           </div>
-        )}
+        ) : (
+          <>
+            {c.channel === "whatsapp" && (
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-foreground">Templates aprobados de WhatsApp</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Consulta y envía templates aprobados del negocio activo desde el buzón.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => setTemplateDialogOpen(true)}
+                >
+                  <LayoutTemplate className="w-4 h-4" />
+                  Ver templates
+                </Button>
+              </div>
+            )}
 
-        <div className="flex items-end gap-2">
-          <div className="flex-1 flex flex-col gap-1">
-            <ChatToolbar
-              onInsertText={handleInsertText}
-              conversationId={c.id}
-              clinicId={clinicId || ""}
-            />
-            <Textarea
-              ref={textareaRef}
-              placeholder="Escribe un mensaje... (Shift+Enter para nueva línea)"
-              value={input}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              className="min-h-[40px] max-h-[120px] text-sm resize-none py-2"
-              rows={1}
-            />
-          </div>
-          <Button onClick={handleSend} disabled={!input.trim() || sending} size="icon" className="shrink-0 h-10 w-10">
-            <Send className="w-4 h-4" />
-          </Button>
-        </div>
+            <div className="flex items-end gap-2">
+              <div className="flex-1 flex flex-col gap-1">
+                <ChatToolbar
+                  onInsertText={handleInsertText}
+                  conversationId={c.id}
+                  clinicId={clinicId || ""}
+                />
+                <Textarea
+                  ref={textareaRef}
+                  placeholder="Escribe un mensaje... (Shift+Enter para nueva línea)"
+                  value={input}
+                  onChange={handleInputChange}
+                  onKeyDown={handleKeyDown}
+                  className="min-h-[40px] max-h-[120px] text-sm resize-none py-2"
+                  rows={1}
+                />
+              </div>
+              <Button onClick={handleSend} disabled={!input.trim() || sending} size="icon" className="shrink-0 h-10 w-10">
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+          </>
+        )}
       </div>
 
       <WhatsAppTemplateDialog
