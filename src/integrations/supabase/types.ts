@@ -2177,6 +2177,81 @@ export type Database = {
         }
         Relationships: []
       }
+      pipeline_message_queue: {
+        Row: {
+          attempt_count: number | null
+          clinic_id: string
+          contact_number: number
+          conversation_id: string
+          created_at: string | null
+          generated_message: string | null
+          id: string
+          last_attempt_at: string | null
+          last_error: string | null
+          max_attempts: number | null
+          message_type: string
+          priority: number | null
+          resolved_manually_at: string | null
+          resolved_manually_by: string | null
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          attempt_count?: number | null
+          clinic_id: string
+          contact_number: number
+          conversation_id: string
+          created_at?: string | null
+          generated_message?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          max_attempts?: number | null
+          message_type?: string
+          priority?: number | null
+          resolved_manually_at?: string | null
+          resolved_manually_by?: string | null
+          scheduled_at: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempt_count?: number | null
+          clinic_id?: string
+          contact_number?: number
+          conversation_id?: string
+          created_at?: string | null
+          generated_message?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          max_attempts?: number | null
+          message_type?: string
+          priority?: number | null
+          resolved_manually_at?: string | null
+          resolved_manually_by?: string | null
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_message_queue_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_message_queue_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pipeline_templates: {
         Row: {
           automation_rules: Json | null
