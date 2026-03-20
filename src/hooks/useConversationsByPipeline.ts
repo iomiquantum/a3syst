@@ -146,6 +146,7 @@ export const useConversationsByPipeline = (params: Params) => {
       seguimiento_last_completed_s: c.seguimiento_last_completed_s || 0,
       seguimiento_next_s: c.seguimiento_next_s || 0,
       seguimiento_responded_at_s: c.seguimiento_responded_at_s || 0,
+      seguimiento_next_contact_at: c.seguimiento_next_contact_at || null,
       pinned: c.pinned || false,
       inactivity_timer_start: c.inactivity_timer_start || null,
       contactName: c.contacts?.name || c.visitor_name || "Sin nombre",
