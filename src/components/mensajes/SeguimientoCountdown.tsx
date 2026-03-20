@@ -96,8 +96,11 @@ const SeguimientoCountdown = memo(({
   const isAutomatic = currentS >= 1 && currentS <= 8;
   const isManual = currentS >= 9 && currentS <= 10;
 
-  // Case 1: In resueltos_ia with no S history → new conversation, no countdown
-  if (isInResueltosIA && nextS <= 0) return null;
+  // Case 1: In resueltos_ia with no S history AND no inactivity timer → truly new, no countdown
+  if (isInResueltosIA && nextS <= 0 && !inactivityTimerStart) return null;
+
+  // Effective next S: if nextS is 0 but timer is running, they'll go to S1
+  const effectiveNextS = nextS > 0 ? nextS : 1;
 
   const badges: JSX.Element[] = [];
 
