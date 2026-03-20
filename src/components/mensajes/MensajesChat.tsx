@@ -200,17 +200,19 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
 
   const getOriginLabel = (m: ChatMessage): { text: string; color: string } | null => {
     if (m.direction !== "outbound") return null;
-    const raw = m.origin || (m.sent_by ? `human|unknown` : `ai_auto|unknown`);
+    const raw = m.origin || (m.sent_by ? "human|unknown" : "ai_auto|unknown");
     const [sender, stage] = raw.split("|");
     const stageLabel = formatPipelineTab(stage || "");
     const stageTag = stageLabel ? ` · ${stageLabel}` : "";
 
     if (sender === "human") return { text: `👤 Humano${stageTag}`, color: "text-blue-500" };
-    if (sender === "ai_auto") return { text: `🤖 ${agentName}${stageTag}`, color: "text-violet-500" };
-    if (sender === "ai_agent") return { text: `🤖 ${agentName}${stageTag}`, color: "text-violet-500" };
+    if (sender === "ai_auto" || sender === "ai_agent") return { text: `🤖 ${agentName}${stageTag}`, color: "text-violet-500" };
     if (sender.startsWith("follow_up_s")) {
       const num = sender.replace("follow_up_s", "");
-      return { text: `🔄 Seguimiento S${num}${stageTag}`, color: "text-amber-500" };
+      // Don't repeat stage if it matches the follow-up number (e.g. "S5 · S5")
+      const followUpStage = `seguimiento_s${num}`;
+      const extraStage = stage && stage !== followUpStage ? ` · ${formatPipelineTab(stage)}` : "";
+      return { text: `🔄 Seguimiento S${num}${extraStage}`, color: "text-amber-500" };
     }
     if (sender === "appointment_flow") return { text: `📅 Flujo de cita${stageTag}`, color: "text-emerald-500" };
     if (sender === "reminder") return { text: `⏰ Recordatorio${stageTag}`, color: "text-orange-500" };
