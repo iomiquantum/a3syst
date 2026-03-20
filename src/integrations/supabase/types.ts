@@ -1127,6 +1127,8 @@ export type Database = {
       }
       contacts: {
         Row: {
+          alternative_phone: string | null
+          alternative_phone_label: string | null
           branch_id: string | null
           clinic_id: string
           created_at: string
@@ -1144,6 +1146,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          alternative_phone?: string | null
+          alternative_phone_label?: string | null
           branch_id?: string | null
           clinic_id: string
           created_at?: string
@@ -1161,6 +1165,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          alternative_phone?: string | null
+          alternative_phone_label?: string | null
           branch_id?: string | null
           clinic_id?: string
           created_at?: string
