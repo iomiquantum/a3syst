@@ -42,6 +42,7 @@ interface ChatMessage {
   content: string;
   sent_by: string | null;
   message_type: string;
+  media_url: string | null;
   created_at: string;
   status: string;
   origin: string | null;
