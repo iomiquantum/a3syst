@@ -288,7 +288,7 @@ Responde SOLO JSON válido:
 
       // If flow complete (patient confirmed all 3 and AI says complete)
       if (parsed.flow_complete && missingFields.length === 0) {
-        return await confirmAppointment(supabase, supabaseUrl, supabaseKey, conv, flowData, clinic_id, agentName, clinicName, branches);
+        return await confirmAppointment(supabase, supabaseUrl, supabaseKey, conv, flowData, clinic_id, agentName, clinicName, branches, agentConfig?.locations_text || null);
       }
 
       return jsonResponse({
