@@ -42,13 +42,13 @@ function formatCountdown(targetIso: string): { label: string; expired: boolean; 
       ? { label: "Pendiente", expired: true, totalSeconds: remaining }
       : { label: "Procesando...", expired: true, totalSeconds: remaining };
   }
-  const mm = Math.floor(remaining / 60);
+  const hh = Math.floor(remaining / 3600);
+  const mm = Math.floor((remaining % 3600) / 60);
   const ss = Math.floor(remaining % 60);
-  return {
-    label: `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`,
-    expired: false,
-    totalSeconds: remaining,
-  };
+  const label = hh > 0
+    ? `${hh}h ${String(mm).padStart(2, "0")}m`
+    : `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+  return { label, expired: false, totalSeconds: remaining };
 }
 
 function formatInactivityCountdown(startIso: string, timeoutMin: number): { label: string; expired: boolean; totalSeconds: number } {
@@ -59,13 +59,13 @@ function formatInactivityCountdown(startIso: string, timeoutMin: number): { labe
       ? { label: "Pendiente", expired: true, totalSeconds: remaining }
       : { label: "Procesando...", expired: true, totalSeconds: remaining };
   }
-  const mm = Math.floor(remaining / 60);
+  const hh = Math.floor(remaining / 3600);
+  const mm = Math.floor((remaining % 3600) / 60);
   const ss = Math.floor(remaining % 60);
-  return {
-    label: `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`,
-    expired: false,
-    totalSeconds: remaining,
-  };
+  const label = hh > 0
+    ? `${hh}h ${String(mm).padStart(2, "0")}m`
+    : `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+  return { label, expired: false, totalSeconds: remaining };
 }
 
 const SeguimientoCountdown = memo(({
