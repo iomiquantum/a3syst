@@ -566,7 +566,7 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const { data: fresh } = await supabase.from("conversations").select("pipeline_tab, seguimiento_contact_number").eq("id", conv.id).single();
+        const { data: fresh } = await supabase.from("conversations").select("pipeline_tab, seguimiento_contact_number, seguimiento_consecutive_read_no_reply").eq("id", conv.id).single();
         if (!fresh || !fresh.pipeline_tab?.startsWith("seguimiento_s")) continue;
 
         const contactNumber = fresh.seguimiento_contact_number || conv.seguimiento_contact_number || 1;
@@ -575,6 +575,31 @@ Deno.serve(async (req) => {
         // S9-S10 are manual — don't send auto messages
         if (isManualStep) {
           console.log(`[PIPELINE] S${contactNumber} is manual, skipping auto-send for conv ${conv.id}`);
+          continue;
+        }
+
+        // === ANTI-SPAM CHECK ===
+        const spamLimit = Number(rules["spam_protection_read_no_reply_limit"]) || 4;
+        const readNoReplyCount = fresh.seguimiento_consecutive_read_no_reply || 0;
+        if (readNoReplyCount >= spamLimit) {
+          // Jump to S9 (manual) for spam protection
+          await supabase.from("conversations").update({
+            pipeline_tab: "seguimiento_s9",
+            seguimiento_contact_number: 9,
+            seguimiento_next_s: 9,
+            seguimiento_next_contact_at: null,
+            seguimiento_spam_protection_triggered: true,
+            seguimiento_spam_jumped_from_s: contactNumber,
+          }).eq("id", conv.id);
+
+          await supabase.from("conversation_pipeline_history").insert({
+            conversation_id: conv.id, clinic_id: conv.clinic_id,
+            from_tab: `seguimiento_s${contactNumber}`, to_tab: "seguimiento_s9",
+            moved_by: "system",
+            reason: `Protección anti-spam: cliente leyó ${readNoReplyCount} mensajes consecutivos sin responder. Saltó de S${contactNumber} a S9.`,
+          });
+
+          console.log(`[PIPELINE SPAM-PROTECTION] Conv ${conv.id} jumped from S${contactNumber} to S9 (${readNoReplyCount} reads without reply)`);
           continue;
         }
 
