@@ -129,7 +129,7 @@ const SeguimientoCountdown = memo(({
   }
 
   // Case 2: In resueltos_ia waiting for inactivity timer → show countdown to next S
-  if (isInResueltosIA && nextS > 0 && inactivityTimerStart) {
+  if (isInResueltosIA && inactivityTimerStart) {
     const { label, expired } = formatInactivityCountdown(inactivityTimerStart, inactivityTimeoutMinutes);
     badges.push(
       <span
@@ -142,7 +142,7 @@ const SeguimientoCountdown = memo(({
         )}
       >
         <Timer className="w-2.5 h-2.5" />
-        {expired ? label : `${label} → S${nextS}`}
+        {expired ? label : `${label} → S${effectiveNextS}`}
       </span>
     );
     return <div className="flex gap-1 flex-wrap items-center">{badges}</div>;
