@@ -274,7 +274,7 @@ const PipelineConfigPage = () => {
                   </div>
                   {isManual && (
                     <p className="text-[10px] text-amber-600 italic">
-                      Este contacto lo envía un agente humano. S9: se presenta como compañero de {localAgentName}. S10: cierre con valor.
+                      Este contacto lo envía un agente humano. S5: se presenta como compañero de {localAgentName}. S6: cierre con valor.
                     </p>
                   )}
                   {!isManual && (
