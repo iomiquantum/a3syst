@@ -213,6 +213,7 @@ async function sendWhatsAppMessageSmart(
       body: JSON.stringify({
         clinic_id: conv.clinic_id, to_number: conv.visitor_contact,
         message_type: "text", content: messageContent, conversation_id: conv.id,
+        origin: origin || "system",
       }),
     });
     if (!sendResp.ok) {
