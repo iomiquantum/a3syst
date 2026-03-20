@@ -139,37 +139,40 @@ function getScheduledContactTime(
   from = new Date(),
 ): Date {
   const localNow = getDateTimePartsInTz(from, tz);
-  const delayedLocalAsUtc = new Date(
-    Date.UTC(localNow.year, localNow.month - 1, localNow.day, localNow.hour, localNow.minute, localNow.second)
-      + delayMinutes * 60 * 1000,
+  let effectiveLocalMs = Date.UTC(
+    localNow.year, localNow.month - 1, localNow.day,
+    localNow.hour, localNow.minute, localNow.second,
   );
 
-  const delayedLocal = {
-    year: delayedLocalAsUtc.getUTCFullYear(),
-    month: delayedLocalAsUtc.getUTCMonth() + 1,
-    day: delayedLocalAsUtc.getUTCDate(),
-    hour: delayedLocalAsUtc.getUTCHours(),
-    minute: delayedLocalAsUtc.getUTCMinutes(),
-    second: delayedLocalAsUtc.getUTCSeconds(),
-  };
-
-  if (delayedLocal.hour >= sendWindowEnd) {
-    const nextDay = shiftLocalDate(delayedLocal.year, delayedLocal.month, delayedLocal.day, 1);
-    return zonedTimeToUtc(tz, nextDay.year, nextDay.month, nextDay.day, sendWindowStart, 0, 0);
+  // If 'from' is already outside the send window, snap to next window start
+  if (localNow.hour >= sendWindowEnd) {
+    const nextDay = shiftLocalDate(localNow.year, localNow.month, localNow.day, 1);
+    effectiveLocalMs = Date.UTC(nextDay.year, nextDay.month - 1, nextDay.day, sendWindowStart, 0, 0);
+  } else if (localNow.hour < sendWindowStart) {
+    effectiveLocalMs = Date.UTC(localNow.year, localNow.month - 1, localNow.day, sendWindowStart, 0, 0);
   }
 
-  if (delayedLocal.hour < sendWindowStart) {
-    return zonedTimeToUtc(tz, delayedLocal.year, delayedLocal.month, delayedLocal.day, sendWindowStart, 0, 0);
+  const tentativeMs = effectiveLocalMs + delayMinutes * 60 * 1000;
+  const tentative = new Date(tentativeMs);
+  const tHour = tentative.getUTCHours();
+
+  // If tentative falls within the send window, use it directly
+  if (tHour >= sendWindowStart && tHour < sendWindowEnd) {
+    return zonedTimeToUtc(
+      tz, tentative.getUTCFullYear(), tentative.getUTCMonth() + 1,
+      tentative.getUTCDate(), tHour, tentative.getUTCMinutes(), tentative.getUTCSeconds(),
+    );
   }
+
+  // Tentative falls outside the window — skip the dead zone
+  // Dead zone duration = (24 - sendWindowEnd + sendWindowStart) hours
+  const deadZoneMs = (24 - sendWindowEnd + sendWindowStart) * 60 * 60 * 1000;
+  const adjustedMs = tentativeMs + deadZoneMs;
+  const adjusted = new Date(adjustedMs);
 
   return zonedTimeToUtc(
-    tz,
-    delayedLocal.year,
-    delayedLocal.month,
-    delayedLocal.day,
-    delayedLocal.hour,
-    delayedLocal.minute,
-    delayedLocal.second,
+    tz, adjusted.getUTCFullYear(), adjusted.getUTCMonth() + 1,
+    adjusted.getUTCDate(), adjusted.getUTCHours(), adjusted.getUTCMinutes(), adjusted.getUTCSeconds(),
   );
 }
 

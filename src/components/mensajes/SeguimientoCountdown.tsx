@@ -1,5 +1,5 @@
 import { useState, useEffect, memo } from "react";
-import { Timer, User } from "lucide-react";
+import { Timer, User, Pause } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatElapsedTimeoutCountdown, formatTargetCountdown } from "./seguimientoTime";
 
@@ -98,42 +98,88 @@ const SeguimientoCountdown = memo(({
 
   // Case 2: In resueltos_ia waiting for inactivity timer → show countdown to next S
   if (isInResueltosIA && inactivityTimerStart) {
-    const { label, expired } = formatElapsedTimeoutCountdown(inactivityTimerStart, inactivityTimeoutMinutes);
+    const state = formatElapsedTimeoutCountdown(inactivityTimerStart, inactivityTimeoutMinutes);
     badges.push(
       <span
         key="timer"
         className={cn(
           "inline-flex items-center gap-0.5 text-[8px] font-medium px-1.5 py-0.5 rounded leading-none",
-          expired
+          state.expired
             ? "bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300"
             : "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300"
         )}
       >
         <Timer className="w-2.5 h-2.5" />
-        {expired ? label : `${label} → S${effectiveNextS}`}
+        {state.expired ? state.label : `${state.label} → S${effectiveNextS}`}
       </span>
     );
     return <div className="flex gap-1 flex-wrap items-center">{badges}</div>;
   }
 
-  // Case 3: In seguimiento S1-S8 (automatic) → show countdown
+  // Case 3: In seguimiento S1-S8 (automatic) → show countdown with pause awareness
   if (isInSeguimiento && isAutomatic) {
     if (seguimientoNextContactAt) {
-      const { label, expired } = formatTargetCountdown(seguimientoNextContactAt);
-      badges.push(
-        <span
-          key="timer"
-          className={cn(
-            "inline-flex items-center gap-0.5 text-[8px] font-medium px-1.5 py-0.5 rounded leading-none",
-            expired
-              ? "bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300"
-              : "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300"
-          )}
-        >
-          <Timer className="w-2.5 h-2.5" />
-          {expired ? label : `⏱ ${label}`}
-        </span>
-      );
+      const state = formatTargetCountdown(seguimientoNextContactAt);
+
+      if (state.mode === "paused" || state.mode === "sends_on_resume") {
+        // Paused state — amber/gray badge
+        badges.push(
+          <span
+            key="timer"
+            className="inline-flex items-center gap-0.5 text-[8px] font-medium bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded leading-none"
+          >
+            <Pause className="w-2.5 h-2.5" />
+            {state.label}
+          </span>
+        );
+        if (state.subLabel) {
+          badges.push(
+            <span
+              key="sub"
+              className="text-[7px] text-muted-foreground leading-none"
+            >
+              ({state.subLabel})
+            </span>
+          );
+        }
+      } else if (state.mode === "active_will_pause") {
+        // Active but will cross pause boundary
+        badges.push(
+          <span
+            key="timer"
+            className="inline-flex items-center gap-0.5 text-[8px] font-medium bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded leading-none"
+          >
+            <Timer className="w-2.5 h-2.5" />
+            ⏱ {state.label}
+          </span>
+        );
+        if (state.subLabel) {
+          badges.push(
+            <span
+              key="sub"
+              className="text-[7px] text-muted-foreground leading-none"
+            >
+              ({state.subLabel})
+            </span>
+          );
+        }
+      } else {
+        // Active or expired
+        badges.push(
+          <span
+            key="timer"
+            className={cn(
+              "inline-flex items-center gap-0.5 text-[8px] font-medium px-1.5 py-0.5 rounded leading-none",
+              state.expired
+                ? "bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300"
+                : "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300"
+            )}
+          >
+            <Timer className="w-2.5 h-2.5" />
+            {state.expired ? state.label : `⏱ ${state.label}`}
+          </span>
+        );
+      }
     }
     return <div className="flex gap-1 flex-wrap items-center">{badges}</div>;
   }
