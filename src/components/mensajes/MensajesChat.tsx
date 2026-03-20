@@ -7,6 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import PipelineBadge from "./PipelineBadge";
+import PipelineProgressBar from "./PipelineProgressBar";
 import ChannelIcon from "@/components/messaging/ChannelIcon";
 import ChatToolbar from "./ChatToolbar";
 import { usePipelineAction } from "@/hooks/usePipelineAction";
