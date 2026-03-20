@@ -628,6 +628,7 @@ Deno.serve(async (req) => {
       try {
         const stageNumber = conv.seguimiento_contact_number || getStageNumberFromPipelineTab(conv.pipeline_tab) || 1;
         if (stageNumber > 4) continue; // S5-S6 are manual, skip cleanup
+        if (conv.whatsapp_window_blocked) continue; // Window blocked, timer will be paused anyway
 
         const delay = await getClinicStageDelay(conv.clinic_id, stageNumber);
         const missingTimer = !conv.seguimiento_next_contact_at;
