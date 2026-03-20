@@ -507,7 +507,7 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
       const sendResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
         method: "POST",
         headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: reply, conversation_id }),
+        body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: reply, conversation_id, origin: isFollowUp ? `follow_up_s${(conversationData.follow_up_count || 0) + 1}` : "ai_agent" }),
       });
 
       const sendPayload = await sendResponse.json().catch(() => null);
