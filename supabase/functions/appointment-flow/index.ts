@@ -489,6 +489,7 @@ async function confirmAppointment(
   agentName: string,
   clinicName: string,
   branches: any[] | null,
+  locationsText?: string | null,
 ) {
   const previousTab = conv.pipeline_tab;
   const branch = branches?.[0];
@@ -530,9 +531,16 @@ async function confirmAppointment(
     last_error: "Appointment confirmed, queue cleared",
   }).eq("conversation_id", conv.id).in("status", ["pending", "retry", "processing"]);
 
-  // 3. Build confirmation message
+  // 3. Build confirmation message with location from agent config or branches
   const dateFormatted = formatDateES(flowData.date);
-  const confirmMsg = `¡Listo ${contactName}! Tu cita está agendada 🎉\n\n📅 ${dateFormatted}\n🕐 ${flowData.time}\n💼 ${flowData.service}${branch ? `\n🏥 ${branch.name}` : ""}\n\nTe enviaremos un recordatorio antes de tu cita. ¡Te esperamos!`;
+  let locationLine = "";
+  if (branch) {
+    locationLine = `\n🏥 ${branch.name}`;
+    if (branch.address) locationLine += `\n📍 ${branch.address}`;
+  } else if (locationsText) {
+    locationLine = `\n📍 ${locationsText.split("\n")[0]}`; // First line of locations
+  }
+  const confirmMsg = `¡Listo ${contactName}! Tu cita está agendada 🎉\n\n📅 ${dateFormatted}\n🕐 ${flowData.time}\n💼 ${flowData.service}${locationLine}\n\nTe enviaremos un recordatorio antes de tu cita. ¡Te esperamos!`;
 
   // 4. Log history
   await supabase.from("conversation_pipeline_history").insert({
