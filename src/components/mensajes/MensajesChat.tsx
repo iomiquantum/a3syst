@@ -42,6 +42,7 @@ interface ChatMessage {
   content: string;
   sent_by: string | null;
   message_type: string;
+  media_url: string | null;
   created_at: string;
   status: string;
   origin: string | null;
@@ -344,7 +345,35 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                     </div>
                   ) : null;
                 })()}
-                <p className="leading-relaxed whitespace-pre-wrap">{m.content}</p>
+                {/* Audio / voice note player */}
+                {(m.message_type === "audio" || m.message_type === "voice") && m.media_url ? (
+                  <div className="mb-1">
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-1">
+                      <span>🎙️ Nota de voz</span>
+                    </div>
+                    <audio controls preload="metadata" className="max-w-full h-8 rounded" style={{ minWidth: "200px" }}>
+                      <source src={m.media_url} />
+                      Tu navegador no soporta reproducción de audio.
+                    </audio>
+                    {m.content && m.content !== "[audio]" && m.content !== "[voice]" && (
+                      <p className="leading-relaxed whitespace-pre-wrap mt-1 text-xs italic text-muted-foreground">{m.content}</p>
+                    )}
+                  </div>
+                ) : m.media_url && (m.message_type === "image" || m.message_type === "sticker") ? (
+                  <img src={m.media_url} alt="media" className="max-w-full rounded-lg mb-1" loading="lazy" />
+                ) : m.media_url && m.message_type === "video" ? (
+                  <video controls preload="metadata" className="max-w-full rounded-lg mb-1">
+                    <source src={m.media_url} />
+                  </video>
+                ) : m.media_url && m.message_type === "document" ? (
+                  <a href={m.media_url} target="_blank" rel="noopener noreferrer" className="text-xs underline text-primary">
+                    📎 Ver documento adjunto
+                  </a>
+                ) : null}
+                {/* Text content (skip for audio-only) */}
+                {!(m.message_type === "audio" || m.message_type === "voice") && (
+                  <p className="leading-relaxed whitespace-pre-wrap">{m.content}</p>
+                )}
                 <div className={cn("flex items-center justify-end gap-1 mt-1", m.direction === "outbound" && !isBotMessage(m) ? "text-primary-foreground/70" : "text-muted-foreground")}>
                   <span className="text-[10px]">
                     {new Date(m.created_at).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
