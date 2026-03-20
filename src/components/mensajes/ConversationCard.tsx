@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Pin } from "lucide-react";
 import PipelineBadge from "./PipelineBadge";
+import InactivityTimer from "./InactivityTimer";
 import ChannelIcon from "@/components/messaging/ChannelIcon";
 import type { PipelineConversation, PipelineTab } from "@/hooks/useConversationsByPipeline";
 
