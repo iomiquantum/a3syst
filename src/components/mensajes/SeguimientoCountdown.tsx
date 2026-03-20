@@ -98,7 +98,7 @@ const SeguimientoCountdown = memo(({
 
   // Case 2: In resueltos_ia waiting for inactivity timer → show countdown to next S
   if (isInResueltosIA && inactivityTimerStart) {
-    const { label, expired } = formatInactivityCountdown(inactivityTimerStart, inactivityTimeoutMinutes);
+    const { label, expired } = formatElapsedTimeoutCountdown(inactivityTimerStart, inactivityTimeoutMinutes);
     badges.push(
       <span
         key="timer"
@@ -119,7 +119,7 @@ const SeguimientoCountdown = memo(({
   // Case 3: In seguimiento S1-S8 (automatic) → show countdown
   if (isInSeguimiento && isAutomatic) {
     if (seguimientoNextContactAt) {
-      const { label, expired } = formatCountdown(seguimientoNextContactAt);
+      const { label, expired } = formatTargetCountdown(seguimientoNextContactAt);
       badges.push(
         <span
           key="timer"
