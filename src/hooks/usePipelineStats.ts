@@ -17,7 +17,7 @@ export const usePipelineStats = () => {
   const [tabCounts, setTabCounts] = useState<Record<string, number>>({});
   const [resumenStats, setResumenStats] = useState<ResumenStats>({
     respondidos: 0, escalados: 0, convertidos: 0,
-    seguimiento: { total: 0, s1_s8: 0, s9_s10: 0 }, noResponden: 0,
+    seguimiento: { total: 0, s1_s4: 0, s5_s6: 0 }, noResponden: 0,
   });
   const [loading, setLoading] = useState(true);
 
