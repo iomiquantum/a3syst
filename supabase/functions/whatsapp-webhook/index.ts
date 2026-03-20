@@ -167,14 +167,16 @@ Deno.serve(async (req) => {
             last_message_at: new Date().toISOString(),
           }).eq("id", conversation.id);
 
-          const unifiedConvId = await syncToUnifiedMessaging(supabase, clinicId, contactPhone, contactName, content, messageType, msg.id);
+          const syncResult = await syncToUnifiedMessaging(supabase, clinicId, contactPhone, contactName, content, messageType, msg.id);
+          const unifiedConvId = syncResult?.conversationId || null;
+          const isNewConversation = syncResult?.isNew || false;
 
           // === PIPELINE: Handle inbound message transitions ===
           if (unifiedConvId) {
             await handleIncomingMessagePipeline(supabase, unifiedConvId, clinicId);
           }
 
-          console.log("[WA-Webhook] Message processed:", { contactPhone, conversationId: conversation.id });
+          console.log("[WA-Webhook] Message processed:", { contactPhone, conversationId: conversation.id, isNewConversation });
 
           // --- AUTO-RESPUESTA DEL AGENTE IA ---
           if (messageType === "text" && content) {
@@ -188,7 +190,7 @@ Deno.serve(async (req) => {
 
               const { data: channelConfig } = await supabase
                 .from("ai_agent_channel_prompts")
-                .select("enabled")
+                .select("enabled, welcome_message, welcome_message_enabled")
                 .eq("clinic_id", clinicId)
                 .eq("channel", "whatsapp")
                 .eq("enabled", true)
@@ -207,6 +209,38 @@ Deno.serve(async (req) => {
                   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
                   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+                  // --- WELCOME MESSAGE: Send first if new conversation ---
+                  let sentWelcome = false;
+                  if (isNewConversation && channelConfig.welcome_message_enabled && channelConfig.welcome_message) {
+                    try {
+                      console.log("[WA-Webhook] Sending welcome message for new conversation");
+                      const welcomeResp = await fetch(
+                        `${supabaseUrl}/functions/v1/whatsapp-send`,
+                        {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${serviceKey}`,
+                            "apikey": serviceKey,
+                          },
+                          body: JSON.stringify({
+                            clinic_id: clinicId,
+                            to_number: contactPhone,
+                            message_type: "text",
+                            content: channelConfig.welcome_message,
+                            conversation_id: unifiedConv.id,
+                          }),
+                        }
+                      );
+                      const welcomeResult = await welcomeResp.json().catch(() => null);
+                      sentWelcome = !welcomeResult?.error;
+                      console.log("[WA-Webhook] Welcome message:", sentWelcome ? "sent OK" : "failed");
+                    } catch (welcomeErr) {
+                      console.error("[WA-Webhook] Welcome message error:", welcomeErr);
+                    }
+                  }
+
+                  // --- CONTEXTUAL AI REPLY: Always generate a response to the user's question ---
                   const agentResponse = await fetch(
                     `${supabaseUrl}/functions/v1/ai-agent-reply`,
                     {
@@ -221,6 +255,7 @@ Deno.serve(async (req) => {
                         channel: "whatsapp",
                         conversation_id: unifiedConv.id,
                         triggered_by: "auto",
+                        skip_already_replied: sentWelcome,
                       }),
                     }
                   );
@@ -261,7 +296,7 @@ async function syncToUnifiedMessaging(
   content: string,
   messageType: string,
   waMessageId: string
-): Promise<string | null> {
+): Promise<{ conversationId: string; isNew: boolean } | null> {
   try {
     let contactId: string | null = null;
     const { data: existingContact } = await supabase
@@ -293,9 +328,11 @@ async function syncToUnifiedMessaging(
       .maybeSingle();
 
     let conversationId = existingConv?.id;
+    let isNew = false;
     const nowIso = new Date().toISOString();
 
     if (!conversationId) {
+      isNew = true;
       const { data: newConv } = await supabase
         .from("conversations")
         .insert({
@@ -313,7 +350,6 @@ async function syncToUnifiedMessaging(
       conversationId = newConv?.id;
     } else {
       const { data: convData } = await supabase.from("conversations").select("unread_count").eq("id", conversationId).single();
-      // Update last_client_message_at + reset whatsapp window block
       await supabase.from("conversations").update({
         last_message_at: nowIso,
         last_message_preview: content.substring(0, 100),
@@ -336,7 +372,7 @@ async function syncToUnifiedMessaging(
       });
     }
 
-    return conversationId || null;
+    return conversationId ? { conversationId, isNew } : null;
   } catch (err) {
     console.error("[WA-Webhook] Sync to unified error:", err);
     return null;

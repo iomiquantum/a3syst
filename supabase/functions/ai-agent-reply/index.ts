@@ -10,7 +10,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { conversation_id, clinic_id, triggered_by = "manual", channel: requestChannel, draft_only = false, custom_prompt } = await req.json();
+    const { conversation_id, clinic_id, triggered_by = "manual", channel: requestChannel, draft_only = false, custom_prompt, skip_already_replied = false } = await req.json();
     const isFollowUp = triggered_by === "follow_up";
     const isDraft = draft_only === true;
     console.log("ai-agent-reply called:", { conversation_id, clinic_id, triggered_by, isFollowUp, isDraft, requestChannel });
@@ -78,7 +78,7 @@ serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(1);
 
-      if (latestInbound?.[0] && latestOutbound?.[0]) {
+      if (latestInbound?.[0] && latestOutbound?.[0] && !skip_already_replied) {
         const inboundTime = new Date(latestInbound[0].created_at).getTime();
         const outboundTime = new Date(latestOutbound[0].created_at).getTime();
         if (outboundTime > inboundTime) {
@@ -134,7 +134,9 @@ IMPORTANTE:
 - Responde de forma breve y directa (máximo 2-3 oraciones).
 - Usa emojis con moderación.
 - Si no sabes algo, sugiere contactar al negocio directamente.
-- Nunca inventes información sobre servicios o precios que no estén listados arriba.`;
+- Nunca inventes información sobre servicios o precios que no estén listados arriba.
+- Si el cliente ya recibió un mensaje de bienvenida, NO repitas el saludo ni te presentes de nuevo. Ve directo a responder su pregunta o consulta.
+- Cuando el cliente pregunte sobre un servicio o tema específico, responde directamente sobre eso. No des respuestas genéricas.`;
 
     // Follow-up mode: add specific instructions
     if (isFollowUp) {
