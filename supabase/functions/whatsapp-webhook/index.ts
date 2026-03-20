@@ -455,6 +455,7 @@ async function syncToUnifiedMessaging(
         conversation_id: conversationId, clinic_id: clinicId,
         direction: "inbound", content, message_type: messageType,
         whatsapp_message_id: waMessageId, status: "received",
+        media_url: mediaUrl || null,
       });
     }
 
