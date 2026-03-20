@@ -77,6 +77,7 @@ const AdminPipelinePage = () => {
   const [lockStatus, setLockStatus] = useState<{ is_running: boolean; last_completed_at: string | null }>({ is_running: false, last_completed_at: null });
   const [execLogs, setExecLogs] = useState<any[]>([]);
   const [pipelineCounts, setPipelineCounts] = useState<Record<string, number>>({});
+  const [waTemplates, setWaTemplates] = useState<any[]>([]);
 
   const fetchAll = async () => {
     setLoading(true);
