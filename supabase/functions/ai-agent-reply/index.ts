@@ -78,7 +78,7 @@ serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(1);
 
-      if (latestInbound?.[0] && latestOutbound?.[0]) {
+      if (latestInbound?.[0] && latestOutbound?.[0] && !skip_already_replied) {
         const inboundTime = new Date(latestInbound[0].created_at).getTime();
         const outboundTime = new Date(latestOutbound[0].created_at).getTime();
         if (outboundTime > inboundTime) {
