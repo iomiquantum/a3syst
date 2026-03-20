@@ -1006,6 +1006,47 @@ export type Database = {
           },
         ]
       }
+      clinic_services: {
+        Row: {
+          clinic_id: string
+          created_at: string | null
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          price: number | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          price?: number | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_services_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinics: {
         Row: {
           additional_info: string | null
@@ -1301,6 +1342,9 @@ export type Database = {
           appointment_confirmed: boolean | null
           appointment_confirmed_at: string | null
           appointment_date: string | null
+          appointment_flow_active: boolean | null
+          appointment_flow_data: Json | null
+          appointment_flow_step: string | null
           appointment_had_sale: boolean | null
           appointment_reminder_1_sent: boolean | null
           appointment_reminder_1_sent_at: string | null
@@ -1363,6 +1407,9 @@ export type Database = {
           appointment_confirmed?: boolean | null
           appointment_confirmed_at?: string | null
           appointment_date?: string | null
+          appointment_flow_active?: boolean | null
+          appointment_flow_data?: Json | null
+          appointment_flow_step?: string | null
           appointment_had_sale?: boolean | null
           appointment_reminder_1_sent?: boolean | null
           appointment_reminder_1_sent_at?: string | null
@@ -1425,6 +1472,9 @@ export type Database = {
           appointment_confirmed?: boolean | null
           appointment_confirmed_at?: string | null
           appointment_date?: string | null
+          appointment_flow_active?: boolean | null
+          appointment_flow_data?: Json | null
+          appointment_flow_step?: string | null
           appointment_had_sale?: boolean | null
           appointment_reminder_1_sent?: boolean | null
           appointment_reminder_1_sent_at?: string | null
