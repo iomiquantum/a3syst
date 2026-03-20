@@ -327,7 +327,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
       <AppointmentBanner conversation={c} onActionComplete={onActionComplete} />
 
       {/* Anti-spam Banner */}
-      {c.pipeline_tab === "seguimiento_s9" && (c as any).seguimiento_spam_protection_triggered && (
+      {c.pipeline_tab === "no_responden" && (c as any).seguimiento_spam_protection_triggered && (
         <AntiSpamBadge
           consecutiveReadNoReply={(c as any).seguimiento_consecutive_read_no_reply || 0}
           spamProtectionTriggered={true}
