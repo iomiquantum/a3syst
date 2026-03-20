@@ -1131,14 +1131,18 @@ Deno.serve(async (req) => {
 
     // 7.3 Clean old completed items (>30 days)
     const cleanThreshold = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    const { count: cleanedCount } = await supabase
+    const { data: oldItems } = await supabase
       .from("pipeline_message_queue")
-      .delete()
+      .select("id")
       .in("status", ["sent", "cancelled", "resolved_manually"])
       .lt("created_at", cleanThreshold)
-      .select("id", { count: "exact", head: true });
+      .limit(100);
 
-    tarea7Cleaned = cleanedCount || 0;
+    if (oldItems && oldItems.length > 0) {
+      const oldIds = oldItems.map(i => i.id);
+      await supabase.from("pipeline_message_queue").delete().in("id", oldIds);
+      tarea7Cleaned = oldIds.length;
+    }
 
     if (tarea7Orphans + tarea7Stale + tarea7Cleaned > 0) {
       console.log(`[PIPELINE] Cleanup: ${tarea7Orphans} orphans, ${tarea7Stale} stale, ${tarea7Cleaned} old records`);
