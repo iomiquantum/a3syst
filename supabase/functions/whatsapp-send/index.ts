@@ -207,6 +207,7 @@ async function logOutboundMessage(
       whatsapp_message_id: waMessageId,
       status: "sent",
       sent_by: sentBy || null,
+      origin: origin || (sentBy ? "human" : "ai_agent"),
     });
     const conversationUpdate: Record<string, unknown> = {
       last_message_at: new Date().toISOString(),
