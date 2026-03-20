@@ -256,7 +256,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                 {isBotMessage(m) && (
                   <div className="flex items-center gap-1 mb-1">
                     <Bot className="w-3 h-3 text-violet-500" />
-                    <span className="text-[10px] font-medium text-violet-500">Asistente IA</span>
+                    <span className="text-[9px] font-medium text-violet-500">{agentName}</span>
                   </div>
                 )}
                 <p className="leading-relaxed whitespace-pre-wrap">{m.content}</p>
