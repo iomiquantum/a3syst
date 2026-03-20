@@ -74,7 +74,7 @@ interface Params {
 
 const ALL_SEGUIMIENTO_TABS = [
   "seguimiento_s1", "seguimiento_s2", "seguimiento_s3", "seguimiento_s4", "seguimiento_s5",
-  "seguimiento_s6", "seguimiento_s7", "seguimiento_s8", "seguimiento_s9", "seguimiento_s10",
+  "seguimiento_s6",
 ];
 
 export const useConversationsByPipeline = (params: Params) => {

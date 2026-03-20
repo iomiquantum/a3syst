@@ -47,14 +47,14 @@ export const usePipelineStats = () => {
     setTabCounts(counts);
 
     const segTotal = ALL_SEG_KEYS.reduce((s, k) => s + (counts[k] || 0), 0);
-    const s1_s8 = ALL_SEG_KEYS.slice(0, 8).reduce((s, k) => s + (counts[k] || 0), 0);
-    const s9_s10 = (counts["seguimiento_s9"] || 0) + (counts["seguimiento_s10"] || 0);
+    const s1_s4 = ALL_SEG_KEYS.slice(0, 4).reduce((s, k) => s + (counts[k] || 0), 0);
+    const s5_s6 = (counts["seguimiento_s5"] || 0) + (counts["seguimiento_s6"] || 0);
 
     setResumenStats({
       respondidos: (counts.resueltos_ia || 0) + (counts.pacientes || 0),
       escalados: counts.escalados || 0,
       convertidos: counts.pacientes || 0,
-      seguimiento: { total: segTotal, s1_s8, s9_s10 },
+      seguimiento: { total: segTotal, s1_s4, s5_s6 },
       noResponden: counts.no_responden || 0,
     });
 
