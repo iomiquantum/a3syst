@@ -1,15 +1,12 @@
-// Default constants for the send window (clinic local time)
-const DEFAULT_WINDOW_START = 7;  // 7 AM
-const DEFAULT_WINDOW_END = 23;   // 11 PM
+const DEFAULT_WINDOW_START = 7;
+const DEFAULT_WINDOW_END = 23;
 const DEFAULT_TZ = "America/Guayaquil";
 
 export interface CountdownState {
   label: string;
   expired: boolean;
   totalSeconds: number;
-  /** Visual mode for the badge */
   mode: "active" | "active_will_pause" | "paused" | "sends_on_resume" | "processing" | "pending";
-  /** Extra info line (e.g. "pausa a las 11 PM") */
   subLabel?: string;
 }
 
@@ -28,7 +25,6 @@ function getLocalHour(tz: string = DEFAULT_TZ): number {
 }
 
 function getNextLocalTime(tz: string, targetHour: number): Date {
-  // Build an approximate UTC date for the target hour in the given TZ
   const now = new Date();
   const localParts = new Intl.DateTimeFormat("en-CA", {
     timeZone: tz,
@@ -52,7 +48,6 @@ function getNextLocalTime(tz: string, targetHour: number): Date {
   let targetDay = day;
   if (localHour >= targetHour) targetDay += 1;
 
-  // Build target in "local as UTC" then convert via iterative offset
   let utcMs = Date.UTC(year, month - 1, targetDay, targetHour, 0, 0);
   for (let i = 0; i < 4; i++) {
     const checkParts = new Intl.DateTimeFormat("en-CA", {
@@ -97,10 +92,9 @@ export function formatTargetCountdown(
   const msRemaining = new Date(targetIso).getTime() - Date.now();
   const remainingSeconds = msRemaining / 1000;
 
-  // Expired states
   if (remainingSeconds <= 0) {
     if (remainingSeconds < -60) {
-      return { label: "Pendiente", expired: true, totalSeconds: remainingSeconds, mode: "pending" };
+      return { label: "En cola", expired: true, totalSeconds: remainingSeconds, mode: "pending" };
     }
     return { label: "Procesando...", expired: true, totalSeconds: remainingSeconds, mode: "processing" };
   }
@@ -109,11 +103,10 @@ export function formatTargetCountdown(
   const isInPause = localHour >= windowEnd || localHour < windowStart;
 
   if (isInPause) {
-    // We're in the pause window
     const resumeTime = getNextLocalTime(tz, windowStart);
     const msAfterResume = new Date(targetIso).getTime() - resumeTime.getTime();
-
     const resumeLabel = `${windowStart}:00 AM`;
+
     if (msAfterResume > 0) {
       const afterResumeSeconds = msAfterResume / 1000;
       return {
@@ -123,23 +116,20 @@ export function formatTargetCountdown(
         mode: "paused",
         subLabel: `quedan ${formatTime(afterResumeSeconds)}`,
       };
-    } else {
-      return {
-        label: `⏸ Se envía a las ${resumeLabel}`,
-        expired: false,
-        totalSeconds: remainingSeconds,
-        mode: "sends_on_resume",
-      };
     }
+
+    return {
+      label: `⏸ Se envía a las ${resumeLabel}`,
+      expired: false,
+      totalSeconds: remainingSeconds,
+      mode: "sends_on_resume",
+    };
   }
 
-  // We're in the active window — check if countdown will cross the pause boundary
   const pauseTime = getNextLocalTime(tz, windowEnd);
-  // Since we're in active window, localHour < windowEnd, so getNextLocalTime returns today's end hour.
   const msUntilPause = pauseTime.getTime() - Date.now();
 
   if (msRemaining <= msUntilPause) {
-    // Sends today, before 11PM — normal countdown
     return {
       label: formatTime(remainingSeconds),
       expired: false,
@@ -148,7 +138,6 @@ export function formatTargetCountdown(
     };
   }
 
-  // Countdown will cross the pause — show with note
   return {
     label: formatTime(remainingSeconds),
     expired: false,
@@ -164,7 +153,7 @@ export function formatElapsedTimeoutCountdown(startIso: string, timeoutMinutes: 
 
   if (remainingSeconds <= 0) {
     if (remainingSeconds < -60) {
-      return { label: "Pendiente", expired: true, totalSeconds: remainingSeconds, mode: "pending" };
+      return { label: "En cola", expired: true, totalSeconds: remainingSeconds, mode: "pending" };
     }
     return { label: "Procesando...", expired: true, totalSeconds: remainingSeconds, mode: "processing" };
   }

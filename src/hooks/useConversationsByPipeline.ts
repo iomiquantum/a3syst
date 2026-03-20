@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
 
@@ -52,7 +52,9 @@ export interface PipelineConversation {
   contactTags: string[];
   contactEmail: string;
   inactivity_timer_start: string | null;
-  // Appointment fields
+  last_client_message_at: string | null;
+  whatsapp_window_blocked: boolean;
+  whatsapp_window_blocked_reason: string | null;
   appointment_date: string | null;
   appointment_time: string | null;
   appointment_service: string | null;
@@ -95,10 +97,8 @@ export const useConversationsByPipeline = (params: Params) => {
       .order("pinned", { ascending: false })
       .order("last_message_at", { ascending: false });
 
-    // Pipeline filter
     if (params.pipelineTab !== "todos") {
       if (params.pipelineTab === "seguimiento_s1") {
-        // "Seguimiento" tab groups S1-S10
         if (params.subFilter && params.subFilter !== "todos") {
           query = query.eq("pipeline_tab", params.subFilter);
         } else {
@@ -114,12 +114,10 @@ export const useConversationsByPipeline = (params: Params) => {
       }
     }
 
-    // Channel filter
     if (params.channel !== "todos") {
       query = query.eq("channel", params.channel);
     }
 
-    // Period filter
     if (params.periodStart) {
       query = query.gte("last_message_at", params.periodStart);
     }
@@ -141,7 +139,7 @@ export const useConversationsByPipeline = (params: Params) => {
       status: c.status,
       last_message_at: c.last_message_at,
       last_message_preview: c.last_message_preview || "",
-      last_outbound_status: null, // will be populated below if needed
+      last_outbound_status: null,
       unread_count: c.unread_count || 0,
       chatbot_active: c.chatbot_active,
       pipeline_tab: c.pipeline_tab || "resueltos_ia",
@@ -157,6 +155,9 @@ export const useConversationsByPipeline = (params: Params) => {
       seguimiento_spam_jumped_from_s: c.seguimiento_spam_jumped_from_s ?? null,
       pinned: c.pinned || false,
       inactivity_timer_start: c.inactivity_timer_start || null,
+      last_client_message_at: c.last_client_message_at || null,
+      whatsapp_window_blocked: c.whatsapp_window_blocked || false,
+      whatsapp_window_blocked_reason: c.whatsapp_window_blocked_reason || null,
       contactName: c.contacts?.name || c.visitor_name || "Sin nombre",
       contactPhone: c.contacts?.phone || c.visitor_contact || "",
       contactTags: c.contacts?.tags || [],
@@ -171,15 +172,13 @@ export const useConversationsByPipeline = (params: Params) => {
       appointment_branch_id: c.appointment_branch_id || null,
     }));
 
-    // Client-side tag filter
     if (params.tags.length > 0) {
-      mapped = mapped.filter(c => params.tags.some(t => c.contactTags.includes(t)));
+      mapped = mapped.filter((c) => params.tags.some((t) => c.contactTags.includes(t)));
     }
 
-    // Client-side search
     if (params.searchQuery.trim()) {
       const q = params.searchQuery.toLowerCase();
-      mapped = mapped.filter(c =>
+      mapped = mapped.filter((c) =>
         c.contactName.toLowerCase().includes(q) ||
         c.contactPhone.toLowerCase().includes(q)
       );
@@ -194,7 +193,6 @@ export const useConversationsByPipeline = (params: Params) => {
     fetchConversations();
   }, [clinicId, params.pipelineTab, params.channel, params.tags.join(","), params.searchQuery, params.periodStart, params.periodEnd, params.showArchived, params.subFilter]);
 
-  // Realtime subscription
   useEffect(() => {
     if (!clinicId) return;
     const channel = supabase
@@ -209,7 +207,9 @@ export const useConversationsByPipeline = (params: Params) => {
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [clinicId]);
 
   return { conversations, loading, refetch: fetchConversations };
