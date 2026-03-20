@@ -16,8 +16,6 @@ interface Props {
 
 const PROGRESS_STEPS = [
   { key: "agendado", label: "Agendado" },
-  { key: "reminder_1_sent", label: "R1" },
-  { key: "reminder_2_sent", label: "R2" },
   { key: "confirmado", label: "Confirmado" },
   { key: "asistio", label: "Asistió" },
   { key: "show_con_venta", label: "Venta" },
@@ -25,8 +23,6 @@ const PROGRESS_STEPS = [
 
 const STATUS_COLORS: Record<string, string> = {
   agendado: "bg-emerald-500",
-  reminder_1_sent: "bg-blue-500",
-  reminder_2_sent: "bg-blue-600",
   confirmado: "bg-emerald-600",
   asistio: "bg-teal-500",
   show_con_venta: "bg-emerald-700",
