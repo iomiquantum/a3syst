@@ -699,6 +699,7 @@ CONTEXTO DE MOVIMIENTO:
 
 CONVERSACIÓN COMPLETA (últimos 20 mensajes):
 ${messagesContext}
+${clinicKnowledgeBlock}
 
 INFORMACIÓN DEL CONTACTO:
 - Nombre: ${contactName}
@@ -727,6 +728,7 @@ REGLAS GLOBALES INQUEBRANTABLES:
 11. Si es S7 o S8: el tono es empático y de despedida, SIN preguntas
 12. NUNCA sugieras "agendar una llamada" ni "llamar" — la comunicación es por MENSAJES. Ofrece agendar una CITA presencial o resolver dudas por este medio.
 13. NUNCA inventes números exactos de cupos (ej. "quedan 2 cupos"). Usa "pocos cupos" o "espacios limitados". Ofrece DÍAS disponibles, NUNCA horarios específicos.
+14. SOLO menciona servicios, tratamientos y precios que aparezcan en la INFORMACIÓN REAL DEL NEGOCIO. NUNCA inventes servicios que no existan (ej. NO digas "limpieza facial" si no está en la lista).
 
 Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aquí tienes el mensaje:".`;
         } else {
