@@ -326,6 +326,98 @@ const AdminPipelinePage = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* WhatsApp Templates Tab */}
+          <TabsContent value="templates" className="space-y-6 mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Estado de WhatsApp Templates</CardTitle>
+                <CardDescription>Templates HSM utilizados cuando la ventana de 24h de WhatsApp está cerrada</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {(() => {
+                  const unapproved = waTemplates.filter(t => !t.meta_approved);
+                  if (unapproved.length > 0) {
+                    return (
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
+                        <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                        <p className="text-sm text-amber-700 dark:text-amber-300">
+                          Tienes <strong>{unapproved.length}</strong> templates pendientes de aprobación en Meta. Sin ellos, los mensajes no se pueden enviar a contactos cuya ventana de 24h haya expirado.
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {waTemplates.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No hay templates configurados</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nombre</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Estado</TableHead>
+                        <TableHead>Meta Template ID</TableHead>
+                        <TableHead>Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {waTemplates.map((t: any) => (
+                        <TableRow key={t.id}>
+                          <TableCell className="text-sm font-medium">{t.template_name}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{t.template_type}</TableCell>
+                          <TableCell>
+                            {t.meta_approved ? (
+                              <Badge className="bg-emerald-500/20 text-emerald-600 text-xs"><CheckCircle2 className="w-3 h-3 mr-1" />Aprobado</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-amber-600 text-xs"><Clock className="w-3 h-3 mr-1" />Pendiente</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              placeholder="ej: seguimiento_consulta_es"
+                              defaultValue={t.meta_template_id || ""}
+                              className="w-48 text-xs"
+                              onBlur={async (e) => {
+                                const val = e.target.value.trim();
+                                if (val !== (t.meta_template_id || "")) {
+                                  await (supabase as any).from("whatsapp_templates").update({ meta_template_id: val, updated_at: new Date().toISOString() }).eq("id", t.id);
+                                  toast.success("Template ID actualizado");
+                                }
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant={t.meta_approved ? "outline" : "default"}
+                              onClick={async () => {
+                                await (supabase as any).from("whatsapp_templates").update({ meta_approved: !t.meta_approved, updated_at: new Date().toISOString() }).eq("id", t.id);
+                                toast.success(t.meta_approved ? "Marcado como pendiente" : "Marcado como aprobado");
+                                fetchAll();
+                              }}
+                            >
+                              {t.meta_approved ? "Desmarcar" : "✓ Marcar aprobado"}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+
+                <div className="border-t border-border pt-4">
+                  <p className="text-xs text-muted-foreground">
+                    <strong>¿Cómo funciona?</strong> Cuando un contacto no ha enviado un mensaje en más de 24 horas, WhatsApp no permite enviar mensajes libres.
+                    En ese caso, el sistema envía un Template Message (HSM) previamente aprobado por Meta para reabrir la conversación.
+                    Ventana de envío: <strong>7:00 AM — 11:00 PM</strong>.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
     </AppLayout>
