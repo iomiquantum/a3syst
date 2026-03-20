@@ -154,7 +154,7 @@ export function formatTargetCountdown(
     expired: false,
     totalSeconds: remainingSeconds,
     mode: "active_will_pause",
-    subLabel: "pausa a las 11 PM",
+    subLabel: `pausa a las ${windowEnd > 12 ? windowEnd - 12 : windowEnd} ${windowEnd >= 12 ? "PM" : "AM"}`,
   };
 }
 
