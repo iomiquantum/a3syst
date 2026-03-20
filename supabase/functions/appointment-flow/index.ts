@@ -144,13 +144,6 @@ Responde SOLO JSON válido:
         return jsonResponse({ error: "Flow not active" });
       }
 
-      // Fetch clinic services
-      const { data: services } = await supabase
-        .from("clinic_services")
-        .select("name, description, duration_minutes, price")
-        .eq("clinic_id", clinic_id)
-        .eq("is_active", true);
-
       // Fetch branches
       const { data: branches } = await supabase
         .from("branches")
@@ -158,10 +151,10 @@ Responde SOLO JSON válido:
         .eq("clinic_id", clinic_id)
         .eq("active", true);
 
-      // Fetch agent config
+      // Fetch agent config (PRIMARY source for services, treatments, prices)
       const { data: agentConfig } = await supabase
         .from("ai_agent_config")
-        .select("agent_name")
+        .select("agent_name, services, treatments_text, prices_text, locations_text, professionals_text, special_instructions")
         .eq("clinic_id", clinic_id)
         .maybeSingle();
 
@@ -175,9 +168,21 @@ Responde SOLO JSON válido:
       const agentName = agentConfig?.agent_name || "Asistente";
       const clinicName = clinic?.name || "nuestro negocio";
 
-      const servicesText = (services || []).map(s =>
-        `• ${s.name}${s.price ? ` — $${s.price}` : ""}${s.duration_minutes ? ` (${s.duration_minutes} min)` : ""}`
-      ).join("\n") || "(sin servicios configurados)";
+      // Build services text from ai_agent_config (primary source)
+      const agentServices = (agentConfig?.services || []) as { name: string; price: string; description: string }[];
+      let servicesText = agentServices.map(s =>
+        `• ${s.name}${s.price ? ` — $${s.price}` : ""}${s.description ? ` — ${s.description}` : ""}`
+      ).join("\n");
+
+      // Add treatments and prices from agent config
+      if (agentConfig?.treatments_text) {
+        servicesText += (servicesText ? "\n\n" : "") + "TRATAMIENTOS:\n" + agentConfig.treatments_text;
+      }
+      if (agentConfig?.prices_text) {
+        servicesText += (servicesText ? "\n\n" : "") + "PRECIOS:\n" + agentConfig.prices_text;
+      }
+
+      if (!servicesText) servicesText = "(sin servicios configurados)";
 
       const branchesText = (branches || []).map(b => `• ${b.name}: ${b.address || ""}`)
         .join("\n") || "(sin sucursales)";
