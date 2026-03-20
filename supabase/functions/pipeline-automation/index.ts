@@ -536,9 +536,7 @@ Deno.serve(async (req) => {
         const readNoReplyCount = fresh.seguimiento_consecutive_read_no_reply || 0;
         if (readNoReplyCount >= spamLimit) {
           await supabase.from("conversations").update({
-            pipeline_tab: "seguimiento_s9",
-            seguimiento_contact_number: 9,
-            seguimiento_next_s: 9,
+            pipeline_tab: "no_responden",
             seguimiento_next_contact_at: null,
             seguimiento_spam_protection_triggered: true,
             seguimiento_spam_jumped_from_s: contactNumber,
@@ -546,11 +544,11 @@ Deno.serve(async (req) => {
 
           await supabase.from("conversation_pipeline_history").insert({
             conversation_id: conv.id, clinic_id: conv.clinic_id,
-            from_tab: `seguimiento_s${contactNumber}`, to_tab: "seguimiento_s9",
+            from_tab: `seguimiento_s${contactNumber}`, to_tab: "no_responden",
             moved_by: "system",
             reason: `Protección anti-spam: ${readNoReplyCount} lecturas sin responder`,
           });
-          console.log(`[PIPELINE SPAM] Conv ${conv.id} jumped S${contactNumber} → S9`);
+          console.log(`[PIPELINE SPAM] Conv ${conv.id} jumped S${contactNumber} → no_responden`);
           continue;
         }
 
