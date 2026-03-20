@@ -223,6 +223,21 @@ serve(async (req) => {
 
     // ====== NORMAL AI REPLY FLOW (unchanged) ======
     if (!isManualTrigger) {
+      // Check channel-level autopilot
+      const convChannel = conversationData.channel || requestChannel || "web_chat";
+      const { data: channelPromptCheck } = await supabase
+        .from("ai_agent_channel_prompts")
+        .select("enabled")
+        .eq("clinic_id", clinic_id)
+        .eq("channel", convChannel)
+        .maybeSingle();
+
+      if (channelPromptCheck && channelPromptCheck.enabled === false) {
+        return new Response(JSON.stringify({ skipped: true, reason: "channel autopilot disabled" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const { data: claimed, error: claimError } = await supabase
         .from("conversations")
         .update({ last_message_at: new Date().toISOString() })
