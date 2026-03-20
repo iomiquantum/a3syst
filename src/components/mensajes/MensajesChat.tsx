@@ -13,6 +13,7 @@ import ChatToolbar from "./ChatToolbar";
 import { usePipelineAction } from "@/hooks/usePipelineAction";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
+import { useAgentName } from "@/hooks/useAgentName";
 import { useAuth } from "@/hooks/useAuth";
 import { useClinicTemplate } from "@/hooks/useClinicTemplate";
 import ClinicChatActions from "./ClinicChatActions";
