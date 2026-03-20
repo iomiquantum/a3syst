@@ -301,7 +301,7 @@ const AdminPlantillaEditorPage = () => {
               onChange={e => setAutomationRules(e.target.value)}
               rows={6}
               className="font-mono text-xs"
-              placeholder='[{"when": "pipeline_tab = seguimiento_venta", "condition": "show_result = no_show", "action": "move_to seguimiento_c1"}]'
+              placeholder='[{"when": "pipeline_tab = agendados", "condition": "show_result = no_show", "action": "move_to seguimiento_s1"}]'
             />
             <p className="text-xs text-muted-foreground mt-1">JSON con las reglas de automatización específicas de esta plantilla</p>
           </CardContent>

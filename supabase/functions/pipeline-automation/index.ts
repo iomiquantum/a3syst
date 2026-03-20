@@ -594,7 +594,7 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
   };
 
   await supabase.from("pipeline_execution_log").insert({
-    moved_to_c1: tarea1Count,
+    moved_to_seguimiento: tarea1Count,
     messages_sent: tarea2Sent,
     moved_to_no_responden: tarea2NoResponden,
     inconsistencies_fixed: tarea3Fixed,

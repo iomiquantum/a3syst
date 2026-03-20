@@ -26,23 +26,31 @@ interface RuleField {
 }
 
 const RULE_FIELDS: RuleField[] = [
-  { key: "inactivity_timeout_minutes", label: "Tiempo de inactividad", description: "Después de que la IA responde, si el cliente no escribe en este tiempo, pasa a Contacto 1", default: 30, unit: "minutes" },
-  { key: "c1_delay_minutes", label: "Delay Contacto 1", description: "Tiempo después de la inactividad para enviar el primer mensaje de seguimiento", default: 60, unit: "minutes" },
-  { key: "c2_delay_minutes", label: "Delay Contacto 2", description: "Tiempo después de C1 sin respuesta para enviar el segundo mensaje", default: 240, unit: "minutes" },
-  { key: "c3_delay_minutes", label: "Delay Contacto 3", description: "Tiempo después de C2 sin respuesta para enviar el último mensaje automático", default: 720, unit: "minutes" },
-  { key: "max_auto_contacts", label: "Contactos automáticos máximos", description: "Después de este número de contactos sin respuesta, se mueve a 'No responden'", default: 3, unit: "count", min: 1, max: 10 },
+  { key: "inactivity_timeout_minutes", label: "Tiempo de inactividad", description: "Después de que la IA responde, si el cliente no escribe en este tiempo, pasa a S1", default: 15, unit: "minutes" },
+  { key: "s1_delay_minutes", label: "Delay S1", description: "Tiempo para enviar primer seguimiento automático", default: 15, unit: "minutes" },
+  { key: "s2_delay_minutes", label: "Delay S2", description: "Tiempo después de S1 sin respuesta", default: 30, unit: "minutes" },
+  { key: "s3_delay_minutes", label: "Delay S3", description: "Tiempo después de S2 sin respuesta", default: 30, unit: "minutes" },
+  { key: "s4_delay_minutes", label: "Delay S4", description: "Tiempo después de S3 sin respuesta", default: 60, unit: "minutes" },
+  { key: "s5_delay_minutes", label: "Delay S5", description: "Tiempo después de S4 sin respuesta", default: 120, unit: "minutes" },
+  { key: "s6_delay_minutes", label: "Delay S6", description: "Tiempo después de S5 sin respuesta", default: 240, unit: "minutes" },
+  { key: "s7_delay_minutes", label: "Delay S7", description: "Tiempo después de S6 sin respuesta", default: 720, unit: "minutes" },
+  { key: "s8_delay_minutes", label: "Delay S8", description: "Último seguimiento automático IA", default: 30, unit: "minutes" },
+  { key: "max_auto_contacts", label: "Contactos automáticos máximos", description: "Después de este número sin respuesta, se mueve a 'No responden'", default: 10, unit: "count", min: 1, max: 10 },
   { key: "recurrente_max_cycles", label: "Ciclos recurrentes máximos", description: "Cuántas veces un contacto puede reingresar al seguimiento. 0 = sin límite", default: 0, unit: "count", min: 0 },
 ];
 
 const PIPELINE_STATES = [
-  { state: "Resueltos IA", desc: "La IA respondió y el timer de inactividad está corriendo", movedBy: "Sistema (automático)", goesTo: "Seguimiento C1" },
-  { state: "Seguimiento C1", desc: "Primer mensaje de re-engagement enviado", movedBy: "Sistema (timer)", goesTo: "C2 o Resueltos IA" },
-  { state: "Seguimiento C2", desc: "Segundo mensaje de re-engagement", movedBy: "Sistema (timer)", goesTo: "C3 o Resueltos IA" },
-  { state: "Seguimiento C3", desc: "Tercer y último mensaje automático", movedBy: "Sistema (timer)", goesTo: "No responden o Resueltos IA" },
+  { state: "Resueltos IA", desc: "La IA respondió y el timer de inactividad está corriendo", movedBy: "Sistema (automático)", goesTo: "Seguimiento S1" },
+  { state: "Seguimiento S1-S8", desc: "Seguimiento automático con estrategias psicológicas (IA)", movedBy: "Sistema (timer)", goesTo: "Siguiente S o No responden" },
+  { state: "Seguimiento S9-S10", desc: "Seguimiento manual por agente humano", movedBy: "Agente humano", goesTo: "Agendados o Perdidos" },
   { state: "No responden", desc: "Sin respuesta después de todos los contactos", movedBy: "Sistema", goesTo: "Resueltos IA (si responde)" },
-  { state: "No interesado", desc: "Marcado manualmente como no interesado", movedBy: "Operador manual", goesTo: "Sticky (no se mueve)" },
-  { state: "Escalados", desc: "Requiere atención humana", movedBy: "Operador manual", goesTo: "Sticky (no se mueve)" },
-  { state: "Clientes", desc: "Convertido a cliente", movedBy: "Operador manual", goesTo: "Sticky (no se mueve)" },
+  { state: "Agendados", desc: "Cita programada con recordatorios automáticos", movedBy: "Operador manual", goesTo: "Show/No-show" },
+  { state: "No-show", desc: "No asistió a la cita, reinicia seguimiento", movedBy: "Operador manual", goesTo: "Seguimiento S1 (recurrente)" },
+  { state: "Show sin venta", desc: "Asistió pero no compró", movedBy: "Operador manual", goesTo: "Reconversión" },
+  { state: "No interesado", desc: "Marcado manualmente como no interesado", movedBy: "Operador manual", goesTo: "Terminal" },
+  { state: "Escalados", desc: "Requiere atención especial", movedBy: "Operador manual", goesTo: "Terminal" },
+  { state: "Pacientes", desc: "Convertido a paciente/cliente", movedBy: "Operador manual", goesTo: "Terminal" },
+  { state: "Perdidos", desc: "Perdido, opción de reingreso", movedBy: "Operador manual", goesTo: "Resueltos IA (reingreso)" },
 ];
 
 function formatMinutes(min: number): string {
@@ -254,7 +262,7 @@ const AdminPipelinePage = () => {
                 {/* Pipeline Counts */}
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Conversaciones en el pipeline</p>
-                  {["resueltos_ia", "seguimiento_c1", "seguimiento_c2", "seguimiento_c3", "no_responden", "no_interesado", "escalados", "clientes"].map(tab => (
+                  {["resueltos_ia", "seguimiento_s1", "seguimiento_s2", "seguimiento_s3", "seguimiento_s4", "seguimiento_s5", "seguimiento_s6", "seguimiento_s7", "seguimiento_s8", "seguimiento_s9", "seguimiento_s10", "no_responden", "agendados", "no_show", "show_sin_venta", "no_interesado", "escalados", "pacientes", "perdidos"].map(tab => (
                     <div key={tab} className="flex items-center gap-2">
                       <span className="text-xs w-32 text-muted-foreground capitalize">{tab.replace(/_/g, " ")}</span>
                       <div className="flex-1 bg-muted rounded-full h-4 overflow-hidden">
