@@ -167,14 +167,16 @@ Deno.serve(async (req) => {
             last_message_at: new Date().toISOString(),
           }).eq("id", conversation.id);
 
-          const unifiedConvId = await syncToUnifiedMessaging(supabase, clinicId, contactPhone, contactName, content, messageType, msg.id);
+          const syncResult = await syncToUnifiedMessaging(supabase, clinicId, contactPhone, contactName, content, messageType, msg.id);
+          const unifiedConvId = syncResult?.conversationId || null;
+          const isNewConversation = syncResult?.isNew || false;
 
           // === PIPELINE: Handle inbound message transitions ===
           if (unifiedConvId) {
             await handleIncomingMessagePipeline(supabase, unifiedConvId, clinicId);
           }
 
-          console.log("[WA-Webhook] Message processed:", { contactPhone, conversationId: conversation.id });
+          console.log("[WA-Webhook] Message processed:", { contactPhone, conversationId: conversation.id, isNewConversation });
 
           // --- AUTO-RESPUESTA DEL AGENTE IA ---
           if (messageType === "text" && content) {
