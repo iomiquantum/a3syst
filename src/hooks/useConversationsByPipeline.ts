@@ -41,6 +41,7 @@ export interface PipelineConversation {
   seguimiento_last_completed_s: number;
   seguimiento_next_s: number;
   seguimiento_responded_at_s: number;
+  seguimiento_next_contact_at: string | null;
   pinned: boolean;
   contactName: string;
   contactPhone: string;
