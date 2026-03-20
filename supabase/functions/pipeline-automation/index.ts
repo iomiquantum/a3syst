@@ -32,8 +32,10 @@ function sleep(ms: number): Promise<void> {
 }
 
 function getBatchHumanDelayMs(messageContent: string, enabled: boolean, workload: number): number {
-  if (!enabled || workload > MAX_BATCH_SIZE_FOR_HUMAN_DELAY) return 0;
-  return Math.min(calculateHumanDelay(messageContent), MAX_BATCH_HUMAN_DELAY_MS);
+  void messageContent;
+  void enabled;
+  void workload;
+  return 0;
 }
 
 interface ZonedDateParts {
@@ -186,6 +188,20 @@ function getTemplateType(context: string): string {
   return "seguimiento_general";
 }
 
+async function clearWhatsAppBlockedState(
+  supabase: ReturnType<typeof createClient>,
+  conversationId: string,
+) {
+  await supabase
+    .from("conversations")
+    .update({
+      whatsapp_window_blocked: false,
+      whatsapp_window_blocked_at: null,
+      whatsapp_window_blocked_reason: null,
+    })
+    .eq("id", conversationId);
+}
+
 /** Send a WhatsApp message, using template if 24h window is closed */
 async function sendWhatsAppMessageSmart(
   supabase: ReturnType<typeof createClient>,
@@ -240,6 +256,8 @@ async function sendWhatsAppMessageSmart(
       console.error(`[WHATSAPP] Send failed for conv ${conv.id}`);
       return { sent: false, type: "error", reason: "send_failed" };
     }
+
+    await clearWhatsAppBlockedState(supabase, conv.id);
     return { sent: true, type: "free_form" };
   }
 
@@ -318,6 +336,7 @@ async function sendWhatsAppMessageSmart(
     return { sent: false, type: "error", reason: "template_send_failed" };
   }
 
+  await clearWhatsAppBlockedState(supabase, conv.id);
   return { sent: true, type: "template" };
 }
 
@@ -399,6 +418,24 @@ Deno.serve(async (req) => {
       const tz = data?.timezone || "America/Guayaquil";
       clinicTimezoneCache[clinicId] = tz;
       return tz;
+    }
+
+    const templateApprovalCache: Record<string, boolean> = {};
+    async function hasApprovedTemplate(clinicId: string, templateType: string): Promise<boolean> {
+      const cacheKey = `${clinicId}:${templateType}`;
+      if (cacheKey in templateApprovalCache) return templateApprovalCache[cacheKey];
+
+      const { data: template } = await supabase
+        .from("whatsapp_templates")
+        .select("meta_approved")
+        .eq("clinic_id", clinicId)
+        .eq("template_type", templateType)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      const approved = Boolean(template?.meta_approved);
+      templateApprovalCache[cacheKey] = approved;
+      return approved;
     }
 
     // ========== TAREA 1: Inactivity timeout ==========
@@ -489,6 +526,25 @@ Deno.serve(async (req) => {
         if (isManualStep) {
           console.log(`[PIPELINE] S${contactNumber} is manual, skipping auto-send for conv ${conv.id}`);
           continue;
+        }
+
+        const sendContext = "seguimiento";
+        const templateType = getTemplateType(sendContext);
+        const windowOpen = conv.channel !== "whatsapp" || isWhatsAppWindowOpen(conv.last_client_message_at || null);
+
+        if (!windowOpen) {
+          const templateApproved = await hasApprovedTemplate(conv.clinic_id, templateType);
+          if (!templateApproved) {
+            const retryAt = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
+            await supabase.from("conversations").update({
+              whatsapp_window_blocked: true,
+              whatsapp_window_blocked_at: new Date().toISOString(),
+              whatsapp_window_blocked_reason: `template_${templateType}_not_approved`,
+              seguimiento_next_contact_at: retryAt,
+            }).eq("id", conv.id);
+            console.warn(`[PIPELINE] Pre-check blocked (template '${templateType}' not approved) for conv ${conv.id}, retrying at ${retryAt}`);
+            continue;
+          }
         }
 
         // Get strategy for this contact number
@@ -637,16 +693,16 @@ Responde SOLO con el texto del mensaje. Sin comillas, sin explicación, sin "Aqu
             contact_id: conv.contact_id,
             last_client_message_at: conv.last_client_message_at,
           },
-          messageContent, "seguimiento", agentName,
+          messageContent, sendContext, agentName,
         );
 
         if (!sendResult.sent) {
           if (sendResult.type === "blocked") {
-            // Don't advance pipeline, retry in 1 hour
+            const retryAt = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
             await supabase.from("conversations").update({
-              seguimiento_next_contact_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+              seguimiento_next_contact_at: retryAt,
             }).eq("id", conv.id);
-            console.log(`[PIPELINE] Send blocked (template not approved) for conv ${conv.id}, retrying in 1h`);
+            console.log(`[PIPELINE] Send blocked (template not approved) for conv ${conv.id}, retrying at ${retryAt}`);
           }
           continue;
         }
