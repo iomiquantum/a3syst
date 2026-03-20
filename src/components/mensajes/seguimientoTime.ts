@@ -88,7 +88,12 @@ function formatTime(totalSeconds: number): string {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-export function formatTargetCountdown(targetIso: string, tz: string = DEFAULT_TZ): CountdownState {
+export function formatTargetCountdown(
+  targetIso: string,
+  tz: string = DEFAULT_TZ,
+  windowStart: number = DEFAULT_WINDOW_START,
+  windowEnd: number = DEFAULT_WINDOW_END,
+): CountdownState {
   const msRemaining = new Date(targetIso).getTime() - Date.now();
   const remainingSeconds = msRemaining / 1000;
 
@@ -101,7 +106,7 @@ export function formatTargetCountdown(targetIso: string, tz: string = DEFAULT_TZ
   }
 
   const localHour = getLocalHour(tz);
-  const isInPause = localHour >= WINDOW_END || localHour < WINDOW_START;
+  const isInPause = localHour >= windowEnd || localHour < windowStart;
 
   if (isInPause) {
     // We're in the pause window (11PM-7AM)
