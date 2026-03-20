@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
     }
 
     const waMessageId = metaResult?.messages?.[0]?.id;
-    await logOutboundMessage(supabase, connection, effectiveClinicId, targetNumber, msgType, msgContent, waMessageId, sent_by, conversation_id, template_name);
+    await logOutboundMessage(supabase, connection, effectiveClinicId, targetNumber, msgType, msgContent, waMessageId, sent_by, conversation_id, template_name, origin);
 
     return jsonResponse({ success: true, wa_message_id: waMessageId });
   } catch (err) {
