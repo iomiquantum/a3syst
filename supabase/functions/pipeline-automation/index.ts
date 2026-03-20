@@ -410,14 +410,66 @@ Deno.serve(async (req) => {
       .order("contact_number", { ascending: true });
     const strategiesMap: Record<number, any> = {};
     (strategiesRows || []).forEach((s: any) => { strategiesMap[s.contact_number] = s; });
-    // Cache clinic timezones to avoid repeated queries
+    // Cache clinic config to avoid repeated queries
     const clinicTimezoneCache: Record<string, string> = {};
+    const clinicDelayCache: Record<string, number> = {};
+    const clinicAgentNameCache: Record<string, string> = {};
+
     async function getClinicTimezone(clinicId: string): Promise<string> {
       if (clinicTimezoneCache[clinicId]) return clinicTimezoneCache[clinicId];
       const { data } = await supabase.from("clinics").select("timezone").eq("id", clinicId).single();
       const tz = data?.timezone || "America/Guayaquil";
       clinicTimezoneCache[clinicId] = tz;
       return tz;
+    }
+
+    async function getClinicStageDelay(clinicId: string, stageNumber: number): Promise<number> {
+      const cacheKey = `${clinicId}:s${stageNumber}`;
+      if (cacheKey in clinicDelayCache) return clinicDelayCache[cacheKey];
+
+      const fallbackDelay = delayMap[stageNumber] || 15;
+      const { data } = await supabase
+        .from("clinic_pipeline_rules")
+        .select("rule_value")
+        .eq("clinic_id", clinicId)
+        .eq("rule_key", `s${stageNumber}_delay_minutes`)
+        .maybeSingle();
+
+      const delay = data ? Number(data.rule_value) || fallbackDelay : fallbackDelay;
+      clinicDelayCache[cacheKey] = delay;
+      return delay;
+    }
+
+    async function getClinicAgentName(clinicId: string): Promise<string> {
+      if (clinicAgentNameCache[clinicId]) return clinicAgentNameCache[clinicId];
+
+      const { data } = await supabase
+        .from("clinic_pipeline_rules")
+        .select("rule_value")
+        .eq("clinic_id", clinicId)
+        .eq("rule_key", "ai_agent_name")
+        .maybeSingle();
+
+      const agentName = data?.rule_value
+        ? String(data.rule_value).replace(/^"|"$/g, "") || globalAgentName
+        : globalAgentName;
+
+      clinicAgentNameCache[clinicId] = agentName;
+      return agentName;
+    }
+
+    function getStageNumberFromPipelineTab(pipelineTab: string | null | undefined): number | null {
+      const match = pipelineTab?.match(/^seguimiento_s(\d{1,2})$/);
+      return match ? Number(match[1]) : null;
+    }
+
+    function hasSuspiciousFutureTimer(scheduledAt: string | null, expectedDelayMinutes: number): boolean {
+      if (!scheduledAt) return false;
+      const diffMs = new Date(scheduledAt).getTime() - Date.now();
+      if (diffMs <= 0) return false;
+
+      const maxExpectedMs = Math.max(expectedDelayMinutes * 4, 60) * 60 * 1000;
+      return diffMs > maxExpectedMs;
     }
 
     const templateApprovalCache: Record<string, boolean> = {};
