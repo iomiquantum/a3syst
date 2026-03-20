@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
 
-  // --- GET: Webhook verification (per-connection token) ---
+  // --- GET: Webhook verification ---
   if (req.method === "GET") {
     const url = new URL(req.url);
     const mode = url.searchParams.get("hub.mode");
@@ -24,7 +24,6 @@ Deno.serve(async (req) => {
     const challenge = url.searchParams.get("hub.challenge");
 
     if (mode === "subscribe" && token) {
-      // Look up connection by its unique webhook_verify_token
       const { data: connection } = await supabase
         .from("whatsapp_connections")
         .select("id, clinic_id, business_name")
@@ -39,7 +38,6 @@ Deno.serve(async (req) => {
         return new Response(challenge, { status: 200, headers: { "Content-Type": "text/plain" } });
       }
 
-      // Fallback: check global WHATSAPP_VERIFY_TOKEN for backward compatibility
       const expectedToken = Deno.env.get("WHATSAPP_VERIFY_TOKEN");
       if (token === expectedToken) {
         console.log("[WA-Webhook] Verified with global token");
@@ -68,7 +66,6 @@ Deno.serve(async (req) => {
       const displayPhoneNumber = value.metadata?.display_phone_number;
       if (!phoneNumberId) return respondOk("no phone_number_id");
 
-      // Look up connection by phone_number_id
       const { data: connection, error: connError } = await supabase
         .from("whatsapp_connections")
         .select("id, clinic_id, access_token, business_name")
@@ -96,9 +93,7 @@ Deno.serve(async (req) => {
             updateData.error_code = s.errors[0].code?.toString();
             updateData.error_message = s.errors[0].title || s.errors[0].message;
           }
-          // Update in whatsapp_messages
           await supabase.from("whatsapp_messages").update(updateData).eq("wa_message_id", s.id);
-          // Also update unified messages table
           await supabase.from("messages").update({ status: s.status }).eq("whatsapp_message_id", s.id);
         }
       }
@@ -110,7 +105,7 @@ Deno.serve(async (req) => {
           const contactPhone = msg.from;
           const contactName = contactInfo?.profile?.name || contactPhone;
 
-          // Upsert conversation
+          // Upsert WA conversation
           const { data: conversation } = await supabase
             .from("whatsapp_conversations")
             .upsert({
@@ -200,7 +195,6 @@ Deno.serve(async (req) => {
                 .maybeSingle();
 
               if (agentConfig && channelConfig) {
-                // Find unified conversation for ai-agent-reply
                 const { data: unifiedConv } = await supabase
                   .from("conversations")
                   .select("id")
@@ -299,16 +293,18 @@ async function syncToUnifiedMessaging(
       .maybeSingle();
 
     let conversationId = existingConv?.id;
+    const nowIso = new Date().toISOString();
 
     if (!conversationId) {
       const { data: newConv } = await supabase
         .from("conversations")
         .insert({
           clinic_id: clinicId, contact_id: contactId, channel: "whatsapp",
-          status: "open", last_message_at: new Date().toISOString(),
+          status: "open", last_message_at: nowIso,
           last_message_preview: content.substring(0, 100),
           unread_count: 1, chatbot_active: true, visitor_contact: contactPhone,
-          last_inbound_at: new Date().toISOString(),
+          last_inbound_at: nowIso,
+          last_client_message_at: nowIso,
           follow_up_count: 0,
           pipeline_tab: "resueltos_ia",
         })
@@ -317,12 +313,17 @@ async function syncToUnifiedMessaging(
       conversationId = newConv?.id;
     } else {
       const { data: convData } = await supabase.from("conversations").select("unread_count").eq("id", conversationId).single();
+      // Update last_client_message_at + reset whatsapp window block
       await supabase.from("conversations").update({
-        last_message_at: new Date().toISOString(),
+        last_message_at: nowIso,
         last_message_preview: content.substring(0, 100),
         unread_count: (convData?.unread_count || 0) + 1,
         status: "open",
-        last_inbound_at: new Date().toISOString(),
+        last_inbound_at: nowIso,
+        last_client_message_at: nowIso,
+        whatsapp_window_blocked: false,
+        whatsapp_window_blocked_at: null,
+        whatsapp_window_blocked_reason: null,
         follow_up_count: 0,
       }).eq("id", conversationId);
     }
@@ -350,7 +351,7 @@ async function handleIncomingMessagePipeline(
   try {
     const { data: conv } = await supabase
       .from("conversations")
-      .select("pipeline_tab, seguimiento_is_recurrente, seguimiento_recurrente_count, seguimiento_contact_number, inactivity_timer_start")
+      .select("pipeline_tab, seguimiento_is_recurrente, seguimiento_recurrente_count, seguimiento_contact_number, inactivity_timer_start, seguimiento_next_s")
       .eq("id", conversationId)
       .single();
 
@@ -379,7 +380,10 @@ async function handleIncomingMessagePipeline(
       });
       console.log(`[PIPELINE] Cliente respondió desde no_responden → resueltos_ia (recurrente #${newCount})`);
 
-    } else if (tab.startsWith("seguimiento_c")) {
+    } else if (tab.startsWith("seguimiento_s")) {
+      // "Never go back" — advance next_s
+      const currentS = conv.seguimiento_contact_number || 1;
+      const nextS = Math.max((conv.seguimiento_next_s || 0), currentS + 1);
       const wasRecurrente = conv.seguimiento_is_recurrente;
       const newCount = wasRecurrente
         ? (conv.seguimiento_recurrente_count || 0) + 1
@@ -389,6 +393,8 @@ async function handleIncomingMessagePipeline(
         pipeline_tab: "resueltos_ia",
         seguimiento_is_recurrente: true,
         seguimiento_recurrente_count: newCount,
+        seguimiento_next_s: nextS,
+        seguimiento_responded_at_s: currentS,
         seguimiento_contact_number: 0,
         seguimiento_next_contact_at: null,
         inactivity_timer_start: null,
@@ -400,9 +406,9 @@ async function handleIncomingMessagePipeline(
         from_tab: tab,
         to_tab: "resueltos_ia",
         moved_by: "system",
-        reason: `Cliente respondió durante seguimiento ${tab.replace("seguimiento_", "").toUpperCase()}`,
+        reason: `Cliente respondió durante seguimiento S${currentS} → próximo será S${nextS}`,
       });
-      console.log(`[PIPELINE] Cliente respondió durante ${tab} → resueltos_ia`);
+      console.log(`[PIPELINE] Cliente respondió durante ${tab} → resueltos_ia (next: S${nextS})`);
 
     } else if (tab === "resueltos_ia") {
       if (conv.inactivity_timer_start) {
@@ -412,7 +418,7 @@ async function handleIncomingMessagePipeline(
         console.log(`[PIPELINE] Inactivity timer reset for conv ${conversationId}`);
       }
 
-    } else if (["no_interesado", "clientes", "escalados"].includes(tab)) {
+    } else if (["no_interesado", "clientes", "escalados", "pacientes"].includes(tab)) {
       console.log(`[PIPELINE] Message received in sticky state '${tab}', no move`);
     }
   } catch (err) {
