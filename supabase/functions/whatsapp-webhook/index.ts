@@ -506,7 +506,7 @@ async function handleIncomingMessagePipeline(
     } else if (tab.startsWith("seguimiento_s")) {
       // "Never go back" — advance next_s
       const currentS = conv.seguimiento_contact_number || 1;
-      const nextS = Math.max((conv.seguimiento_next_s || 0), currentS + 1);
+      const nextS = Math.min(Math.max((conv.seguimiento_next_s || 0), currentS + 1), 7);
       const wasRecurrente = conv.seguimiento_is_recurrente;
       const newCount = wasRecurrente
         ? (conv.seguimiento_recurrente_count || 0) + 1
