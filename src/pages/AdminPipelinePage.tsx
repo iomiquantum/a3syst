@@ -188,6 +188,7 @@ const AdminPipelinePage = () => {
         <Tabs defaultValue="reglas">
           <TabsList>
             <TabsTrigger value="reglas" className="gap-1.5"><Settings className="w-3.5 h-3.5" />Reglas</TabsTrigger>
+            <TabsTrigger value="templates" className="gap-1.5"><MessageSquare className="w-3.5 h-3.5" />WhatsApp Templates</TabsTrigger>
             <TabsTrigger value="monitor" className="gap-1.5"><Monitor className="w-3.5 h-3.5" />Monitor</TabsTrigger>
           </TabsList>
 
