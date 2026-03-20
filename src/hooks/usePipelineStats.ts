@@ -6,7 +6,7 @@ interface ResumenStats {
   respondidos: number;
   escalados: number;
   convertidos: number;
-  seguimiento: { total: number; s1_s8: number; s9_s10: number };
+  seguimiento: { total: number; s1_s4: number; s5_s6: number };
   noResponden: number;
 }
 
