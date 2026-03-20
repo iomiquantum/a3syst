@@ -641,15 +641,17 @@ Deno.serve(async (req) => {
         }
 
         const nowDate = new Date();
+        const todayStart = new Date(nowDate);
+        todayStart.setUTCHours(0, 0, 0, 0);
 
-        // REMINDER 1
+        // REMINDER 1 - use gte to include today's appointments
         const { data: reminder1Convs } = await supabase
           .from("conversations")
           .select("id, clinic_id, contact_id, channel, visitor_contact, appointment_date, appointment_time, appointment_service, appointment_confirmed, last_client_message_at")
           .eq("pipeline_tab", "agendados")
           .eq("appointment_reminder_1_sent", false)
           .not("appointment_date", "is", null)
-          .gt("appointment_date", nowDate.toISOString());
+          .gte("appointment_date", todayStart.toISOString());
 
         for (const conv of reminder1Convs || []) {
           try {
@@ -659,8 +661,13 @@ Deno.serve(async (req) => {
             if (!r1Config) continue;
 
             const appointmentDate = new Date(conv.appointment_date);
+            // Combine date + time for accurate hours calculation
+            if (conv.appointment_time) {
+              const [hh, mm] = conv.appointment_time.split(":").map(Number);
+              appointmentDate.setUTCHours(hh || 0, mm || 0, 0, 0);
+            }
             const hoursUntil = (appointmentDate.getTime() - nowDate.getTime()) / (1000 * 60 * 60);
-            if (hoursUntil > r1Config.hours_before_appointment) continue;
+            if (hoursUntil <= 0 || hoursUntil > r1Config.hours_before_appointment) continue;
 
             // Enqueue reminder instead of sending directly
             const { data: existingReminder } = await supabase
@@ -715,7 +722,7 @@ Deno.serve(async (req) => {
           .eq("appointment_reminder_2_sent", false)
           .eq("appointment_confirmed", false)
           .not("appointment_date", "is", null)
-          .gt("appointment_date", nowDate.toISOString());
+          .gte("appointment_date", todayStart.toISOString());
 
         for (const conv of reminder2Convs || []) {
           try {
@@ -724,8 +731,12 @@ Deno.serve(async (req) => {
             if (!r2Config) continue;
 
             const appointmentDate = new Date(conv.appointment_date);
+            if (conv.appointment_time) {
+              const [hh, mm] = conv.appointment_time.split(":").map(Number);
+              appointmentDate.setUTCHours(hh || 0, mm || 0, 0, 0);
+            }
             const hoursUntil = (appointmentDate.getTime() - nowDate.getTime()) / (1000 * 60 * 60);
-            if (hoursUntil > r2Config.hours_before_appointment) continue;
+            if (hoursUntil <= 0 || hoursUntil > r2Config.hours_before_appointment) continue;
 
             const { data: existingReminder } = await supabase
               .from("pipeline_message_queue")

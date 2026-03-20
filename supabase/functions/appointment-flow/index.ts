@@ -54,7 +54,12 @@ serve(async (req) => {
         `${m.direction === "inbound" ? "Cliente" : "Agente"}: ${m.content}`
       ).join("\n");
 
+      const today = new Date().toISOString().split("T")[0];
+      const dayOfWeek = new Date().toLocaleDateString("es", { weekday: "long" });
+
       const detectPrompt = `Analiza el mensaje del paciente en contexto de la conversación.
+
+FECHA DE HOY: ${today} (${dayOfWeek})
 
 CONVERSACIÓN:
 ${msgContext}
@@ -68,6 +73,9 @@ SÍ: "Quiero agendar", "Me gustaría una cita", "¿Puedo ir mañana?",
 
 NO: Solo preguntar precios, pedir info general, "lo voy a pensar",
 preguntar horarios sin intención de reservar
+
+IMPORTANTE: Si el paciente menciona una fecha relativa ("mañana", "el viernes", "la próxima semana"),
+DEBES resolverla a formato YYYY-MM-DD basándote en la fecha de hoy.
 
 Responde SOLO JSON válido:
 {
@@ -174,7 +182,12 @@ Responde SOLO JSON válido:
       const branchesText = (branches || []).map(b => `• ${b.name}: ${b.address || ""}`)
         .join("\n") || "(sin sucursales)";
 
+      const todayStr = new Date().toISOString().split("T")[0];
+      const dayOfWeekStr = new Date().toLocaleDateString("es", { weekday: "long" });
+
       const guidedPrompt = `Eres ${agentName} de ${clinicName}. Ayudas a agendar una cita.
+
+FECHA DE HOY: ${todayStr} (${dayOfWeekStr})
 
 DATOS RECOPILADOS HASTA AHORA:
 - Servicio: ${flowData.service || "❌ Sin definir"}
@@ -197,6 +210,7 @@ INSTRUCCIONES:
 4. Si el paciente quiere cancelar el agendamiento: respétalo
 5. No aceptes fechas en el pasado
 6. Tono cálido y breve (máximo 2-3 oraciones)
+7. IMPORTANTE: Si el paciente menciona una fecha relativa ("mañana", "el viernes", etc.), resuélvela a formato YYYY-MM-DD basándote en la fecha de hoy.
 
 Responde SOLO JSON válido:
 {
