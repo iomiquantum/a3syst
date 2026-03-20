@@ -360,7 +360,7 @@ Deno.serve(async (req) => {
     // Build delay map for S1-S8
     const delayMap: Record<number, number> = {};
     for (let i = 1; i <= 8; i++) {
-      delayMap[i] = Number(rules[`s${i}_delay_minutes`]) || [15, 30, 30, 60, 120, 240, 720, 30][i - 1];
+      delayMap[i] = Number(rules[`s${i}_delay_minutes`]) || [15, 30, 240, 720, 120, 240, 720, 30][i - 1];
     }
 
     // === LOAD STRATEGIES ===
