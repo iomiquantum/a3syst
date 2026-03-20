@@ -44,6 +44,7 @@ interface ChatMessage {
   message_type: string;
   created_at: string;
   status: string;
+  origin: string | null;
 }
 
 const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPanel, onToggleContactPanel }: Props) => {
