@@ -184,6 +184,16 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                 <span key={t} className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">{t}</span>
               ))}
             </div>
+            {/* Pipeline Progress Bar */}
+            {(c.seguimiento_last_completed_s > 0 || c.seguimiento_next_s > 0) && (
+              <PipelineProgressBar
+                lastCompletedS={c.seguimiento_last_completed_s}
+                nextS={c.seguimiento_next_s}
+                currentTab={c.pipeline_tab}
+                isRecurrente={c.seguimiento_is_recurrente}
+                recurrenteCount={c.seguimiento_recurrente_count}
+              />
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
