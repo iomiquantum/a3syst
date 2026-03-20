@@ -187,6 +187,7 @@ async function sendWhatsAppMessageSmart(
   messageContent: string,
   context: string,
   agentName: string,
+  origin?: string,
 ): Promise<{ sent: boolean; type: string; reason?: string }> {
   const channel = conv.channel || "whatsapp";
 
