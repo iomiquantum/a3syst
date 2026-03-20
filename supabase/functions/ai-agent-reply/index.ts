@@ -135,7 +135,7 @@ serve(async (req) => {
             await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
               method: "POST",
               headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
-              body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: cancelReply, conversation_id }),
+              body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: cancelReply, conversation_id, origin: "appointment_flow" }),
             });
           }
         } else {
