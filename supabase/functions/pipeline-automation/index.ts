@@ -661,8 +661,13 @@ Deno.serve(async (req) => {
             if (!r1Config) continue;
 
             const appointmentDate = new Date(conv.appointment_date);
+            // Combine date + time for accurate hours calculation
+            if (conv.appointment_time) {
+              const [hh, mm] = conv.appointment_time.split(":").map(Number);
+              appointmentDate.setUTCHours(hh || 0, mm || 0, 0, 0);
+            }
             const hoursUntil = (appointmentDate.getTime() - nowDate.getTime()) / (1000 * 60 * 60);
-            if (hoursUntil > r1Config.hours_before_appointment) continue;
+            if (hoursUntil <= 0 || hoursUntil > r1Config.hours_before_appointment) continue;
 
             // Enqueue reminder instead of sending directly
             const { data: existingReminder } = await supabase
