@@ -252,7 +252,7 @@ Deno.serve(async (req) => {
             last_message_at: new Date().toISOString(),
           }).eq("id", conversation.id);
 
-          const syncResult = await syncToUnifiedMessaging(supabase, clinicId, contactPhone, contactName, content, messageType, msg.id);
+          const syncResult = await syncToUnifiedMessaging(supabase, clinicId, contactPhone, contactName, content, messageType, msg.id, downloadedMediaUrl);
           const unifiedConvId = syncResult?.conversationId || null;
           const isNewConversation = syncResult?.isNew || false;
 
