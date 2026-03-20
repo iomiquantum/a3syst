@@ -1,6 +1,6 @@
-// Constants for the send window (clinic local time)
-const WINDOW_START = 7;  // 7 AM
-const WINDOW_END = 23;   // 11 PM
+// Default constants for the send window (clinic local time)
+const DEFAULT_WINDOW_START = 7;  // 7 AM
+const DEFAULT_WINDOW_END = 23;   // 11 PM
 const DEFAULT_TZ = "America/Guayaquil";
 
 export interface CountdownState {
