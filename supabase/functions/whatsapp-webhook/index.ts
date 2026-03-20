@@ -179,6 +179,52 @@ Deno.serve(async (req) => {
             default: content = `[${messageType}]`;
           }
 
+          // Download media from Meta API if we have a media ID
+          let downloadedMediaUrl: string | null = null;
+          if (mediaUrl && ["audio", "image", "video", "document", "sticker"].includes(messageType)) {
+            try {
+              const accessToken = connection.access_token || Deno.env.get("META_ACCESS_TOKEN");
+              if (accessToken) {
+                // Step 1: Get the media download URL from Meta
+                const mediaResp = await fetch(`https://graph.facebook.com/v21.0/${mediaUrl}`, {
+                  headers: { Authorization: `Bearer ${accessToken}` },
+                });
+                const mediaData = await mediaResp.json();
+                
+                if (mediaData.url) {
+                  // Step 2: Download the actual media binary
+                  const binaryResp = await fetch(mediaData.url, {
+                    headers: { Authorization: `Bearer ${accessToken}` },
+                  });
+                  
+                  if (binaryResp.ok) {
+                    const blob = await binaryResp.blob();
+                    const ext = mediaMimeType?.split("/")[1]?.replace("ogg", "ogg") || "bin";
+                    const fileName = `${clinicId}/${conversation.id}/${msg.id}.${ext}`;
+                    
+                    // Upload to Supabase Storage
+                    const { data: uploadData, error: uploadErr } = await supabase.storage
+                      .from("chat-media")
+                      .upload(fileName, blob, {
+                        contentType: mediaMimeType || "application/octet-stream",
+                        upsert: true,
+                      });
+                    
+                    if (!uploadErr && uploadData) {
+                      const { data: publicUrl } = supabase.storage.from("chat-media").getPublicUrl(fileName);
+                      downloadedMediaUrl = publicUrl.publicUrl;
+                      console.log("[WA-Webhook] Media uploaded:", downloadedMediaUrl);
+                    } else {
+                      console.error("[WA-Webhook] Media upload error:", uploadErr);
+                    }
+                  }
+                }
+              }
+            } catch (mediaErr) {
+              console.error("[WA-Webhook] Media download error:", mediaErr);
+            }
+          }
+
           // Insert into whatsapp_messages
           await supabase.from("whatsapp_messages").upsert({
             conversation_id: conversation.id,
