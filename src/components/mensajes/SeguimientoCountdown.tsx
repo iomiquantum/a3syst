@@ -1,5 +1,5 @@
 import { useState, useEffect, memo } from "react";
-import { Timer, User, Pause } from "lucide-react";
+import { Timer, Pause } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatElapsedTimeoutCountdown, formatTargetCountdown } from "./seguimientoTime";
 
