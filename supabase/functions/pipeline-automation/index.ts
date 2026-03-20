@@ -471,7 +471,12 @@ Deno.serve(async (req) => {
       const diffMs = new Date(scheduledAt).getTime() - Date.now();
       if (diffMs <= 0) return false;
 
-      const maxExpectedMs = Math.max(expectedDelayMinutes * 4, 60) * 60 * 1000;
+      // Account for the overnight dead zone (e.g. 23:00 to 07:00 = 8 hours)
+      // When a timer is set near the end of the send window, it legitimately
+      // gets pushed to next morning, adding up to deadZoneHours extra time
+      const deadZoneHours = 24 - sendWindowEnd + sendWindowStart; // e.g. 24-23+7 = 8h
+      const deadZoneMs = deadZoneHours * 60 * 60 * 1000;
+      const maxExpectedMs = Math.max(expectedDelayMinutes * 4, 60) * 60 * 1000 + deadZoneMs;
       return diffMs > maxExpectedMs;
     }
 
