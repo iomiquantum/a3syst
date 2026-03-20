@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, MoreVertical, PanelRightOpen, PanelRightClose } from "lucide-react";
+import { Send, Bot, MoreVertical, PanelRightOpen, PanelRightClose, LayoutTemplate } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -21,6 +21,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useClinicTemplate } from "@/hooks/useClinicTemplate";
 import ClinicChatActions from "./ClinicChatActions";
 import AppointmentBanner from "./AppointmentBanner";
+import WhatsAppTemplateDialog from "./WhatsAppTemplateDialog";
 import type { PipelineConversation } from "@/hooks/useConversationsByPipeline";
 
 interface Props {
@@ -56,8 +57,10 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(true);
   const [sending, setSending] = useState(false);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isWhatsAppBlocked = c.channel === "whatsapp" && Boolean((c as any).whatsapp_window_blocked);
 
   // Fetch real messages
   useEffect(() => {
@@ -122,6 +125,13 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
 
     const channel = c.channel || "whatsapp";
     if (channel === "whatsapp" && c.contactPhone) {
+      if (isWhatsAppBlocked) {
+        toast.info("La ventana de 24h está cerrada. Usa un template aprobado para responder.");
+        setTemplateDialogOpen(true);
+        setSending(false);
+        return;
+      }
+
       try {
         const { error } = await supabase.functions.invoke("whatsapp-send", {
           body: {
@@ -313,6 +323,10 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
               <p className="text-[10px] text-amber-600 dark:text-amber-400">
                 El cliente no ha escrito en más de 24 horas. Al enviar, se usará un template para reabrir la conversación.
               </p>
+              <Button size="sm" onClick={() => setTemplateDialogOpen(true)}>
+                <LayoutTemplate className="w-4 h-4" />
+                Elegir template aprobado
+              </Button>
             </div>
           )}
         </div>
@@ -325,6 +339,29 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 text-xs">
             <Bot className="w-3.5 h-3.5 shrink-0" />
             <span>La IA está respondiendo esta conversación. Puedes enviar mensajes como humano sin desactivarla.</span>
+          </div>
+        )}
+
+        {c.channel === "whatsapp" && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-foreground">Templates aprobados de WhatsApp</p>
+              <p className="text-[11px] text-muted-foreground">
+                {isWhatsAppBlocked
+                  ? "La ventana de 24 horas está cerrada. Selecciona un template aprobado para responder."
+                  : "Consulta y envía templates aprobados del negocio activo desde el buzón."}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant={isWhatsAppBlocked ? "default" : "outline"}
+              size="sm"
+              className="shrink-0"
+              onClick={() => setTemplateDialogOpen(true)}
+            >
+              <LayoutTemplate className="w-4 h-4" />
+              {isWhatsAppBlocked ? "Usar template" : "Ver templates"}
+            </Button>
           </div>
         )}
 
@@ -350,6 +387,15 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
           </Button>
         </div>
       </div>
+
+      <WhatsAppTemplateDialog
+        open={templateDialogOpen}
+        onOpenChange={setTemplateDialogOpen}
+        clinicId={clinicId || ""}
+        conversationId={c.id}
+        toNumber={c.contactPhone}
+        contactName={c.contactName}
+      />
     </div>
   );
 };
