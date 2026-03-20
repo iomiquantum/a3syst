@@ -96,8 +96,11 @@ const SeguimientoCountdown = memo(({
   const isAutomatic = currentS >= 1 && currentS <= 8;
   const isManual = currentS >= 9 && currentS <= 10;
 
-  // Case 1: In resueltos_ia with no S history → new conversation, no countdown
-  if (isInResueltosIA && nextS <= 0) return null;
+  // Case 1: In resueltos_ia with no S history AND no inactivity timer → truly new, no countdown
+  if (isInResueltosIA && nextS <= 0 && !inactivityTimerStart) return null;
+
+  // Effective next S: if nextS is 0 but timer is running, they'll go to S1
+  const effectiveNextS = nextS > 0 ? nextS : 1;
 
   const badges: JSX.Element[] = [];
 
@@ -126,7 +129,7 @@ const SeguimientoCountdown = memo(({
   }
 
   // Case 2: In resueltos_ia waiting for inactivity timer → show countdown to next S
-  if (isInResueltosIA && nextS > 0 && inactivityTimerStart) {
+  if (isInResueltosIA && inactivityTimerStart) {
     const { label, expired } = formatInactivityCountdown(inactivityTimerStart, inactivityTimeoutMinutes);
     badges.push(
       <span
@@ -139,7 +142,7 @@ const SeguimientoCountdown = memo(({
         )}
       >
         <Timer className="w-2.5 h-2.5" />
-        {expired ? label : `${label} → S${nextS}`}
+        {expired ? label : `${label} → S${effectiveNextS}`}
       </span>
     );
     return <div className="flex gap-1 flex-wrap items-center">{badges}</div>;
