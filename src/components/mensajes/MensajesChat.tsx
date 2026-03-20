@@ -267,7 +267,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
 
           {c.pipeline_tab === "resueltos_ia" && (
             <p className="text-center text-[11px] text-muted-foreground italic py-2">
-              Si no responde en 30 min pasa a Seguimiento C1
+              Si no responde en 15 min pasa a Seguimiento S1
             </p>
           )}
         </div>
