@@ -86,6 +86,16 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
           return [...prev, payload.new as ChatMessage];
         });
       })
+      .on("postgres_changes", {
+        event: "UPDATE",
+        schema: "public",
+        table: "messages",
+        filter: `conversation_id=eq.${c.id}`,
+      }, (payload) => {
+        setMessages(prev => prev.map(m =>
+          m.id === (payload.new as any).id ? { ...m, status: (payload.new as any).status } : m
+        ));
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
