@@ -109,24 +109,23 @@ export function formatTargetCountdown(
   const isInPause = localHour >= windowEnd || localHour < windowStart;
 
   if (isInPause) {
-    // We're in the pause window (11PM-7AM)
-    const resumeTime = getNextLocalTime(tz, WINDOW_START);
+    // We're in the pause window
+    const resumeTime = getNextLocalTime(tz, windowStart);
     const msAfterResume = new Date(targetIso).getTime() - resumeTime.getTime();
 
+    const resumeLabel = `${windowStart}:00 AM`;
     if (msAfterResume > 0) {
-      // Time remaining after resume
       const afterResumeSeconds = msAfterResume / 1000;
       return {
-        label: `⏸ Pausado — reanuda 7:00 AM`,
+        label: `⏸ Pausado — reanuda ${resumeLabel}`,
         expired: false,
         totalSeconds: remainingSeconds,
         mode: "paused",
         subLabel: `quedan ${formatTime(afterResumeSeconds)}`,
       };
     } else {
-      // Will send right at resume
       return {
-        label: `⏸ Se envía a las 7:00 AM`,
+        label: `⏸ Se envía a las ${resumeLabel}`,
         expired: false,
         totalSeconds: remainingSeconds,
         mode: "sends_on_resume",
@@ -135,10 +134,8 @@ export function formatTargetCountdown(
   }
 
   // We're in the active window — check if countdown will cross the pause boundary
-  const pauseTime = getNextLocalTime(tz, WINDOW_END);
-  // But getNextLocalTime adds a day if localHour >= WINDOW_END. Since we're in active window,
-  // localHour < WINDOW_END, so it returns today's 11PM.
-  // Actually we need "today's 11PM", not "next 11PM". Since localHour < 23, getNextLocalTime(tz, 23) should work.
+  const pauseTime = getNextLocalTime(tz, windowEnd);
+  // Since we're in active window, localHour < windowEnd, so getNextLocalTime returns today's end hour.
   const msUntilPause = pauseTime.getTime() - Date.now();
 
   if (msRemaining <= msUntilPause) {
