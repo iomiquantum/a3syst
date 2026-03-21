@@ -352,7 +352,8 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
 - Genera un mensaje amable y persuasivo para que el contacto retome la conversación.
 - NO repitas el mismo mensaje anterior, varía el enfoque.
 - Contacto ${followUpCount <= 2 ? ": Sé amable y recuerda los beneficios del servicio." : followUpCount <= 4 ? ": Crea urgencia moderada, menciona disponibilidad limitada o promociones." : ": Último intento, ofrece ayuda directa o alternativas de contacto."}
-- Mantén el mensaje corto (1-2 oraciones máximo).`;
+- Mantén el mensaje corto (1-2 oraciones máximo).
+- NUNCA inventes servicios, horarios, precios ni datos que no estén en la configuración de arriba. Usa SOLO la información real del negocio.`;
     }
 
     // Fetch channel-specific instructions
