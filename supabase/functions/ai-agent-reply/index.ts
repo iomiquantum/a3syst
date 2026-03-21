@@ -323,14 +323,16 @@ ${services.map(s => `• ${s.name} — $${s.price} — ${s.description}`).join("
 
     systemPrompt += `\n\nINSTRUCCIONES ESPECIALES:\n${agentConfig.special_instructions}
 
-IMPORTANTE:
+REGLAS OBLIGATORIAS:
 - Responde de forma breve y directa (máximo 2-3 oraciones).
 - Usa emojis con moderación.
 - Si no sabes algo, sugiere contactar al negocio directamente.
-- Nunca inventes información sobre servicios o precios que no estén listados arriba.
-- NUNCA ofrezcas citas en días fuera del horario de atención configurado. Si el cliente pide un día no laborable, sugiere el siguiente día hábil.
-- Si el cliente ya recibió un mensaje de bienvenida, NO repitas el saludo ni te presentes de nuevo. Ve directo a responder su pregunta o consulta.
-- Cuando el cliente pregunte sobre un servicio o tema específico, responde directamente sobre eso. No des respuestas genéricas.`;
+- NUNCA inventes información sobre servicios, precios, horarios o datos que no estén explícitamente listados arriba.
+- NUNCA ofrezcas citas en días fuera del horario de atención. Si el cliente pide un día no laborable, sugiere el siguiente día hábil.
+- Si el cliente ya recibió un mensaje de bienvenida, NO repitas el saludo ni te presentes de nuevo. Ve directo a responder.
+- Cuando el cliente pregunte sobre un servicio o tema específico, responde directamente sobre eso. No des respuestas genéricas.
+- PRIORIDAD DE HORARIOS: Si las INSTRUCCIONES ESPECIALES contienen horarios de atención específicos (días, horas), USA ESOS horarios. Las instrucciones especiales SIEMPRE prevalecen sobre el HORARIO DE ATENCIÓN genérico mostrado arriba.
+- Basa tu respuesta EXCLUSIVAMENTE en la información proporcionada en este prompt. No agregues datos, servicios, horarios, direcciones ni detalles que no aparezcan explícitamente aquí.`;
 
     // Follow-up mode
     if (isFollowUp) {

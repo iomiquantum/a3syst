@@ -205,12 +205,16 @@ Responde SOLO JSON válido:
         ? `Días de atención: ${workingDays.join(", ")}. Horario: ${openingHour || "?"} a ${closingHour || "?"}.`
         : "(sin horario configurado)";
 
+      // Include special_instructions if they contain schedule overrides
+      const specialInstructions = agentConfig?.special_instructions || "";
+
       const guidedPrompt = `Eres ${agentName} de ${clinicName}. Ayudas a agendar una cita.
 
 FECHA DE HOY: ${todayStr} (${dayOfWeekStr})
 
-HORARIO DE ATENCIÓN:
+HORARIO DE ATENCIÓN (GENÉRICO):
 ${scheduleText}
+${specialInstructions ? `\nINSTRUCCIONES ESPECIALES DEL NEGOCIO:\n${specialInstructions}` : ""}
 
 DATOS RECOPILADOS HASTA AHORA:
 - Servicio: ${flowData.service || "❌ Sin definir"}
@@ -233,12 +237,14 @@ INSTRUCCIONES:
 3. Si falta algún dato: pregunta SOLO lo que falta de forma amable
 4. Si el paciente quiere cancelar el agendamiento: respétalo
 5. No aceptes fechas en el pasado
-6. NUNCA ofrezcas ni aceptes citas en días que NO estén en el HORARIO DE ATENCIÓN. Si el paciente pide un día no laborable, sugiere el siguiente día hábil disponible.
-7. Solo ofrece horarios dentro del rango de apertura y cierre configurado.
-8. Tono cálido y breve (máximo 2-3 oraciones)
-9. IMPORTANTE: Si el paciente menciona una fecha relativa ("mañana", "el viernes", etc.), resuélvela a formato YYYY-MM-DD basándote en la fecha de hoy.
-10. Si el paciente pregunta por ubicación o dirección, USA la información de UBICACIONES arriba. NUNCA digas que no hay sucursales físicas si hay una dirección configurada.
-11. Usa los precios y servicios EXACTOS de la configuración. No inventes servicios ni precios.
+6. PRIORIDAD DE HORARIOS: Si las INSTRUCCIONES ESPECIALES contienen horarios de atención específicos (días, horas, sábados, etc.), USA ESOS horarios. Las instrucciones especiales SIEMPRE prevalecen sobre el HORARIO DE ATENCIÓN GENÉRICO.
+7. NUNCA ofrezcas ni aceptes citas en días/horarios fuera del horario válido. Si el paciente pide un día no laborable, sugiere el siguiente día hábil disponible.
+8. Solo ofrece horarios dentro del rango de apertura y cierre configurado.
+9. Tono cálido y breve (máximo 2-3 oraciones)
+10. IMPORTANTE: Si el paciente menciona una fecha relativa ("mañana", "el viernes", etc.), resuélvela a formato YYYY-MM-DD basándote en la fecha de hoy.
+11. Si el paciente pregunta por ubicación o dirección, USA la información de UBICACIONES arriba. NUNCA digas que no hay sucursales físicas si hay una dirección configurada.
+12. Usa los precios y servicios EXACTOS de la configuración. NUNCA inventes servicios, precios, horarios ni datos que no aparezcan explícitamente aquí.
+13. Basa tu respuesta EXCLUSIVAMENTE en la información proporcionada en este prompt.
 
 Responde SOLO JSON válido:
 {
