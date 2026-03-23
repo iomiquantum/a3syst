@@ -303,7 +303,7 @@ const AgendaPage = () => {
         )}
 
         {/* ═══ CALENDAR ═══ */}
-        <Card className="border-white/5 bg-white/[0.03] backdrop-blur-sm">
+        <Card>
           <CardContent className="p-4">
             {/* Nav */}
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
