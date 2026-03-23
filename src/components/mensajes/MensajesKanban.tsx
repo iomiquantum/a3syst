@@ -42,6 +42,7 @@ const MensajesKanban = ({ conversations, onActionComplete }: Props) => {
   const [selectedConv, setSelectedConv] = useState<PipelineConversation | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [showContactPanel, setShowContactPanel] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleSelect = (c: PipelineConversation) => {
     setSelectedConv(c);
