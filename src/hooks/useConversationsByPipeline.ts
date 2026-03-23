@@ -26,6 +26,7 @@ export interface PipelineConversation {
   contact_id: string;
   channel: string;
   status: string;
+  created_at: string;
   last_message_at: string;
   last_message_preview: string;
   last_outbound_status: string | null;
@@ -133,6 +134,7 @@ export const useConversationsByPipeline = (params: Params) => {
       contact_id: c.contact_id,
       channel: c.channel || "whatsapp",
       status: c.status,
+      created_at: c.created_at,
       last_message_at: c.last_message_at,
       last_message_preview: c.last_message_preview || "",
       last_outbound_status: null,

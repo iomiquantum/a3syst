@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Pin } from "lucide-react";
+import { Pin, CalendarPlus, Clock } from "lucide-react";
 import PipelineBadge from "./PipelineBadge";
 import SeguimientoCountdown from "./SeguimientoCountdown";
 import ChannelIcon from "@/components/messaging/ChannelIcon";
@@ -24,6 +24,16 @@ function relativeTime(iso: string): string {
   if (hrs < 24) return `${hrs}h`;
   const days = Math.floor(hrs / 24);
   return `${days}d`;
+}
+
+function formatShortDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("es", { day: "2-digit", month: "short" });
+}
+
+function formatDateWithTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("es", { day: "2-digit", month: "short" }) + " " + d.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
 }
 
 function getInitials(name: string): string {
@@ -60,6 +70,21 @@ const SpamBadge = ({ c }: { c: PipelineConversation }) => (
   />
 );
 
+const DatesBadge = ({ c }: { c: PipelineConversation }) => (
+  <div className="flex flex-col gap-0.5">
+    {c.created_at && (
+      <span className="text-[9px] text-muted-foreground flex items-center gap-1">
+        <CalendarPlus className="w-2.5 h-2.5 shrink-0" /> 1er contacto: {formatShortDate(c.created_at)}
+      </span>
+    )}
+    {c.last_message_at && (
+      <span className="text-[9px] text-muted-foreground flex items-center gap-1">
+        <Clock className="w-2.5 h-2.5 shrink-0" /> Último msg: {formatDateWithTime(c.last_message_at)}
+      </span>
+    )}
+  </div>
+);
+
 const ConversationCard = ({ conversation: c, selected, onClick, variant = "list" }: Props) => {
   const isSpamProtected = c.seguimiento_spam_protection_triggered && c.pipeline_tab === "no_responden";
 
@@ -89,13 +114,13 @@ const ConversationCard = ({ conversation: c, selected, onClick, variant = "list"
         <CountdownBadges c={c} />
         <SpamBadge c={c} />
         {windowBadge}
+        <DatesBadge c={c} />
         <div className="flex flex-col items-start gap-1">
           {c.contactTags.slice(0, 2).map((t) => (
             <span key={t} className="text-[8px] bg-accent/20 text-accent-foreground px-1.5 py-0.5 rounded">{t}</span>
           ))}
         </div>
         <div className="flex items-center justify-between pt-1">
-          <span className="text-[10px] text-muted-foreground">{relativeTime(c.last_message_at)}</span>
           <ChannelIcon channel={c.channel} size="sm" />
         </div>
       </div>
@@ -133,6 +158,7 @@ const ConversationCard = ({ conversation: c, selected, onClick, variant = "list"
             </div>
             <SpamBadge c={c} />
             {windowBadge}
+            <DatesBadge c={c} />
             {c.contactTags.length > 0 && (
               <div className="flex flex-col items-start gap-1">
                 {c.contactTags.slice(0, 2).map((t) => (
