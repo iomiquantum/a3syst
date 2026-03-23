@@ -578,7 +578,7 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
     // === PIPELINE: Start inactivity timer after AI response ===
     const { data: convState } = await supabase
       .from("conversations")
-      .select("pipeline_tab")
+      .select("pipeline_tab, seguimiento_last_completed_s, seguimiento_is_recurrente, seguimiento_recurrente_count")
       .eq("id", conversation_id)
       .single();
 
@@ -586,6 +586,138 @@ Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondid
       await supabase.from("conversations").update({
         inactivity_timer_start: new Date().toISOString(),
       }).eq("id", conversation_id);
+    }
+
+    // === DISPOSITION ANALYSIS: Determine if contact is fully informed or needs more info ===
+    // Only run for non-follow-up auto replies on contacts that have been through at least one seguimiento cycle
+    const hasBeenThroughSeguimiento = (convState?.seguimiento_last_completed_s || 0) >= 1 || (convState?.seguimiento_is_recurrente === true);
+    if (!isFollowUp && !isDraft && triggered_by === "auto" && conversationData.contact_id && hasBeenThroughSeguimiento && convState?.pipeline_tab === "resueltos_ia") {
+      try {
+        const { data: fullHistory } = await supabase
+          .from("messages")
+          .select("direction, content")
+          .eq("conversation_id", conversation_id)
+          .order("created_at", { ascending: true })
+          .limit(20);
+
+        const chatSummary = (fullHistory || []).map(m =>
+          `${m.direction === "inbound" ? "CLIENTE" : "NEGOCIO"}: ${m.content}`
+        ).join("\n");
+
+        const dispositionResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash-lite",
+            messages: [
+              {
+                role: "system",
+                content: `Analiza esta conversación entre un negocio y un cliente. Determina:
+
+1. ¿El cliente ya recibió la información que necesitaba? (precios, servicios, detalles)
+2. ¿Mostró interés real en los servicios?
+3. ¿Indicó que no quiere agendar AHORA pero sí en el futuro? (ej: "en abril", "después te aviso", "luego les escribo")
+4. ¿Tiene dudas pendientes sin resolver?
+
+SERVICIOS DEL NEGOCIO:
+${services.map(s => `• ${s.name} — $${s.price}`).join("\n") || "(sin servicios)"}
+
+Clasifica:
+- "fully_informed": Cliente recibió info, mostró interés, pero no quiere cerrar ahora. No necesita más seguimiento automático.
+- "needs_more_info": Cliente aún tiene preguntas, no recibió toda la info, o la conversación fue cortada. Necesita seguimiento.
+- "not_applicable": Conversación muy corta o sin contexto suficiente para decidir.
+
+Si es "fully_informed", genera un resumen de 2-3 líneas del contexto.`,
+              },
+              { role: "user", content: chatSummary },
+            ],
+            tools: [
+              {
+                type: "function",
+                function: {
+                  name: "classify_disposition",
+                  description: "Classify conversation disposition",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      disposition: { type: "string", enum: ["fully_informed", "needs_more_info", "not_applicable"] },
+                      interested: { type: "boolean", description: "Did the client show real interest?" },
+                      summary: { type: "string", description: "2-3 line summary of what happened" },
+                      reason: { type: "string", description: "Why this disposition was chosen" },
+                    },
+                    required: ["disposition", "interested", "summary", "reason"],
+                    additionalProperties: false,
+                  },
+                },
+              },
+            ],
+            tool_choice: { type: "function", function: { name: "classify_disposition" } },
+            stream: false,
+            max_tokens: 300,
+          }),
+        });
+
+        if (dispositionResp.ok) {
+          const dispositionData = await dispositionResp.json();
+          const toolCall = dispositionData.choices?.[0]?.message?.tool_calls?.[0];
+          if (toolCall?.function?.arguments) {
+            const parsed = JSON.parse(toolCall.function.arguments);
+            console.log("[DISPOSITION]", JSON.stringify(parsed));
+
+            if (parsed.disposition === "fully_informed") {
+              // Move to S6 (manual review) instead of restarting S1
+              await supabase.from("conversations").update({
+                pipeline_tab: "seguimiento_s6",
+                seguimiento_contact_number: 6,
+                seguimiento_next_s: 6,
+                inactivity_timer_start: null,
+                seguimiento_next_contact_at: null,
+              }).eq("id", conversation_id);
+
+              // Add INTERESADO tag
+              const { data: contactData } = await supabase
+                .from("contacts")
+                .select("tags, notes")
+                .eq("id", conversationData.contact_id)
+                .single();
+
+              if (contactData) {
+                const currentTags = contactData.tags || [];
+                if (!currentTags.includes("INTERESADO")) {
+                  await supabase.from("contacts").update({
+                    tags: [...currentTags, "INTERESADO"],
+                  }).eq("id", conversationData.contact_id);
+                }
+
+                // Add summary note
+                const today = new Date().toISOString().split("T")[0];
+                const noteEntry = `\n[${today}] 🟡 Análisis IA: ${parsed.summary}`;
+                await supabase.from("contacts").update({
+                  notes: (contactData.notes || "") + noteEntry,
+                }).eq("id", conversationData.contact_id);
+              }
+
+              // Log pipeline history
+              await supabase.from("conversation_pipeline_history").insert({
+                conversation_id,
+                clinic_id,
+                from_tab: "resueltos_ia",
+                to_tab: "seguimiento_s6",
+                moved_by: "ai_disposition",
+                reason: `IA: ${parsed.reason}`,
+              });
+
+              console.log(`[DISPOSITION] Contact moved to S6 (fully_informed): ${parsed.reason}`);
+            }
+            // needs_more_info → normal flow continues (S1 will trigger via inactivity)
+          }
+        }
+      } catch (e) {
+        console.error("[DISPOSITION] Non-blocking error:", e);
+      }
     }
 
     // If follow-up, update follow_up_count and contact funnel_stage
