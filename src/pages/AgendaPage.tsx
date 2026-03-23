@@ -572,7 +572,7 @@ const AgendaPage = () => {
             <div>
               <Label className="text-xs text-muted-foreground">Notas</Label>
               <Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
-                className="bg-white/5 border-white/10 text-foreground mt-1 min-h-[60px]" maxLength={1000} />
+                className="mt-1 min-h-[60px]" maxLength={1000} />
             </div>
 
             <div className="flex gap-3 pt-1">
