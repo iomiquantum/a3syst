@@ -1,8 +1,10 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useState, useMemo } from "react";
+import { Search } from "lucide-react";
 import ConversationCard from "./ConversationCard";
 import MensajesChat from "./MensajesChat";
 import ContactInfoPanel from "./ContactInfoPanel";
