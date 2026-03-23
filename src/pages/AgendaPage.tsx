@@ -244,15 +244,15 @@ const AgendaPage = () => {
         {/* ═══ TODAY STATS ═══ */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Hoy", value: todayStats.total, icon: CalIcon, color: "from-[#8B5CF6] to-[#6D28D9]" },
-            { label: "Confirmadas", value: todayStats.confirmadas, icon: CheckCircle2, color: "from-blue-500 to-blue-700" },
-            { label: "Pendientes", value: todayStats.pendientes, icon: AlertCircle, color: "from-yellow-500 to-yellow-700" },
-            { label: "Canceladas", value: todayStats.canceladas, icon: XCircle, color: "from-gray-500 to-gray-700" },
+            { label: "Hoy", value: todayStats.total, icon: CalIcon, color: "bg-primary" },
+            { label: "Confirmadas", value: todayStats.confirmadas, icon: CheckCircle2, color: "bg-[hsl(var(--info))]" },
+            { label: "Pendientes", value: todayStats.pendientes, icon: AlertCircle, color: "bg-[hsl(var(--warning))]" },
+            { label: "Canceladas", value: todayStats.canceladas, icon: XCircle, color: "bg-muted-foreground" },
           ].map(s => (
-            <Card key={s.label} className="border-white/5 bg-white/[0.03]">
+            <Card key={s.label}>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${s.color} flex items-center justify-center`}>
-                  <s.icon className="w-4 h-4 text-white" />
+                <div className={`w-9 h-9 rounded-lg ${s.color} flex items-center justify-center`}>
+                  <s.icon className="w-4 h-4 text-primary-foreground" />
                 </div>
                 <div>
                   <p className="text-xl font-bold text-foreground">{loading ? "—" : s.value}</p>
