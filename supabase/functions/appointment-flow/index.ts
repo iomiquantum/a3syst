@@ -335,7 +335,7 @@ ZONA HORARIA: ${clinicTz}
 CALENDARIO DE REFERENCIA (próximos 14 días):
 ${calendarRef.join("\n")}
 
-HORARIO DE ATENCIÓN (GENÉRICO):
+
 ${scheduleText}
 ${specialInstructions ? `\nINSTRUCCIONES ESPECIALES DEL NEGOCIO:\n${specialInstructions}` : ""}
 
