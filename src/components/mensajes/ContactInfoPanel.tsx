@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { PipelineConversation } from "@/hooks/useConversationsByPipeline";
+import ManualBookingDialog from "@/components/mensajes/ManualBookingDialog";
 
 const PIPELINE_STAGES = [
   { key: "resueltos_ia", label: "Resueltos IA" },
