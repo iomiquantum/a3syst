@@ -40,7 +40,7 @@ serve(async (req) => {
     // Fetch clinic schedule info
     const { data: clinicInfo } = await supabase
       .from("clinics")
-      .select("name, working_days, opening_hour, closing_hour")
+      .select("name, working_days, opening_hour, closing_hour, timezone, working_schedule")
       .eq("id", clinic_id)
       .single();
 
