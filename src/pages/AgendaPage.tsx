@@ -598,7 +598,7 @@ const AgendaPage = () => {
             <div>
               <Label className="text-xs text-muted-foreground">Monto</Label>
               <Input type="number" value={saleAmount} onChange={e => setSaleAmount(e.target.value)}
-                className="h-9 bg-white/5 border-white/10 text-foreground mt-1" min={0} />
+                className="h-9 mt-1" min={0} />
             </div>
             {paymentMethods.length > 0 && (
               <div>
