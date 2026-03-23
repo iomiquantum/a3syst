@@ -1,8 +1,10 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useState, useMemo } from "react";
+import { Search } from "lucide-react";
 import ConversationCard from "./ConversationCard";
 import MensajesChat from "./MensajesChat";
 import ContactInfoPanel from "./ContactInfoPanel";
@@ -40,6 +42,7 @@ const MensajesKanban = ({ conversations, onActionComplete }: Props) => {
   const [selectedConv, setSelectedConv] = useState<PipelineConversation | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [showContactPanel, setShowContactPanel] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleSelect = (c: PipelineConversation) => {
     setSelectedConv(c);
@@ -52,10 +55,19 @@ const MensajesKanban = ({ conversations, onActionComplete }: Props) => {
     if (!open) setShowContactPanel(false);
   };
 
+  const filteredConversations = useMemo(() => {
+    if (!searchQuery.trim()) return conversations;
+    const q = searchQuery.toLowerCase();
+    return conversations.filter(c =>
+      c.contactName.toLowerCase().includes(q) ||
+      c.contactPhone.toLowerCase().includes(q)
+    );
+  }, [conversations, searchQuery]);
+
   // Pre-sort seguimiento columns by time remaining (closest first)
   const sortedConversations = useMemo(() => {
     const grouped = new Map<string, PipelineConversation[]>();
-    for (const c of conversations) {
+    for (const c of filteredConversations) {
       const tab = c.pipeline_tab || "resueltos_ia";
       if (!grouped.has(tab)) grouped.set(tab, []);
       grouped.get(tab)!.push(c);
@@ -71,10 +83,21 @@ const MensajesKanban = ({ conversations, onActionComplete }: Props) => {
       }
     }
     return grouped;
-  }, [conversations]);
+  }, [filteredConversations]);
 
   return (
     <>
+      <div className="px-3 pt-3 pb-1 shrink-0">
+        <div className="relative max-w-xs">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nombre o teléfono..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="h-8 text-xs pl-8"
+          />
+        </div>
+      </div>
       <div
         className="grid h-full p-3 gap-2.5 overflow-x-auto"
         style={{ gridTemplateColumns: `repeat(${KANBAN_COLUMNS.length}, minmax(160px, 1fr))` }}
