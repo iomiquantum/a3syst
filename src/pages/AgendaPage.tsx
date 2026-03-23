@@ -372,7 +372,7 @@ const AgendaPage = () => {
               <div className="overflow-x-auto">
                 <div className="min-w-[800px]">
                   {/* Header */}
-                  <div className="grid grid-cols-8 border-b border-white/5">
+                  <div className="grid grid-cols-8 border-b border-border">
                     <div className="p-2" />
                     {weekDates.map((date, i) => {
                       const isToday = fmtDate(date) === todayStr;
