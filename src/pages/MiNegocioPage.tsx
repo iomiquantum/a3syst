@@ -15,6 +15,31 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+interface DaySchedule {
+  enabled: boolean;
+  open: string;
+  close: string;
+}
+
+interface WorkingSchedule {
+  [key: string]: DaySchedule;
+}
+
+const DEFAULT_SCHEDULE: WorkingSchedule = {
+  lunes: { enabled: true, open: "09:00", close: "18:00" },
+  martes: { enabled: true, open: "09:00", close: "18:00" },
+  miercoles: { enabled: true, open: "09:00", close: "18:00" },
+  jueves: { enabled: true, open: "09:00", close: "18:00" },
+  viernes: { enabled: true, open: "09:00", close: "18:00" },
+  sabado: { enabled: false, open: "09:00", close: "14:00" },
+  domingo: { enabled: false, open: "09:00", close: "14:00" },
+};
+
+const DAY_LABELS: Record<string, string> = {
+  lunes: "Lunes", martes: "Martes", miercoles: "Miércoles", jueves: "Jueves",
+  viernes: "Viernes", sabado: "Sábado", domingo: "Domingo",
+};
+
 interface ClinicProfile {
   id: string;
   name: string;
@@ -26,6 +51,7 @@ interface ClinicProfile {
   opening_hour: string | null;
   closing_hour: string | null;
   working_days: string[] | null;
+  working_schedule: WorkingSchedule | null;
   logo_url: string | null;
   primary_color: string | null;
   business_type: string;
@@ -52,7 +78,7 @@ const MiNegocioPage = () => {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("clinics")
-        .select("id, name, description, slug, city, address, whatsapp, opening_hour, closing_hour, working_days, logo_url, primary_color, business_type, business_category, timezone")
+        .select("id, name, description, slug, city, address, whatsapp, opening_hour, closing_hour, working_days, working_schedule, logo_url, primary_color, business_type, business_category, timezone")
         .eq("id", clinicId!)
         .single();
       if (error) throw error;
@@ -303,22 +329,42 @@ const MiNegocioPage = () => {
                     </select>
                     <p className="text-xs text-muted-foreground">La IA usará esta zona horaria para agendar citas correctamente.</p>
                   </div>
-                  <div className="flex gap-4">
-                    <div className="space-y-2 flex-1">
-                      <Label>Hora apertura</Label>
-                      <Input
-                        type="time"
-                        value={form.opening_hour ?? clinic?.opening_hour ?? "09:00"}
-                        onChange={e => setForm(f => ({ ...f, opening_hour: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2 flex-1">
-                      <Label>Hora cierre</Label>
-                      <Input
-                        type="time"
-                        value={form.closing_hour ?? clinic?.closing_hour ?? "18:00"}
-                        onChange={e => setForm(f => ({ ...f, closing_hour: e.target.value }))}
-                      />
+                  {/* Per-day schedule editor */}
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="text-base font-medium">Horario de atención por día</Label>
+                    <p className="text-xs text-muted-foreground mb-3">Configura los días y horarios en que tu negocio está abierto. La IA solo agendará dentro de estos horarios.</p>
+                    <div className="space-y-2">
+                      {Object.entries(DAY_LABELS).map(([key, label]) => {
+                        const schedule: WorkingSchedule = (form as any).working_schedule ?? clinic?.working_schedule ?? DEFAULT_SCHEDULE;
+                        const day = schedule[key] || { enabled: false, open: "09:00", close: "18:00" };
+                        const updateDay = (field: keyof DaySchedule, value: any) => {
+                          const current = { ...((form as any).working_schedule ?? clinic?.working_schedule ?? DEFAULT_SCHEDULE) };
+                          current[key] = { ...current[key], [field]: value };
+                          setForm(f => ({ ...f, working_schedule: current }));
+                        };
+                        return (
+                          <div key={key} className={cn("flex items-center gap-3 rounded-lg border p-2.5 transition-colors", day.enabled ? "bg-background border-border" : "bg-muted/50 border-transparent")}>
+                            <label className="flex items-center gap-2 min-w-[110px] cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={day.enabled}
+                                onChange={e => updateDay("enabled", e.target.checked)}
+                                className="rounded border-input"
+                              />
+                              <span className={cn("text-sm font-medium", !day.enabled && "text-muted-foreground")}>{label}</span>
+                            </label>
+                            {day.enabled ? (
+                              <div className="flex items-center gap-2 flex-1">
+                                <Input type="time" value={day.open} onChange={e => updateDay("open", e.target.value)} className="h-8 text-sm w-[120px]" />
+                                <span className="text-xs text-muted-foreground">a</span>
+                                <Input type="time" value={day.close} onChange={e => updateDay("close", e.target.value)} className="h-8 text-sm w-[120px]" />
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Cerrado</span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

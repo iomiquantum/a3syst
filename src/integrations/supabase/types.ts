@@ -1072,6 +1072,7 @@ export type Database = {
           updated_at: string
           whatsapp: string | null
           working_days: string[] | null
+          working_schedule: Json | null
         }
         Insert: {
           additional_info?: string | null
@@ -1097,6 +1098,7 @@ export type Database = {
           updated_at?: string
           whatsapp?: string | null
           working_days?: string[] | null
+          working_schedule?: Json | null
         }
         Update: {
           additional_info?: string | null
@@ -1122,6 +1124,7 @@ export type Database = {
           updated_at?: string
           whatsapp?: string | null
           working_days?: string[] | null
+          working_schedule?: Json | null
         }
         Relationships: []
       }
