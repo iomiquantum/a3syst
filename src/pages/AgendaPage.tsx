@@ -367,7 +367,7 @@ const AgendaPage = () => {
 
             {/* Calendar grid */}
             {loading ? (
-              <div className="space-y-2">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-12 bg-white/5" />)}</div>
+              <div className="space-y-2">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-12" />)}</div>
             ) : (
               <div className="overflow-x-auto">
                 <div className="min-w-[800px]">
