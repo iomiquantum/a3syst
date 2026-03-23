@@ -305,13 +305,31 @@ serve(async (req) => {
     const services = (agentConfig.services || []) as { name: string; price: string; description: string }[];
     const langLabel = agentConfig.language === "es" ? "Español" : agentConfig.language === "en" ? "English" : "Português";
 
+    // Build schedule text from working_schedule (per-day) or fallback to generic
+    const ws = (clinicInfo as any)?.working_schedule as Record<string, { enabled: boolean; open: string; close: string }> | null;
+    let scheduleBlock = "";
+    if (ws) {
+      const dayLabels: Record<string, string> = { lunes: "Lunes", martes: "Martes", miercoles: "Miércoles", jueves: "Jueves", viernes: "Viernes", sabado: "Sábado", domingo: "Domingo" };
+      const lines = Object.entries(dayLabels).map(([k, l]) => ws[k]?.enabled ? `• ${l}: ${ws[k].open} a ${ws[k].close}` : `• ${l}: CERRADO`);
+      scheduleBlock = lines.join("\n");
+    } else {
+      scheduleBlock = (clinicInfo?.working_days || []).length > 0 ? `${((clinicInfo as any).working_days as string[]).join(", ")}. ${(clinicInfo as any).opening_hour || ""} a ${(clinicInfo as any).closing_hour || ""}` : "(sin horario configurado)";
+    }
+
+    // Use clinic timezone for today's date
+    const clinicTz = (clinicInfo as any)?.timezone || "America/Guayaquil";
+    const nowInClinicTz = new Date(new Date().toLocaleString("en-US", { timeZone: clinicTz }));
+    const todayDate = `${nowInClinicTz.getFullYear()}-${String(nowInClinicTz.getMonth() + 1).padStart(2, "0")}-${String(nowInClinicTz.getDate()).padStart(2, "0")}`;
+    const todayDay = nowInClinicTz.toLocaleDateString("es", { weekday: "long" });
+
     let systemPrompt = `Eres "${agentConfig.agent_name}", un asistente virtual del negocio.
 Idioma: ${langLabel}
 Tono: ${agentConfig.tone}
 
 NEGOCIO: ${clinicInfo?.name || ""}
-HORARIO DE ATENCIÓN: ${(clinicInfo?.working_days || []).length > 0 ? `${(clinicInfo.working_days as string[]).join(", ")}. ${clinicInfo.opening_hour || ""} a ${clinicInfo.closing_hour || ""}` : "(sin horario configurado)"}
-FECHA DE HOY: ${new Date().toISOString().split("T")[0]} (${new Date().toLocaleDateString("es", { weekday: "long" })})
+HORARIO DE ATENCIÓN:
+${scheduleBlock}
+FECHA DE HOY: ${todayDate} (${todayDay})
 
 OBJETIVO:
 ${agentConfig.objective}
