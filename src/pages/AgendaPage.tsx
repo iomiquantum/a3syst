@@ -514,7 +514,7 @@ const AgendaPage = () => {
               <Label className="text-xs text-muted-foreground">Paciente *</Label>
               <div className="mt-1">
                 <Input placeholder="Buscar paciente..." value={patientSearch} onChange={e => setPatientSearch(e.target.value)}
-                  className="h-9 bg-white/5 border-white/10 text-foreground placeholder:text-white/20 mb-1" />
+                  className="h-9 mb-1" />
                 {form.patient_id && (
                   <span className="text-xs text-[#A78BFA]">
                     ✓ {patients.find(p => p.id === form.patient_id)?.first_name} {patients.find(p => p.id === form.patient_id)?.last_name}
