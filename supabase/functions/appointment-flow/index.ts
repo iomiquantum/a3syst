@@ -269,9 +269,25 @@ Responde SOLO JSON válido:
         });
       }
 
+      // Build a 14-day calendar reference so the AI maps day names to dates correctly
+      const calendarRef: string[] = [];
+      const dayNames = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+      for (let i = 0; i < 14; i++) {
+        const d = new Date(nowLocal);
+        d.setDate(d.getDate() + i);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        calendarRef.push(`${dayNames[d.getDay()]} ${dd}/${mm}/${yyyy} → ${yyyy}-${mm}-${dd}`);
+      }
+
       const guidedPrompt = `Eres ${agentName} de ${clinicName}. Estás ayudando a un paciente a agendar una cita.
 
 FECHA DE HOY: ${todayStr} (${dayOfWeekStr})
+ZONA HORARIA: ${clinicTz}
+
+CALENDARIO DE REFERENCIA (próximos 14 días):
+${calendarRef.join("\n")}
 
 HORARIO DE ATENCIÓN (GENÉRICO):
 ${scheduleText}
