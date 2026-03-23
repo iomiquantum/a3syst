@@ -31,10 +31,10 @@ const TIME_SLOTS = Array.from({ length: 26 }, (_, i) => {
 type AptStatus = "pendiente" | "confirmado" | "completado" | "cancelado";
 
 const STATUS_CFG: Record<AptStatus, { label: string; dot: string; bg: string; text: string }> = {
-  pendiente: { label: "Pendiente", dot: "bg-yellow-400", bg: "bg-yellow-500/20 border-yellow-500/30", text: "text-yellow-300" },
-  confirmado: { label: "Confirmado", dot: "bg-blue-400", bg: "bg-blue-500/20 border-blue-500/30", text: "text-blue-300" },
-  completado: { label: "Completado", dot: "bg-emerald-400", bg: "bg-emerald-500/20 border-emerald-500/30", text: "text-emerald-300" },
-  cancelado: { label: "Cancelado", dot: "bg-gray-400", bg: "bg-gray-500/20 border-gray-500/30", text: "text-gray-400" },
+  pendiente: { label: "Pendiente", dot: "bg-[hsl(var(--warning))]", bg: "bg-[hsl(var(--warning)/0.15)] border-[hsl(var(--warning)/0.3)]", text: "text-[hsl(var(--warning))]" },
+  confirmado: { label: "Confirmado", dot: "bg-[hsl(var(--info))]", bg: "bg-[hsl(var(--info)/0.15)] border-[hsl(var(--info)/0.3)]", text: "text-[hsl(var(--info))]" },
+  completado: { label: "Completado", dot: "bg-[hsl(var(--success))]", bg: "bg-[hsl(var(--success)/0.15)] border-[hsl(var(--success)/0.3)]", text: "text-[hsl(var(--success))]" },
+  cancelado: { label: "Cancelado", dot: "bg-muted-foreground", bg: "bg-muted/50 border-border", text: "text-muted-foreground" },
 };
 
 const getWeekStart = (d: Date) => {
@@ -231,11 +231,11 @@ const AgendaPage = () => {
             <p className="text-sm text-muted-foreground">Autopilot de agenda</p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Autopilot activo
+            <span className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.1)] px-3 py-1.5 text-xs font-medium text-[hsl(var(--success))]">
+              <span className="w-2 h-2 rounded-full bg-[hsl(var(--success))] animate-pulse" /> Autopilot activo
             </span>
             <Button onClick={() => { resetForm(); setCreateOpen(true); }}
-              className="bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white hover:opacity-90 shadow-[0_0_20px_rgba(139,92,246,0.3)]">
+              className="gradient-primary text-primary-foreground hover:opacity-90">
               <Plus className="w-4 h-4 mr-2" /> Nueva cita
             </Button>
           </div>
@@ -244,15 +244,15 @@ const AgendaPage = () => {
         {/* ═══ TODAY STATS ═══ */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Hoy", value: todayStats.total, icon: CalIcon, color: "from-[#8B5CF6] to-[#6D28D9]" },
-            { label: "Confirmadas", value: todayStats.confirmadas, icon: CheckCircle2, color: "from-blue-500 to-blue-700" },
-            { label: "Pendientes", value: todayStats.pendientes, icon: AlertCircle, color: "from-yellow-500 to-yellow-700" },
-            { label: "Canceladas", value: todayStats.canceladas, icon: XCircle, color: "from-gray-500 to-gray-700" },
+            { label: "Hoy", value: todayStats.total, icon: CalIcon, color: "bg-primary" },
+            { label: "Confirmadas", value: todayStats.confirmadas, icon: CheckCircle2, color: "bg-[hsl(var(--info))]" },
+            { label: "Pendientes", value: todayStats.pendientes, icon: AlertCircle, color: "bg-[hsl(var(--warning))]" },
+            { label: "Canceladas", value: todayStats.canceladas, icon: XCircle, color: "bg-muted-foreground" },
           ].map(s => (
-            <Card key={s.label} className="border-white/5 bg-white/[0.03]">
+            <Card key={s.label}>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${s.color} flex items-center justify-center`}>
-                  <s.icon className="w-4 h-4 text-white" />
+                <div className={`w-9 h-9 rounded-lg ${s.color} flex items-center justify-center`}>
+                  <s.icon className="w-4 h-4 text-primary-foreground" />
                 </div>
                 <div>
                   <p className="text-xl font-bold text-foreground">{loading ? "—" : s.value}</p>
@@ -267,15 +267,15 @@ const AgendaPage = () => {
         {!loading && pendingApprovals.length > 0 && (
           <section>
             <h2 className="flex items-center gap-2 text-sm font-bold text-foreground mb-3">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /> Necesita tu aprobación
+              <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" /> Necesita tu aprobación
             </h2>
             <div className="grid gap-3 md:grid-cols-2">
               {pendingApprovals.slice(0, 6).map(apt => (
-                <Card key={apt.id} className="border-white/10 bg-white/[0.03]">
+                <Card key={apt.id}>
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
-                      <div className="p-2 rounded-lg bg-yellow-500/10 shrink-0">
-                        <CalIcon className="w-4 h-4 text-yellow-400" />
+                      <div className="p-2 rounded-lg bg-[hsl(var(--warning)/0.1)] shrink-0">
+                        <CalIcon className="w-4 h-4 text-[hsl(var(--warning))]" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-muted-foreground">Cita pendiente</p>
@@ -285,11 +285,11 @@ const AgendaPage = () => {
                         </p>
                         <div className="flex gap-2 mt-2">
                           <button onClick={() => updateStatus(apt.id, "confirmado")}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 text-xs font-medium hover:bg-emerald-500/25 transition-colors">
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))] text-xs font-medium hover:bg-[hsl(var(--success)/0.25)] transition-colors">
                             <Check className="w-3.5 h-3.5" /> Confirmar
                           </button>
                           <button onClick={() => updateStatus(apt.id, "cancelado")}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-red-500/20 text-red-400 text-xs font-medium hover:bg-red-500/10 transition-colors">
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-destructive/20 text-destructive text-xs font-medium hover:bg-destructive/10 transition-colors">
                             <X className="w-3.5 h-3.5" /> Cancelar
                           </button>
                         </div>
@@ -303,7 +303,7 @@ const AgendaPage = () => {
         )}
 
         {/* ═══ CALENDAR ═══ */}
-        <Card className="border-white/5 bg-white/[0.03] backdrop-blur-sm">
+        <Card>
           <CardContent className="p-4">
             {/* Nav */}
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -312,15 +312,15 @@ const AgendaPage = () => {
                   {format(currentDate, "MMMM yyyy", { locale: es })}
                 </h3>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => navigateWeek(-1)} className="p-1.5 rounded hover:bg-white/5"><ChevronLeft className="w-4 h-4 text-muted-foreground" /></button>
-                  <button onClick={() => navigateWeek(1)} className="p-1.5 rounded hover:bg-white/5"><ChevronRight className="w-4 h-4 text-muted-foreground" /></button>
+                  <button onClick={() => navigateWeek(-1)} className="p-1.5 rounded hover:bg-muted"><ChevronLeft className="w-4 h-4 text-muted-foreground" /></button>
+                  <button onClick={() => navigateWeek(1)} className="p-1.5 rounded hover:bg-muted"><ChevronRight className="w-4 h-4 text-muted-foreground" /></button>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="text-xs border-white/10 hover:bg-white/5" onClick={() => setCurrentDate(new Date())}>Hoy</Button>
+                <Button variant="outline" size="sm" className="text-xs" onClick={() => setCurrentDate(new Date())}>Hoy</Button>
                 {(["dia", "semana", "mes"] as const).map(v => (
                   <Button key={v} variant={view === v ? "default" : "outline"} size="sm"
-                    className={cn("text-xs", view !== v && "border-white/10 hover:bg-white/5")}
+                    className="text-xs"
                     onClick={() => setView(v)}>
                     {v === "dia" ? "Día" : v === "semana" ? "Semana" : "Mes"}
                   </Button>
@@ -331,14 +331,14 @@ const AgendaPage = () => {
             {/* Filters */}
             <div className="flex items-center gap-3 mb-4 flex-wrap">
               <Select value={filterPro} onValueChange={setFilterPro}>
-                <SelectTrigger className="w-44 h-8 text-xs bg-white/5 border-white/10"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-44 h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos los profesionales</SelectItem>
                   {professionals.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-36 h-8 text-xs bg-white/5 border-white/10"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos</SelectItem>
                   {(Object.keys(STATUS_CFG) as AptStatus[]).map(s => (
@@ -355,11 +355,11 @@ const AgendaPage = () => {
                   </div>
                 ))}
                 <div className="flex items-center gap-1.5">
-                  <Bot className="w-3 h-3 text-[#8B5CF6]" />
+                  <Bot className="w-3 h-3 text-primary" />
                   <span className="text-[10px] text-muted-foreground">IA</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <User className="w-3 h-3 text-blue-400" />
+                  <User className="w-3 h-3 text-[hsl(var(--info))]" />
                   <span className="text-[10px] text-muted-foreground">Manual</span>
                 </div>
               </div>
@@ -367,19 +367,19 @@ const AgendaPage = () => {
 
             {/* Calendar grid */}
             {loading ? (
-              <div className="space-y-2">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-12 bg-white/5" />)}</div>
+              <div className="space-y-2">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-12" />)}</div>
             ) : (
               <div className="overflow-x-auto">
                 <div className="min-w-[800px]">
                   {/* Header */}
-                  <div className="grid grid-cols-8 border-b border-white/5">
+                  <div className="grid grid-cols-8 border-b border-border">
                     <div className="p-2" />
                     {weekDates.map((date, i) => {
                       const isToday = fmtDate(date) === todayStr;
                       return (
-                        <div key={i} className={cn("p-2 text-center border-l border-white/5", isToday && "bg-[#8B5CF6]/5")}>
+                        <div key={i} className={cn("p-2 text-center border-l border-border", isToday && "bg-primary/5")}>
                           <p className="text-[10px] text-muted-foreground">{DAYS[i]}</p>
-                          <p className={cn("text-sm font-semibold mt-0.5", isToday ? "text-[#A78BFA]" : "text-foreground")}>{date.getDate()}</p>
+                          <p className={cn("text-sm font-semibold mt-0.5", isToday ? "text-primary" : "text-foreground")}>{date.getDate()}</p>
                         </div>
                       );
                     })}
@@ -388,7 +388,7 @@ const AgendaPage = () => {
                   {/* Time rows */}
                   <div className="max-h-[500px] overflow-y-auto">
                     {TIME_SLOTS.map(time => (
-                      <div key={time} className="grid grid-cols-8 border-b border-white/[0.03] min-h-[44px]">
+                      <div key={time} className="grid grid-cols-8 border-b border-border/30 min-h-[44px]">
                         <div className="p-1.5 flex items-start justify-end pr-2">
                           <span className="text-[10px] text-muted-foreground">{time}</span>
                         </div>
@@ -397,7 +397,7 @@ const AgendaPage = () => {
                           const slotApts = getAptsForSlot(dateStr, time);
                           return (
                             <div key={di}
-                              className="border-l border-white/[0.03] p-0.5 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                              className="border-l border-border/30 p-0.5 cursor-pointer hover:bg-muted/30 transition-colors"
                               onClick={() => slotApts.length === 0 && openSlot(dateStr, time)}>
                               {slotApts.map(apt => {
                                 const cfg = STATUS_CFG[apt.status as AptStatus] || STATUS_CFG.pendiente;
@@ -410,9 +410,9 @@ const AgendaPage = () => {
                                         {apt.patients?.first_name} {apt.patients?.last_name}
                                       </p>
                                       {apt.booking_source === "ai_auto" ? (
-                                        <Bot className="w-3 h-3 text-[#8B5CF6] shrink-0" />
+                                        <Bot className="w-3 h-3 text-primary shrink-0" />
                                       ) : (
-                                        <User className="w-3 h-3 text-blue-400 shrink-0" />
+                                        <User className="w-3 h-3 text-[hsl(var(--info))] shrink-0" />
                                       )}
                                     </div>
                                     <p className="text-[9px] text-muted-foreground truncate">
@@ -436,7 +436,7 @@ const AgendaPage = () => {
 
       {/* ═══ DETAIL DIALOG ═══ */}
       <Dialog open={!!detailApt} onOpenChange={o => !o && setDetailApt(null)}>
-        <DialogContent className="bg-[#0d0d1a] border-white/10 text-foreground max-w-md">
+        <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Detalle de cita</DialogTitle></DialogHeader>
           {detailApt && (() => {
             const cfg = STATUS_CFG[detailApt.status as AptStatus] || STATUS_CFG.pendiente;
@@ -470,11 +470,11 @@ const AgendaPage = () => {
                   <p className="text-[10px] text-muted-foreground uppercase">Agendado por</p>
                   <div className="flex items-center gap-1.5 mt-1">
                     {detailApt.booking_source === "ai_auto" ? (
-                      <><Bot className="w-3.5 h-3.5 text-[#8B5CF6]" /><span className="text-sm font-medium">IA (automático)</span></>
+                      <><Bot className="w-3.5 h-3.5 text-primary" /><span className="text-sm font-medium">IA (automático)</span></>
                     ) : detailApt.booking_source === "ai_manual" ? (
-                      <><Bot className="w-3.5 h-3.5 text-[#8B5CF6]" /><span className="text-sm font-medium">IA (asistido)</span></>
+                      <><Bot className="w-3.5 h-3.5 text-primary" /><span className="text-sm font-medium">IA (asistido)</span></>
                     ) : (
-                      <><User className="w-3.5 h-3.5 text-blue-400" /><span className="text-sm font-medium">Manual (operador)</span></>
+                      <><User className="w-3.5 h-3.5 text-[hsl(var(--info))]" /><span className="text-sm font-medium">Manual (operador)</span></>
                     )}
                   </div>
                 </div>
@@ -482,19 +482,19 @@ const AgendaPage = () => {
                 <div className="flex flex-wrap gap-2 pt-2">
                   {detailApt.status === "pendiente" && (
                     <Button size="sm" onClick={() => updateStatus(detailApt.id, "confirmado")}
-                      className="bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border-0">
+                      className="bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.25)] border-0">
                       <Check className="w-3.5 h-3.5 mr-1" /> Confirmar
                     </Button>
                   )}
                   {detailApt.status === "confirmado" && (
                     <Button size="sm" onClick={() => updateStatus(detailApt.id, "completado")}
-                      className="bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border-0">
+                      className="bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.25)] border-0">
                       <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Completar
                     </Button>
                   )}
                   {detailApt.status !== "cancelado" && detailApt.status !== "completado" && (
                     <Button size="sm" variant="outline" onClick={() => updateStatus(detailApt.id, "cancelado")}
-                      className="border-red-500/20 text-red-400 hover:bg-red-500/10">
+                      className="border-destructive/20 text-destructive hover:bg-destructive/10">
                       <X className="w-3.5 h-3.5 mr-1" /> Cancelar
                     </Button>
                   )}
@@ -507,24 +507,24 @@ const AgendaPage = () => {
 
       {/* ═══ CREATE DIALOG ═══ */}
       <Dialog open={createOpen} onOpenChange={o => { if (!o) { setCreateOpen(false); resetForm(); setPatientSearch(""); } else setCreateOpen(true); }}>
-        <DialogContent className="bg-[#0d0d1a] border-white/10 text-foreground max-w-md">
+        <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Nueva cita</DialogTitle></DialogHeader>
           <div className="space-y-4 pt-2">
             <div>
               <Label className="text-xs text-muted-foreground">Paciente *</Label>
               <div className="mt-1">
                 <Input placeholder="Buscar paciente..." value={patientSearch} onChange={e => setPatientSearch(e.target.value)}
-                  className="h-9 bg-white/5 border-white/10 text-foreground placeholder:text-white/20 mb-1" />
+                  className="h-9 mb-1" />
                 {form.patient_id && (
-                  <span className="text-xs text-[#A78BFA]">
+                  <span className="text-xs text-primary">
                     ✓ {patients.find(p => p.id === form.patient_id)?.first_name} {patients.find(p => p.id === form.patient_id)?.last_name}
                   </span>
                 )}
                 {patientSearch && !form.patient_id && (
-                  <div className="max-h-32 overflow-y-auto rounded-lg border border-white/10 bg-[#0d0d1a]">
+                  <div className="max-h-32 overflow-y-auto rounded-lg border border-border bg-popover">
                     {filteredPatients.map(p => (
                       <button key={p.id} onClick={() => { setForm({ ...form, patient_id: p.id }); setPatientSearch(""); }}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-white/5 truncate">
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted truncate">
                         {p.first_name} {p.last_name}
                       </button>
                     ))}
@@ -537,7 +537,7 @@ const AgendaPage = () => {
             <div>
               <Label className="text-xs text-muted-foreground">Servicio</Label>
               <Select value={form.treatment_id} onValueChange={handleTreatmentChange}>
-                <SelectTrigger className="h-9 bg-white/5 border-white/10 mt-1"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                <SelectTrigger className="h-9 mt-1"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                 <SelectContent>{treatments.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
@@ -545,7 +545,7 @@ const AgendaPage = () => {
             <div>
               <Label className="text-xs text-muted-foreground">Profesional</Label>
               <Select value={form.professional_id} onValueChange={v => setForm({ ...form, professional_id: v })}>
-                <SelectTrigger className="h-9 bg-white/5 border-white/10 mt-1"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                <SelectTrigger className="h-9 mt-1"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                 <SelectContent>{professionals.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
@@ -554,31 +554,31 @@ const AgendaPage = () => {
               <div>
                 <Label className="text-xs text-muted-foreground">Fecha *</Label>
                 <Input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
-                  className="h-9 bg-white/5 border-white/10 text-foreground mt-1" />
+                  className="h-9 mt-1" />
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Hora *</Label>
                 <Input type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })}
-                  className="h-9 bg-white/5 border-white/10 text-foreground mt-1" />
+                  className="h-9 mt-1" />
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Duración</Label>
                 <Input type="number" value={form.duration} min={5} max={480}
                   onChange={e => setForm({ ...form, duration: e.target.value })}
-                  className="h-9 bg-white/5 border-white/10 text-foreground mt-1" />
+                  className="h-9 mt-1" />
               </div>
             </div>
 
             <div>
               <Label className="text-xs text-muted-foreground">Notas</Label>
               <Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
-                className="bg-white/5 border-white/10 text-foreground mt-1 min-h-[60px]" maxLength={1000} />
+                className="mt-1 min-h-[60px]" maxLength={1000} />
             </div>
 
             <div className="flex gap-3 pt-1">
-              <Button variant="outline" onClick={() => { setCreateOpen(false); resetForm(); }} className="flex-1 border-white/10 hover:bg-white/5">Cancelar</Button>
+              <Button variant="outline" onClick={() => { setCreateOpen(false); resetForm(); }} className="flex-1">Cancelar</Button>
               <Button onClick={handleCreate} disabled={!form.patient_id || !form.date || !form.time}
-                className="flex-1 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white hover:opacity-90">
+                className="flex-1 gradient-primary text-primary-foreground hover:opacity-90">
                 Crear cita
               </Button>
             </div>
@@ -588,7 +588,7 @@ const AgendaPage = () => {
 
       {/* ═══ REGISTER SALE DIALOG ═══ */}
       <Dialog open={!!saleDialogApt} onOpenChange={o => !o && setSaleDialogApt(null)}>
-        <DialogContent className="bg-[#0d0d1a] border-white/10 text-foreground max-w-sm">
+        <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>💰 Registrar venta</DialogTitle></DialogHeader>
           <div className="space-y-4 pt-2">
             <p className="text-sm text-muted-foreground">
@@ -598,21 +598,21 @@ const AgendaPage = () => {
             <div>
               <Label className="text-xs text-muted-foreground">Monto</Label>
               <Input type="number" value={saleAmount} onChange={e => setSaleAmount(e.target.value)}
-                className="h-9 bg-white/5 border-white/10 text-foreground mt-1" min={0} />
+                className="h-9 mt-1" min={0} />
             </div>
             {paymentMethods.length > 0 && (
               <div>
                 <Label className="text-xs text-muted-foreground">Método de pago</Label>
                 <Select value={salePaymentMethod} onValueChange={setSalePaymentMethod}>
-                  <SelectTrigger className="h-9 bg-white/5 border-white/10 mt-1"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                  <SelectTrigger className="h-9 mt-1"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                   <SelectContent>{paymentMethods.map(pm => <SelectItem key={pm.id} value={pm.id}>{pm.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             )}
             <div className="flex gap-3 pt-1">
-              <Button variant="outline" onClick={() => setSaleDialogApt(null)} className="flex-1 border-white/10 hover:bg-white/5">Omitir</Button>
+              <Button variant="outline" onClick={() => setSaleDialogApt(null)} className="flex-1">Omitir</Button>
               <Button onClick={handleRegisterSale} disabled={!saleAmount}
-                className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-700 text-white hover:opacity-90">
+                className="flex-1 bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] hover:opacity-90">
                 Registrar venta
               </Button>
             </div>
