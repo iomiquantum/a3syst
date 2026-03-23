@@ -610,9 +610,9 @@ const AgendaPage = () => {
               </div>
             )}
             <div className="flex gap-3 pt-1">
-              <Button variant="outline" onClick={() => setSaleDialogApt(null)} className="flex-1 border-white/10 hover:bg-white/5">Omitir</Button>
+              <Button variant="outline" onClick={() => setSaleDialogApt(null)} className="flex-1">Omitir</Button>
               <Button onClick={handleRegisterSale} disabled={!saleAmount}
-                className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-700 text-white hover:opacity-90">
+                className="flex-1 bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] hover:opacity-90">
                 Registrar venta
               </Button>
             </div>
