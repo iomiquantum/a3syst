@@ -312,8 +312,8 @@ const AgendaPage = () => {
                   {format(currentDate, "MMMM yyyy", { locale: es })}
                 </h3>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => navigateWeek(-1)} className="p-1.5 rounded hover:bg-white/5"><ChevronLeft className="w-4 h-4 text-muted-foreground" /></button>
-                  <button onClick={() => navigateWeek(1)} className="p-1.5 rounded hover:bg-white/5"><ChevronRight className="w-4 h-4 text-muted-foreground" /></button>
+                  <button onClick={() => navigateWeek(-1)} className="p-1.5 rounded hover:bg-muted"><ChevronLeft className="w-4 h-4 text-muted-foreground" /></button>
+                  <button onClick={() => navigateWeek(1)} className="p-1.5 rounded hover:bg-muted"><ChevronRight className="w-4 h-4 text-muted-foreground" /></button>
                 </div>
               </div>
               <div className="flex items-center gap-2">
