@@ -124,7 +124,7 @@ serve(async (req) => {
       // If flow returned error or no text, fall through to normal AI
       if (flowResult.flow_cancelled) {
         const cancelReply = flowResult.response_text || "Sin problema. Cuando quieras agendar, aquí estoy. 😊";
-        // Send cancel message and continue normal flow
+        // Send cancel message
         if (conversationData.channel === "whatsapp") {
           let toNumber = conversationData.visitor_contact;
           if (!toNumber && conversationData.contact_id) {
@@ -135,18 +135,29 @@ serve(async (req) => {
             await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
               method: "POST",
               headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
-              body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: cancelReply, conversation_id, origin: `appointment_flow|${conversationData.pipeline_tab || "inbox"}` }),
+              body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: cancelReply, conversation_id, origin: `appointment_flow|${conversationData.pipeline_tab || "escalados"}` }),
             });
           }
         } else {
           await supabase.from("messages").insert({
-            conversation_id, clinic_id, direction: "outbound", content: cancelReply, message_type: "text", status: "sent", origin: `appointment_flow|${conversationData.pipeline_tab || "inbox"}`,
+            conversation_id, clinic_id, direction: "outbound", content: cancelReply, message_type: "text", status: "sent", origin: `appointment_flow|${conversationData.pipeline_tab || "escalados"}`,
           });
           await supabase.from("conversations").update({
             last_message_at: new Date().toISOString(), last_message_preview: cancelReply.substring(0, 100),
           }).eq("id", conversation_id);
         }
-        return new Response(JSON.stringify({ reply: cancelReply, appointment_flow: true, flow_cancelled: true }), {
+
+        // If escalated by circuit breaker, ensure conversation is in escalados with chatbot off
+        if (flowResult.escalated) {
+          await supabase.from("conversations").update({
+            pipeline_tab: "escalados",
+            chatbot_active: false,
+            escalado_at: new Date().toISOString(),
+            escalado_reason: flowResult.escalado_reason || "Escalado automático desde flujo de agendamiento",
+          }).eq("id", conversation_id);
+        }
+
+        return new Response(JSON.stringify({ reply: cancelReply, appointment_flow: true, flow_cancelled: true, escalated: flowResult.escalated || false }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
