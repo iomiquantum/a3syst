@@ -537,7 +537,7 @@ const AgendaPage = () => {
             <div>
               <Label className="text-xs text-muted-foreground">Servicio</Label>
               <Select value={form.treatment_id} onValueChange={handleTreatmentChange}>
-                <SelectTrigger className="h-9 bg-white/5 border-white/10 mt-1"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                <SelectTrigger className="h-9 mt-1"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                 <SelectContent>{treatments.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
