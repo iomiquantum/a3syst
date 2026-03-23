@@ -1,0 +1,2 @@
+ALTER TABLE public.appointments ADD COLUMN booking_source text NOT NULL DEFAULT 'manual';
+COMMENT ON COLUMN public.appointments.booking_source IS 'How the appointment was created: manual, ai_auto, ai_manual';

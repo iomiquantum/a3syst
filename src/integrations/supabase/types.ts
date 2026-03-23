@@ -575,6 +575,7 @@ export type Database = {
       }
       appointments: {
         Row: {
+          booking_source: string
           branch_id: string | null
           clinic_id: string
           created_at: string
@@ -591,6 +592,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          booking_source?: string
           branch_id?: string | null
           clinic_id: string
           created_at?: string
@@ -607,6 +609,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          booking_source?: string
           branch_id?: string | null
           clinic_id?: string
           created_at?: string
