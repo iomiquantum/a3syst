@@ -494,7 +494,7 @@ const AgendaPage = () => {
                   )}
                   {detailApt.status !== "cancelado" && detailApt.status !== "completado" && (
                     <Button size="sm" variant="outline" onClick={() => updateStatus(detailApt.id, "cancelado")}
-                      className="border-red-500/20 text-red-400 hover:bg-red-500/10">
+                      className="border-destructive/20 text-destructive hover:bg-destructive/10">
                       <X className="w-3.5 h-3.5 mr-1" /> Cancelar
                     </Button>
                   )}
