@@ -134,6 +134,7 @@ export const useConversationsByPipeline = (params: Params) => {
       contact_id: c.contact_id,
       channel: c.channel || "whatsapp",
       status: c.status,
+      created_at: c.created_at,
       last_message_at: c.last_message_at,
       last_message_preview: c.last_message_preview || "",
       last_outbound_status: null,
