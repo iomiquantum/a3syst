@@ -761,9 +761,6 @@ async function escalateConversation(
 }
 
 
-  return formatDateLabelES(dateStr, false);
-}
-
 const DAY_NAMES_ES = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"] as const;
 const WEEKDAY_ALIASES = [
   { index: 0, labels: ["domingo"] },
