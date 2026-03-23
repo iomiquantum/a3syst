@@ -52,7 +52,7 @@ const MiNegocioPage = () => {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("clinics")
-        .select("id, name, description, slug, city, address, whatsapp, opening_hour, closing_hour, working_days, logo_url, primary_color, business_type, business_category")
+        .select("id, name, description, slug, city, address, whatsapp, opening_hour, closing_hour, working_days, logo_url, primary_color, business_type, business_category, timezone")
         .eq("id", clinicId!)
         .single();
       if (error) throw error;
