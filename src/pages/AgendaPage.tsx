@@ -347,13 +347,21 @@ const AgendaPage = () => {
                 </SelectContent>
               </Select>
               {/* Legend */}
-              <div className="flex items-center gap-3 ml-auto">
+              <div className="flex items-center gap-3 ml-auto flex-wrap">
                 {(Object.entries(STATUS_CFG) as [AptStatus, typeof STATUS_CFG[AptStatus]][]).map(([k, v]) => (
                   <div key={k} className="flex items-center gap-1.5">
                     <span className={`w-2 h-2 rounded-full ${v.dot}`} />
                     <span className="text-[10px] text-muted-foreground">{v.label}</span>
                   </div>
                 ))}
+                <div className="flex items-center gap-1.5">
+                  <Bot className="w-3 h-3 text-[#8B5CF6]" />
+                  <span className="text-[10px] text-muted-foreground">IA</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <User className="w-3 h-3 text-blue-400" />
+                  <span className="text-[10px] text-muted-foreground">Manual</span>
+                </div>
               </div>
             </div>
 
