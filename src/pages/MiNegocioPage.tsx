@@ -30,6 +30,7 @@ interface ClinicProfile {
   primary_color: string | null;
   business_type: string;
   business_category: string;
+  timezone: string | null;
 }
 
 interface Treatment {
