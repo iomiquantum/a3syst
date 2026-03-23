@@ -158,6 +158,7 @@ const ConversationCard = ({ conversation: c, selected, onClick, variant = "list"
             </div>
             <SpamBadge c={c} />
             {windowBadge}
+            <DatesBadge c={c} />
             {c.contactTags.length > 0 && (
               <div className="flex flex-col items-start gap-1">
                 {c.contactTags.slice(0, 2).map((t) => (
