@@ -317,10 +317,10 @@ const AgendaPage = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="text-xs border-white/10 hover:bg-white/5" onClick={() => setCurrentDate(new Date())}>Hoy</Button>
+                <Button variant="outline" size="sm" className="text-xs" onClick={() => setCurrentDate(new Date())}>Hoy</Button>
                 {(["dia", "semana", "mes"] as const).map(v => (
                   <Button key={v} variant={view === v ? "default" : "outline"} size="sm"
-                    className={cn("text-xs", view !== v && "border-white/10 hover:bg-white/5")}
+                    className="text-xs"
                     onClick={() => setView(v)}>
                     {v === "dia" ? "Día" : v === "semana" ? "Semana" : "Mes"}
                   </Button>
