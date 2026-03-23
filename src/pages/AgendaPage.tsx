@@ -470,11 +470,11 @@ const AgendaPage = () => {
                   <p className="text-[10px] text-muted-foreground uppercase">Agendado por</p>
                   <div className="flex items-center gap-1.5 mt-1">
                     {detailApt.booking_source === "ai_auto" ? (
-                      <><Bot className="w-3.5 h-3.5 text-[#8B5CF6]" /><span className="text-sm font-medium">IA (automático)</span></>
+                      <><Bot className="w-3.5 h-3.5 text-primary" /><span className="text-sm font-medium">IA (automático)</span></>
                     ) : detailApt.booking_source === "ai_manual" ? (
-                      <><Bot className="w-3.5 h-3.5 text-[#8B5CF6]" /><span className="text-sm font-medium">IA (asistido)</span></>
+                      <><Bot className="w-3.5 h-3.5 text-primary" /><span className="text-sm font-medium">IA (asistido)</span></>
                     ) : (
-                      <><User className="w-3.5 h-3.5 text-blue-400" /><span className="text-sm font-medium">Manual (operador)</span></>
+                      <><User className="w-3.5 h-3.5 text-[hsl(var(--info))]" /><span className="text-sm font-medium">Manual (operador)</span></>
                     )}
                   </div>
                 </div>
