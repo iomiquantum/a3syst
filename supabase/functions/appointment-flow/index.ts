@@ -243,9 +243,9 @@ Responde SOLO JSON válido:
 
       // Use clinic timezone for accurate date
       const clinicTz = (clinic as any)?.timezone || "America/Guayaquil";
-      const nowLocal = new Date(new Date().toLocaleString("en-US", { timeZone: clinicTz }));
-      const todayStr = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, "0")}-${String(nowLocal.getDate()).padStart(2, "0")}`;
-      const dayOfWeekStr = nowLocal.toLocaleDateString("es", { weekday: "long" });
+      const todayLocalInfo = getLocalDateInfo(clinicTz);
+      const todayStr = todayLocalInfo.iso;
+      const dayOfWeekStr = DAY_NAMES_ES[todayLocalInfo.weekday];
 
       // Build working schedule info — prefer detailed per-day schedule
       const workingSchedule = (clinic as any)?.working_schedule as Record<string, { enabled: boolean; open: string; close: string }> | null;
@@ -311,17 +311,9 @@ Responde SOLO JSON válido:
         });
       }
 
-      // Build a 14-day calendar reference so the AI maps day names to dates correctly
-      const calendarRef: string[] = [];
-      const dayNames = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
-      for (let i = 0; i < 14; i++) {
-        const d = new Date(nowLocal);
-        d.setDate(d.getDate() + i);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, "0");
-        const dd = String(d.getDate()).padStart(2, "0");
-        calendarRef.push(`${dayNames[d.getDay()]} ${dd}/${mm}/${yyyy} → ${yyyy}-${mm}-${dd}`);
-      }
+      const calendarRef = buildCalendarReference(todayLocalInfo, 14);
+      const resolvedDate = resolveDateReferenceFromMessage(patient_message, clinicTz);
+      const dateInstruction = buildDateResolutionInstruction(resolvedDate);
 
       const guidedPrompt = `Eres ${agentName} de ${clinicName}. Estás ayudando a un paciente a agendar una cita.
 
@@ -330,6 +322,7 @@ ZONA HORARIA: ${clinicTz}
 
 CALENDARIO DE REFERENCIA (próximos 14 días):
 ${calendarRef.join("\n")}
+${dateInstruction ? `\n${dateInstruction}\n` : ""}
 
 
 ${scheduleText}
