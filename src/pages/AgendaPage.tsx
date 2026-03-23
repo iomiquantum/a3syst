@@ -267,7 +267,7 @@ const AgendaPage = () => {
         {!loading && pendingApprovals.length > 0 && (
           <section>
             <h2 className="flex items-center gap-2 text-sm font-bold text-foreground mb-3">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /> Necesita tu aprobación
+              <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" /> Necesita tu aprobación
             </h2>
             <div className="grid gap-3 md:grid-cols-2">
               {pendingApprovals.slice(0, 6).map(apt => (
