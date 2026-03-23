@@ -436,7 +436,7 @@ const AgendaPage = () => {
 
       {/* ═══ DETAIL DIALOG ═══ */}
       <Dialog open={!!detailApt} onOpenChange={o => !o && setDetailApt(null)}>
-        <DialogContent className="bg-[#0d0d1a] border-white/10 text-foreground max-w-md">
+        <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Detalle de cita</DialogTitle></DialogHeader>
           {detailApt && (() => {
             const cfg = STATUS_CFG[detailApt.status as AptStatus] || STATUS_CFG.pendiente;
