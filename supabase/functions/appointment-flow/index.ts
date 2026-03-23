@@ -274,7 +274,7 @@ Responde SOLO JSON válido:
       // Include special_instructions if they contain schedule overrides
       const specialInstructions = agentConfig?.special_instructions || "";
 
-      // Loop detection: count how many outbound appointment_flow messages exist
+      // Safety net: hard limit at 6 messages (reduced from 12)
       const { count: flowMsgCount } = await supabase
         .from("messages")
         .select("id", { count: "exact", head: true })
@@ -282,33 +282,12 @@ Responde SOLO JSON válido:
         .eq("direction", "outbound")
         .like("origin", "appointment_flow%");
 
-      // If more than 12 flow messages, abort to prevent infinite loop
-      if ((flowMsgCount || 0) > 12) {
-        console.warn("Appointment flow loop detected, escalating conversation:", conversation_id);
-        await supabase.from("conversations").update({
-          appointment_flow_active: false,
-          appointment_flow_step: null,
-          appointment_flow_data: {},
-          pipeline_tab: "escalados",
-          chatbot_active: false,
-          escalado_at: new Date().toISOString(),
-          escalado_reason: "Flujo de agendamiento no completado después de 12 intentos",
-        }).eq("id", conversation_id);
-
-        // Log pipeline history
-        await supabase.from("conversation_pipeline_history").insert({
-          conversation_id, clinic_id,
-          from_tab: conv.pipeline_tab || "resueltos_ia",
-          to_tab: "escalados",
-          moved_by: "system",
-          reason: "Circuit breaker: flujo de agendamiento excedió 12 mensajes",
-        });
-
-        return jsonResponse({
-          response_text: "Disculpa las molestias. Permíteme conectarte con uno de nuestros asesores para ayudarte con tu agendamiento. 😊",
-          flow_cancelled: true,
-          escalated: true,
-        });
+      if ((flowMsgCount || 0) > 6) {
+        return await escalateConversation(
+          supabase, conversation_id, clinic_id,
+          conv.pipeline_tab || "resueltos_ia",
+          "El flujo de agendamiento no pudo completarse después de múltiples intentos."
+        );
       }
 
       const calendarRef = buildCalendarReference(todayLocalInfo, 14);
