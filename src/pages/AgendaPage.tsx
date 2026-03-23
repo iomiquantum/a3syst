@@ -462,8 +462,21 @@ const AgendaPage = () => {
                 </div>
 
                 <div>
-                  <p className="text-[10px] text-muted-foreground uppercase mb-2">Estado</p>
+                  <p className="text-[10px] text-muted-foreground uppercase">Estado</p>
                   <span className={cn("text-xs font-medium px-3 py-1.5 rounded-full border", cfg.bg, cfg.text)}>{cfg.label}</span>
+                </div>
+
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase">Agendado por</p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    {detailApt.booking_source === "ai_auto" ? (
+                      <><Bot className="w-3.5 h-3.5 text-[#8B5CF6]" /><span className="text-sm font-medium">IA (automático)</span></>
+                    ) : detailApt.booking_source === "ai_manual" ? (
+                      <><Bot className="w-3.5 h-3.5 text-[#8B5CF6]" /><span className="text-sm font-medium">IA (asistido)</span></>
+                    ) : (
+                      <><User className="w-3.5 h-3.5 text-blue-400" /><span className="text-sm font-medium">Manual (operador)</span></>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2 pt-2">
