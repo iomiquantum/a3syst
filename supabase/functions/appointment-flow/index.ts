@@ -230,8 +230,11 @@ Responde SOLO JSON válido:
       // Include professionals if available
       const professionalsText = agentConfig?.professionals_text || "";
 
-      const todayStr = new Date().toISOString().split("T")[0];
-      const dayOfWeekStr = new Date().toLocaleDateString("es", { weekday: "long" });
+      // Use clinic timezone for accurate date
+      const clinicTz = (clinic as any)?.timezone || "America/Guayaquil";
+      const nowLocal = new Date(new Date().toLocaleString("en-US", { timeZone: clinicTz }));
+      const todayStr = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, "0")}-${String(nowLocal.getDate()).padStart(2, "0")}`;
+      const dayOfWeekStr = nowLocal.toLocaleDateString("es", { weekday: "long" });
 
       // Build working days / schedule info
       const workingDays = (clinic as any)?.working_days || [];
