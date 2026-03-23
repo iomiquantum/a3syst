@@ -388,7 +388,7 @@ const AgendaPage = () => {
                   {/* Time rows */}
                   <div className="max-h-[500px] overflow-y-auto">
                     {TIME_SLOTS.map(time => (
-                      <div key={time} className="grid grid-cols-8 border-b border-white/[0.03] min-h-[44px]">
+                      <div key={time} className="grid grid-cols-8 border-b border-border/30 min-h-[44px]">
                         <div className="p-1.5 flex items-start justify-end pr-2">
                           <span className="text-[10px] text-muted-foreground">{time}</span>
                         </div>
