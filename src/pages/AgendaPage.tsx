@@ -554,7 +554,7 @@ const AgendaPage = () => {
               <div>
                 <Label className="text-xs text-muted-foreground">Fecha *</Label>
                 <Input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
-                  className="h-9 bg-white/5 border-white/10 text-foreground mt-1" />
+                  className="h-9 mt-1" />
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Hora *</Label>
