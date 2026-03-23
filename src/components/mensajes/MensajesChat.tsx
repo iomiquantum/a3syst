@@ -234,6 +234,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
     if (sender === "appointment_flow") return { text: `📅 Flujo de cita${stageTag}`, color: "text-emerald-500" };
     if (sender === "reminder") return { text: `⏰ Recordatorio${stageTag}`, color: "text-orange-500" };
     if (sender === "system") return { text: `⚙️ Sistema${stageTag}`, color: "text-muted-foreground" };
+    if (sender === "system_summary") return { text: `📋 Resumen IA${stageTag}`, color: "text-primary" };
     return { text: `🤖 ${agentName}${stageTag}`, color: "text-violet-500" };
   };
 
