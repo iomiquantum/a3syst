@@ -576,9 +576,9 @@ const AgendaPage = () => {
             </div>
 
             <div className="flex gap-3 pt-1">
-              <Button variant="outline" onClick={() => { setCreateOpen(false); resetForm(); }} className="flex-1 border-white/10 hover:bg-white/5">Cancelar</Button>
+              <Button variant="outline" onClick={() => { setCreateOpen(false); resetForm(); }} className="flex-1">Cancelar</Button>
               <Button onClick={handleCreate} disabled={!form.patient_id || !form.date || !form.time}
-                className="flex-1 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white hover:opacity-90">
+                className="flex-1 gradient-primary text-primary-foreground hover:opacity-90">
                 Crear cita
               </Button>
             </div>
