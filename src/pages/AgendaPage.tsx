@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   ChevronLeft, ChevronRight, Plus, Clock, X, Check, Calendar as CalIcon,
-  Search, Bot, CheckCircle2, XCircle, AlertCircle
+  Search, Bot, CheckCircle2, XCircle, AlertCircle, User
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -98,7 +98,7 @@ const AgendaPage = () => {
       supabase.from("appointments")
         .select("*, patients(first_name, last_name), treatments(name, price), professionals(full_name)")
         .eq("clinic_id", clinicId).gte("date", startDate).lte("date", endDate)
-        .order("date").order("time"),
+        .order("date").order("time") as any,
       supabase.from("patients").select("id, first_name, last_name").eq("clinic_id", clinicId).order("first_name"),
       supabase.from("treatments").select("id, name, duration, price").eq("clinic_id", clinicId),
       supabase.from("professionals").select("id, full_name").eq("clinic_id", clinicId).eq("active", true),
@@ -347,13 +347,21 @@ const AgendaPage = () => {
                 </SelectContent>
               </Select>
               {/* Legend */}
-              <div className="flex items-center gap-3 ml-auto">
+              <div className="flex items-center gap-3 ml-auto flex-wrap">
                 {(Object.entries(STATUS_CFG) as [AptStatus, typeof STATUS_CFG[AptStatus]][]).map(([k, v]) => (
                   <div key={k} className="flex items-center gap-1.5">
                     <span className={`w-2 h-2 rounded-full ${v.dot}`} />
                     <span className="text-[10px] text-muted-foreground">{v.label}</span>
                   </div>
                 ))}
+                <div className="flex items-center gap-1.5">
+                  <Bot className="w-3 h-3 text-[#8B5CF6]" />
+                  <span className="text-[10px] text-muted-foreground">IA</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <User className="w-3 h-3 text-blue-400" />
+                  <span className="text-[10px] text-muted-foreground">Manual</span>
+                </div>
               </div>
             </div>
 
@@ -397,9 +405,16 @@ const AgendaPage = () => {
                                   <button key={apt.id}
                                     onClick={e => { e.stopPropagation(); setDetailApt(apt); }}
                                     className={cn("w-full rounded-md p-1.5 text-left border transition-all hover:scale-[1.02]", cfg.bg)}>
-                                    <p className={cn("text-[10px] font-medium truncate", cfg.text)}>
-                                      {apt.patients?.first_name} {apt.patients?.last_name}
-                                    </p>
+                                    <div className="flex items-center gap-1">
+                                      <p className={cn("text-[10px] font-medium truncate flex-1", cfg.text)}>
+                                        {apt.patients?.first_name} {apt.patients?.last_name}
+                                      </p>
+                                      {apt.booking_source === "ai_auto" ? (
+                                        <Bot className="w-3 h-3 text-[#8B5CF6] shrink-0" />
+                                      ) : (
+                                        <User className="w-3 h-3 text-blue-400 shrink-0" />
+                                      )}
+                                    </div>
                                     <p className="text-[9px] text-muted-foreground truncate">
                                       {apt.treatments?.name || ""} · {apt.duration}min
                                     </p>
@@ -447,8 +462,21 @@ const AgendaPage = () => {
                 </div>
 
                 <div>
-                  <p className="text-[10px] text-muted-foreground uppercase mb-2">Estado</p>
+                  <p className="text-[10px] text-muted-foreground uppercase">Estado</p>
                   <span className={cn("text-xs font-medium px-3 py-1.5 rounded-full border", cfg.bg, cfg.text)}>{cfg.label}</span>
+                </div>
+
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase">Agendado por</p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    {detailApt.booking_source === "ai_auto" ? (
+                      <><Bot className="w-3.5 h-3.5 text-[#8B5CF6]" /><span className="text-sm font-medium">IA (automático)</span></>
+                    ) : detailApt.booking_source === "ai_manual" ? (
+                      <><Bot className="w-3.5 h-3.5 text-[#8B5CF6]" /><span className="text-sm font-medium">IA (asistido)</span></>
+                    ) : (
+                      <><User className="w-3.5 h-3.5 text-blue-400" /><span className="text-sm font-medium">Manual (operador)</span></>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2 pt-2">
