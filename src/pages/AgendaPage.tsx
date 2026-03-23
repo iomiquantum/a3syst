@@ -331,7 +331,7 @@ const AgendaPage = () => {
             {/* Filters */}
             <div className="flex items-center gap-3 mb-4 flex-wrap">
               <Select value={filterPro} onValueChange={setFilterPro}>
-                <SelectTrigger className="w-44 h-8 text-xs bg-white/5 border-white/10"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-44 h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos los profesionales</SelectItem>
                   {professionals.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
