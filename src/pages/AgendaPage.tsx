@@ -98,7 +98,7 @@ const AgendaPage = () => {
       supabase.from("appointments")
         .select("*, patients(first_name, last_name), treatments(name, price), professionals(full_name)")
         .eq("clinic_id", clinicId).gte("date", startDate).lte("date", endDate)
-        .order("date").order("time"),
+        .order("date").order("time") as any,
       supabase.from("patients").select("id, first_name, last_name").eq("clinic_id", clinicId).order("first_name"),
       supabase.from("treatments").select("id, name, duration, price").eq("clinic_id", clinicId),
       supabase.from("professionals").select("id, full_name").eq("clinic_id", clinicId).eq("active", true),
