@@ -87,6 +87,17 @@ const MensajesKanban = ({ conversations, onActionComplete }: Props) => {
 
   return (
     <>
+      <div className="px-3 pt-3 pb-1 shrink-0">
+        <div className="relative max-w-xs">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nombre o teléfono..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="h-8 text-xs pl-8"
+          />
+        </div>
+      </div>
       <div
         className="grid h-full p-3 gap-2.5 overflow-x-auto"
         style={{ gridTemplateColumns: `repeat(${KANBAN_COLUMNS.length}, minmax(160px, 1fr))` }}
