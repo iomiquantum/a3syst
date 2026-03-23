@@ -343,7 +343,80 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
           {!loadingMsgs && messages.length === 0 && (
             <p className="text-center text-sm text-muted-foreground py-8">No hay mensajes aún</p>
           )}
-          {messages.map(m => (
+          {messages.map(m => {
+            // System note — AI summary for human agent
+            if (m.message_type === "system_note") {
+              return (
+                <div key={m.id} className="mx-auto max-w-md">
+                  <div className="bg-accent/50 border border-border rounded-xl p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <ClipboardList className="w-4 h-4 text-primary" />
+                      <span className="text-xs font-semibold text-primary">Resumen IA para agente</span>
+                      <span className="text-[9px] text-muted-foreground ml-auto">
+                        {new Date(m.created_at).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                    <p className="text-xs leading-relaxed whitespace-pre-wrap text-foreground">{m.content}</p>
+                    <div className="border-t border-border pt-3">
+                      <p className="text-[10px] text-muted-foreground font-medium mb-2">Acciones rápidas:</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-[10px] h-7 gap-1"
+                          onClick={() => setTemplateDialogOpen(true)}
+                        >
+                          <LayoutTemplate className="w-3 h-3" /> Enviar template
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-[10px] h-7 gap-1"
+                          onClick={() => textareaRef.current?.focus()}
+                        >
+                          <MessageSquareText className="w-3 h-3" /> Escribir mensaje
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-[10px] h-7 gap-1"
+                          onClick={() => handleAction("seguimiento_s1")}
+                        >
+                          <RotateCcw className="w-3 h-3" /> Reiniciar S1
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-[10px] h-7 gap-1"
+                          onClick={() => handleAction("no_responden")}
+                        >
+                          <PhoneOff className="w-3 h-3" /> No responden
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-[10px] h-7 gap-1"
+                          onClick={() => handleAction("no_interesado")}
+                        >
+                          <UserX className="w-3 h-3" /> No interesado
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-[10px] h-7 gap-1"
+                          onClick={() => handleAction("agendados")}
+                        >
+                          <CalendarPlus className="w-3 h-3" /> Agendar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            // Normal message bubble
+            return (
             <div key={m.id} className={cn("flex", m.direction === "outbound" ? "justify-end" : "justify-start")}>
               <div className={cn(
                 "max-w-[75%] rounded-xl px-3.5 py-2.5 text-sm",
@@ -398,7 +471,8 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
 
           {c.pipeline_tab === "resueltos_ia" && (
             <p className="text-center text-[11px] text-muted-foreground italic py-2">
