@@ -383,20 +383,29 @@ Responde SOLO JSON válido:
         return jsonResponse({ error: "AI parse error", raw: aiResp });
       }
 
-      // Merge updated data
+      // Merge updated data, but force system-resolved dates when available
       const updated = parsed.updated_data || {};
+      if (resolvedDate?.type === "single") {
+        updated.date = resolvedDate.iso;
+        parsed.response_text = harmonizeResponseDate(parsed.response_text, resolvedDate);
+      }
+
+      if (resolvedDate?.type === "ambiguous") {
+        const [firstOption, secondOption] = resolvedDate.options;
+        parsed.response_text = `Entendido. ¿Te refieres a ${firstOption.label} o a ${secondOption.label}?`;
+        parsed.flow_complete = false;
+        delete updated.date;
+      }
+
       if (updated.service) flowData.service = updated.service;
       if (updated.date) flowData.date = updated.date;
       if (updated.time) flowData.time = updated.time;
 
-      // Validate date not in past
-      if (flowData.date) {
-        const dateObj = new Date(flowData.date + "T23:59:59");
-        if (dateObj < new Date()) {
-          flowData.date = null;
-          parsed.response_text = "Esa fecha ya pasó. ¿Qué día te funciona?";
-          parsed.flow_complete = false;
-        }
+      // Validate date not in past using clinic-local date
+      if (flowData.date && flowData.date < todayStr) {
+        flowData.date = null;
+        parsed.response_text = "Esa fecha ya pasó. ¿Qué día te funciona?";
+        parsed.flow_complete = false;
       }
 
       if (parsed.patient_cancelled) {
