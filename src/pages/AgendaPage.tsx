@@ -274,7 +274,7 @@ const AgendaPage = () => {
                 <Card key={apt.id}>
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
-                      <div className="p-2 rounded-lg bg-yellow-500/10 shrink-0">
+                      <div className="p-2 rounded-lg bg-[hsl(var(--warning)/0.1)] shrink-0">
                         <CalIcon className="w-4 h-4 text-[hsl(var(--warning))]" />
                       </div>
                       <div className="flex-1 min-w-0">
