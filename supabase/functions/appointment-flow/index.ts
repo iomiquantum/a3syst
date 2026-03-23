@@ -64,12 +64,35 @@ serve(async (req) => {
       const availableServices = ((agentCfg?.services || []) as { name: string }[]).map(s => s.name).join(", ");
       const treatmentsRef = agentCfg?.treatments_text || "";
 
-      const today = new Date().toISOString().split("T")[0];
-      const dayOfWeek = new Date().toLocaleDateString("es", { weekday: "long" });
+      // Fetch clinic timezone
+      const { data: clinicTz } = await supabase
+        .from("clinics")
+        .select("timezone")
+        .eq("id", clinic_id)
+        .maybeSingle();
+      const tz = clinicTz?.timezone || "America/Guayaquil";
+      const nowInTz = new Date(new Date().toLocaleString("en-US", { timeZone: tz }));
+      const today = `${nowInTz.getFullYear()}-${String(nowInTz.getMonth() + 1).padStart(2, "0")}-${String(nowInTz.getDate()).padStart(2, "0")}`;
+      const dayOfWeek = nowInTz.toLocaleDateString("es", { weekday: "long" });
+
+      // Build calendar reference for detect_intent too
+      const dayNamesDetect = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+      const calRefDetect: string[] = [];
+      for (let i = 0; i < 14; i++) {
+        const d = new Date(nowInTz);
+        d.setDate(d.getDate() + i);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        calRefDetect.push(`${dayNamesDetect[d.getDay()]} ${dd}/${mm} → ${yyyy}-${mm}-${dd}`);
+      }
 
       const detectPrompt = `Analiza el mensaje del paciente en contexto de TODA la conversación.
 
 FECHA DE HOY: ${today} (${dayOfWeek})
+
+CALENDARIO (próximos 14 días):
+${calRefDetect.join("\n")}
 
 SERVICIOS DISPONIBLES DEL NEGOCIO:
 ${availableServices || "(sin servicios)"}
@@ -188,7 +211,7 @@ Responde SOLO JSON válido:
 
       const { data: clinic } = await supabase
         .from("clinics")
-        .select("name, working_days, opening_hour, closing_hour")
+        .select("name, working_days, opening_hour, closing_hour, timezone")
         .eq("id", clinic_id)
         .single();
 
@@ -222,8 +245,11 @@ Responde SOLO JSON válido:
       // Include professionals if available
       const professionalsText = agentConfig?.professionals_text || "";
 
-      const todayStr = new Date().toISOString().split("T")[0];
-      const dayOfWeekStr = new Date().toLocaleDateString("es", { weekday: "long" });
+      // Use clinic timezone for accurate date
+      const clinicTz = (clinic as any)?.timezone || "America/Guayaquil";
+      const nowLocal = new Date(new Date().toLocaleString("en-US", { timeZone: clinicTz }));
+      const todayStr = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, "0")}-${String(nowLocal.getDate()).padStart(2, "0")}`;
+      const dayOfWeekStr = nowLocal.toLocaleDateString("es", { weekday: "long" });
 
       // Build working days / schedule info
       const workingDays = (clinic as any)?.working_days || [];
@@ -258,9 +284,25 @@ Responde SOLO JSON válido:
         });
       }
 
+      // Build a 14-day calendar reference so the AI maps day names to dates correctly
+      const calendarRef: string[] = [];
+      const dayNames = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+      for (let i = 0; i < 14; i++) {
+        const d = new Date(nowLocal);
+        d.setDate(d.getDate() + i);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        calendarRef.push(`${dayNames[d.getDay()]} ${dd}/${mm}/${yyyy} → ${yyyy}-${mm}-${dd}`);
+      }
+
       const guidedPrompt = `Eres ${agentName} de ${clinicName}. Estás ayudando a un paciente a agendar una cita.
 
 FECHA DE HOY: ${todayStr} (${dayOfWeekStr})
+ZONA HORARIA: ${clinicTz}
+
+CALENDARIO DE REFERENCIA (próximos 14 días):
+${calendarRef.join("\n")}
 
 HORARIO DE ATENCIÓN (GENÉRICO):
 ${scheduleText}
@@ -297,8 +339,9 @@ PASO ACTUAL: ${conv.appointment_flow_step}
 10. PRIORIDAD DE HORARIOS: Si las INSTRUCCIONES ESPECIALES contienen horarios específicos, USA ESOS. Prevalecen sobre el HORARIO GENÉRICO.
 11. NUNCA ofrezcas citas fuera del horario válido. Sugiere el siguiente día hábil si pide un día no laborable.
 12. Tono cálido y breve (máximo 2-3 oraciones).
-13. Si el paciente menciona fecha relativa ("mañana", "el viernes"), resuélvela a YYYY-MM-DD.
+13. Si el paciente menciona fecha relativa ("mañana", "el viernes"), resuélvela a YYYY-MM-DD usando la FECHA DE HOY como referencia. VERIFICA QUE EL DÍA DE LA SEMANA CORRESPONDA A LA FECHA CALCULADA. Ejemplo: si hoy es domingo 23 y dice "el sábado", el próximo sábado es el 29, NO el 28. Haz la aritmética correctamente.
 14. NUNCA inventes servicios, precios, horarios ni datos que no aparezcan aquí.
+15A. IMPORTANTE: Cuando menciones una fecha al paciente, SIEMPRE verifica que el día de la semana sea correcto para esa fecha. Si dices "sábado 29 de marzo" asegúrate que el 29 de marzo realmente caiga sábado.
 15. NO repitas preguntas que ya se respondieron en el historial. Lee el historial antes de preguntar.
 16. Si el paciente parece frustrado o repite información, discúlpate brevemente y ve directo al punto.
 
