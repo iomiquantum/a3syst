@@ -46,7 +46,7 @@ serve(async (req) => {
 
     const { data: conversationData, error: conversationError } = await supabase
       .from("conversations")
-      .select("id, channel, visitor_contact, contact_id, chatbot_active, follow_up_count, last_inbound_at, appointment_flow_active, appointment_flow_step, appointment_flow_data, pipeline_tab, appointment_confirmed")
+      .select("id, channel, visitor_contact, contact_id, chatbot_active, follow_up_count, last_inbound_at, appointment_flow_active, appointment_flow_step, appointment_flow_data, pipeline_tab, appointment_confirmed, seguimiento_last_completed_s, seguimiento_is_recurrente, seguimiento_recurrente_count")
       .eq("id", conversation_id)
       .eq("clinic_id", clinic_id)
       .single();
