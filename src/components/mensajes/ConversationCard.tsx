@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Pin } from "lucide-react";
+import { Pin, CalendarPlus, Clock } from "lucide-react";
 import PipelineBadge from "./PipelineBadge";
 import SeguimientoCountdown from "./SeguimientoCountdown";
 import ChannelIcon from "@/components/messaging/ChannelIcon";
