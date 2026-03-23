@@ -377,9 +377,9 @@ const AgendaPage = () => {
                     {weekDates.map((date, i) => {
                       const isToday = fmtDate(date) === todayStr;
                       return (
-                        <div key={i} className={cn("p-2 text-center border-l border-white/5", isToday && "bg-[#8B5CF6]/5")}>
+                        <div key={i} className={cn("p-2 text-center border-l border-border", isToday && "bg-primary/5")}>
                           <p className="text-[10px] text-muted-foreground">{DAYS[i]}</p>
-                          <p className={cn("text-sm font-semibold mt-0.5", isToday ? "text-[#A78BFA]" : "text-foreground")}>{date.getDate()}</p>
+                          <p className={cn("text-sm font-semibold mt-0.5", isToday ? "text-primary" : "text-foreground")}>{date.getDate()}</p>
                         </div>
                       );
                     })}
