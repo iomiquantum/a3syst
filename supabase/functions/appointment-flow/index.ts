@@ -274,7 +274,7 @@ Responde SOLO JSON válido:
       // Include special_instructions if they contain schedule overrides
       const specialInstructions = agentConfig?.special_instructions || "";
 
-      // Loop detection: count how many outbound appointment_flow messages exist
+      // Safety net: hard limit at 6 messages (reduced from 12)
       const { count: flowMsgCount } = await supabase
         .from("messages")
         .select("id", { count: "exact", head: true })
@@ -282,33 +282,12 @@ Responde SOLO JSON válido:
         .eq("direction", "outbound")
         .like("origin", "appointment_flow%");
 
-      // If more than 12 flow messages, abort to prevent infinite loop
-      if ((flowMsgCount || 0) > 12) {
-        console.warn("Appointment flow loop detected, escalating conversation:", conversation_id);
-        await supabase.from("conversations").update({
-          appointment_flow_active: false,
-          appointment_flow_step: null,
-          appointment_flow_data: {},
-          pipeline_tab: "escalados",
-          chatbot_active: false,
-          escalado_at: new Date().toISOString(),
-          escalado_reason: "Flujo de agendamiento no completado después de 12 intentos",
-        }).eq("id", conversation_id);
-
-        // Log pipeline history
-        await supabase.from("conversation_pipeline_history").insert({
-          conversation_id, clinic_id,
-          from_tab: conv.pipeline_tab || "resueltos_ia",
-          to_tab: "escalados",
-          moved_by: "system",
-          reason: "Circuit breaker: flujo de agendamiento excedió 12 mensajes",
-        });
-
-        return jsonResponse({
-          response_text: "Disculpa las molestias. Permíteme conectarte con uno de nuestros asesores para ayudarte con tu agendamiento. 😊",
-          flow_cancelled: true,
-          escalated: true,
-        });
+      if ((flowMsgCount || 0) > 6) {
+        return await escalateConversation(
+          supabase, conversation_id, clinic_id,
+          conv.pipeline_tab || "resueltos_ia",
+          "El flujo de agendamiento no pudo completarse después de múltiples intentos."
+        );
       }
 
       const calendarRef = buildCalendarReference(todayLocalInfo, 14);
@@ -364,13 +343,16 @@ PASO ACTUAL: ${conv.appointment_flow_step}
 15A. IMPORTANTE: Cuando menciones una fecha al paciente, SIEMPRE verifica que el día de la semana sea correcto para esa fecha. Si dices "sábado 29 de marzo" asegúrate que el 29 de marzo realmente caiga sábado.
 15. NO repitas preguntas que ya se respondieron en el historial. Lee el historial antes de preguntar.
 16. Si el paciente parece frustrado o repite información, discúlpate brevemente y ve directo al punto.
+17. ESCALACIÓN INTELIGENTE: Si detectas que NO puedes ayudar al paciente (pide algo fuera de tu alcance, está frustrado y repite lo mismo, pregunta algo que no está en tus datos, o el flujo está estancado), responde con should_escalate=true y en escalation_reason explica brevemente POR QUÉ escalas (ej: "El paciente solicita un servicio no disponible", "El paciente necesita información que no tengo").
 
 Responde SOLO JSON válido:
 {
   "response_text": "mensaje para el paciente",
   "updated_data": { "service": "valor o null", "date": "YYYY-MM-DD o null", "time": "HH:MM o null" },
   "flow_complete": false,
-  "patient_cancelled": false
+  "patient_cancelled": false,
+  "should_escalate": false,
+  "escalation_reason": null
 }`;
 
       const aiResp = await callAI(LOVABLE_API_KEY, guidedPrompt, patient_message);
@@ -381,6 +363,12 @@ Responde SOLO JSON válido:
       } catch {
         console.error("Failed to parse guided flow:", aiResp);
         return jsonResponse({ error: "AI parse error", raw: aiResp });
+      }
+
+      // AI-driven escalation
+      if (parsed.should_escalate) {
+        const reason = parsed.escalation_reason || "La IA detectó que no puede resolver la solicitud del paciente.";
+        return await escalateConversation(supabase, conversation_id, clinic_id, conv.pipeline_tab || "resueltos_ia", reason);
       }
 
       // Merge updated data, but force system-resolved dates when available
@@ -712,9 +700,66 @@ async function confirmAppointment(
   });
 }
 
-function formatDateES(dateStr: string): string {
-  return formatDateLabelES(dateStr, false);
+async function escalateConversation(
+  supabase: any,
+  conversation_id: string,
+  clinic_id: string,
+  from_tab: string,
+  reason: string,
+) {
+  console.warn("Escalating conversation:", conversation_id, "Reason:", reason);
+
+  // 1. Update conversation state
+  await supabase.from("conversations").update({
+    appointment_flow_active: false,
+    appointment_flow_step: null,
+    appointment_flow_data: {},
+    pipeline_tab: "escalados",
+    chatbot_active: false,
+    escalado_at: new Date().toISOString(),
+    escalado_reason: reason,
+  }).eq("id", conversation_id);
+
+  // 2. Log pipeline history with reason
+  await supabase.from("conversation_pipeline_history").insert({
+    conversation_id,
+    clinic_id,
+    from_tab,
+    to_tab: "escalados",
+    moved_by: "system",
+    reason: `Escalado IA: ${reason}`,
+  });
+
+  // 3. Add note to contact
+  const { data: conv } = await supabase
+    .from("conversations")
+    .select("contact_id")
+    .eq("id", conversation_id)
+    .maybeSingle();
+
+  if (conv?.contact_id) {
+    const currentNotes = await supabase
+      .from("contacts")
+      .select("notes")
+      .eq("id", conv.contact_id)
+      .maybeSingle();
+
+    const timestamp = new Date().toLocaleString("es", { timeZone: "America/Guayaquil" });
+    const newNote = `[${timestamp}] 🔴 Escalado IA: ${reason}`;
+    const existingNotes = currentNotes?.data?.notes || "";
+    const updatedNotes = existingNotes ? `${existingNotes}\n${newNote}` : newNote;
+
+    await supabase.from("contacts").update({ notes: updatedNotes }).eq("id", conv.contact_id);
+  }
+
+  return jsonResponse({
+    response_text: "Entiendo tu consulta. Permíteme conectarte con uno de nuestros asesores que podrá ayudarte mejor. 😊",
+    flow_cancelled: true,
+    escalated: true,
+    escalation_reason: reason,
+  });
 }
+
 
 const DAY_NAMES_ES = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"] as const;
 const WEEKDAY_ALIASES = [
@@ -789,6 +834,10 @@ function buildCalendarReference(base: LocalDateInfo, totalDays = 14): string[] {
     const info = addDaysToLocalDate(base, index);
     return `${DAY_NAMES_ES[info.weekday]} ${pad2(info.day)}/${pad2(info.month)}/${info.year} → ${info.iso}`;
   });
+}
+
+function formatDateES(dateStr: string): string {
+  return formatDateLabelES(dateStr, false);
 }
 
 function formatDateLabelES(dateStr: string, includeYear = true): string {
