@@ -31,10 +31,10 @@ const TIME_SLOTS = Array.from({ length: 26 }, (_, i) => {
 type AptStatus = "pendiente" | "confirmado" | "completado" | "cancelado";
 
 const STATUS_CFG: Record<AptStatus, { label: string; dot: string; bg: string; text: string }> = {
-  pendiente: { label: "Pendiente", dot: "bg-yellow-400", bg: "bg-yellow-500/20 border-yellow-500/30", text: "text-yellow-300" },
-  confirmado: { label: "Confirmado", dot: "bg-blue-400", bg: "bg-blue-500/20 border-blue-500/30", text: "text-blue-300" },
-  completado: { label: "Completado", dot: "bg-emerald-400", bg: "bg-emerald-500/20 border-emerald-500/30", text: "text-emerald-300" },
-  cancelado: { label: "Cancelado", dot: "bg-gray-400", bg: "bg-gray-500/20 border-gray-500/30", text: "text-gray-400" },
+  pendiente: { label: "Pendiente", dot: "bg-[hsl(var(--warning))]", bg: "bg-[hsl(var(--warning)/0.15)] border-[hsl(var(--warning)/0.3)]", text: "text-[hsl(var(--warning))]" },
+  confirmado: { label: "Confirmado", dot: "bg-[hsl(var(--info))]", bg: "bg-[hsl(var(--info)/0.15)] border-[hsl(var(--info)/0.3)]", text: "text-[hsl(var(--info))]" },
+  completado: { label: "Completado", dot: "bg-[hsl(var(--success))]", bg: "bg-[hsl(var(--success)/0.15)] border-[hsl(var(--success)/0.3)]", text: "text-[hsl(var(--success))]" },
+  cancelado: { label: "Cancelado", dot: "bg-muted-foreground", bg: "bg-muted/50 border-border", text: "text-muted-foreground" },
 };
 
 const getWeekStart = (d: Date) => {
