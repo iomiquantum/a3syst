@@ -389,17 +389,18 @@ REGLAS OBLIGATORIAS:
           ? `${Math.floor(timeSince / 60)} horas`
           : `${timeSince} minutos`;
 
-      // Load strategy for this contact number
-      const { data: strategy } = await supabase
+      // Load ALL strategies (S1-S6 tactics) to give the AI a toolkit
+      const { data: allStrategies } = await supabase
         .from("seguimiento_strategies")
-        .select("strategy_name, prompt_instruction, rules, psychological_principle")
-        .eq("contact_number", followUpCount)
-        .maybeSingle();
+        .select("contact_number, strategy_name, prompt_instruction, rules, psychological_principle")
+        .lte("contact_number", 6)
+        .order("contact_number", { ascending: true });
 
-      const strategyInstruction = strategy?.prompt_instruction || "";
-      const strategyRules = strategy?.rules || "";
+      const strategyCatalog = (allStrategies || []).map(s =>
+        `TÁCTICA ${s.contact_number} — "${s.strategy_name}" (${s.psychological_principle}):\n${s.prompt_instruction}\nReglas: ${s.rules}`
+      ).join("\n\n");
 
-      systemPrompt += `\n\n=== MODO SEGUIMIENTO — VALOR PRIMERO (Contacto #${followUpCount}) ===
+      systemPrompt += `\n\n=== MODO SEGUIMIENTO — VALOR PRIMERO (Contacto #${followUpCount} de 4 automáticos) ===
 El contacto no ha respondido en ${timeLabel}.
 
 FILOSOFÍA FUNDAMENTAL:
@@ -407,24 +408,23 @@ Tu objetivo NO es vender ni presionar para agendar. Tu objetivo es ENAMORAR al c
 El cliente debe sentir: "esta empresa genuinamente quiere ayudarme y sabe de lo que habla".
 Si el cliente se siente cuidado e informado, la venta llegará sola.
 
-ESTRATEGIA PARA ESTE CONTACTO — "${strategy?.strategy_name || "Seguimiento"}":
-Principio psicológico: ${strategy?.psychological_principle || "Reciprocidad — dar valor primero"}
-${strategyInstruction}
+TÁCTICAS DISPONIBLES — Elige la más apropiada según el contexto del chat:
+${strategyCatalog}
 
-REGLAS DE ESTE CONTACTO:
-${strategyRules}
+INSTRUCCIONES PARA ELEGIR LA TÁCTICA:
+- Analiza el historial del chat: ¿qué preguntó? ¿qué duda quedó pendiente? ¿qué le interesaba?
+- Contacto #${followUpCount}: ${followUpCount === 1 ? "Es el primer re-contacto. PRIORIZA responder la duda que tenía o darle valor educativo sobre lo que preguntó. NO menciones agendar." : followUpCount === 2 ? "Ya intentamos una vez. Comparte un dato nuevo que NO se haya mencionado o personaliza la info para su caso. Agendar solo si fluye 100% natural." : followUpCount === 3 ? "Tercer contacto. Puedes combinar valor con una sugerencia suave de agendar. Pero el valor sigue siendo lo primero." : "Último contacto automático. Ofrece ayuda genuina. Si ya tiene toda la info, una sugerencia natural de agendar. Si no, resuelve su duda."}
+- Elige la táctica que mejor encaje con el estado de la conversación. NO uses siempre la misma.
+- Si los mensajes anteriores ya dieron valor educativo, cambia de ángulo (personalización, prueba social, etc.)
+- Si los mensajes anteriores fueron de enamoramiento, ahora sí puedes sugerir agendar suavemente.
 
-REGLAS GENERALES DE SEGUIMIENTO:
-- Analiza el historial del chat: ¿qué preguntó? ¿qué duda tenía? ¿qué le interesaba? Responde ESO primero.
-- Dale información educativa, práctica o científica basada en los servicios REALES del negocio.
+REGLAS OBLIGATORIAS:
 - Máximo 3 oraciones y 250 caracteres.
 - NUNCA menciones "llamadas" ni "videollamadas" — todo es por mensajes o citas presenciales.
 - NUNCA inventes servicios, cupos, promociones, estudios ni datos que no estén configurados arriba.
-- ${followUpCount <= 2 ? "En S1-S2: PRIORIZA dar valor educativo. La mención de agendar debe ser mínima o inexistente." : followUpCount <= 4 ? "En S3-S4: Ya diste valor. Ahora puedes sugerir agendar de forma natural, pero sin presión." : "En S5+: Empatía pura. Solo dejar la puerta abierta."}
-- NO repitas el mismo contenido de mensajes anteriores. Varía el enfoque y la información.`;
+- NO repitas el mismo contenido de mensajes anteriores. Varía el enfoque y la información.
+- Basa TODA la información en los servicios, tratamientos y datos REALES del negocio listados arriba.`;
     }
-
-    // Fetch channel-specific instructions
     const resolvedChannel = requestChannel || conversationData.channel || "web_chat";
     const { data: channelPrompt } = await supabase
       .from("ai_agent_channel_prompts")
