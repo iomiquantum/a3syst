@@ -671,6 +671,7 @@ export type Database = {
           clinic_id: string
           created_at: string
           description: string | null
+          email: string | null
           full_address: string | null
           google_maps_url: string | null
           id: string
@@ -678,6 +679,8 @@ export type Database = {
           phone: string | null
           preparation_notes: string | null
           updated_at: string
+          whatsapp: string | null
+          working_schedule: Json | null
         }
         Insert: {
           active?: boolean
@@ -686,6 +689,7 @@ export type Database = {
           clinic_id: string
           created_at?: string
           description?: string | null
+          email?: string | null
           full_address?: string | null
           google_maps_url?: string | null
           id?: string
@@ -693,6 +697,8 @@ export type Database = {
           phone?: string | null
           preparation_notes?: string | null
           updated_at?: string
+          whatsapp?: string | null
+          working_schedule?: Json | null
         }
         Update: {
           active?: boolean
@@ -701,6 +707,7 @@ export type Database = {
           clinic_id?: string
           created_at?: string
           description?: string | null
+          email?: string | null
           full_address?: string | null
           google_maps_url?: string | null
           id?: string
@@ -708,6 +715,8 @@ export type Database = {
           phone?: string | null
           preparation_notes?: string | null
           updated_at?: string
+          whatsapp?: string | null
+          working_schedule?: Json | null
         }
         Relationships: [
           {

@@ -224,29 +224,42 @@ const MiNegocioPage = () => {
   // ── Branches ──
   const [openBranch, setOpenBranch] = useState(false);
   const [editingBranchId, setEditingBranchId] = useState<string | null>(null);
-  const [branchForm, setBranchForm] = useState({ name: "", address: "", phone: "", description: "" });
+  const emptyBranchForm = { name: "", address: "", phone: "", description: "", email: "", whatsapp: "", full_address: "", google_maps_url: "", arrival_instructions: "", preparation_notes: "", working_schedule: null as WorkingSchedule | null };
+  const [branchForm, setBranchForm] = useState(emptyBranchForm);
 
   const handleSaveBranch = async () => {
     if (!clinicId) return;
     try {
-      const validated = branchSchema.parse(branchForm);
+      const validated = branchSchema.parse({ name: branchForm.name, address: branchForm.address, phone: branchForm.phone, description: branchForm.description });
+      const payload: any = {
+        name: validated.name, address: validated.address, phone: validated.phone || "", description: validated.description || "",
+        email: branchForm.email || null, whatsapp: branchForm.whatsapp || null,
+        full_address: branchForm.full_address || null, google_maps_url: branchForm.google_maps_url || null,
+        arrival_instructions: branchForm.arrival_instructions || null, preparation_notes: branchForm.preparation_notes || null,
+        working_schedule: branchForm.working_schedule || null,
+      };
       if (editingBranchId) {
-        const { error } = await supabase.from("branches").update({ name: validated.name, address: validated.address, phone: validated.phone || "", description: validated.description || "" }).eq("id", editingBranchId);
+        const { error } = await supabase.from("branches").update(payload).eq("id", editingBranchId);
         if (error) { toast.error(error.message); return; }
         toast.success(`${labels.branches_singular} actualizada`);
       } else {
-        const { error } = await supabase.from("branches").insert({ clinic_id: clinicId, name: validated.name, address: validated.address, phone: validated.phone || "", description: validated.description || "" });
+        const { error } = await supabase.from("branches").insert({ clinic_id: clinicId, ...payload });
         if (error) { toast.error(error.message); return; }
         toast.success(`${labels.branches_singular} creada`);
       }
-      setOpenBranch(false); setEditingBranchId(null); setBranchForm({ name: "", address: "", phone: "", description: "" });
+      setOpenBranch(false); setEditingBranchId(null); setBranchForm(emptyBranchForm);
       refetchBranches();
     } catch (e) { toast.error(getValidationError(e)); }
   };
 
   const handleEditBranch = (b: any) => {
     setEditingBranchId(b.id);
-    setBranchForm({ name: b.name, address: b.address || "", phone: b.phone || "", description: b.description || "" });
+    setBranchForm({
+      name: b.name, address: b.address || "", phone: b.phone || "", description: b.description || "",
+      email: b.email || "", whatsapp: b.whatsapp || "", full_address: b.full_address || "",
+      google_maps_url: b.google_maps_url || "", arrival_instructions: b.arrival_instructions || "",
+      preparation_notes: b.preparation_notes || "", working_schedule: b.working_schedule || null,
+    });
     setOpenBranch(true);
   };
 
@@ -650,19 +663,77 @@ const MiNegocioPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">{labels.branches}</h2>
-                <p className="text-sm text-muted-foreground">Gestiona las {labels.branches.toLowerCase()} de tu negocio</p>
+                <p className="text-sm text-muted-foreground">Gestiona las {labels.branches.toLowerCase()} de tu negocio. Cada sede tiene su información completa para el bot de IA.</p>
               </div>
-              <Dialog open={openBranch} onOpenChange={(o) => { setOpenBranch(o); if (!o) { setEditingBranchId(null); setBranchForm({ name: "", address: "", phone: "", description: "" }); } }}>
+              <Dialog open={openBranch} onOpenChange={(o) => { setOpenBranch(o); if (!o) { setEditingBranchId(null); setBranchForm(emptyBranchForm); } }}>
                 <DialogTrigger asChild>
                   <Button className="gradient-primary text-primary-foreground"><Plus className="w-4 h-4 mr-2" /> Nueva {labels.branches_singular}</Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader><DialogTitle>{editingBranchId ? `Editar ${labels.branches_singular}` : `Nueva ${labels.branches_singular}`}</DialogTitle></DialogHeader>
-                  <div className="space-y-4 pt-2">
-                    <div><Label>Nombre *</Label><Input value={branchForm.name} onChange={e => setBranchForm({ ...branchForm, name: e.target.value })} placeholder={`Nombre de la ${labels.branches_singular.toLowerCase()}`} maxLength={100} /></div>
-                    <div><Label>Dirección *</Label><Input value={branchForm.address} onChange={e => setBranchForm({ ...branchForm, address: e.target.value })} placeholder="Dirección completa" maxLength={300} /></div>
-                    <div><Label>Teléfono</Label><Input value={branchForm.phone} onChange={e => setBranchForm({ ...branchForm, phone: e.target.value })} maxLength={20} /></div>
-                    <div><Label>Descripción</Label><Textarea value={branchForm.description} onChange={e => setBranchForm({ ...branchForm, description: e.target.value })} maxLength={1000} /></div>
+                  <div className="space-y-5 pt-2">
+                    {/* Basic info */}
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Información básica</p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div><Label>Nombre *</Label><Input value={branchForm.name} onChange={e => setBranchForm({ ...branchForm, name: e.target.value })} placeholder={`Nombre de la ${labels.branches_singular.toLowerCase()}`} maxLength={100} /></div>
+                      <div><Label>Teléfono</Label><Input value={branchForm.phone} onChange={e => setBranchForm({ ...branchForm, phone: e.target.value })} placeholder="+593 999 999 999" maxLength={20} /></div>
+                      <div><Label>Email</Label><Input type="email" value={branchForm.email} onChange={e => setBranchForm({ ...branchForm, email: e.target.value })} placeholder="sede@negocio.com" maxLength={255} /></div>
+                      <div><Label>WhatsApp</Label><Input value={branchForm.whatsapp} onChange={e => setBranchForm({ ...branchForm, whatsapp: e.target.value })} placeholder="+593999999999" maxLength={20} /></div>
+                    </div>
+                    <div><Label>Descripción</Label><Textarea value={branchForm.description} onChange={e => setBranchForm({ ...branchForm, description: e.target.value })} placeholder="Describe esta sede brevemente..." maxLength={1000} rows={2} /></div>
+
+                    {/* Location */}
+                    <div className="space-y-1 pt-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ubicación</p>
+                    </div>
+                    <div><Label>Dirección corta *</Label><Input value={branchForm.address} onChange={e => setBranchForm({ ...branchForm, address: e.target.value })} placeholder="Av. Principal 123" maxLength={300} /></div>
+                    <div><Label>Dirección completa</Label><Textarea value={branchForm.full_address} onChange={e => setBranchForm({ ...branchForm, full_address: e.target.value })} placeholder="Av. Principal 123, Edificio Torre Norte, Piso 3, Of. 302, Quito, Ecuador" maxLength={500} rows={2} /></div>
+                    <div><Label>Link Google Maps</Label><Input value={branchForm.google_maps_url} onChange={e => setBranchForm({ ...branchForm, google_maps_url: e.target.value })} placeholder="https://maps.google.com/..." maxLength={500} /></div>
+
+                    {/* Patient-facing info */}
+                    <div className="space-y-1 pt-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Información para el cliente</p>
+                      <p className="text-xs text-muted-foreground">El bot usará esta info para guiar al cliente cuando agende.</p>
+                    </div>
+                    <div><Label>Instrucciones de llegada</Label><Textarea value={branchForm.arrival_instructions} onChange={e => setBranchForm({ ...branchForm, arrival_instructions: e.target.value })} placeholder="Ej: Entrar por la puerta lateral, tomar ascensor al piso 3, oficina 302..." maxLength={1000} rows={2} /></div>
+                    <div><Label>Notas de preparación</Label><Textarea value={branchForm.preparation_notes} onChange={e => setBranchForm({ ...branchForm, preparation_notes: e.target.value })} placeholder="Ej: Traer documento de identidad, llegar 15 min antes de la cita..." maxLength={1000} rows={2} /></div>
+
+                    {/* Schedule */}
+                    <div className="space-y-1 pt-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Horario de atención de esta sede</p>
+                      <p className="text-xs text-muted-foreground">Si no configuras horario, se usará el horario general del negocio.</p>
+                    </div>
+                    <div className="space-y-2">
+                      {Object.entries(DAY_LABELS).map(([key, label]) => {
+                        const schedule: WorkingSchedule = branchForm.working_schedule ?? DEFAULT_SCHEDULE;
+                        const day = schedule[key] || { enabled: false, open: "09:00", close: "18:00" };
+                        const updateBranchDay = (field: keyof DaySchedule, value: any) => {
+                          const current = { ...(branchForm.working_schedule ?? DEFAULT_SCHEDULE) };
+                          current[key] = { ...current[key], [field]: value };
+                          setBranchForm(f => ({ ...f, working_schedule: current }));
+                        };
+                        return (
+                          <div key={key} className={cn("flex items-center gap-3 rounded-lg border p-2.5 transition-colors", day.enabled ? "bg-background border-border" : "bg-muted/50 border-transparent")}>
+                            <label className="flex items-center gap-2 min-w-[110px] cursor-pointer">
+                              <input type="checkbox" checked={day.enabled} onChange={e => updateBranchDay("enabled", e.target.checked)} className="rounded border-input" />
+                              <span className={cn("text-sm font-medium", !day.enabled && "text-muted-foreground")}>{label}</span>
+                            </label>
+                            {day.enabled ? (
+                              <div className="flex items-center gap-2 flex-1">
+                                <Input type="time" value={day.open} onChange={e => updateBranchDay("open", e.target.value)} className="h-8 text-sm w-[120px]" />
+                                <span className="text-xs text-muted-foreground">a</span>
+                                <Input type="time" value={day.close} onChange={e => updateBranchDay("close", e.target.value)} className="h-8 text-sm w-[120px]" />
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Cerrado</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
                     <Button onClick={handleSaveBranch} className="w-full gradient-primary text-primary-foreground" disabled={!branchForm.name || !branchForm.address}>
                       {editingBranchId ? "Guardar Cambios" : `Crear ${labels.branches_singular}`}
                     </Button>
@@ -674,28 +745,48 @@ const MiNegocioPage = () => {
             {branches.length === 0 ? (
               <Card><CardContent className="p-8 text-center"><p className="text-muted-foreground">No hay {labels.branches.toLowerCase()} creadas aún.</p></CardContent></Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {branches.map((branch: any) => (
-                  <Card key={branch.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2.5 rounded-xl bg-primary/10"><Building2 className="w-5 h-5 text-primary" /></div>
-                          <CardTitle className="text-base">{branch.name}</CardTitle>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {branches.map((branch: any) => {
+                  const bSchedule = branch.working_schedule as WorkingSchedule | null;
+                  const openDays = bSchedule ? Object.entries(bSchedule).filter(([, v]) => (v as DaySchedule).enabled) : [];
+                  return (
+                    <Card key={branch.id} className="hover:shadow-md transition-shadow">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2.5 rounded-xl bg-primary/10"><Building2 className="w-5 h-5 text-primary" /></div>
+                            <div>
+                              <CardTitle className="text-base">{branch.name}</CardTitle>
+                              {branch.description && <p className="text-xs text-muted-foreground mt-0.5">{branch.description}</p>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => handleEditBranch(branch)} className="p-1.5 rounded-md hover:bg-muted"><Pencil className="w-4 h-4 text-muted-foreground" /></button>
+                            <button onClick={() => deleteBranch(branch.id)} className="p-1.5 rounded-md hover:bg-destructive/10"><Trash2 className="w-4 h-4 text-destructive" /></button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => handleEditBranch(branch)} className="p-1.5 rounded-md hover:bg-muted"><Pencil className="w-4 h-4 text-muted-foreground" /></button>
-                          <button onClick={() => deleteBranch(branch.id)} className="p-1.5 rounded-md hover:bg-destructive/10"><Trash2 className="w-4 h-4 text-destructive" /></button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      {branch.address && <div className="flex items-center gap-2 text-sm text-muted-foreground"><MapPin className="w-4 h-4 shrink-0" /><span>{branch.address}</span></div>}
-                      {branch.phone && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Phone className="w-4 h-4 shrink-0" /><span>{branch.phone}</span></div>}
-                      {branch.description && <p className="text-sm text-muted-foreground pt-1">{branch.description}</p>}
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm">
+                        {branch.address && <div className="flex items-center gap-2 text-muted-foreground"><MapPin className="w-4 h-4 shrink-0" /><span>{branch.full_address || branch.address}</span></div>}
+                        {branch.phone && <div className="flex items-center gap-2 text-muted-foreground"><Phone className="w-4 h-4 shrink-0" /><span>{branch.phone}</span></div>}
+                        {branch.email && <div className="flex items-center gap-2 text-muted-foreground"><Mail className="w-4 h-4 shrink-0" /><span>{branch.email}</span></div>}
+                        {branch.whatsapp && <div className="flex items-center gap-2 text-muted-foreground"><Phone className="w-4 h-4 shrink-0" /><span>WA: {branch.whatsapp}</span></div>}
+                        {branch.google_maps_url && <a href={branch.google_maps_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-primary hover:underline text-xs"><ExternalLink className="w-3.5 h-3.5" /> Ver en Google Maps</a>}
+                        {openDays.length > 0 && (
+                          <div className="pt-2 border-t border-border mt-2">
+                            <p className="text-xs font-medium text-foreground mb-1.5 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Horario</p>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                              {openDays.map(([dayKey, val]) => {
+                                const d = val as DaySchedule;
+                                return <div key={dayKey} className="flex justify-between text-xs text-muted-foreground"><span>{DAY_LABELS[dayKey]}</span><span>{d.open} - {d.close}</span></div>;
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </TabsContent>
