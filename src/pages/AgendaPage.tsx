@@ -524,7 +524,7 @@ const AgendaPage = () => {
                   <div className="max-h-32 overflow-y-auto rounded-lg border border-border bg-popover">
                     {filteredPatients.map(p => (
                       <button key={p.id} onClick={() => { setForm({ ...form, patient_id: p.id }); setPatientSearch(""); }}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-white/5 truncate">
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted truncate">
                         {p.first_name} {p.last_name}
                       </button>
                     ))}
