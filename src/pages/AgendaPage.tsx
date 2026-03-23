@@ -482,7 +482,7 @@ const AgendaPage = () => {
                 <div className="flex flex-wrap gap-2 pt-2">
                   {detailApt.status === "pendiente" && (
                     <Button size="sm" onClick={() => updateStatus(detailApt.id, "confirmado")}
-                      className="bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border-0">
+                      className="bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.25)] border-0">
                       <Check className="w-3.5 h-3.5 mr-1" /> Confirmar
                     </Button>
                   )}
