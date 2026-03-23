@@ -836,6 +836,10 @@ function buildCalendarReference(base: LocalDateInfo, totalDays = 14): string[] {
   });
 }
 
+function formatDateES(dateStr: string): string {
+  return formatDateLabelES(dateStr, false);
+}
+
 function formatDateLabelES(dateStr: string, includeYear = true): string {
   try {
     const [year, month, day] = dateStr.split("-").map(Number);
