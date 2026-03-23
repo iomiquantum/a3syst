@@ -405,9 +405,16 @@ const AgendaPage = () => {
                                   <button key={apt.id}
                                     onClick={e => { e.stopPropagation(); setDetailApt(apt); }}
                                     className={cn("w-full rounded-md p-1.5 text-left border transition-all hover:scale-[1.02]", cfg.bg)}>
-                                    <p className={cn("text-[10px] font-medium truncate", cfg.text)}>
-                                      {apt.patients?.first_name} {apt.patients?.last_name}
-                                    </p>
+                                    <div className="flex items-center gap-1">
+                                      <p className={cn("text-[10px] font-medium truncate flex-1", cfg.text)}>
+                                        {apt.patients?.first_name} {apt.patients?.last_name}
+                                      </p>
+                                      {apt.booking_source === "ai_auto" ? (
+                                        <Bot className="w-3 h-3 text-[#8B5CF6] shrink-0" />
+                                      ) : (
+                                        <User className="w-3 h-3 text-blue-400 shrink-0" />
+                                      )}
+                                    </div>
                                     <p className="text-[9px] text-muted-foreground truncate">
                                       {apt.treatments?.name || ""} · {apt.duration}min
                                     </p>
