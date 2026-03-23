@@ -126,6 +126,11 @@ Responde SOLO JSON válido:
         return jsonResponse({ wants_appointment: false, confidence: 0, raw: aiResp });
       }
 
+      if (detectedDateResolution?.type === "single") {
+        parsed.has_date = true;
+        parsed.date_mentioned = detectedDateResolution.iso;
+      }
+
       // If confidence >= 0.7, activate flow
       if (parsed.wants_appointment && parsed.confidence >= 0.7) {
         const flowData: any = {};
