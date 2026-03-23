@@ -588,7 +588,7 @@ const AgendaPage = () => {
 
       {/* ═══ REGISTER SALE DIALOG ═══ */}
       <Dialog open={!!saleDialogApt} onOpenChange={o => !o && setSaleDialogApt(null)}>
-        <DialogContent className="bg-[#0d0d1a] border-white/10 text-foreground max-w-sm">
+        <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>💰 Registrar venta</DialogTitle></DialogHeader>
           <div className="space-y-4 pt-2">
             <p className="text-sm text-muted-foreground">
