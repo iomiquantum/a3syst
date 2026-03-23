@@ -321,6 +321,15 @@ serve(async (req) => {
     const nowInClinicTz = new Date(new Date().toLocaleString("en-US", { timeZone: clinicTz }));
     const todayDate = `${nowInClinicTz.getFullYear()}-${String(nowInClinicTz.getMonth() + 1).padStart(2, "0")}-${String(nowInClinicTz.getDate()).padStart(2, "0")}`;
     const todayDay = nowInClinicTz.toLocaleDateString("es", { weekday: "long" });
+    const dayNames = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+    const calendarRef = Array.from({ length: 21 }, (_, index) => {
+      const d = new Date(nowInClinicTz);
+      d.setDate(d.getDate() + index);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${dayNames[d.getDay()]} ${dd}/${mm}/${yyyy} → ${yyyy}-${mm}-${dd}`;
+    }).join("\n");
 
     let systemPrompt = `Eres "${agentConfig.agent_name}", un asistente virtual del negocio.
 Idioma: ${langLabel}
@@ -330,6 +339,9 @@ NEGOCIO: ${clinicInfo?.name || ""}
 HORARIO DE ATENCIÓN:
 ${scheduleBlock}
 FECHA DE HOY: ${todayDate} (${todayDay})
+ZONA HORARIA: ${clinicTz}
+CALENDARIO DE REFERENCIA (próximos 21 días):
+${calendarRef}
 
 OBJETIVO:
 ${agentConfig.objective}
@@ -361,6 +373,7 @@ REGLAS OBLIGATORIAS:
 - Si el cliente ya recibió un mensaje de bienvenida, NO repitas el saludo ni te presentes de nuevo. Ve directo a responder.
 - Cuando el cliente pregunte sobre un servicio o tema específico, responde directamente sobre eso. No des respuestas genéricas.
 - PRIORIDAD DE HORARIOS: Si las INSTRUCCIONES ESPECIALES contienen horarios de atención específicos (días, horas), USA ESOS horarios. Las instrucciones especiales SIEMPRE prevalecen sobre el HORARIO DE ATENCIÓN genérico mostrado arriba.
+- Si mencionas una fecha o un día de la semana, DEBES verificarlo contra el CALENDARIO DE REFERENCIA antes de responder.
 - Basa tu respuesta EXCLUSIVAMENTE en la información proporcionada en este prompt. No agregues datos, servicios, horarios, direcciones ni detalles que no aparezcan explícitamente aquí.`;
 
     // Follow-up mode
