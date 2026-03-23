@@ -338,7 +338,7 @@ const AgendaPage = () => {
                 </SelectContent>
               </Select>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-36 h-8 text-xs bg-white/5 border-white/10"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos</SelectItem>
                   {(Object.keys(STATUS_CFG) as AptStatus[]).map(s => (
