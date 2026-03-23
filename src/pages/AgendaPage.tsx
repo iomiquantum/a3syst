@@ -355,11 +355,11 @@ const AgendaPage = () => {
                   </div>
                 ))}
                 <div className="flex items-center gap-1.5">
-                  <Bot className="w-3 h-3 text-[#8B5CF6]" />
+                  <Bot className="w-3 h-3 text-primary" />
                   <span className="text-[10px] text-muted-foreground">IA</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <User className="w-3 h-3 text-blue-400" />
+                  <User className="w-3 h-3 text-[hsl(var(--info))]" />
                   <span className="text-[10px] text-muted-foreground">Manual</span>
                 </div>
               </div>
