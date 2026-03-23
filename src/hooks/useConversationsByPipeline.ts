@@ -26,6 +26,7 @@ export interface PipelineConversation {
   contact_id: string;
   channel: string;
   status: string;
+  created_at: string;
   last_message_at: string;
   last_message_preview: string;
   last_outbound_status: string | null;
