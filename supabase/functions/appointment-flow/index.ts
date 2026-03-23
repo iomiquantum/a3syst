@@ -75,9 +75,24 @@ serve(async (req) => {
       const today = `${nowInTz.getFullYear()}-${String(nowInTz.getMonth() + 1).padStart(2, "0")}-${String(nowInTz.getDate()).padStart(2, "0")}`;
       const dayOfWeek = nowInTz.toLocaleDateString("es", { weekday: "long" });
 
+      // Build calendar reference for detect_intent too
+      const dayNamesDetect = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+      const calRefDetect: string[] = [];
+      for (let i = 0; i < 14; i++) {
+        const d = new Date(nowInTz);
+        d.setDate(d.getDate() + i);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        calRefDetect.push(`${dayNamesDetect[d.getDay()]} ${dd}/${mm} → ${yyyy}-${mm}-${dd}`);
+      }
+
       const detectPrompt = `Analiza el mensaje del paciente en contexto de TODA la conversación.
 
 FECHA DE HOY: ${today} (${dayOfWeek})
+
+CALENDARIO (próximos 14 días):
+${calRefDetect.join("\n")}
 
 SERVICIOS DISPONIBLES DEL NEGOCIO:
 ${availableServices || "(sin servicios)"}
