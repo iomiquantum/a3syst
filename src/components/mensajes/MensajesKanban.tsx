@@ -55,10 +55,19 @@ const MensajesKanban = ({ conversations, onActionComplete }: Props) => {
     if (!open) setShowContactPanel(false);
   };
 
+  const filteredConversations = useMemo(() => {
+    if (!searchQuery.trim()) return conversations;
+    const q = searchQuery.toLowerCase();
+    return conversations.filter(c =>
+      c.contactName.toLowerCase().includes(q) ||
+      c.contactPhone.toLowerCase().includes(q)
+    );
+  }, [conversations, searchQuery]);
+
   // Pre-sort seguimiento columns by time remaining (closest first)
   const sortedConversations = useMemo(() => {
     const grouped = new Map<string, PipelineConversation[]>();
-    for (const c of conversations) {
+    for (const c of filteredConversations) {
       const tab = c.pipeline_tab || "resueltos_ia";
       if (!grouped.has(tab)) grouped.set(tab, []);
       grouped.get(tab)!.push(c);
@@ -74,7 +83,7 @@ const MensajesKanban = ({ conversations, onActionComplete }: Props) => {
       }
     }
     return grouped;
-  }, [conversations]);
+  }, [filteredConversations]);
 
   return (
     <>
