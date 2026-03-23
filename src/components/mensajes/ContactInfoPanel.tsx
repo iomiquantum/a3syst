@@ -62,6 +62,7 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props)
   const [editValue, setEditValue] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [highlightedField, setHighlightedField] = useState<string | null>(null);
+  const [bookingOpen, setBookingOpen] = useState(false);
 
   const fetchContact = useCallback(async () => {
     if (!c.contact_id) return;
