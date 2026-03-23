@@ -70,6 +70,21 @@ const SpamBadge = ({ c }: { c: PipelineConversation }) => (
   />
 );
 
+const DatesBadge = ({ c }: { c: PipelineConversation }) => (
+  <div className="flex flex-col gap-0.5">
+    {c.created_at && (
+      <span className="text-[9px] text-muted-foreground flex items-center gap-1">
+        <CalendarPlus className="w-2.5 h-2.5 shrink-0" /> 1er contacto: {formatShortDate(c.created_at)}
+      </span>
+    )}
+    {c.last_message_at && (
+      <span className="text-[9px] text-muted-foreground flex items-center gap-1">
+        <Clock className="w-2.5 h-2.5 shrink-0" /> Último msg: {formatDateWithTime(c.last_message_at)}
+      </span>
+    )}
+  </div>
+);
+
 const ConversationCard = ({ conversation: c, selected, onClick, variant = "list" }: Props) => {
   const isSpamProtected = c.seguimiento_spam_protection_triggered && c.pipeline_tab === "no_responden";
 
