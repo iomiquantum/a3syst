@@ -224,29 +224,42 @@ const MiNegocioPage = () => {
   // ── Branches ──
   const [openBranch, setOpenBranch] = useState(false);
   const [editingBranchId, setEditingBranchId] = useState<string | null>(null);
-  const [branchForm, setBranchForm] = useState({ name: "", address: "", phone: "", description: "" });
+  const emptyBranchForm = { name: "", address: "", phone: "", description: "", email: "", whatsapp: "", full_address: "", google_maps_url: "", arrival_instructions: "", preparation_notes: "", working_schedule: null as WorkingSchedule | null };
+  const [branchForm, setBranchForm] = useState(emptyBranchForm);
 
   const handleSaveBranch = async () => {
     if (!clinicId) return;
     try {
-      const validated = branchSchema.parse(branchForm);
+      const validated = branchSchema.parse({ name: branchForm.name, address: branchForm.address, phone: branchForm.phone, description: branchForm.description });
+      const payload: any = {
+        name: validated.name, address: validated.address, phone: validated.phone || "", description: validated.description || "",
+        email: branchForm.email || null, whatsapp: branchForm.whatsapp || null,
+        full_address: branchForm.full_address || null, google_maps_url: branchForm.google_maps_url || null,
+        arrival_instructions: branchForm.arrival_instructions || null, preparation_notes: branchForm.preparation_notes || null,
+        working_schedule: branchForm.working_schedule || null,
+      };
       if (editingBranchId) {
-        const { error } = await supabase.from("branches").update({ name: validated.name, address: validated.address, phone: validated.phone || "", description: validated.description || "" }).eq("id", editingBranchId);
+        const { error } = await supabase.from("branches").update(payload).eq("id", editingBranchId);
         if (error) { toast.error(error.message); return; }
         toast.success(`${labels.branches_singular} actualizada`);
       } else {
-        const { error } = await supabase.from("branches").insert({ clinic_id: clinicId, name: validated.name, address: validated.address, phone: validated.phone || "", description: validated.description || "" });
+        const { error } = await supabase.from("branches").insert({ clinic_id: clinicId, ...payload });
         if (error) { toast.error(error.message); return; }
         toast.success(`${labels.branches_singular} creada`);
       }
-      setOpenBranch(false); setEditingBranchId(null); setBranchForm({ name: "", address: "", phone: "", description: "" });
+      setOpenBranch(false); setEditingBranchId(null); setBranchForm(emptyBranchForm);
       refetchBranches();
     } catch (e) { toast.error(getValidationError(e)); }
   };
 
   const handleEditBranch = (b: any) => {
     setEditingBranchId(b.id);
-    setBranchForm({ name: b.name, address: b.address || "", phone: b.phone || "", description: b.description || "" });
+    setBranchForm({
+      name: b.name, address: b.address || "", phone: b.phone || "", description: b.description || "",
+      email: b.email || "", whatsapp: b.whatsapp || "", full_address: b.full_address || "",
+      google_maps_url: b.google_maps_url || "", arrival_instructions: b.arrival_instructions || "",
+      preparation_notes: b.preparation_notes || "", working_schedule: b.working_schedule || null,
+    });
     setOpenBranch(true);
   };
 
