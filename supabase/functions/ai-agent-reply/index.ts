@@ -376,7 +376,7 @@ REGLAS OBLIGATORIAS:
 - Si mencionas una fecha o un día de la semana, DEBES verificarlo contra el CALENDARIO DE REFERENCIA antes de responder.
 - Basa tu respuesta EXCLUSIVAMENTE en la información proporcionada en este prompt. No agregues datos, servicios, horarios, direcciones ni detalles que no aparezcan explícitamente aquí.`;
 
-    // Follow-up mode
+    // Follow-up mode — VALUE-FIRST philosophy
     if (isFollowUp) {
       const followUpCount = (conversationData.follow_up_count || 0) + 1;
       const lastInbound = conversationData.last_inbound_at;
@@ -389,13 +389,39 @@ REGLAS OBLIGATORIAS:
           ? `${Math.floor(timeSince / 60)} horas`
           : `${timeSince} minutos`;
 
-      systemPrompt += `\n\n=== MODO SEGUIMIENTO (Contacto ${followUpCount}) ===
-Este es un mensaje de seguimiento #${followUpCount}. El contacto no ha respondido en ${timeLabel}.
-- Genera un mensaje amable y persuasivo para que el contacto retome la conversación.
-- NO repitas el mismo mensaje anterior, varía el enfoque.
-- Contacto ${followUpCount <= 2 ? ": Sé amable y recuerda los beneficios del servicio." : followUpCount <= 4 ? ": Crea urgencia moderada, menciona disponibilidad limitada o promociones." : ": Último intento, ofrece ayuda directa o alternativas de contacto."}
-- Mantén el mensaje corto (1-2 oraciones máximo).
-- NUNCA inventes servicios, horarios, precios ni datos que no estén en la configuración de arriba. Usa SOLO la información real del negocio.`;
+      // Load strategy for this contact number
+      const { data: strategy } = await supabase
+        .from("seguimiento_strategies")
+        .select("strategy_name, prompt_instruction, rules, psychological_principle")
+        .eq("contact_number", followUpCount)
+        .maybeSingle();
+
+      const strategyInstruction = strategy?.prompt_instruction || "";
+      const strategyRules = strategy?.rules || "";
+
+      systemPrompt += `\n\n=== MODO SEGUIMIENTO — VALOR PRIMERO (Contacto #${followUpCount}) ===
+El contacto no ha respondido en ${timeLabel}.
+
+FILOSOFÍA FUNDAMENTAL:
+Tu objetivo NO es vender ni presionar para agendar. Tu objetivo es ENAMORAR al cliente con valor real.
+El cliente debe sentir: "esta empresa genuinamente quiere ayudarme y sabe de lo que habla".
+Si el cliente se siente cuidado e informado, la venta llegará sola.
+
+ESTRATEGIA PARA ESTE CONTACTO — "${strategy?.strategy_name || "Seguimiento"}":
+Principio psicológico: ${strategy?.psychological_principle || "Reciprocidad — dar valor primero"}
+${strategyInstruction}
+
+REGLAS DE ESTE CONTACTO:
+${strategyRules}
+
+REGLAS GENERALES DE SEGUIMIENTO:
+- Analiza el historial del chat: ¿qué preguntó? ¿qué duda tenía? ¿qué le interesaba? Responde ESO primero.
+- Dale información educativa, práctica o científica basada en los servicios REALES del negocio.
+- Máximo 3 oraciones y 250 caracteres.
+- NUNCA menciones "llamadas" ni "videollamadas" — todo es por mensajes o citas presenciales.
+- NUNCA inventes servicios, cupos, promociones, estudios ni datos que no estén configurados arriba.
+- ${followUpCount <= 2 ? "En S1-S2: PRIORIZA dar valor educativo. La mención de agendar debe ser mínima o inexistente." : followUpCount <= 4 ? "En S3-S4: Ya diste valor. Ahora puedes sugerir agendar de forma natural, pero sin presión." : "En S5+: Empatía pura. Solo dejar la puerta abierta."}
+- NO repitas el mismo contenido de mensajes anteriores. Varía el enfoque y la información.`;
     }
 
     // Fetch channel-specific instructions
