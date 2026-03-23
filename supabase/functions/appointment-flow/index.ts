@@ -41,30 +41,44 @@ serve(async (req) => {
         return jsonResponse({ skip: true, reason: "already_agendado" });
       }
 
-      // Fetch last 10 messages for context
+      // Fetch last 15 messages for context
       const { data: messages } = await supabase
         .from("messages")
         .select("direction, content")
         .eq("conversation_id", conversation_id)
         .order("created_at", { ascending: false })
-        .limit(10);
+        .limit(15);
 
       if (messages) messages.reverse();
       const msgContext = (messages || []).map(m =>
         `${m.direction === "inbound" ? "Cliente" : "Agente"}: ${m.content}`
       ).join("\n");
 
+      // Fetch available services to help AI match from context
+      const { data: agentCfg } = await supabase
+        .from("ai_agent_config")
+        .select("services, treatments_text")
+        .eq("clinic_id", clinic_id)
+        .maybeSingle();
+
+      const availableServices = ((agentCfg?.services || []) as { name: string }[]).map(s => s.name).join(", ");
+      const treatmentsRef = agentCfg?.treatments_text || "";
+
       const today = new Date().toISOString().split("T")[0];
       const dayOfWeek = new Date().toLocaleDateString("es", { weekday: "long" });
 
-      const detectPrompt = `Analiza el mensaje del paciente en contexto de la conversación.
+      const detectPrompt = `Analiza el mensaje del paciente en contexto de TODA la conversación.
 
 FECHA DE HOY: ${today} (${dayOfWeek})
 
-CONVERSACIÓN:
+SERVICIOS DISPONIBLES DEL NEGOCIO:
+${availableServices || "(sin servicios)"}
+${treatmentsRef ? `\nTRATAMIENTOS:\n${treatmentsRef}` : ""}
+
+CONVERSACIÓN COMPLETA:
 ${msgContext}
 
-MENSAJE: "${patient_message}"
+ÚLTIMO MENSAJE: "${patient_message}"
 
 ¿Quiere agendar una cita?
 
@@ -74,15 +88,17 @@ SÍ: "Quiero agendar", "Me gustaría una cita", "¿Puedo ir mañana?",
 NO: Solo preguntar precios, pedir info general, "lo voy a pensar",
 preguntar horarios sin intención de reservar
 
-IMPORTANTE: Si el paciente menciona una fecha relativa ("mañana", "el viernes", "la próxima semana"),
-DEBES resolverla a formato YYYY-MM-DD basándote en la fecha de hoy.
+IMPORTANTE SOBRE EL SERVICIO:
+- Revisa TODA la conversación previa. Si el cliente ya preguntó o habló sobre un servicio específico (ej: "¿cuánto cuesta la consulta?", "me interesa el tratamiento X"), ESE es el servicio que quiere agendar.
+- Mapea lo que el cliente mencionó al servicio más cercano de los SERVICIOS DISPONIBLES arriba.
+- Si el paciente menciona una fecha relativa ("mañana", "el viernes"), resuélvela a YYYY-MM-DD.
 
 Responde SOLO JSON válido:
 {
   "wants_appointment": true/false,
   "has_date": true/false, "date_mentioned": "2026-03-25" o null,
   "has_time": true/false, "time_mentioned": "10:00" o null,
-  "has_service": true/false, "service_mentioned": "consulta general" o null,
+  "has_service": true/false, "service_mentioned": "nombre del servicio" o null,
   "confidence": 0.0-1.0
 }`;
 
