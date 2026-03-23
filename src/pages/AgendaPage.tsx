@@ -545,7 +545,7 @@ const AgendaPage = () => {
             <div>
               <Label className="text-xs text-muted-foreground">Profesional</Label>
               <Select value={form.professional_id} onValueChange={v => setForm({ ...form, professional_id: v })}>
-                <SelectTrigger className="h-9 bg-white/5 border-white/10 mt-1"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                <SelectTrigger className="h-9 mt-1"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                 <SelectContent>{professionals.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
