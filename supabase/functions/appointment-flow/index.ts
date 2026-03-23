@@ -251,13 +251,29 @@ Responde SOLO JSON válido:
       const todayStr = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, "0")}-${String(nowLocal.getDate()).padStart(2, "0")}`;
       const dayOfWeekStr = nowLocal.toLocaleDateString("es", { weekday: "long" });
 
-      // Build working days / schedule info
-      const workingDays = (clinic as any)?.working_days || [];
-      const openingHour = (clinic as any)?.opening_hour || "";
-      const closingHour = (clinic as any)?.closing_hour || "";
-      const scheduleText = workingDays.length > 0
-        ? `Días de atención: ${workingDays.join(", ")}. Horario: ${openingHour || "?"} a ${closingHour || "?"}.`
-        : "(sin horario configurado)";
+      // Build working schedule info — prefer detailed per-day schedule
+      const workingSchedule = (clinic as any)?.working_schedule as Record<string, { enabled: boolean; open: string; close: string }> | null;
+      let scheduleText = "";
+      if (workingSchedule) {
+        const dayLabels: Record<string, string> = { lunes: "Lunes", martes: "Martes", miercoles: "Miércoles", jueves: "Jueves", viernes: "Viernes", sabado: "Sábado", domingo: "Domingo" };
+        const lines: string[] = [];
+        for (const [key, label] of Object.entries(dayLabels)) {
+          const d = workingSchedule[key];
+          if (d?.enabled) {
+            lines.push(`• ${label}: ${d.open} a ${d.close}`);
+          } else {
+            lines.push(`• ${label}: CERRADO`);
+          }
+        }
+        scheduleText = "HORARIO DE ATENCIÓN:\n" + lines.join("\n");
+      } else {
+        const workingDays = (clinic as any)?.working_days || [];
+        const openingHour = (clinic as any)?.opening_hour || "";
+        const closingHour = (clinic as any)?.closing_hour || "";
+        scheduleText = workingDays.length > 0
+          ? `Días de atención: ${workingDays.join(", ")}. Horario: ${openingHour || "?"} a ${closingHour || "?"}.`
+          : "(sin horario configurado)";
+      }
 
       // Include special_instructions if they contain schedule overrides
       const specialInstructions = agentConfig?.special_instructions || "";
