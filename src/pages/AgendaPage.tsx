@@ -285,11 +285,11 @@ const AgendaPage = () => {
                         </p>
                         <div className="flex gap-2 mt-2">
                           <button onClick={() => updateStatus(apt.id, "confirmado")}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 text-xs font-medium hover:bg-emerald-500/25 transition-colors">
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))] text-xs font-medium hover:bg-[hsl(var(--success)/0.25)] transition-colors">
                             <Check className="w-3.5 h-3.5" /> Confirmar
                           </button>
                           <button onClick={() => updateStatus(apt.id, "cancelado")}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-red-500/20 text-red-400 text-xs font-medium hover:bg-red-500/10 transition-colors">
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-destructive/20 text-destructive text-xs font-medium hover:bg-destructive/10 transition-colors">
                             <X className="w-3.5 h-3.5" /> Cancelar
                           </button>
                         </div>
