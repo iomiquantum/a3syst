@@ -368,9 +368,19 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props)
           <button onClick={() => toast.info("Conversión a paciente (próximamente)")} className="w-full h-9 rounded-lg bg-primary text-primary-foreground text-sm font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
             <UserPlus className="w-4 h-4" /> Convertir a Paciente
           </button>
-          <button onClick={() => toast.info("Agendar cita (próximamente)")} className="w-full h-9 rounded-lg border border-border text-foreground text-sm font-medium flex items-center justify-center gap-2 hover:bg-muted transition-colors">
+          <button onClick={() => setBookingOpen(true)} className="w-full h-9 rounded-lg border border-border text-foreground text-sm font-medium flex items-center justify-center gap-2 hover:bg-muted transition-colors">
             <Calendar className="w-4 h-4" /> Agendar
           </button>
+          <ManualBookingDialog
+            open={bookingOpen}
+            onOpenChange={setBookingOpen}
+            contactId={contact?.id || c.contact_id}
+            contactName={c.contactName}
+            contactPhone={c.contactPhone}
+            contactEmail={c.contactEmail}
+            conversationId={c.id}
+            onBooked={() => onActionComplete?.()}
+          />
           <button onClick={async () => {
             const newPinned = !c.pinned;
             await (supabase as any).from("conversations").update({ pinned: newPinned }).eq("id", c.id);
