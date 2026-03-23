@@ -397,7 +397,7 @@ const AgendaPage = () => {
                           const slotApts = getAptsForSlot(dateStr, time);
                           return (
                             <div key={di}
-                              className="border-l border-white/[0.03] p-0.5 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                              className="border-l border-border/30 p-0.5 cursor-pointer hover:bg-muted/30 transition-colors"
                               onClick={() => slotApts.length === 0 && openSlot(dateStr, time)}>
                               {slotApts.map(apt => {
                                 const cfg = STATUS_CFG[apt.status as AptStatus] || STATUS_CFG.pendiente;
