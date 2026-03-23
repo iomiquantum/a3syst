@@ -343,13 +343,16 @@ PASO ACTUAL: ${conv.appointment_flow_step}
 15A. IMPORTANTE: Cuando menciones una fecha al paciente, SIEMPRE verifica que el día de la semana sea correcto para esa fecha. Si dices "sábado 29 de marzo" asegúrate que el 29 de marzo realmente caiga sábado.
 15. NO repitas preguntas que ya se respondieron en el historial. Lee el historial antes de preguntar.
 16. Si el paciente parece frustrado o repite información, discúlpate brevemente y ve directo al punto.
+17. ESCALACIÓN INTELIGENTE: Si detectas que NO puedes ayudar al paciente (pide algo fuera de tu alcance, está frustrado y repite lo mismo, pregunta algo que no está en tus datos, o el flujo está estancado), responde con should_escalate=true y en escalation_reason explica brevemente POR QUÉ escalas (ej: "El paciente solicita un servicio no disponible", "El paciente necesita información que no tengo").
 
 Responde SOLO JSON válido:
 {
   "response_text": "mensaje para el paciente",
   "updated_data": { "service": "valor o null", "date": "YYYY-MM-DD o null", "time": "HH:MM o null" },
   "flow_complete": false,
-  "patient_cancelled": false
+  "patient_cancelled": false,
+  "should_escalate": false,
+  "escalation_reason": null
 }`;
 
       const aiResp = await callAI(LOVABLE_API_KEY, guidedPrompt, patient_message);
@@ -360,6 +363,12 @@ Responde SOLO JSON válido:
       } catch {
         console.error("Failed to parse guided flow:", aiResp);
         return jsonResponse({ error: "AI parse error", raw: aiResp });
+      }
+
+      // AI-driven escalation
+      if (parsed.should_escalate) {
+        const reason = parsed.escalation_reason || "La IA detectó que no puede resolver la solicitud del paciente.";
+        return await escalateConversation(supabase, conversation_id, clinic_id, conv.pipeline_tab || "resueltos_ia", reason);
       }
 
       // Merge updated data, but force system-resolved dates when available
