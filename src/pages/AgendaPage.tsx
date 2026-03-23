@@ -271,7 +271,7 @@ const AgendaPage = () => {
             </h2>
             <div className="grid gap-3 md:grid-cols-2">
               {pendingApprovals.slice(0, 6).map(apt => (
-                <Card key={apt.id} className="border-white/10 bg-white/[0.03]">
+                <Card key={apt.id}>
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
                       <div className="p-2 rounded-lg bg-yellow-500/10 shrink-0">
