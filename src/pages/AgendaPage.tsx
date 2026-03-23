@@ -559,7 +559,7 @@ const AgendaPage = () => {
               <div>
                 <Label className="text-xs text-muted-foreground">Hora *</Label>
                 <Input type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })}
-                  className="h-9 bg-white/5 border-white/10 text-foreground mt-1" />
+                  className="h-9 mt-1" />
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Duración</Label>
