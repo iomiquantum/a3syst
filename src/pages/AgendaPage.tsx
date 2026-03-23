@@ -410,9 +410,9 @@ const AgendaPage = () => {
                                         {apt.patients?.first_name} {apt.patients?.last_name}
                                       </p>
                                       {apt.booking_source === "ai_auto" ? (
-                                        <Bot className="w-3 h-3 text-[#8B5CF6] shrink-0" />
+                                        <Bot className="w-3 h-3 text-primary shrink-0" />
                                       ) : (
-                                        <User className="w-3 h-3 text-blue-400 shrink-0" />
+                                        <User className="w-3 h-3 text-[hsl(var(--info))] shrink-0" />
                                       )}
                                     </div>
                                     <p className="text-[9px] text-muted-foreground truncate">
