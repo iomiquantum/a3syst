@@ -700,7 +700,67 @@ async function confirmAppointment(
   });
 }
 
-function formatDateES(dateStr: string): string {
+async function escalateConversation(
+  supabase: any,
+  conversation_id: string,
+  clinic_id: string,
+  from_tab: string,
+  reason: string,
+) {
+  console.warn("Escalating conversation:", conversation_id, "Reason:", reason);
+
+  // 1. Update conversation state
+  await supabase.from("conversations").update({
+    appointment_flow_active: false,
+    appointment_flow_step: null,
+    appointment_flow_data: {},
+    pipeline_tab: "escalados",
+    chatbot_active: false,
+    escalado_at: new Date().toISOString(),
+    escalado_reason: reason,
+  }).eq("id", conversation_id);
+
+  // 2. Log pipeline history with reason
+  await supabase.from("conversation_pipeline_history").insert({
+    conversation_id,
+    clinic_id,
+    from_tab,
+    to_tab: "escalados",
+    moved_by: "system",
+    reason: `Escalado IA: ${reason}`,
+  });
+
+  // 3. Add note to contact
+  const { data: conv } = await supabase
+    .from("conversations")
+    .select("contact_id")
+    .eq("id", conversation_id)
+    .maybeSingle();
+
+  if (conv?.contact_id) {
+    const currentNotes = await supabase
+      .from("contacts")
+      .select("notes")
+      .eq("id", conv.contact_id)
+      .maybeSingle();
+
+    const timestamp = new Date().toLocaleString("es", { timeZone: "America/Guayaquil" });
+    const newNote = `[${timestamp}] 🔴 Escalado IA: ${reason}`;
+    const existingNotes = currentNotes?.data?.notes || "";
+    const updatedNotes = existingNotes ? `${existingNotes}\n${newNote}` : newNote;
+
+    await supabase.from("contacts").update({ notes: updatedNotes }).eq("id", conv.contact_id);
+  }
+
+  return jsonResponse({
+    response_text: "Entiendo tu consulta. Permíteme conectarte con uno de nuestros asesores que podrá ayudarte mejor. 😊",
+    flow_cancelled: true,
+    escalated: true,
+    escalation_reason: reason,
+  });
+}
+
+
   return formatDateLabelES(dateStr, false);
 }
 
