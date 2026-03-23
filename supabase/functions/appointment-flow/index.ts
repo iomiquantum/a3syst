@@ -144,6 +144,18 @@ Responde SOLO JSON válido:
         return jsonResponse({ error: "Flow not active" });
       }
 
+      // Fetch recent conversation history for context (last 15 messages)
+      const { data: recentMsgs } = await supabase
+        .from("messages")
+        .select("direction, content")
+        .eq("conversation_id", conversation_id)
+        .order("created_at", { ascending: false })
+        .limit(15);
+      if (recentMsgs) recentMsgs.reverse();
+      const conversationHistory = (recentMsgs || []).map(m =>
+        `${m.direction === "inbound" ? "Cliente" : "Agente"}: ${m.content}`
+      ).join("\n");
+
       // Fetch branches
       const { data: branches } = await supabase
         .from("branches")
@@ -208,7 +220,29 @@ Responde SOLO JSON válido:
       // Include special_instructions if they contain schedule overrides
       const specialInstructions = agentConfig?.special_instructions || "";
 
-      const guidedPrompt = `Eres ${agentName} de ${clinicName}. Ayudas a agendar una cita.
+      // Loop detection: count how many outbound appointment_flow messages exist
+      const { count: flowMsgCount } = await supabase
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("conversation_id", conversation_id)
+        .eq("direction", "outbound")
+        .like("origin", "appointment_flow%");
+
+      // If more than 12 flow messages, abort to prevent infinite loop
+      if ((flowMsgCount || 0) > 12) {
+        console.warn("Appointment flow loop detected, deactivating flow for conversation:", conversation_id);
+        await supabase.from("conversations").update({
+          appointment_flow_active: false,
+          appointment_flow_step: null,
+          appointment_flow_data: {},
+        }).eq("id", conversation_id);
+        return jsonResponse({
+          response_text: "Disculpa las molestias. Permíteme conectarte con uno de nuestros asesores para ayudarte con tu agendamiento. 😊",
+          flow_cancelled: true,
+        });
+      }
+
+      const guidedPrompt = `Eres ${agentName} de ${clinicName}. Estás ayudando a un paciente a agendar una cita.
 
 FECHA DE HOY: ${todayStr} (${dayOfWeekStr})
 
@@ -228,23 +262,28 @@ UBICACIONES / DIRECCIÓN:
 ${locationsText}
 ${professionalsText ? `\nPROFESIONALES:\n${professionalsText}` : ""}
 
-PASO ACTUAL: ${conv.appointment_flow_step}
-MENSAJE DEL PACIENTE: "${patient_message}"
+HISTORIAL RECIENTE DE LA CONVERSACIÓN:
+${conversationHistory}
 
-INSTRUCCIONES:
-1. Extrae datos nuevos del mensaje del paciente
-2. Si tienes los 3 datos (servicio + fecha + hora): pide confirmación resumiendo la cita
-3. Si falta algún dato: pregunta SOLO lo que falta de forma amable
-4. Si el paciente quiere cancelar el agendamiento: respétalo
-5. No aceptes fechas en el pasado
-6. PRIORIDAD DE HORARIOS: Si las INSTRUCCIONES ESPECIALES contienen horarios de atención específicos (días, horas, sábados, etc.), USA ESOS horarios. Las instrucciones especiales SIEMPRE prevalecen sobre el HORARIO DE ATENCIÓN GENÉRICO.
-7. NUNCA ofrezcas ni aceptes citas en días/horarios fuera del horario válido. Si el paciente pide un día no laborable, sugiere el siguiente día hábil disponible.
-8. Solo ofrece horarios dentro del rango de apertura y cierre configurado.
-9. Tono cálido y breve (máximo 2-3 oraciones)
-10. IMPORTANTE: Si el paciente menciona una fecha relativa ("mañana", "el viernes", etc.), resuélvela a formato YYYY-MM-DD basándote en la fecha de hoy.
-11. Si el paciente pregunta por ubicación o dirección, USA la información de UBICACIONES arriba. NUNCA digas que no hay sucursales físicas si hay una dirección configurada.
-12. Usa los precios y servicios EXACTOS de la configuración. NUNCA inventes servicios, precios, horarios ni datos que no aparezcan explícitamente aquí.
-13. Basa tu respuesta EXCLUSIVAMENTE en la información proporcionada en este prompt.
+PASO ACTUAL: ${conv.appointment_flow_step}
+ÚLTIMO MENSAJE DEL PACIENTE: "${patient_message}"
+
+=== REGLAS CRÍTICAS ===
+1. Solo necesitas recopilar 3 datos: SERVICIO, FECHA y HORA. Nada más.
+2. PROHIBIDO pedir nombre, apellido, correo electrónico, teléfono u otros datos personales. Esos datos YA los tienes del contacto.
+3. Si el paciente envía un nombre, email o teléfono, NO los pidas de nuevo. Simplemente ignóralos y pregunta por lo que realmente falta (servicio, fecha u hora).
+4. Extrae datos del mensaje del paciente. Si menciona un servicio, fecha o hora, captúralos en updated_data.
+5. Si tienes los 3 datos (servicio + fecha + hora): pide confirmación resumiendo la cita.
+6. Si falta algún dato: pregunta SOLO lo que falta de forma amable y directa.
+7. Si el paciente quiere cancelar: respétalo.
+8. No aceptes fechas en el pasado.
+9. PRIORIDAD DE HORARIOS: Si las INSTRUCCIONES ESPECIALES contienen horarios específicos, USA ESOS. Prevalecen sobre el HORARIO GENÉRICO.
+10. NUNCA ofrezcas citas fuera del horario válido. Sugiere el siguiente día hábil si pide un día no laborable.
+11. Tono cálido y breve (máximo 2-3 oraciones).
+12. Si el paciente menciona fecha relativa ("mañana", "el viernes"), resuélvela a YYYY-MM-DD.
+13. NUNCA inventes servicios, precios, horarios ni datos que no aparezcan aquí.
+14. NO repitas preguntas que ya se respondieron en el historial. Lee el historial antes de preguntar.
+15. Si el paciente parece frustrado o repite información, discúlpate brevemente y ve directo al punto.
 
 Responde SOLO JSON válido:
 {
