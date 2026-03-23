@@ -41,30 +41,44 @@ serve(async (req) => {
         return jsonResponse({ skip: true, reason: "already_agendado" });
       }
 
-      // Fetch last 10 messages for context
+      // Fetch last 15 messages for context
       const { data: messages } = await supabase
         .from("messages")
         .select("direction, content")
         .eq("conversation_id", conversation_id)
         .order("created_at", { ascending: false })
-        .limit(10);
+        .limit(15);
 
       if (messages) messages.reverse();
       const msgContext = (messages || []).map(m =>
         `${m.direction === "inbound" ? "Cliente" : "Agente"}: ${m.content}`
       ).join("\n");
 
+      // Fetch available services to help AI match from context
+      const { data: agentCfg } = await supabase
+        .from("ai_agent_config")
+        .select("services, treatments_text")
+        .eq("clinic_id", clinic_id)
+        .maybeSingle();
+
+      const availableServices = ((agentCfg?.services || []) as { name: string }[]).map(s => s.name).join(", ");
+      const treatmentsRef = agentCfg?.treatments_text || "";
+
       const today = new Date().toISOString().split("T")[0];
       const dayOfWeek = new Date().toLocaleDateString("es", { weekday: "long" });
 
-      const detectPrompt = `Analiza el mensaje del paciente en contexto de la conversación.
+      const detectPrompt = `Analiza el mensaje del paciente en contexto de TODA la conversación.
 
 FECHA DE HOY: ${today} (${dayOfWeek})
 
-CONVERSACIÓN:
+SERVICIOS DISPONIBLES DEL NEGOCIO:
+${availableServices || "(sin servicios)"}
+${treatmentsRef ? `\nTRATAMIENTOS:\n${treatmentsRef}` : ""}
+
+CONVERSACIÓN COMPLETA:
 ${msgContext}
 
-MENSAJE: "${patient_message}"
+ÚLTIMO MENSAJE: "${patient_message}"
 
 ¿Quiere agendar una cita?
 
@@ -74,15 +88,17 @@ SÍ: "Quiero agendar", "Me gustaría una cita", "¿Puedo ir mañana?",
 NO: Solo preguntar precios, pedir info general, "lo voy a pensar",
 preguntar horarios sin intención de reservar
 
-IMPORTANTE: Si el paciente menciona una fecha relativa ("mañana", "el viernes", "la próxima semana"),
-DEBES resolverla a formato YYYY-MM-DD basándote en la fecha de hoy.
+IMPORTANTE SOBRE EL SERVICIO:
+- Revisa TODA la conversación previa. Si el cliente ya preguntó o habló sobre un servicio específico (ej: "¿cuánto cuesta la consulta?", "me interesa el tratamiento X"), ESE es el servicio que quiere agendar.
+- Mapea lo que el cliente mencionó al servicio más cercano de los SERVICIOS DISPONIBLES arriba.
+- Si el paciente menciona una fecha relativa ("mañana", "el viernes"), resuélvela a YYYY-MM-DD.
 
 Responde SOLO JSON válido:
 {
   "wants_appointment": true/false,
   "has_date": true/false, "date_mentioned": "2026-03-25" o null,
   "has_time": true/false, "time_mentioned": "10:00" o null,
-  "has_service": true/false, "service_mentioned": "consulta general" o null,
+  "has_service": true/false, "service_mentioned": "nombre del servicio" o null,
   "confidence": 0.0-1.0
 }`;
 
@@ -272,18 +288,19 @@ PASO ACTUAL: ${conv.appointment_flow_step}
 1. Solo necesitas recopilar 3 datos: SERVICIO, FECHA y HORA. Nada más.
 2. PROHIBIDO pedir nombre, apellido, correo electrónico, teléfono u otros datos personales. Esos datos YA los tienes del contacto.
 3. Si el paciente envía un nombre, email o teléfono, NO los pidas de nuevo. Simplemente ignóralos y pregunta por lo que realmente falta (servicio, fecha u hora).
-4. Extrae datos del mensaje del paciente. Si menciona un servicio, fecha o hora, captúralos en updated_data.
-5. Si tienes los 3 datos (servicio + fecha + hora): pide confirmación resumiendo la cita.
-6. Si falta algún dato: pregunta SOLO lo que falta de forma amable y directa.
-7. Si el paciente quiere cancelar: respétalo.
-8. No aceptes fechas en el pasado.
-9. PRIORIDAD DE HORARIOS: Si las INSTRUCCIONES ESPECIALES contienen horarios específicos, USA ESOS. Prevalecen sobre el HORARIO GENÉRICO.
-10. NUNCA ofrezcas citas fuera del horario válido. Sugiere el siguiente día hábil si pide un día no laborable.
-11. Tono cálido y breve (máximo 2-3 oraciones).
-12. Si el paciente menciona fecha relativa ("mañana", "el viernes"), resuélvela a YYYY-MM-DD.
-13. NUNCA inventes servicios, precios, horarios ni datos que no aparezcan aquí.
-14. NO repitas preguntas que ya se respondieron en el historial. Lee el historial antes de preguntar.
-15. Si el paciente parece frustrado o repite información, discúlpate brevemente y ve directo al punto.
+4. INFERIR SERVICIO DEL CONTEXTO: Si el servicio aún no está definido, revisa el HISTORIAL COMPLETO de la conversación. Si el cliente preguntó o habló sobre un servicio/tratamiento específico antes de pedir agendar, ESE es el servicio. No le preguntes de nuevo; confírmalo directamente. Ejemplo: "Perfecto, ¿entonces agendamos tu cita de [servicio inferido]? ¿Qué día y hora te funcionan?"
+5. Si hay varios servicios mencionados en el historial y no es claro cuál quiere, pregunta cuál de ellos desea agendar.
+6. Si tienes los 3 datos (servicio + fecha + hora): pide confirmación resumiendo la cita.
+7. Si falta algún dato: pregunta SOLO lo que falta de forma amable y directa. Idealmente pregunta fecha y hora juntos si ambos faltan.
+8. Si el paciente quiere cancelar: respétalo.
+9. No aceptes fechas en el pasado.
+10. PRIORIDAD DE HORARIOS: Si las INSTRUCCIONES ESPECIALES contienen horarios específicos, USA ESOS. Prevalecen sobre el HORARIO GENÉRICO.
+11. NUNCA ofrezcas citas fuera del horario válido. Sugiere el siguiente día hábil si pide un día no laborable.
+12. Tono cálido y breve (máximo 2-3 oraciones).
+13. Si el paciente menciona fecha relativa ("mañana", "el viernes"), resuélvela a YYYY-MM-DD.
+14. NUNCA inventes servicios, precios, horarios ni datos que no aparezcan aquí.
+15. NO repitas preguntas que ya se respondieron en el historial. Lee el historial antes de preguntar.
+16. Si el paciente parece frustrado o repite información, discúlpate brevemente y ve directo al punto.
 
 Responde SOLO JSON válido:
 {
