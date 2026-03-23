@@ -715,12 +715,160 @@ async function confirmAppointment(
 }
 
 function formatDateES(dateStr: string): string {
+  return formatDateLabelES(dateStr, false);
+}
+
+const DAY_NAMES_ES = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"] as const;
+const WEEKDAY_ALIASES = [
+  { index: 0, labels: ["domingo"] },
+  { index: 1, labels: ["lunes"] },
+  { index: 2, labels: ["martes"] },
+  { index: 3, labels: ["miercoles", "miércoles"] },
+  { index: 4, labels: ["jueves"] },
+  { index: 5, labels: ["viernes"] },
+  { index: 6, labels: ["sabado", "sábado"] },
+] as const;
+
+type LocalDateInfo = {
+  year: number;
+  month: number;
+  day: number;
+  weekday: number;
+  iso: string;
+  date: Date;
+};
+
+type DateResolution =
+  | { type: "single"; iso: string; label: string }
+  | { type: "ambiguous"; options: Array<{ iso: string; label: string }> }
+  | null;
+
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+function capitalizeFirst(value: string): string {
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+}
+
+function normalizeText(value: string): string {
+  return value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function createLocalDateInfo(year: number, month: number, day: number): LocalDateInfo {
+  const date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  return {
+    year,
+    month,
+    day,
+    weekday: date.getUTCDay(),
+    iso: `${year}-${pad2(month)}-${pad2(day)}`,
+    date,
+  };
+}
+
+function getLocalDateInfo(timeZone: string, source = new Date()): LocalDateInfo {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(source).filter((part) => part.type !== "literal").map((part) => [part.type, part.value]),
+  );
+
+  return createLocalDateInfo(Number(parts.year), Number(parts.month), Number(parts.day));
+}
+
+function addDaysToLocalDate(base: LocalDateInfo, days: number): LocalDateInfo {
+  const date = new Date(base.date);
+  date.setUTCDate(date.getUTCDate() + days);
+  return createLocalDateInfo(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate());
+}
+
+function buildCalendarReference(base: LocalDateInfo, totalDays = 14): string[] {
+  return Array.from({ length: totalDays }, (_, index) => {
+    const info = addDaysToLocalDate(base, index);
+    return `${DAY_NAMES_ES[info.weekday]} ${pad2(info.day)}/${pad2(info.month)}/${info.year} → ${info.iso}`;
+  });
+}
+
+function formatDateLabelES(dateStr: string, includeYear = true): string {
   try {
-    const d = new Date(dateStr + "T12:00:00");
-    return d.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" });
+    const [year, month, day] = dateStr.split("-").map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+    return new Intl.DateTimeFormat("es-ES", {
+      timeZone: "UTC",
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      ...(includeYear ? { year: "numeric" as const } : {}),
+    }).format(date);
   } catch {
     return dateStr;
   }
+}
+
+function resolveDateReferenceFromMessage(message: string, timeZone: string): DateResolution {
+  const normalized = normalizeText(message || "");
+  const today = getLocalDateInfo(timeZone);
+
+  if (/\bpasado manana\b/.test(normalized)) {
+    const target = addDaysToLocalDate(today, 2);
+    return { type: "single", iso: target.iso, label: formatDateLabelES(target.iso) };
+  }
+
+  if (/\bmanana\b/.test(normalized)) {
+    const target = addDaysToLocalDate(today, 1);
+    return { type: "single", iso: target.iso, label: formatDateLabelES(target.iso) };
+  }
+
+  if (/\bhoy\b/.test(normalized)) {
+    return { type: "single", iso: today.iso, label: formatDateLabelES(today.iso) };
+  }
+
+  for (const weekday of WEEKDAY_ALIASES) {
+    const matchedLabel = weekday.labels.find((label) => new RegExp(`\\b${label}\\b`).test(normalized));
+    if (!matchedLabel) continue;
+
+    const isNext = new RegExp(`\\bproximo\\s+${matchedLabel}\\b`).test(normalized);
+    const isThis = new RegExp(`\\best[ae]\\s+${matchedLabel}\\b`).test(normalized);
+    const delta = (weekday.index - today.weekday + 7) % 7;
+
+    if (!isNext && !isThis && delta === 0) {
+      const nextWeek = addDaysToLocalDate(today, 7);
+      return {
+        type: "ambiguous",
+        options: [
+          { iso: today.iso, label: formatDateLabelES(today.iso) },
+          { iso: nextWeek.iso, label: formatDateLabelES(nextWeek.iso) },
+        ],
+      };
+    }
+
+    const daysToAdd = isNext ? (delta === 0 ? 7 : delta) : delta;
+    const target = addDaysToLocalDate(today, daysToAdd);
+    return { type: "single", iso: target.iso, label: formatDateLabelES(target.iso) };
+  }
+
+  return null;
+}
+
+function buildDateResolutionInstruction(resolution: DateResolution): string {
+  if (!resolution) return "";
+  if (resolution.type === "single") {
+    return `INTERPRETACIÓN DE FECHA RESUELTA POR SISTEMA:\n- La referencia temporal del paciente corresponde exactamente a ${resolution.iso} (${resolution.label}).\n- Usa ESA fecha exacta y no menciones ninguna otra.`;
+  }
+
+  return `ACLARACIÓN DE FECHA OBLIGATORIA:\n- La referencia temporal del paciente es ambigua.\n- SOLO puedes ofrecer estas opciones exactas:\n${resolution.options.map((option) => `  • ${option.iso} (${option.label})`).join("\n")}\n- No menciones ninguna otra fecha.`;
+}
+
+function harmonizeResponseDate(responseText: string, resolution: DateResolution): string {
+  if (!responseText || !resolution || resolution.type !== "single") return responseText;
+  const corrected = formatDateLabelES(resolution.iso, false);
+  return responseText
+    .replace(/\b(?:lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\s+\d{1,2}\s+de\s+[a-záéíóú]+(?:\s+de\s+\d{4})?/i, corrected)
+    .replace(/\b(este|próximo|proximo)\s+(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\s+\d{1,2}\s+de\s+[a-záéíóú]+(?:\s+de\s+\d{4})?/i, corrected);
 }
 
 function jsonResponse(data: unknown, status = 200) {
