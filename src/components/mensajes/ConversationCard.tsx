@@ -26,6 +26,16 @@ function relativeTime(iso: string): string {
   return `${days}d`;
 }
 
+function formatShortDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("es", { day: "2-digit", month: "short" });
+}
+
+function formatDateWithTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("es", { day: "2-digit", month: "short" }) + " " + d.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+}
+
 function getInitials(name: string): string {
   return name.split(" ").slice(0, 2).map((w) => w[0] || "").join("").toUpperCase();
 }
