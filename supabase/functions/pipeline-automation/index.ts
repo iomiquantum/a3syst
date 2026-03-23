@@ -499,6 +499,106 @@ Deno.serve(async (req) => {
             seguimiento_next_contact_at: null,
             inactivity_timer_start: null,
           }).eq("id", conv.id);
+
+          // === GENERATE AI CONTEXT SUMMARY for human agent (S5 only) ===
+          if (nextS === 5) {
+            try {
+              const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+              if (LOVABLE_API_KEY) {
+                // Fetch conversation history
+                const { data: chatHistory } = await supabase
+                  .from("messages")
+                  .select("direction, content, created_at, origin")
+                  .eq("conversation_id", conv.id)
+                  .order("created_at", { ascending: true })
+                  .limit(30);
+
+                // Fetch contact info
+                const { data: convDetail } = await supabase
+                  .from("conversations")
+                  .select("contact_id, seguimiento_is_recurrente, seguimiento_recurrente_count")
+                  .eq("id", conv.id)
+                  .single();
+
+                let contactName = "el contacto";
+                if (convDetail?.contact_id) {
+                  const { data: contact } = await supabase.from("contacts").select("name, tags").eq("id", convDetail.contact_id).single();
+                  if (contact?.name) contactName = contact.name;
+                }
+
+                // Fetch clinic services for context
+                const { data: agentCfg } = await supabase
+                  .from("ai_agent_config")
+                  .select("services")
+                  .eq("clinic_id", conv.clinic_id)
+                  .maybeSingle();
+
+                const servicesList = ((agentCfg?.services || []) as { name: string }[]).map(s => s.name).join(", ") || "servicios del negocio";
+
+                const chatSummaryText = (chatHistory || []).map(m =>
+                  `${m.direction === "inbound" ? "CLIENTE" : "NEGOCIO"}: ${m.content}`
+                ).join("\n");
+
+                const summaryResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    model: "google/gemini-2.5-flash-lite",
+                    messages: [
+                      {
+                        role: "system",
+                        content: `Eres un analista de conversaciones de ventas. Genera un RESUMEN EJECUTIVO para el agente humano que va a tomar esta conversación.
+
+El resumen debe incluir:
+1. **Contexto**: Qué preguntó el cliente, sobre qué servicio/producto mostró interés
+2. **Estado**: ¿Mostró interés real? ¿Tiene dudas pendientes? ¿Dijo que volvería después?
+3. **Historial de seguimiento**: Ya se le enviaron 4 mensajes automáticos (S1-S4) sin respuesta
+4. **Sugerencia**: Qué debería hacer el agente humano — opciones concretas:
+   - Enviar un template de WhatsApp para reabrir conversación (si la ventana está cerrada)
+   - Escribir un mensaje personalizado resolviendo dudas pendientes
+   - Moverlo a "No responden" si no hay señales de interés
+   - Moverlo a "No interesado" si expresó desinterés
+   - Intentar un último contacto con ángulo diferente
+
+SERVICIOS DISPONIBLES: ${servicesList}
+NOMBRE DEL CLIENTE: ${contactName}
+${convDetail?.seguimiento_is_recurrente ? `NOTA: Este es un ciclo recurrente (#${convDetail?.seguimiento_recurrente_count || 1}). Ya ha pasado por seguimiento antes.` : ""}
+
+Formato: Usa emojis para hacerlo visual y fácil de escanear. Máximo 6 líneas. Sé directo y práctico.`,
+                      },
+                      { role: "user", content: chatSummaryText || "Sin mensajes en el historial" },
+                    ],
+                    stream: false,
+                    max_tokens: 350,
+                  }),
+                });
+
+                if (summaryResp.ok) {
+                  const summaryData = await summaryResp.json();
+                  const summary = summaryData.choices?.[0]?.message?.content?.trim();
+
+                  if (summary) {
+                    // Insert as a system note message (visible only to agents)
+                    await supabase.from("messages").insert({
+                      conversation_id: conv.id,
+                      clinic_id: conv.clinic_id,
+                      direction: "outbound",
+                      content: summary,
+                      message_type: "system_note",
+                      status: "delivered",
+                      origin: "system_summary|seguimiento_s5",
+                    });
+                    console.log(`[PIPELINE] S5 summary generated for conv ${conv.id}`);
+                  }
+                }
+              }
+            } catch (summaryErr) {
+              console.error(`[PIPELINE] S5 summary generation failed (non-blocking):`, summaryErr);
+            }
+          }
         } else {
           // S1-S4 are automatic — set timer
           const contactDelay = await getClinicStageDelay(conv.clinic_id, nextS);
