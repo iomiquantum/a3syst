@@ -604,7 +604,7 @@ const AgendaPage = () => {
               <div>
                 <Label className="text-xs text-muted-foreground">Método de pago</Label>
                 <Select value={salePaymentMethod} onValueChange={setSalePaymentMethod}>
-                  <SelectTrigger className="h-9 bg-white/5 border-white/10 mt-1"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                  <SelectTrigger className="h-9 mt-1"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                   <SelectContent>{paymentMethods.map(pm => <SelectItem key={pm.id} value={pm.id}>{pm.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
