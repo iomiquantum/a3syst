@@ -64,8 +64,16 @@ serve(async (req) => {
       const availableServices = ((agentCfg?.services || []) as { name: string }[]).map(s => s.name).join(", ");
       const treatmentsRef = agentCfg?.treatments_text || "";
 
-      const today = new Date().toISOString().split("T")[0];
-      const dayOfWeek = new Date().toLocaleDateString("es", { weekday: "long" });
+      // Fetch clinic timezone
+      const { data: clinicTz } = await supabase
+        .from("clinics")
+        .select("timezone")
+        .eq("id", clinic_id)
+        .maybeSingle();
+      const tz = clinicTz?.timezone || "America/Guayaquil";
+      const nowInTz = new Date(new Date().toLocaleString("en-US", { timeZone: tz }));
+      const today = `${nowInTz.getFullYear()}-${String(nowInTz.getMonth() + 1).padStart(2, "0")}-${String(nowInTz.getDate()).padStart(2, "0")}`;
+      const dayOfWeek = nowInTz.toLocaleDateString("es", { weekday: "long" });
 
       const detectPrompt = `Analiza el mensaje del paciente en contexto de TODA la conversación.
 
