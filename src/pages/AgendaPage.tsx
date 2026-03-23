@@ -565,7 +565,7 @@ const AgendaPage = () => {
                 <Label className="text-xs text-muted-foreground">Duración</Label>
                 <Input type="number" value={form.duration} min={5} max={480}
                   onChange={e => setForm({ ...form, duration: e.target.value })}
-                  className="h-9 bg-white/5 border-white/10 text-foreground mt-1" />
+                  className="h-9 mt-1" />
               </div>
             </div>
 
