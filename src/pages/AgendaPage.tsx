@@ -507,7 +507,7 @@ const AgendaPage = () => {
 
       {/* ═══ CREATE DIALOG ═══ */}
       <Dialog open={createOpen} onOpenChange={o => { if (!o) { setCreateOpen(false); resetForm(); setPatientSearch(""); } else setCreateOpen(true); }}>
-        <DialogContent className="bg-[#0d0d1a] border-white/10 text-foreground max-w-md">
+        <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Nueva cita</DialogTitle></DialogHeader>
           <div className="space-y-4 pt-2">
             <div>
