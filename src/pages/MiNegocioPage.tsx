@@ -276,6 +276,33 @@ const MiNegocioPage = () => {
                       placeholder="+593999999999"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Zona horaria</Label>
+                    <select
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      value={(form as any).timezone ?? clinic?.timezone ?? "America/Guayaquil"}
+                      onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))}
+                    >
+                      <option value="America/New_York">US Eastern (New York)</option>
+                      <option value="America/Chicago">US Central (Chicago)</option>
+                      <option value="America/Denver">US Mountain (Denver)</option>
+                      <option value="America/Los_Angeles">US Pacific (Los Angeles)</option>
+                      <option value="America/Mexico_City">México (Ciudad de México)</option>
+                      <option value="America/Bogota">Colombia (Bogotá)</option>
+                      <option value="America/Guayaquil">Ecuador (Guayaquil)</option>
+                      <option value="America/Lima">Perú (Lima)</option>
+                      <option value="America/Santiago">Chile (Santiago)</option>
+                      <option value="America/Argentina/Buenos_Aires">Argentina (Buenos Aires)</option>
+                      <option value="America/Sao_Paulo">Brasil (São Paulo)</option>
+                      <option value="America/Caracas">Venezuela (Caracas)</option>
+                      <option value="America/Panama">Panamá</option>
+                      <option value="America/Costa_Rica">Costa Rica</option>
+                      <option value="America/Guatemala">Guatemala</option>
+                      <option value="Europe/Madrid">España (Madrid)</option>
+                      <option value="Europe/London">UK (Londres)</option>
+                    </select>
+                    <p className="text-xs text-muted-foreground">La IA usará esta zona horaria para agendar citas correctamente.</p>
+                  </div>
                   <div className="flex gap-4">
                     <div className="space-y-2 flex-1">
                       <Label>Hora apertura</Label>
