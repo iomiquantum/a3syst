@@ -231,11 +231,11 @@ const AgendaPage = () => {
             <p className="text-sm text-muted-foreground">Autopilot de agenda</p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Autopilot activo
+            <span className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.1)] px-3 py-1.5 text-xs font-medium text-[hsl(var(--success))]">
+              <span className="w-2 h-2 rounded-full bg-[hsl(var(--success))] animate-pulse" /> Autopilot activo
             </span>
             <Button onClick={() => { resetForm(); setCreateOpen(true); }}
-              className="bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white hover:opacity-90 shadow-[0_0_20px_rgba(139,92,246,0.3)]">
+              className="gradient-primary text-primary-foreground hover:opacity-90">
               <Plus className="w-4 h-4 mr-2" /> Nueva cita
             </Button>
           </div>
