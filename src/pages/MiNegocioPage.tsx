@@ -149,7 +149,7 @@ const MiNegocioPage = () => {
 
   const [form, setForm] = useState<Partial<ClinicProfile>>({});
   const initForm = () => {
-    if (clinic) setForm({ name: clinic.name, description: clinic.description || "", city: clinic.city || "", address: clinic.address || "", whatsapp: clinic.whatsapp || "", opening_hour: clinic.opening_hour || "09:00", closing_hour: clinic.closing_hour || "18:00" });
+    if (clinic) setForm({ name: clinic.name, description: clinic.description || "", whatsapp: clinic.whatsapp || "", timezone: clinic.timezone || "America/Guayaquil" });
   };
   const handleSaveProfile = () => {
     if (!form.name?.trim()) return toast.error("El nombre es obligatorio");
@@ -295,12 +295,11 @@ const MiNegocioPage = () => {
   const completionItems = [
     { label: "Nombre del negocio", done: !!clinic?.name },
     { label: "Descripción", done: !!clinic?.description },
-    { label: "Ciudad", done: !!clinic?.city },
     { label: "WhatsApp", done: !!clinic?.whatsapp },
+    { label: `${labels.branches} configuradas`, done: branches.length > 0 },
     { label: "Horario en sedes", done: branches.some((b: any) => !!b.working_schedule) },
     { label: `${labels.treatments} configurados`, done: treatments.length > 0 },
     { label: `${labels.professionals} configurados`, done: professionals.length > 0 },
-    { label: `${labels.branches} configuradas`, done: branches.length > 0 },
     { label: "Landing activa", done: !!clinic?.slug },
   ];
   const completionPercent = Math.round((completionItems.filter(i => i.done).length / completionItems.length) * 100);
@@ -367,12 +366,11 @@ const MiNegocioPage = () => {
             <TabsTrigger value="perfil" className="gap-1.5"><Settings2 className="w-4 h-4" /> Perfil</TabsTrigger>
             <TabsTrigger value="servicios" className="gap-1.5"><Briefcase className="w-4 h-4" /> {labels.treatments}</TabsTrigger>
             <TabsTrigger value="profesionales" className="gap-1.5"><Users className="w-4 h-4" /> {labels.professionals}</TabsTrigger>
-            <TabsTrigger value="sedes" className="gap-1.5"><Building2 className="w-4 h-4" /> {labels.branches}</TabsTrigger>
             <TabsTrigger value="landing" className="gap-1.5"><Globe className="w-4 h-4" /> Landing</TabsTrigger>
           </TabsList>
 
           {/* ══ PERFIL TAB ══ */}
-          <TabsContent value="perfil" className="mt-4">
+          <TabsContent value="perfil" className="mt-4 space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Información del negocio</CardTitle>
@@ -385,53 +383,79 @@ const MiNegocioPage = () => {
                     <Input value={form.name ?? clinic?.name ?? ""} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ej: Mi Clínica Dental" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Ciudad</Label>
-                    <Input value={form.city ?? clinic?.city ?? ""} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="Ej: Quito" />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label>Dirección</Label>
-                    <Input value={form.address ?? clinic?.address ?? ""} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Ej: Av. Principal 123" />
+                    <Label>WhatsApp</Label>
+                    <Input value={form.whatsapp ?? clinic?.whatsapp ?? ""} onChange={e => setForm(f => ({ ...f, whatsapp: e.target.value }))} placeholder="+593999999999" />
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <Label>Descripción</Label>
                     <Textarea value={form.description ?? clinic?.description ?? ""} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Describe brevemente tu negocio..." rows={3} />
                   </div>
                   <div className="space-y-2">
-                    <Label>WhatsApp</Label>
-                    <Input value={form.whatsapp ?? clinic?.whatsapp ?? ""} onChange={e => setForm(f => ({ ...f, whatsapp: e.target.value }))} placeholder="+593999999999" />
-                  </div>
-                  <div className="space-y-2">
                     <Label>Zona horaria</Label>
                     <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       value={(form as any).timezone ?? clinic?.timezone ?? "America/Guayaquil"}
                       onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))}>
-                      <option value="America/New_York">US Eastern (New York)</option>
-                      <option value="America/Chicago">US Central (Chicago)</option>
-                      <option value="America/Denver">US Mountain (Denver)</option>
-                      <option value="America/Los_Angeles">US Pacific (Los Angeles)</option>
-                      <option value="America/Mexico_City">México (Ciudad de México)</option>
-                      <option value="America/Bogota">Colombia (Bogotá)</option>
-                      <option value="America/Guayaquil">Ecuador (Guayaquil)</option>
-                      <option value="America/Lima">Perú (Lima)</option>
-                      <option value="America/Santiago">Chile (Santiago)</option>
-                      <option value="America/Argentina/Buenos_Aires">Argentina (Buenos Aires)</option>
-                      <option value="America/Sao_Paulo">Brasil (São Paulo)</option>
-                      <option value="America/Caracas">Venezuela (Caracas)</option>
-                      <option value="America/Panama">Panamá</option>
-                      <option value="America/Costa_Rica">Costa Rica</option>
-                      <option value="America/Guatemala">Guatemala</option>
-                      <option value="Europe/Madrid">España (Madrid)</option>
-                      <option value="Europe/London">UK (Londres)</option>
+                      <optgroup label="América del Norte">
+                        <option value="America/New_York">US Eastern (New York)</option>
+                        <option value="America/Chicago">US Central (Chicago)</option>
+                        <option value="America/Denver">US Mountain (Denver)</option>
+                        <option value="America/Los_Angeles">US Pacific (Los Angeles)</option>
+                        <option value="America/Anchorage">Alaska (Anchorage)</option>
+                        <option value="Pacific/Honolulu">Hawái (Honolulu)</option>
+                        <option value="America/Toronto">Canadá (Toronto)</option>
+                        <option value="America/Vancouver">Canadá (Vancouver)</option>
+                      </optgroup>
+                      <optgroup label="México y Centroamérica">
+                        <option value="America/Mexico_City">México (Ciudad de México)</option>
+                        <option value="America/Cancun">México (Cancún)</option>
+                        <option value="America/Tijuana">México (Tijuana)</option>
+                        <option value="America/Guatemala">Guatemala</option>
+                        <option value="America/El_Salvador">El Salvador</option>
+                        <option value="America/Tegucigalpa">Honduras (Tegucigalpa)</option>
+                        <option value="America/Managua">Nicaragua (Managua)</option>
+                        <option value="America/Costa_Rica">Costa Rica</option>
+                        <option value="America/Panama">Panamá</option>
+                      </optgroup>
+                      <optgroup label="Caribe">
+                        <option value="America/Havana">Cuba (La Habana)</option>
+                        <option value="America/Santo_Domingo">Rep. Dominicana</option>
+                        <option value="America/Puerto_Rico">Puerto Rico</option>
+                      </optgroup>
+                      <optgroup label="América del Sur">
+                        <option value="America/Bogota">Colombia (Bogotá)</option>
+                        <option value="America/Guayaquil">Ecuador (Guayaquil)</option>
+                        <option value="America/Lima">Perú (Lima)</option>
+                        <option value="America/Caracas">Venezuela (Caracas)</option>
+                        <option value="America/La_Paz">Bolivia (La Paz)</option>
+                        <option value="America/Santiago">Chile (Santiago)</option>
+                        <option value="America/Argentina/Buenos_Aires">Argentina (Buenos Aires)</option>
+                        <option value="America/Montevideo">Uruguay (Montevideo)</option>
+                        <option value="America/Asuncion">Paraguay (Asunción)</option>
+                        <option value="America/Sao_Paulo">Brasil (São Paulo)</option>
+                        <option value="America/Manaus">Brasil (Manaus)</option>
+                      </optgroup>
+                      <optgroup label="Europa">
+                        <option value="Europe/Madrid">España (Madrid)</option>
+                        <option value="Europe/London">UK (Londres)</option>
+                        <option value="Europe/Paris">Francia (París)</option>
+                        <option value="Europe/Berlin">Alemania (Berlín)</option>
+                        <option value="Europe/Rome">Italia (Roma)</option>
+                        <option value="Europe/Lisbon">Portugal (Lisboa)</option>
+                        <option value="Europe/Amsterdam">Países Bajos (Ámsterdam)</option>
+                        <option value="Europe/Zurich">Suiza (Zúrich)</option>
+                        <option value="Europe/Moscow">Rusia (Moscú)</option>
+                      </optgroup>
+                      <optgroup label="Asia / Oceanía">
+                        <option value="Asia/Dubai">EAU (Dubái)</option>
+                        <option value="Asia/Kolkata">India (Kolkata)</option>
+                        <option value="Asia/Shanghai">China (Shanghái)</option>
+                        <option value="Asia/Tokyo">Japón (Tokio)</option>
+                        <option value="Asia/Seoul">Corea del Sur (Seúl)</option>
+                        <option value="Australia/Sydney">Australia (Sídney)</option>
+                        <option value="Pacific/Auckland">Nueva Zelanda (Auckland)</option>
+                      </optgroup>
                     </select>
                     <p className="text-xs text-muted-foreground">La IA usará esta zona horaria para agendar citas correctamente.</p>
-                  </div>
-                  {/* Schedule note */}
-                  <div className="space-y-2 md:col-span-2">
-                    <div className="rounded-lg border border-border bg-muted/50 p-4">
-                      <p className="text-sm font-medium text-foreground flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> Horarios de atención</p>
-                      <p className="text-xs text-muted-foreground mt-1">Los horarios se configuran individualmente en cada sede (pestaña "{labels.branches}"). El bot de IA usará el horario de cada sede para agendar citas correctamente.</p>
-                      {branches.length === 0 && <p className="text-xs text-destructive mt-2">⚠ No tienes sedes configuradas. Ve a la pestaña "{labels.branches}" para crear tu primera sede con horarios.</p>}
-                    </div>
                   </div>
                 </div>
                 <div className="flex justify-end pt-2">
@@ -441,6 +465,138 @@ const MiNegocioPage = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* ── SEDES inside Perfil ── */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground flex items-center gap-2"><Building2 className="w-5 h-5 text-primary" /> {labels.branches}</h2>
+                  <p className="text-sm text-muted-foreground">Cada sede tiene su ciudad, dirección, horario y datos de contacto. El bot de IA usa esta información.</p>
+                </div>
+                <Dialog open={openBranch} onOpenChange={(o) => { setOpenBranch(o); if (!o) { setEditingBranchId(null); setBranchForm(emptyBranchForm); } }}>
+                  <DialogTrigger asChild>
+                    <Button className="gradient-primary text-primary-foreground"><Plus className="w-4 h-4 mr-2" /> Nueva {labels.branches_singular}</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader><DialogTitle>{editingBranchId ? `Editar ${labels.branches_singular}` : `Nueva ${labels.branches_singular}`}</DialogTitle></DialogHeader>
+                    <div className="space-y-5 pt-2">
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Información básica</p>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><Label>Nombre *</Label><Input value={branchForm.name} onChange={e => setBranchForm({ ...branchForm, name: e.target.value })} placeholder={`Nombre de la ${labels.branches_singular.toLowerCase()}`} maxLength={100} /></div>
+                        <div><Label>Teléfono</Label><Input value={branchForm.phone} onChange={e => setBranchForm({ ...branchForm, phone: e.target.value })} placeholder="+593 999 999 999" maxLength={20} /></div>
+                        <div><Label>Email</Label><Input type="email" value={branchForm.email} onChange={e => setBranchForm({ ...branchForm, email: e.target.value })} placeholder="sede@negocio.com" maxLength={255} /></div>
+                        <div><Label>WhatsApp</Label><Input value={branchForm.whatsapp} onChange={e => setBranchForm({ ...branchForm, whatsapp: e.target.value })} placeholder="+593999999999" maxLength={20} /></div>
+                      </div>
+                      <div><Label>Descripción</Label><Textarea value={branchForm.description} onChange={e => setBranchForm({ ...branchForm, description: e.target.value })} placeholder="Describe esta sede brevemente..." maxLength={1000} rows={2} /></div>
+
+                      <div className="space-y-1 pt-2">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ubicación</p>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><Label>Ciudad</Label><Input value={(branchForm as any).city ?? ""} onChange={e => setBranchForm({ ...branchForm, city: e.target.value } as any)} placeholder="Ej: Quito" maxLength={100} /></div>
+                        <div><Label>Dirección corta *</Label><Input value={branchForm.address} onChange={e => setBranchForm({ ...branchForm, address: e.target.value })} placeholder="Av. Principal 123" maxLength={300} /></div>
+                      </div>
+                      <div><Label>Dirección completa</Label><Textarea value={branchForm.full_address} onChange={e => setBranchForm({ ...branchForm, full_address: e.target.value })} placeholder="Av. Principal 123, Edificio Torre Norte, Piso 3, Of. 302" maxLength={500} rows={2} /></div>
+                      <div><Label>Link Google Maps</Label><Input value={branchForm.google_maps_url} onChange={e => setBranchForm({ ...branchForm, google_maps_url: e.target.value })} placeholder="https://maps.google.com/..." maxLength={500} /></div>
+
+                      <div className="space-y-1 pt-2">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Información para el cliente</p>
+                        <p className="text-xs text-muted-foreground">El bot usará esta info para guiar al cliente cuando agende.</p>
+                      </div>
+                      <div><Label>Instrucciones de llegada</Label><Textarea value={branchForm.arrival_instructions} onChange={e => setBranchForm({ ...branchForm, arrival_instructions: e.target.value })} placeholder="Ej: Entrar por la puerta lateral, tomar ascensor al piso 3..." maxLength={1000} rows={2} /></div>
+                      <div><Label>Notas de preparación</Label><Textarea value={branchForm.preparation_notes} onChange={e => setBranchForm({ ...branchForm, preparation_notes: e.target.value })} placeholder="Ej: Traer documento de identidad, llegar 15 min antes..." maxLength={1000} rows={2} /></div>
+
+                      <div className="space-y-1 pt-2">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Horario de atención de esta sede</p>
+                        <p className="text-xs text-muted-foreground">El bot de IA usará este horario para agendar citas en esta sede.</p>
+                      </div>
+                      <div className="space-y-2">
+                        {Object.entries(DAY_LABELS).map(([key, label]) => {
+                          const schedule: WorkingSchedule = branchForm.working_schedule ?? DEFAULT_SCHEDULE;
+                          const day = schedule[key] || { enabled: false, open: "09:00", close: "18:00" };
+                          const updateBranchDay = (field: keyof DaySchedule, value: any) => {
+                            const current = { ...(branchForm.working_schedule ?? DEFAULT_SCHEDULE) };
+                            current[key] = { ...current[key], [field]: value };
+                            setBranchForm(f => ({ ...f, working_schedule: current }));
+                          };
+                          return (
+                            <div key={key} className={cn("flex items-center gap-3 rounded-lg border p-2.5 transition-colors", day.enabled ? "bg-background border-border" : "bg-muted/50 border-transparent")}>
+                              <label className="flex items-center gap-2 min-w-[110px] cursor-pointer">
+                                <input type="checkbox" checked={day.enabled} onChange={e => updateBranchDay("enabled", e.target.checked)} className="rounded border-input" />
+                                <span className={cn("text-sm font-medium", !day.enabled && "text-muted-foreground")}>{label}</span>
+                              </label>
+                              {day.enabled ? (
+                                <div className="flex items-center gap-2 flex-1">
+                                  <Input type="time" value={day.open} onChange={e => updateBranchDay("open", e.target.value)} className="h-8 text-sm w-[120px]" />
+                                  <span className="text-xs text-muted-foreground">a</span>
+                                  <Input type="time" value={day.close} onChange={e => updateBranchDay("close", e.target.value)} className="h-8 text-sm w-[120px]" />
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">Cerrado</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <Button onClick={handleSaveBranch} className="w-full gradient-primary text-primary-foreground" disabled={!branchForm.name || !branchForm.address}>
+                        {editingBranchId ? "Guardar Cambios" : `Crear ${labels.branches_singular}`}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {branches.length === 0 ? (
+                <Card><CardContent className="p-8 text-center"><p className="text-muted-foreground">No hay {labels.branches.toLowerCase()} creadas aún. Crea tu primera sede para configurar horarios y ubicación.</p></CardContent></Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {branches.map((branch: any) => {
+                    const bSchedule = branch.working_schedule as WorkingSchedule | null;
+                    const openDays = bSchedule ? Object.entries(bSchedule).filter(([, v]) => (v as DaySchedule).enabled) : [];
+                    return (
+                      <Card key={branch.id} className="hover:shadow-md transition-shadow">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2.5 rounded-xl bg-primary/10"><Building2 className="w-5 h-5 text-primary" /></div>
+                              <div>
+                                <CardTitle className="text-base">{branch.name}</CardTitle>
+                                {branch.description && <p className="text-xs text-muted-foreground mt-0.5">{branch.description}</p>}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => handleEditBranch(branch)} className="p-1.5 rounded-md hover:bg-muted"><Pencil className="w-4 h-4 text-muted-foreground" /></button>
+                              <button onClick={() => deleteBranch(branch.id)} className="p-1.5 rounded-md hover:bg-destructive/10"><Trash2 className="w-4 h-4 text-destructive" /></button>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-sm">
+                          {branch.address && <div className="flex items-center gap-2 text-muted-foreground"><MapPin className="w-4 h-4 shrink-0" /><span>{branch.full_address || branch.address}</span></div>}
+                          {branch.phone && <div className="flex items-center gap-2 text-muted-foreground"><Phone className="w-4 h-4 shrink-0" /><span>{branch.phone}</span></div>}
+                          {branch.email && <div className="flex items-center gap-2 text-muted-foreground"><Mail className="w-4 h-4 shrink-0" /><span>{branch.email}</span></div>}
+                          {branch.whatsapp && <div className="flex items-center gap-2 text-muted-foreground"><Phone className="w-4 h-4 shrink-0" /><span>WA: {branch.whatsapp}</span></div>}
+                          {branch.google_maps_url && <a href={branch.google_maps_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-primary hover:underline text-xs"><ExternalLink className="w-3.5 h-3.5" /> Ver en Google Maps</a>}
+                          {openDays.length > 0 && (
+                            <div className="pt-2 border-t border-border mt-2">
+                              <p className="text-xs font-medium text-foreground mb-1.5 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Horario</p>
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                                {openDays.map(([dayKey, val]) => {
+                                  const d = val as DaySchedule;
+                                  return <div key={dayKey} className="flex justify-between text-xs text-muted-foreground"><span>{DAY_LABELS[dayKey]}</span><span>{d.open} - {d.close}</span></div>;
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </TabsContent>
 
           {/* ══ SERVICIOS / TRATAMIENTOS TAB ══ */}
@@ -476,6 +632,17 @@ const MiNegocioPage = () => {
                           <div><Label>Precio</Label><Input type="number" value={treatmentForm.price} onChange={e => setTreatmentForm({ ...treatmentForm, price: e.target.value })} min={0} /></div>
                         </div>
                         <div><Label>Descripción</Label><Textarea value={treatmentForm.description} onChange={e => setTreatmentForm({ ...treatmentForm, description: e.target.value })} maxLength={1000} /></div>
+                        <div>
+                          <Label>{labels.branches_singular} (opcional)</Label>
+                          <Select value={(treatmentForm as any).branch_id ?? "all"} onValueChange={v => setTreatmentForm({ ...treatmentForm, branch_id: v } as any)}>
+                            <SelectTrigger><SelectValue placeholder="Todas las sedes" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Todas las sedes</SelectItem>
+                              {branches.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground mt-1">Deja "Todas las sedes" si este servicio aplica para todas.</p>
+                        </div>
                         <Button onClick={handleSaveTreatment} className="w-full gradient-primary text-primary-foreground" disabled={!treatmentForm.name || !treatmentForm.duration}>Crear</Button>
                       </div>
                     </DialogContent>
@@ -573,8 +740,11 @@ const MiNegocioPage = () => {
                       <div>
                         <Label>{labels.branches_singular}</Label>
                         <Select value={proForm.branch_id} onValueChange={v => setProForm({ ...proForm, branch_id: v })}>
-                          <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                          <SelectContent>{branches.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+                          <SelectTrigger><SelectValue placeholder="Todas las sedes" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todas las sedes</SelectItem>
+                            {branches.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                          </SelectContent>
                         </Select>
                       </div>
                     </div>
@@ -614,7 +784,7 @@ const MiNegocioPage = () => {
                           <td className="px-5 py-3.5 hidden md:table-cell">
                             {p.specialties?.name ? <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary">{p.specialties.name}</span> : <span className="text-sm text-muted-foreground">—</span>}
                           </td>
-                          <td className="px-5 py-3.5 text-sm text-muted-foreground hidden md:table-cell">{p.branches?.name || "—"}</td>
+                          <td className="px-5 py-3.5 text-sm text-muted-foreground hidden md:table-cell">{p.branches?.name || "Todas"}</td>
                           <td className="px-5 py-3.5 hidden md:table-cell">
                             <div className="flex items-center gap-2">
                               <button className="p-1.5 rounded-md hover:bg-muted"><Mail className="w-3.5 h-3.5 text-muted-foreground" /></button>
@@ -631,139 +801,6 @@ const MiNegocioPage = () => {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
-
-          {/* ══ SEDES TAB ══ */}
-          <TabsContent value="sedes" className="mt-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-foreground">{labels.branches}</h2>
-                <p className="text-sm text-muted-foreground">Gestiona las {labels.branches.toLowerCase()} de tu negocio. Cada sede tiene su información completa para el bot de IA.</p>
-              </div>
-              <Dialog open={openBranch} onOpenChange={(o) => { setOpenBranch(o); if (!o) { setEditingBranchId(null); setBranchForm(emptyBranchForm); } }}>
-                <DialogTrigger asChild>
-                  <Button className="gradient-primary text-primary-foreground"><Plus className="w-4 h-4 mr-2" /> Nueva {labels.branches_singular}</Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader><DialogTitle>{editingBranchId ? `Editar ${labels.branches_singular}` : `Nueva ${labels.branches_singular}`}</DialogTitle></DialogHeader>
-                  <div className="space-y-5 pt-2">
-                    {/* Basic info */}
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Información básica</p>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div><Label>Nombre *</Label><Input value={branchForm.name} onChange={e => setBranchForm({ ...branchForm, name: e.target.value })} placeholder={`Nombre de la ${labels.branches_singular.toLowerCase()}`} maxLength={100} /></div>
-                      <div><Label>Teléfono</Label><Input value={branchForm.phone} onChange={e => setBranchForm({ ...branchForm, phone: e.target.value })} placeholder="+593 999 999 999" maxLength={20} /></div>
-                      <div><Label>Email</Label><Input type="email" value={branchForm.email} onChange={e => setBranchForm({ ...branchForm, email: e.target.value })} placeholder="sede@negocio.com" maxLength={255} /></div>
-                      <div><Label>WhatsApp</Label><Input value={branchForm.whatsapp} onChange={e => setBranchForm({ ...branchForm, whatsapp: e.target.value })} placeholder="+593999999999" maxLength={20} /></div>
-                    </div>
-                    <div><Label>Descripción</Label><Textarea value={branchForm.description} onChange={e => setBranchForm({ ...branchForm, description: e.target.value })} placeholder="Describe esta sede brevemente..." maxLength={1000} rows={2} /></div>
-
-                    {/* Location */}
-                    <div className="space-y-1 pt-2">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ubicación</p>
-                    </div>
-                    <div><Label>Dirección corta *</Label><Input value={branchForm.address} onChange={e => setBranchForm({ ...branchForm, address: e.target.value })} placeholder="Av. Principal 123" maxLength={300} /></div>
-                    <div><Label>Dirección completa</Label><Textarea value={branchForm.full_address} onChange={e => setBranchForm({ ...branchForm, full_address: e.target.value })} placeholder="Av. Principal 123, Edificio Torre Norte, Piso 3, Of. 302, Quito, Ecuador" maxLength={500} rows={2} /></div>
-                    <div><Label>Link Google Maps</Label><Input value={branchForm.google_maps_url} onChange={e => setBranchForm({ ...branchForm, google_maps_url: e.target.value })} placeholder="https://maps.google.com/..." maxLength={500} /></div>
-
-                    {/* Patient-facing info */}
-                    <div className="space-y-1 pt-2">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Información para el cliente</p>
-                      <p className="text-xs text-muted-foreground">El bot usará esta info para guiar al cliente cuando agende.</p>
-                    </div>
-                    <div><Label>Instrucciones de llegada</Label><Textarea value={branchForm.arrival_instructions} onChange={e => setBranchForm({ ...branchForm, arrival_instructions: e.target.value })} placeholder="Ej: Entrar por la puerta lateral, tomar ascensor al piso 3, oficina 302..." maxLength={1000} rows={2} /></div>
-                    <div><Label>Notas de preparación</Label><Textarea value={branchForm.preparation_notes} onChange={e => setBranchForm({ ...branchForm, preparation_notes: e.target.value })} placeholder="Ej: Traer documento de identidad, llegar 15 min antes de la cita..." maxLength={1000} rows={2} /></div>
-
-                    {/* Schedule */}
-                    <div className="space-y-1 pt-2">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Horario de atención de esta sede</p>
-                      <p className="text-xs text-muted-foreground">El bot de IA usará este horario para agendar citas en esta sede.</p>
-                    </div>
-                    <div className="space-y-2">
-                      {Object.entries(DAY_LABELS).map(([key, label]) => {
-                        const schedule: WorkingSchedule = branchForm.working_schedule ?? DEFAULT_SCHEDULE;
-                        const day = schedule[key] || { enabled: false, open: "09:00", close: "18:00" };
-                        const updateBranchDay = (field: keyof DaySchedule, value: any) => {
-                          const current = { ...(branchForm.working_schedule ?? DEFAULT_SCHEDULE) };
-                          current[key] = { ...current[key], [field]: value };
-                          setBranchForm(f => ({ ...f, working_schedule: current }));
-                        };
-                        return (
-                          <div key={key} className={cn("flex items-center gap-3 rounded-lg border p-2.5 transition-colors", day.enabled ? "bg-background border-border" : "bg-muted/50 border-transparent")}>
-                            <label className="flex items-center gap-2 min-w-[110px] cursor-pointer">
-                              <input type="checkbox" checked={day.enabled} onChange={e => updateBranchDay("enabled", e.target.checked)} className="rounded border-input" />
-                              <span className={cn("text-sm font-medium", !day.enabled && "text-muted-foreground")}>{label}</span>
-                            </label>
-                            {day.enabled ? (
-                              <div className="flex items-center gap-2 flex-1">
-                                <Input type="time" value={day.open} onChange={e => updateBranchDay("open", e.target.value)} className="h-8 text-sm w-[120px]" />
-                                <span className="text-xs text-muted-foreground">a</span>
-                                <Input type="time" value={day.close} onChange={e => updateBranchDay("close", e.target.value)} className="h-8 text-sm w-[120px]" />
-                              </div>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">Cerrado</span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <Button onClick={handleSaveBranch} className="w-full gradient-primary text-primary-foreground" disabled={!branchForm.name || !branchForm.address}>
-                      {editingBranchId ? "Guardar Cambios" : `Crear ${labels.branches_singular}`}
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            {branches.length === 0 ? (
-              <Card><CardContent className="p-8 text-center"><p className="text-muted-foreground">No hay {labels.branches.toLowerCase()} creadas aún.</p></CardContent></Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {branches.map((branch: any) => {
-                  const bSchedule = branch.working_schedule as WorkingSchedule | null;
-                  const openDays = bSchedule ? Object.entries(bSchedule).filter(([, v]) => (v as DaySchedule).enabled) : [];
-                  return (
-                    <Card key={branch.id} className="hover:shadow-md transition-shadow">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2.5 rounded-xl bg-primary/10"><Building2 className="w-5 h-5 text-primary" /></div>
-                            <div>
-                              <CardTitle className="text-base">{branch.name}</CardTitle>
-                              {branch.description && <p className="text-xs text-muted-foreground mt-0.5">{branch.description}</p>}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <button onClick={() => handleEditBranch(branch)} className="p-1.5 rounded-md hover:bg-muted"><Pencil className="w-4 h-4 text-muted-foreground" /></button>
-                            <button onClick={() => deleteBranch(branch.id)} className="p-1.5 rounded-md hover:bg-destructive/10"><Trash2 className="w-4 h-4 text-destructive" /></button>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-2 text-sm">
-                        {branch.address && <div className="flex items-center gap-2 text-muted-foreground"><MapPin className="w-4 h-4 shrink-0" /><span>{branch.full_address || branch.address}</span></div>}
-                        {branch.phone && <div className="flex items-center gap-2 text-muted-foreground"><Phone className="w-4 h-4 shrink-0" /><span>{branch.phone}</span></div>}
-                        {branch.email && <div className="flex items-center gap-2 text-muted-foreground"><Mail className="w-4 h-4 shrink-0" /><span>{branch.email}</span></div>}
-                        {branch.whatsapp && <div className="flex items-center gap-2 text-muted-foreground"><Phone className="w-4 h-4 shrink-0" /><span>WA: {branch.whatsapp}</span></div>}
-                        {branch.google_maps_url && <a href={branch.google_maps_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-primary hover:underline text-xs"><ExternalLink className="w-3.5 h-3.5" /> Ver en Google Maps</a>}
-                        {openDays.length > 0 && (
-                          <div className="pt-2 border-t border-border mt-2">
-                            <p className="text-xs font-medium text-foreground mb-1.5 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Horario</p>
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-                              {openDays.map(([dayKey, val]) => {
-                                const d = val as DaySchedule;
-                                return <div key={dayKey} className="flex justify-between text-xs text-muted-foreground"><span>{DAY_LABELS[dayKey]}</span><span>{d.open} - {d.close}</span></div>;
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
           </TabsContent>
 
           {/* ══ LANDING TAB ══ */}
