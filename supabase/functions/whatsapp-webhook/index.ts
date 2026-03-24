@@ -168,7 +168,8 @@ Deno.serve(async (req) => {
           switch (messageType) {
             case "text": content = msg.text?.body || ""; break;
             case "image": content = msg.image?.caption || "[Imagen]"; mediaUrl = msg.image?.id; mediaMimeType = msg.image?.mime_type; mediaCaption = msg.image?.caption; break;
-            case "audio": content = "[Audio]"; mediaUrl = msg.audio?.id; mediaMimeType = msg.audio?.mime_type; break;
+             case "audio": content = "[Audio]"; mediaUrl = msg.audio?.id; mediaMimeType = msg.audio?.mime_type; break;
+             case "voice": content = "[Audio]"; mediaUrl = msg.voice?.id || msg.audio?.id; mediaMimeType = msg.voice?.mime_type || msg.audio?.mime_type; break;
             case "video": content = msg.video?.caption || "[Video]"; mediaUrl = msg.video?.id; mediaMimeType = msg.video?.mime_type; break;
             case "document": content = msg.document?.filename || "[Documento]"; mediaUrl = msg.document?.id; mediaMimeType = msg.document?.mime_type; break;
             case "location": content = `📍 ${msg.location?.latitude}, ${msg.location?.longitude}`; break;
