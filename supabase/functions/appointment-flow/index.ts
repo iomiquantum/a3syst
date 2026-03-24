@@ -207,7 +207,7 @@ Responde SOLO JSON válido:
 
       const { data: clinic } = await supabase
         .from("clinics")
-        .select("name, working_days, opening_hour, closing_hour, timezone, working_schedule")
+        .select("name, timezone")
         .eq("id", clinic_id)
         .single();
 
