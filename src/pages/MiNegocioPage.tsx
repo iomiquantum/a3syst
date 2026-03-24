@@ -297,7 +297,7 @@ const MiNegocioPage = () => {
     { label: "Descripción", done: !!clinic?.description },
     { label: "Ciudad", done: !!clinic?.city },
     { label: "WhatsApp", done: !!clinic?.whatsapp },
-    { label: "Horario", done: !!clinic?.opening_hour && !!clinic?.closing_hour },
+    { label: "Horario en sedes", done: branches.some((b: any) => !!b.working_schedule) },
     { label: `${labels.treatments} configurados`, done: treatments.length > 0 },
     { label: `${labels.professionals} configurados`, done: professionals.length > 0 },
     { label: `${labels.branches} configuradas`, done: branches.length > 0 },
