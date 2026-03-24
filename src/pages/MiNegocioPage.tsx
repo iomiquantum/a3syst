@@ -149,7 +149,7 @@ const MiNegocioPage = () => {
 
   const [form, setForm] = useState<Partial<ClinicProfile>>({});
   const initForm = () => {
-    if (clinic) setForm({ name: clinic.name, description: clinic.description || "", city: clinic.city || "", address: clinic.address || "", whatsapp: clinic.whatsapp || "", opening_hour: clinic.opening_hour || "09:00", closing_hour: clinic.closing_hour || "18:00" });
+    if (clinic) setForm({ name: clinic.name, description: clinic.description || "", whatsapp: clinic.whatsapp || "", timezone: clinic.timezone || "America/Guayaquil" });
   };
   const handleSaveProfile = () => {
     if (!form.name?.trim()) return toast.error("El nombre es obligatorio");
