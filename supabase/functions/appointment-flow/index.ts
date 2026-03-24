@@ -197,7 +197,6 @@ Responde SOLO JSON válido:
         .select("id, name, address, full_address, phone, whatsapp, google_maps_url, arrival_instructions, preparation_notes, working_schedule")
         .eq("clinic_id", clinic_id)
         .eq("active", true);
-        .eq("active", true);
 
       // Fetch agent config (PRIMARY source for services, treatments, prices)
       const { data: agentConfig } = await supabase
