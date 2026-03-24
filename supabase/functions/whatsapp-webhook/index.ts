@@ -312,7 +312,7 @@ Deno.serve(async (req) => {
           console.log("[WA-Webhook] Message processed:", { contactPhone, conversationId: conversation.id, isNewConversation });
 
           // --- AUTO-RESPUESTA DEL AGENTE IA ---
-          if (messageType === "text" && content) {
+          if ((messageType === "text" || audioTranscription) && content) {
             try {
               const { data: agentConfig } = await supabase
                 .from("ai_agent_config")
