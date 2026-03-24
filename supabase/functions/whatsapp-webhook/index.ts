@@ -182,28 +182,29 @@ Deno.serve(async (req) => {
 
           // Download media from Meta API if we have a media ID
           let downloadedMediaUrl: string | null = null;
-          if (mediaUrl && ["audio", "image", "video", "document", "sticker"].includes(messageType)) {
+          let audioBlob: Blob | null = null;
+          if (mediaUrl && ["audio", "voice", "image", "video", "document", "sticker"].includes(messageType)) {
             try {
               const accessToken = connection.access_token || Deno.env.get("META_ACCESS_TOKEN");
               if (accessToken) {
-                // Step 1: Get the media download URL from Meta
                 const mediaResp = await fetch(`https://graph.facebook.com/v21.0/${mediaUrl}`, {
                   headers: { Authorization: `Bearer ${accessToken}` },
                 });
                 const mediaData = await mediaResp.json();
                 
                 if (mediaData.url) {
-                  // Step 2: Download the actual media binary
                   const binaryResp = await fetch(mediaData.url, {
                     headers: { Authorization: `Bearer ${accessToken}` },
                   });
                   
                   if (binaryResp.ok) {
                     const blob = await binaryResp.blob();
+                    if (messageType === "audio" || messageType === "voice") {
+                      audioBlob = blob;
+                    }
                     const ext = mediaMimeType?.split("/")[1]?.replace("ogg", "ogg") || "bin";
                     const fileName = `${clinicId}/${conversation.id}/${msg.id}.${ext}`;
                     
-                    // Upload to Supabase Storage
                     const { data: uploadData, error: uploadErr } = await supabase.storage
                       .from("chat-media")
                       .upload(fileName, blob, {
@@ -223,6 +224,52 @@ Deno.serve(async (req) => {
               }
             } catch (mediaErr) {
               console.error("[WA-Webhook] Media download error:", mediaErr);
+            }
+          }
+
+          // Transcribe audio/voice notes using Gemini
+          let audioTranscription: string | null = null;
+          if ((messageType === "audio" || messageType === "voice") && audioBlob) {
+            try {
+              const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+              if (LOVABLE_API_KEY) {
+                const arrayBuf = await audioBlob.arrayBuffer();
+                const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)));
+                const mimeForAI = mediaMimeType || "audio/ogg";
+
+                const transcribeResp = await fetch("https://api.lovable.dev/v1/chat/completions", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+                  },
+                  body: JSON.stringify({
+                    model: "google/gemini-2.5-flash",
+                    messages: [
+                      { role: "system", content: "Transcribe the following audio message exactly as spoken. Return ONLY the transcription text, nothing else. If the audio is unclear or empty, return '[Audio inaudible]'." },
+                      { role: "user", content: [
+                        { type: "input_audio", input_audio: { data: base64Audio, format: mimeForAI.includes("ogg") ? "ogg" : "wav" } },
+                        { type: "text", text: "Transcribe this voice note:" }
+                      ] },
+                    ],
+                    max_tokens: 500,
+                  }),
+                });
+
+                if (transcribeResp.ok) {
+                  const transcribeData = await transcribeResp.json();
+                  const transcribedText = transcribeData.choices?.[0]?.message?.content?.trim();
+                  if (transcribedText && transcribedText !== "[Audio inaudible]") {
+                    audioTranscription = transcribedText;
+                    content = `🎤 Nota de voz transcrita: ${transcribedText}`;
+                    console.log("[WA-Webhook] Audio transcribed:", transcribedText.substring(0, 100));
+                  }
+                } else {
+                  console.error("[WA-Webhook] Transcription API error:", transcribeResp.status);
+                }
+              }
+            } catch (transcribeErr) {
+              console.error("[WA-Webhook] Transcription error:", transcribeErr);
             }
           }
 
