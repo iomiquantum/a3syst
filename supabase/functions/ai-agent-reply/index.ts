@@ -37,12 +37,20 @@ serve(async (req) => {
       });
     }
 
-    // Fetch clinic schedule info
+    // Fetch clinic info (no schedule — schedule comes from branches now)
     const { data: clinicInfo } = await supabase
       .from("clinics")
-      .select("name, working_days, opening_hour, closing_hour, timezone, working_schedule")
+      .select("name, timezone")
       .eq("id", clinic_id)
       .single();
+
+    // Fetch all branches with their schedules
+    const { data: branchesData } = await supabase
+      .from("branches")
+      .select("name, address, full_address, phone, email, whatsapp, google_maps_url, arrival_instructions, preparation_notes, working_schedule")
+      .eq("clinic_id", clinic_id)
+      .eq("active", true)
+      .order("created_at");
 
     const { data: conversationData, error: conversationError } = await supabase
       .from("conversations")
