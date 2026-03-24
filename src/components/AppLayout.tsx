@@ -76,11 +76,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       label: "MI EMPRESA",
       items: [
         { icon: Store, label: "Mi Negocio", path: "/mi-negocio" },
-        { icon: Stethoscope, label: labels.treatments, path: "/configuracion/tratamientos" },
-        { icon: Briefcase, label: labels.professionals, path: "/configuracion/profesionales" },
-        { icon: Building2, label: labels.branches, path: "/configuracion/sucursales" },
         { icon: Users, label: labels.patients, path: "/pacientes" },
-        { icon: Globe, label: "Mi Landing", path: "/mi-negocio", queryTab: "landing" },
       ],
     },
     {
