@@ -678,7 +678,7 @@ const MiNegocioPage = () => {
                     {/* Schedule */}
                     <div className="space-y-1 pt-2">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Horario de atención de esta sede</p>
-                      <p className="text-xs text-muted-foreground">Si no configuras horario, se usará el horario general del negocio.</p>
+                      <p className="text-xs text-muted-foreground">El bot de IA usará este horario para agendar citas en esta sede.</p>
                     </div>
                     <div className="space-y-2">
                       {Object.entries(DAY_LABELS).map(([key, label]) => {
