@@ -194,8 +194,9 @@ Responde SOLO JSON válido:
       // Fetch branches
       const { data: branches } = await supabase
         .from("branches")
-        .select("id, name, address, google_maps_url")
+        .select("id, name, address, full_address, phone, whatsapp, google_maps_url, arrival_instructions, preparation_notes, working_schedule")
         .eq("clinic_id", clinic_id)
+        .eq("active", true);
         .eq("active", true);
 
       // Fetch agent config (PRIMARY source for services, treatments, prices)
