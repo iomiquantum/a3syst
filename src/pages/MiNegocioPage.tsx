@@ -295,12 +295,11 @@ const MiNegocioPage = () => {
   const completionItems = [
     { label: "Nombre del negocio", done: !!clinic?.name },
     { label: "Descripción", done: !!clinic?.description },
-    { label: "Ciudad", done: !!clinic?.city },
     { label: "WhatsApp", done: !!clinic?.whatsapp },
+    { label: `${labels.branches} configuradas`, done: branches.length > 0 },
     { label: "Horario en sedes", done: branches.some((b: any) => !!b.working_schedule) },
     { label: `${labels.treatments} configurados`, done: treatments.length > 0 },
     { label: `${labels.professionals} configurados`, done: professionals.length > 0 },
-    { label: `${labels.branches} configuradas`, done: branches.length > 0 },
     { label: "Landing activa", done: !!clinic?.slug },
   ];
   const completionPercent = Math.round((completionItems.filter(i => i.done).length / completionItems.length) * 100);
