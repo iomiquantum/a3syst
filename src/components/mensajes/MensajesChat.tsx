@@ -436,17 +436,26 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                   ) : null;
                 })()}
                 {/* Audio / voice note player */}
-                {(m.message_type === "audio" || m.message_type === "voice") && m.media_url ? (
+                {(m.message_type === "audio" || m.message_type === "voice") ? (
                   <div className="mb-1">
                     <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-1">
                       <span>🎙️ Nota de voz</span>
                     </div>
-                    <audio controls preload="metadata" className="max-w-full h-8 rounded" style={{ minWidth: "200px" }}>
-                      <source src={m.media_url} />
-                      Tu navegador no soporta reproducción de audio.
-                    </audio>
-                    {m.content && m.content !== "[audio]" && m.content !== "[voice]" && (
-                      <p className="leading-relaxed whitespace-pre-wrap mt-1 text-xs italic text-muted-foreground">{m.content}</p>
+                    {m.media_url && (
+                      <audio controls preload="metadata" className="max-w-full h-8 rounded" style={{ minWidth: "200px" }}>
+                        <source src={m.media_url} type="audio/ogg" />
+                        <source src={m.media_url} type="audio/mpeg" />
+                        Tu navegador no soporta reproducción de audio.
+                      </audio>
+                    )}
+                    {m.content && m.content !== "[Audio]" && m.content !== "[audio]" && m.content !== "[voice]" && (
+                      <div className="mt-1.5 px-2 py-1.5 rounded bg-muted/50 border border-border/50">
+                        <p className="text-[10px] text-muted-foreground mb-0.5 font-medium">📝 Transcripción:</p>
+                        <p className="leading-relaxed whitespace-pre-wrap text-xs">{m.content.replace(/^🎤 Nota de voz transcrita:\s*/i, "")}</p>
+                      </div>
+                    )}
+                    {(!m.content || m.content === "[Audio]" || m.content === "[audio]" || m.content === "[voice]") && (
+                      <p className="text-[10px] text-muted-foreground/60 italic mt-1">Sin transcripción disponible</p>
                     )}
                   </div>
                 ) : m.media_url && (m.message_type === "image" || m.message_type === "sticker") ? (
