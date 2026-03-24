@@ -231,44 +231,30 @@ Responde SOLO JSON válido:
 
       if (!servicesText) servicesText = "(sin servicios configurados)";
 
-      // Use locations from ai_agent_config first, fallback to branches table
+      // Build locations text with full branch info including schedules
+      const dayLabels: Record<string, string> = { lunes: "Lunes", martes: "Martes", miercoles: "Miércoles", jueves: "Jueves", viernes: "Viernes", sabado: "Sábado", domingo: "Domingo" };
       let locationsText = agentConfig?.locations_text || "";
-      if (!locationsText) {
-        locationsText = (branches || []).map(b => `• ${b.name}: ${b.address || ""}`).join("\n");
-      }
-      if (!locationsText) locationsText = "(sin ubicaciones configuradas)";
-
-      // Include professionals if available
-      const professionalsText = agentConfig?.professionals_text || "";
-
-      // Use clinic timezone for accurate date
-      const clinicTz = (clinic as any)?.timezone || "America/Guayaquil";
-      const todayLocalInfo = getLocalDateInfo(clinicTz);
-      const todayStr = todayLocalInfo.iso;
-      const dayOfWeekStr = DAY_NAMES_ES[todayLocalInfo.weekday];
-
-      // Build working schedule info — prefer detailed per-day schedule
-      const workingSchedule = (clinic as any)?.working_schedule as Record<string, { enabled: boolean; open: string; close: string }> | null;
       let scheduleText = "";
-      if (workingSchedule) {
-        const dayLabels: Record<string, string> = { lunes: "Lunes", martes: "Martes", miercoles: "Miércoles", jueves: "Jueves", viernes: "Viernes", sabado: "Sábado", domingo: "Domingo" };
-        const lines: string[] = [];
-        for (const [key, label] of Object.entries(dayLabels)) {
-          const d = workingSchedule[key];
-          if (d?.enabled) {
-            lines.push(`• ${label}: ${d.open} a ${d.close}`);
-          } else {
-            lines.push(`• ${label}: CERRADO`);
+      if (!locationsText && branches && branches.length > 0) {
+        const branchBlocks = branches.map((b: any) => {
+          const parts: string[] = [`📍 ${b.name}: ${b.full_address || b.address || ""}`];
+          if (b.phone) parts.push(`  Tel: ${b.phone}`);
+          if (b.whatsapp) parts.push(`  WA: ${b.whatsapp}`);
+          if (b.arrival_instructions) parts.push(`  Llegada: ${b.arrival_instructions}`);
+          if (b.preparation_notes) parts.push(`  Preparación: ${b.preparation_notes}`);
+          const ws = b.working_schedule as Record<string, { enabled: boolean; open: string; close: string }> | null;
+          if (ws) {
+            const lines = Object.entries(dayLabels).map(([k, l]) => ws[k]?.enabled ? `    • ${l}: ${ws[k].open} a ${ws[k].close}` : `    • ${l}: CERRADO`);
+            parts.push(`  Horario:\n${lines.join("\n")}`);
           }
-        }
-        scheduleText = "HORARIO DE ATENCIÓN:\n" + lines.join("\n");
+          return parts.join("\n");
+        });
+        locationsText = branchBlocks.join("\n\n");
+        // Build combined schedule from all branches for validation
+        scheduleText = "SEDES Y HORARIOS:\n" + locationsText;
       } else {
-        const workingDays = (clinic as any)?.working_days || [];
-        const openingHour = (clinic as any)?.opening_hour || "";
-        const closingHour = (clinic as any)?.closing_hour || "";
-        scheduleText = workingDays.length > 0
-          ? `Días de atención: ${workingDays.join(", ")}. Horario: ${openingHour || "?"} a ${closingHour || "?"}.`
-          : "(sin horario configurado)";
+        locationsText = locationsText || "(sin ubicaciones configuradas)";
+        scheduleText = "(sin horario configurado — revisar sedes)";
       }
 
       // Include special_instructions if they contain schedule overrides
