@@ -37,12 +37,20 @@ serve(async (req) => {
       });
     }
 
-    // Fetch clinic schedule info
+    // Fetch clinic info (no schedule — schedule comes from branches now)
     const { data: clinicInfo } = await supabase
       .from("clinics")
-      .select("name, working_days, opening_hour, closing_hour, timezone, working_schedule")
+      .select("name, timezone")
       .eq("id", clinic_id)
       .single();
+
+    // Fetch all branches with their schedules
+    const { data: branchesData } = await supabase
+      .from("branches")
+      .select("name, address, full_address, phone, email, whatsapp, google_maps_url, arrival_instructions, preparation_notes, working_schedule")
+      .eq("clinic_id", clinic_id)
+      .eq("active", true)
+      .order("created_at");
 
     const { data: conversationData, error: conversationError } = await supabase
       .from("conversations")
@@ -305,15 +313,31 @@ serve(async (req) => {
     const services = (agentConfig.services || []) as { name: string; price: string; description: string }[];
     const langLabel = agentConfig.language === "es" ? "Español" : agentConfig.language === "en" ? "English" : "Português";
 
-    // Build schedule text from working_schedule (per-day) or fallback to generic
-    const ws = (clinicInfo as any)?.working_schedule as Record<string, { enabled: boolean; open: string; close: string }> | null;
-    let scheduleBlock = "";
-    if (ws) {
-      const dayLabels: Record<string, string> = { lunes: "Lunes", martes: "Martes", miercoles: "Miércoles", jueves: "Jueves", viernes: "Viernes", sabado: "Sábado", domingo: "Domingo" };
-      const lines = Object.entries(dayLabels).map(([k, l]) => ws[k]?.enabled ? `• ${l}: ${ws[k].open} a ${ws[k].close}` : `• ${l}: CERRADO`);
-      scheduleBlock = lines.join("\n");
+    // Build schedule & location text from branches
+    const dayLabels: Record<string, string> = { lunes: "Lunes", martes: "Martes", miercoles: "Miércoles", jueves: "Jueves", viernes: "Viernes", sabado: "Sábado", domingo: "Domingo" };
+    let branchesBlock = "";
+    if (branchesData && branchesData.length > 0) {
+      branchesBlock = branchesData.map((b: any) => {
+        const parts: string[] = [`📍 SEDE: ${b.name}`];
+        if (b.full_address || b.address) parts.push(`Dirección: ${b.full_address || b.address}`);
+        if (b.phone) parts.push(`Teléfono: ${b.phone}`);
+        if (b.email) parts.push(`Email: ${b.email}`);
+        if (b.whatsapp) parts.push(`WhatsApp: ${b.whatsapp}`);
+        if (b.google_maps_url) parts.push(`Google Maps: ${b.google_maps_url}`);
+        if (b.arrival_instructions) parts.push(`Instrucciones de llegada: ${b.arrival_instructions}`);
+        if (b.preparation_notes) parts.push(`Notas de preparación: ${b.preparation_notes}`);
+        // Schedule
+        const ws = b.working_schedule as Record<string, { enabled: boolean; open: string; close: string }> | null;
+        if (ws) {
+          const lines = Object.entries(dayLabels).map(([k, l]) => ws[k]?.enabled ? `  • ${l}: ${ws[k].open} a ${ws[k].close}` : `  • ${l}: CERRADO`);
+          parts.push(`Horario:\n${lines.join("\n")}`);
+        } else {
+          parts.push(`Horario: (no configurado para esta sede)`);
+        }
+        return parts.join("\n");
+      }).join("\n\n");
     } else {
-      scheduleBlock = (clinicInfo?.working_days || []).length > 0 ? `${((clinicInfo as any).working_days as string[]).join(", ")}. ${(clinicInfo as any).opening_hour || ""} a ${(clinicInfo as any).closing_hour || ""}` : "(sin horario configurado)";
+      branchesBlock = "(sin sedes configuradas)";
     }
 
     // Use clinic timezone for today's date
@@ -336,8 +360,13 @@ Idioma: ${langLabel}
 Tono: ${agentConfig.tone}
 
 NEGOCIO: ${clinicInfo?.name || ""}
-HORARIO DE ATENCIÓN:
-${scheduleBlock}
+
+SEDES Y HORARIOS DE ATENCIÓN:
+${branchesBlock}
+
+IMPORTANTE: Solo puedes agendar citas en los días y horarios habilitados de cada sede. Si un día está marcado como CERRADO, NO ofrezcas citas ese día. Sugiere el siguiente día hábil disponible.
+Si hay varias sedes, pregunta al cliente en cuál sede prefiere su cita.
+
 FECHA DE HOY: ${todayDate} (${todayDay})
 ZONA HORARIA: ${clinicTz}
 CALENDARIO DE REFERENCIA (próximos 21 días):
