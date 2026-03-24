@@ -425,37 +425,12 @@ const MiNegocioPage = () => {
                     </select>
                     <p className="text-xs text-muted-foreground">La IA usará esta zona horaria para agendar citas correctamente.</p>
                   </div>
-                  {/* Per-day schedule */}
+                  {/* Schedule note */}
                   <div className="space-y-2 md:col-span-2">
-                    <Label className="text-base font-medium">Horario de atención por día</Label>
-                    <p className="text-xs text-muted-foreground mb-3">Configura los días y horarios en que tu negocio está abierto.</p>
-                    <div className="space-y-2">
-                      {Object.entries(DAY_LABELS).map(([key, label]) => {
-                        const schedule: WorkingSchedule = (form as any).working_schedule ?? clinic?.working_schedule ?? DEFAULT_SCHEDULE;
-                        const day = schedule[key] || { enabled: false, open: "09:00", close: "18:00" };
-                        const updateDay = (field: keyof DaySchedule, value: any) => {
-                          const current = { ...((form as any).working_schedule ?? clinic?.working_schedule ?? DEFAULT_SCHEDULE) };
-                          current[key] = { ...current[key], [field]: value };
-                          setForm(f => ({ ...f, working_schedule: current }));
-                        };
-                        return (
-                          <div key={key} className={cn("flex items-center gap-3 rounded-lg border p-2.5 transition-colors", day.enabled ? "bg-background border-border" : "bg-muted/50 border-transparent")}>
-                            <label className="flex items-center gap-2 min-w-[110px] cursor-pointer">
-                              <input type="checkbox" checked={day.enabled} onChange={e => updateDay("enabled", e.target.checked)} className="rounded border-input" />
-                              <span className={cn("text-sm font-medium", !day.enabled && "text-muted-foreground")}>{label}</span>
-                            </label>
-                            {day.enabled ? (
-                              <div className="flex items-center gap-2 flex-1">
-                                <Input type="time" value={day.open} onChange={e => updateDay("open", e.target.value)} className="h-8 text-sm w-[120px]" />
-                                <span className="text-xs text-muted-foreground">a</span>
-                                <Input type="time" value={day.close} onChange={e => updateDay("close", e.target.value)} className="h-8 text-sm w-[120px]" />
-                              </div>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">Cerrado</span>
-                            )}
-                          </div>
-                        );
-                      })}
+                    <div className="rounded-lg border border-border bg-muted/50 p-4">
+                      <p className="text-sm font-medium text-foreground flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> Horarios de atención</p>
+                      <p className="text-xs text-muted-foreground mt-1">Los horarios se configuran individualmente en cada sede (pestaña "{labels.branches}"). El bot de IA usará el horario de cada sede para agendar citas correctamente.</p>
+                      {branches.length === 0 && <p className="text-xs text-destructive mt-2">⚠ No tienes sedes configuradas. Ve a la pestaña "{labels.branches}" para crear tu primera sede con horarios.</p>}
                     </div>
                   </div>
                 </div>
