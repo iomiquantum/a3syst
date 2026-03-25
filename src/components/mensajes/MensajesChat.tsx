@@ -220,7 +220,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
         message_type: "text",
         status: "sent",
         sent_by: user?.id || null,
-        origin: `human|${c.pipeline_tab || "inbox"}`,
+        origin: aiAssisted ? `human_ai_assisted|${c.pipeline_tab || "inbox"}` : `human|${c.pipeline_tab || "inbox"}`,
       });
     }
 
