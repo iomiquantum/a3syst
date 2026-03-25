@@ -191,6 +191,9 @@ const MensajesPage = () => {
             loading={statsLoading}
             period={resumenPeriod} onPeriodChange={setResumenPeriod}
             dateRange={resumenRange} onDateRangeChange={setResumenRange}
+            timeSlot={timeSlot} onTimeSlotChange={setTimeSlot}
+            customStart={customTimeStart} customEnd={customTimeEnd}
+            onCustomTimeChange={(s, e) => { setCustomTimeStart(s); setCustomTimeEnd(e); }}
           />
         </div>
 
