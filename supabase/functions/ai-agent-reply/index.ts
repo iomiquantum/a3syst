@@ -607,7 +607,11 @@ REGLAS OBLIGATORIAS:
       const sendResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
         method: "POST",
         headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: reply, conversation_id, origin: isFollowUp ? `follow_up_s${(conversationData.follow_up_count || 0) + 1}|${conversationData.pipeline_tab || "inbox"}` : `ai_auto|${conversationData.pipeline_tab || "inbox"}` }),
+        const pipelineTab = conversationData.pipeline_tab || "inbox";
+        const isS5S6 = pipelineTab === "seguimiento_s5" || pipelineTab === "seguimiento_s6";
+        const autoOrigin = isS5S6 ? `ai_auto_${pipelineTab.replace("seguimiento_", "")}|${pipelineTab}` : `ai_auto|${pipelineTab}`;
+        const followUpOrigin = `follow_up_s${(conversationData.follow_up_count || 0) + 1}|${pipelineTab}`;
+        body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: reply, conversation_id, origin: isFollowUp ? followUpOrigin : autoOrigin }),
       });
 
       const sendPayload = await sendResponse.json().catch(() => null);
