@@ -234,8 +234,9 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
     onActionComplete?.();
   };
 
-  const handleInsertText = (text: string) => {
+  const handleInsertText = (text: string, fromAI?: boolean) => {
     setInput(prev => prev + text);
+    if (fromAI) setAiAssisted(true);
     setTimeout(() => textareaRef.current?.focus(), 50);
   };
 
