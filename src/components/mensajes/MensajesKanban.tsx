@@ -2,6 +2,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useState, useMemo } from "react";
 import { Search } from "lucide-react";
@@ -11,22 +12,22 @@ import ContactInfoPanel from "./ContactInfoPanel";
 import { getSeguimientoRemainingSeconds } from "./SeguimientoCountdown";
 import type { PipelineConversation, PipelineTab } from "@/hooks/useConversationsByPipeline";
 
-const KANBAN_COLUMNS: { tab: PipelineTab | string; label: string; color: string }[] = [
-  { tab: "resueltos_ia", label: "Resueltos IA", color: "bg-violet-500" },
-  { tab: "seguimiento_s1", label: "S1", color: "bg-blue-500" },
-  { tab: "seguimiento_s2", label: "S2", color: "bg-blue-500" },
-  { tab: "seguimiento_s3", label: "S3", color: "bg-blue-400" },
-  { tab: "seguimiento_s4", label: "S4", color: "bg-blue-400" },
-  { tab: "seguimiento_s5", label: "S5 ✋", color: "bg-amber-500" },
-  { tab: "seguimiento_s6", label: "S6 ✋", color: "bg-amber-400" },
-  { tab: "no_responden", label: "No responden", color: "bg-red-500" },
-  { tab: "escalados", label: "Escalados", color: "bg-orange-500" },
-  { tab: "agendados", label: "Agendados", color: "bg-emerald-500" },
-  { tab: "no_show", label: "No-show", color: "bg-amber-500" },
-  { tab: "show_sin_venta", label: "Show s/v", color: "bg-orange-400" },
-  { tab: "pacientes", label: "Pacientes", color: "bg-teal-500" },
-  { tab: "no_interesado", label: "No interesado", color: "bg-gray-500" },
-  { tab: "perdidos", label: "Perdidos", color: "bg-pink-500" },
+const KANBAN_COLUMNS: { tab: PipelineTab | string; label: string; color: string; tooltip: string }[] = [
+  { tab: "resueltos_ia", label: "Resueltos IA", color: "bg-violet-500", tooltip: "La IA responde automáticamente. Si el cliente no responde en el tiempo de inactividad configurado, avanza a Seguimiento." },
+  { tab: "seguimiento_s1", label: "S1", color: "bg-blue-500", tooltip: "Seguimiento automático #1 — Primer recontacto. La IA envía un mensaje de seguimiento tras el tiempo configurado en S1." },
+  { tab: "seguimiento_s2", label: "S2", color: "bg-blue-500", tooltip: "Seguimiento automático #2 — Segundo recontacto. La IA envía otro mensaje tras el tiempo configurado en S2." },
+  { tab: "seguimiento_s3", label: "S3", color: "bg-blue-400", tooltip: "Seguimiento automático #3 — Tercer recontacto con mayor espaciamiento." },
+  { tab: "seguimiento_s4", label: "S4", color: "bg-blue-400", tooltip: "Seguimiento automático #4 — Último intento automático antes de pasar a seguimiento manual." },
+  { tab: "seguimiento_s5", label: "S5 ✋", color: "bg-amber-500", tooltip: "Seguimiento MANUAL #5 — Requiere acción humana. Un agente debe contactar al cliente personalmente. La IA puede responder aquí si el cliente escribe." },
+  { tab: "seguimiento_s6", label: "S6 ✋", color: "bg-amber-400", tooltip: "Seguimiento MANUAL #6 — Último intento manual. Si no responde, pasa a 'No responden'." },
+  { tab: "no_responden", label: "No responden", color: "bg-red-500", tooltip: "El cliente no respondió a ninguno de los 6 intentos de seguimiento. Si escribe de nuevo, vuelve a Resueltos IA como recurrente." },
+  { tab: "escalados", label: "Escalados", color: "bg-orange-500", tooltip: "Conversación escalada a un agente humano. La IA detectó que necesita atención manual." },
+  { tab: "agendados", label: "Agendados", color: "bg-emerald-500", tooltip: "Cliente con cita agendada. Pendiente de confirmación o asistencia." },
+  { tab: "no_show", label: "No-show", color: "bg-amber-500", tooltip: "Cliente que tenía cita agendada pero no asistió." },
+  { tab: "show_sin_venta", label: "Show s/v", color: "bg-orange-400", tooltip: "Cliente que asistió a su cita pero no realizó la compra o contratación del servicio." },
+  { tab: "pacientes", label: "Pacientes", color: "bg-teal-500", tooltip: "Cliente convertido — Ya es paciente/cliente activo del negocio." },
+  { tab: "no_interesado", label: "No interesado", color: "bg-gray-500", tooltip: "El cliente indicó que no está interesado en los servicios." },
+  { tab: "perdidos", label: "Perdidos", color: "bg-pink-500", tooltip: "Cliente perdido — No se logró conversión ni interés." },
 ];
 
 const SEGUIMIENTO_TABS = new Set(
