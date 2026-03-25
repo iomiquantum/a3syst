@@ -264,6 +264,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
     const stageTag = stageLabel ? ` · ${stageLabel}` : "";
 
     if (sender === "human") return { text: `👤 Humano${stageTag}`, color: "text-blue-500" };
+    if (sender === "ai_auto_s5" || sender === "ai_auto_s6") return { text: `🤖 IA respondiendo en ${stageLabel || sender.replace("ai_auto_", "").toUpperCase()}`, color: "text-purple-500" };
     if (sender === "ai_auto" || sender === "ai_agent") return { text: `🤖 ${agentName}${stageTag}`, color: "text-violet-500" };
     if (sender.startsWith("follow_up_s")) {
       const num = sender.replace("follow_up_s", "");
@@ -482,12 +483,27 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                     <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-1">
                       <span>🎙️ Nota de voz</span>
                     </div>
-                    {m.media_url && (
-                      <audio controls preload="metadata" className="max-w-full h-8 rounded" style={{ minWidth: "200px" }}>
-                        <source src={m.media_url} type="audio/ogg" />
-                        <source src={m.media_url} type="audio/mpeg" />
-                        Tu navegador no soporta reproducción de audio.
-                      </audio>
+                    {m.media_url && !m.media_url.match(/^\d+$/) ? (
+                      <>
+                        <audio controls preload="metadata" className="max-w-[250px]" onError={(e) => {
+                          console.error("Audio playback error:", e);
+                          (e.target as HTMLAudioElement).style.display = 'none';
+                          const fallback = (e.target as HTMLAudioElement).nextElementSibling;
+                          if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                        }}>
+                          <source src={m.media_url} type="audio/ogg; codecs=opus" />
+                          <source src={m.media_url} type="audio/ogg" />
+                          <source src={m.media_url} type="audio/mpeg" />
+                          Tu navegador no soporta reproducción de audio.
+                        </audio>
+                        <div className="hidden items-center gap-1 text-[10px] text-destructive">
+                          <span>⚠️ No se pudo reproducir el audio</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground italic">
+                        <span>🎤 Nota de voz (audio no disponible para reproducción)</span>
+                      </div>
                     )}
                     {m.content && m.content !== "[Audio]" && m.content !== "[audio]" && m.content !== "[voice]" && (
                       <div className="mt-1.5 px-2 py-1.5 rounded bg-muted/50 border border-border/50">
@@ -566,6 +582,13 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 text-xs">
             <Bot className="w-3.5 h-3.5 shrink-0" />
             <span>La IA está respondiendo esta conversación. Puedes enviar mensajes como humano sin desactivarla.</span>
+          </div>
+        )}
+
+        {(c.pipeline_tab === "seguimiento_s5" || c.pipeline_tab === "seguimiento_s6") && autopilot && !isWhatsAppBlocked && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 text-xs border border-purple-200 dark:border-purple-500/20">
+            <Bot className="w-3.5 h-3.5 shrink-0" />
+            <span>🤖 La IA está respondiendo en esta etapa de seguimiento manual ({c.pipeline_tab === "seguimiento_s5" ? "S5" : "S6"}). El contacto NO se moverá a Resueltos IA.</span>
           </div>
         )}
 

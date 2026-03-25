@@ -238,11 +238,19 @@ Deno.serve(async (req) => {
             try {
               const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
               if (LOVABLE_API_KEY) {
+                // Convert blob to base64 in chunks to avoid stack overflow on large files
                 const arrayBuf = await audioBlob.arrayBuffer();
-                const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)));
+                const uint8Array = new Uint8Array(arrayBuf);
+                let base64Audio = "";
+                const chunkSize = 8192;
+                for (let i = 0; i < uint8Array.length; i += chunkSize) {
+                  const chunk = uint8Array.slice(i, i + chunkSize);
+                  base64Audio += btoa(String.fromCharCode(...chunk));
+                }
+                
                 const mimeForAI = mediaMimeType || "audio/ogg";
 
-                const transcribeResp = await fetch("https://api.lovable.dev/v1/chat/completions", {
+                const transcribeResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json",
@@ -251,9 +259,9 @@ Deno.serve(async (req) => {
                   body: JSON.stringify({
                     model: "google/gemini-2.5-flash",
                     messages: [
-                      { role: "system", content: "Transcribe the following audio message exactly as spoken. Return ONLY the transcription text, nothing else. If the audio is unclear or empty, return '[Audio inaudible]'." },
+                      { role: "system", content: "Transcribe the following audio message exactly as spoken in the original language. Return ONLY the transcription text, nothing else. If the audio is unclear or empty, return '[Audio inaudible]'." },
                       { role: "user", content: [
-                        { type: "input_audio", input_audio: { data: base64Audio, format: mimeForAI.includes("ogg") ? "ogg" : "wav" } },
+                        { type: "input_audio", input_audio: { data: base64Audio, format: mimeForAI.includes("ogg") ? "ogg" : mimeForAI.includes("mp4") ? "mp4" : "wav" } },
                         { type: "text", text: "Transcribe this voice note:" }
                       ] },
                     ],
@@ -268,10 +276,15 @@ Deno.serve(async (req) => {
                     audioTranscription = transcribedText;
                     content = `🎤 Nota de voz transcrita: ${transcribedText}`;
                     console.log("[WA-Webhook] Audio transcribed:", transcribedText.substring(0, 100));
+                  } else {
+                    console.log("[WA-Webhook] Audio inaudible or empty transcription");
                   }
                 } else {
-                  console.error("[WA-Webhook] Transcription API error:", transcribeResp.status);
+                  const errBody = await transcribeResp.text();
+                  console.error("[WA-Webhook] Transcription API error:", transcribeResp.status, errBody);
                 }
+              } else {
+                console.warn("[WA-Webhook] LOVABLE_API_KEY not set — skipping transcription");
               }
             } catch (transcribeErr) {
               console.error("[WA-Webhook] Transcription error:", transcribeErr);
@@ -557,34 +570,58 @@ async function handleIncomingMessagePipeline(
       console.log(`[PIPELINE] Cliente respondió desde no_responden → resueltos_ia (recurrente #${newCount})`);
 
     } else if (tab.startsWith("seguimiento_s")) {
-      // "Never go back" — advance next_s
       const currentS = conv.seguimiento_contact_number || 1;
-      const nextS = Math.min(Math.max((conv.seguimiento_next_s || 0), currentS + 1), 7);
-      const wasRecurrente = conv.seguimiento_is_recurrente;
-      const newCount = wasRecurrente
-        ? (conv.seguimiento_recurrente_count || 0) + 1
-        : 1;
+      const sNumber = parseInt(tab.replace("seguimiento_s", ""));
 
-      await supabase.from("conversations").update({
-        pipeline_tab: "resueltos_ia",
-        seguimiento_is_recurrente: true,
-        seguimiento_recurrente_count: newCount,
-        seguimiento_next_s: nextS,
-        seguimiento_responded_at_s: currentS,
-        seguimiento_contact_number: 0,
-        seguimiento_next_contact_at: null,
-        inactivity_timer_start: null,
-      }).eq("id", conversationId);
+      if (sNumber >= 5) {
+        // === S5/S6: STAY in place, just reset timers and let AI respond ===
+        await supabase.from("conversations").update({
+          // DO NOT change pipeline_tab — stays in S5/S6
+          inactivity_timer_start: null,
+          seguimiento_next_contact_at: null,
+          whatsapp_window_blocked: false,
+          last_client_message_at: new Date().toISOString(),
+        }).eq("id", conversationId);
 
-      await supabase.from("conversation_pipeline_history").insert({
-        conversation_id: conversationId,
-        clinic_id: clinicId,
-        from_tab: tab,
-        to_tab: "resueltos_ia",
-        moved_by: "system",
-        reason: `Cliente respondió durante seguimiento S${currentS} → próximo será S${nextS}`,
-      });
-      console.log(`[PIPELINE] Cliente respondió durante ${tab} → resueltos_ia (next: S${nextS})`);
+        await supabase.from("conversation_pipeline_history").insert({
+          conversation_id: conversationId,
+          clinic_id: clinicId,
+          from_tab: tab,
+          to_tab: tab, // stays in same tab
+          moved_by: "system",
+          reason: `Cliente respondió en ${tab} — se mantiene en ${tab}, IA responde aquí`,
+        });
+        console.log(`[PIPELINE] Cliente respondió en ${tab} — se mantiene, IA responde`);
+
+      } else {
+        // === S1-S4: existing behavior — move to resueltos_ia ===
+        const nextS = Math.min(Math.max((conv.seguimiento_next_s || 0), currentS + 1), 7);
+        const wasRecurrente = conv.seguimiento_is_recurrente;
+        const newCount = wasRecurrente
+          ? (conv.seguimiento_recurrente_count || 0) + 1
+          : 1;
+
+        await supabase.from("conversations").update({
+          pipeline_tab: "resueltos_ia",
+          seguimiento_is_recurrente: true,
+          seguimiento_recurrente_count: newCount,
+          seguimiento_next_s: nextS,
+          seguimiento_responded_at_s: currentS,
+          seguimiento_contact_number: 0,
+          seguimiento_next_contact_at: null,
+          inactivity_timer_start: null,
+        }).eq("id", conversationId);
+
+        await supabase.from("conversation_pipeline_history").insert({
+          conversation_id: conversationId,
+          clinic_id: clinicId,
+          from_tab: tab,
+          to_tab: "resueltos_ia",
+          moved_by: "system",
+          reason: `Cliente respondió durante seguimiento S${currentS} → próximo será S${nextS}`,
+        });
+        console.log(`[PIPELINE] Cliente respondió durante ${tab} → resueltos_ia (next: S${nextS})`);
+      }
 
     } else if (tab === "resueltos_ia") {
       if (conv.inactivity_timer_start) {
