@@ -191,7 +191,7 @@ const ChatToolbar = ({ onInsertText, onAttach, conversationId, clinicId }: Props
             <p className="text-xs font-semibold text-foreground mb-2">¿Qué quieres que responda la IA?</p>
             <div className="relative">
               <Textarea
-                placeholder="Ej: Respóndele que la cita es el jueves a las 3pm..."
+                placeholder={isListening ? "🎤 Escuchando... habla y tu voz se convertirá en texto aquí" : "Ej: Respóndele que la cita es el jueves a las 3pm..."}
                 value={aiPrompt}
                 onChange={e => setAiPrompt(e.target.value)}
                 className="text-xs min-h-[60px] pr-10 resize-none"
