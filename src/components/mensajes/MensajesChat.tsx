@@ -107,7 +107,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
         filter: `conversation_id=eq.${c.id}`,
       }, (payload) => {
         setMessages(prev => prev.map(m =>
-          m.id === (payload.new as any).id ? { ...m, status: (payload.new as any).status } : m
+          m.id === (payload.new as any).id ? { ...m, status: (payload.new as any).status, error_code: (payload.new as any).error_code, error_message: (payload.new as any).error_message } : m
         ));
       })
       .subscribe();
