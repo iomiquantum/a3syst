@@ -22,6 +22,8 @@ import { useClinicTemplate } from "@/hooks/useClinicTemplate";
 import ClinicChatActions from "./ClinicChatActions";
 import AppointmentBanner from "./AppointmentBanner";
 import WhatsAppTemplateDialog from "./WhatsAppTemplateDialog";
+import ChatTrainingDialog from "./ChatTrainingDialog";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import type { PipelineConversation } from "@/hooks/useConversationsByPipeline";
 
 interface Props {
