@@ -51,6 +51,18 @@ export default function RoadmapImportDialog({ existingPhases }: Props) {
   const [markdown, setMarkdown] = useState("");
   const [step, setStep] = useState<"input" | "preview">("input");
   const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setMarkdown(ev.target?.result as string || "");
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
 
   const bulkPhases = useBulkCreatePhases();
   const bulkTasks = useBulkCreateTasks();
