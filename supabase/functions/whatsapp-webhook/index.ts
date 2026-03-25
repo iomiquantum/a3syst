@@ -95,11 +95,16 @@ Deno.serve(async (req) => {
           }
           await supabase.from("whatsapp_messages").update(updateData).eq("wa_message_id", s.id);
 
-          // Update unified messages table with status + timestamp
-          await supabase.from("messages").update({
+          // Update unified messages table with status + timestamp + error details
+          const messagesUpdate: Record<string, unknown> = {
             status: s.status,
             delivery_status_updated_at: new Date().toISOString(),
-          }).eq("whatsapp_message_id", s.id);
+          };
+          if (s.status === "failed" && s.errors?.length > 0) {
+            messagesUpdate.error_code = s.errors[0].code?.toString();
+            messagesUpdate.error_message = s.errors[0].title || s.errors[0].message;
+          }
+          await supabase.from("messages").update(messagesUpdate).eq("whatsapp_message_id", s.id);
 
           // Anti-spam: when a seguimiento outbound message is READ, increment counter
           if (s.status === "read") {

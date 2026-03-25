@@ -1,0 +1,1 @@
+UPDATE public.messages SET error_code = '131042', error_message = 'Business eligibility payment issue' WHERE id = '8292f419-dae0-4a37-87f0-7f3b4cc6a71e' AND status = 'failed' AND error_code IS NULL;

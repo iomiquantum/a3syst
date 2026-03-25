@@ -46,6 +46,8 @@ interface ChatMessage {
   created_at: string;
   status: string;
   origin: string | null;
+  error_code: string | null;
+  error_message: string | null;
 }
 
 const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPanel, onToggleContactPanel }: Props) => {
@@ -105,7 +107,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
         filter: `conversation_id=eq.${c.id}`,
       }, (payload) => {
         setMessages(prev => prev.map(m =>
-          m.id === (payload.new as any).id ? { ...m, status: (payload.new as any).status } : m
+          m.id === (payload.new as any).id ? { ...m, status: (payload.new as any).status, error_code: (payload.new as any).error_code, error_message: (payload.new as any).error_message } : m
         ));
       })
       .subscribe();
@@ -479,6 +481,13 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                   </span>
                   {m.direction === "outbound" && <MessageStatusIcon status={m.status} />}
                 </div>
+                {m.status === "failed" && (m.error_code || m.error_message) && (
+                  <div className="mt-1 rounded bg-destructive/10 border border-destructive/20 px-2 py-1">
+                    <p className="text-[10px] text-destructive font-medium">
+                      ❌ Error {m.error_code || ""}: {m.error_message || "Error desconocido de Meta"}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
             );
