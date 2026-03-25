@@ -115,6 +115,9 @@ const AdminPage = () => {
                 <AdminMetaURLs />
               </div>
             </TabsContent>
+            <TabsContent value="roadmap" className="mt-6">
+              <AdminRoadmapTab />
+            </TabsContent>
           </Tabs>
         )}
       </div>
