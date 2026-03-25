@@ -17,7 +17,7 @@ interface SavedSnippet {
 }
 
 interface Props {
-  onInsertText: (text: string) => void;
+  onInsertText: (text: string, fromAI?: boolean) => void;
   onAttach?: (file: File) => void;
   conversationId: string;
   clinicId: string;
