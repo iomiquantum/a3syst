@@ -73,7 +73,7 @@ const ChatToolbar = ({ onInsertText, onAttach, conversationId, clinicId }: Props
 
       const reply = data?.reply || data?.content || "";
       if (reply) {
-        onInsertText(reply);
+        onInsertText(reply, true);
         toast.success("Respuesta generada — revísala antes de enviar");
       } else {
         toast.error("No se pudo generar respuesta");
