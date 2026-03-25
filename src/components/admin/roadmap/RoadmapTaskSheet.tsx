@@ -46,7 +46,7 @@ export default function RoadmapTaskSheet({ task, phase, open, onOpenChange }: Pr
   const createNote = useCreateNote();
   const { data: notes, isLoading: notesLoading } = useTaskNotes(task?.id || null);
 
-  const { isRecording, toggleRecording } = useVoiceInput({
+  const { isListening, toggleListening } = useVoiceInput({
     onResult: (text) => setNoteText((p) => (p ? p + " " + text : text)),
   });
 
