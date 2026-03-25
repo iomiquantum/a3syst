@@ -10,14 +10,16 @@ import MensajesChat from "@/components/mensajes/MensajesChat";
 import MensajesKanban from "@/components/mensajes/MensajesKanban";
 import ContactInfoPanel from "@/components/mensajes/ContactInfoPanel";
 import { useConversationsByPipeline, PipelineConversation, PipelineFilter } from "@/hooks/useConversationsByPipeline";
-import { usePipelineStats } from "@/hooks/usePipelineStats";
+import { usePipelineStats, TimeFilter } from "@/hooks/usePipelineStats";
 import { useChannelStats } from "@/hooks/useChannelStats";
 import { useTagStats } from "@/hooks/useTagStats";
 import { useClinicPipelineTabs } from "@/hooks/useClinicPipelineTabs";
 import { Period, periodToDateRange } from "@/components/mensajes/PeriodSelector";
+import { TimeSlot, getTimeSlotHours } from "@/components/mensajes/TimeSlotSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { DateRange } from "react-day-picker";
+import { startOfDay, endOfDay } from "date-fns";
 
 const VIEW_MODE_KEY = "mensajes-view-mode";
 
