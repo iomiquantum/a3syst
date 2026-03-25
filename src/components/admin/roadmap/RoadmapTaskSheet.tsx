@@ -229,8 +229,8 @@ export default function RoadmapTaskSheet({ task, phase, open, onOpenChange }: Pr
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendNote(); } }}
             />
             <div className="flex flex-col gap-1">
-              <Button variant="ghost" size="icon" className={`h-7 w-7 ${isRecording ? "text-destructive" : ""}`} onClick={toggleRecording}>
-                {isRecording ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+              <Button variant="ghost" size="icon" className={`h-7 w-7 ${isListening ? "text-destructive" : ""}`} onClick={toggleListening}>
+                {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
               </Button>
               <Button size="icon" className="h-7 w-7" onClick={handleSendNote} disabled={!noteText.trim() || createNote.isPending}>
                 {createNote.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
