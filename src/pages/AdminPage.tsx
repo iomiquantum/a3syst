@@ -87,6 +87,9 @@ const AdminPage = () => {
               <TabsTrigger value="social" className="flex items-center gap-2">
                 <Share2 className="w-4 h-4" /> Redes Sociales
               </TabsTrigger>
+              <TabsTrigger value="roadmap" className="flex items-center gap-2">
+                <Map className="w-4 h-4" /> Roadmap
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="clinicas" className="mt-6">
               <AdminClinicasTab clinics={clinics} roles={roles} onRefresh={fetchData} />
