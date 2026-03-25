@@ -32,6 +32,45 @@ interface Props {
   onToggleContactPanel?: () => void;
 }
 
+const WHATSAPP_ERROR_MAP: Record<string, string> = {
+  "131042": "Problema de facturación — Revisa el método de pago en Meta Business Manager.",
+  "131047": "Ventana de 24h cerrada — El cliente no ha escrito recientemente. Usa un template aprobado.",
+  "131026": "El mensaje no pudo ser entregado — El destinatario posiblemente no tiene WhatsApp activo.",
+  "131045": "El número de teléfono no está registrado en WhatsApp.",
+  "131049": "Límite de frecuencia — Este contacto ya recibió demasiados mensajes de marketing.",
+  "131051": "El template de marketing fue bloqueado por límite de frecuencia del destinatario.",
+  "131053": "El contacto no tiene opt-in para recibir mensajes de marketing.",
+  "131056": "Velocidad de envío excedida — Espera unos minutos e intenta de nuevo.",
+  "131048": "Spam detectado — Meta bloqueó este mensaje por posible contenido spam.",
+  "131031": "La cuenta de WhatsApp Business no es válida para enviar mensajes.",
+  "131009": "Parámetro no válido — Verifica el formato del número o los datos del template.",
+  "131021": "El destinatario no puede recibir este tipo de mensaje.",
+  "131005": "Acceso denegado — El token no tiene permisos para esta operación.",
+  "130472": "El número de destino tiene demasiadas conversaciones abiertas. Intenta más tarde.",
+  "132000": "El template tiene parámetros faltantes o incorrectos.",
+  "132001": "El template no existe o no está aprobado.",
+  "132005": "Los parámetros del template no coinciden con la plantilla.",
+  "132012": "Componente del template no soportado.",
+  "132015": "Template pausado por baja calidad.",
+  "132016": "Template deshabilitado por baja calidad.",
+  "133004": "El servidor de WhatsApp no está disponible temporalmente.",
+  "133010": "El número no tiene WhatsApp — El destinatario no tiene la aplicación instalada.",
+  "135000": "Error genérico de WhatsApp — Intenta de nuevo más tarde.",
+  "190": "Token expirado o inválido — Se requiere reconectar WhatsApp.",
+  "80007": "Límite de llamadas a la API excedido — Espera unos minutos.",
+  "100": "Parámetro requerido faltante en la solicitud.",
+};
+
+function getWhatsAppErrorDescription(errorCode: string | null, errorMessage: string | null): string {
+  if (errorCode && WHATSAPP_ERROR_MAP[errorCode]) {
+    return WHATSAPP_ERROR_MAP[errorCode];
+  }
+  if (errorMessage) {
+    return errorMessage;
+  }
+  return "Error desconocido al entregar el mensaje. Verifica la conexión de WhatsApp.";
+}
+
 function getInitials(name: string): string {
   return name.split(" ").slice(0, 2).map(w => w[0] || "").join("").toUpperCase();
 }
