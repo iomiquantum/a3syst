@@ -1,10 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Download, Loader2, Eye } from "lucide-react";
+import { Download, Loader2, Eye, Upload } from "lucide-react";
 import { useBulkCreatePhases, useBulkCreateTasks, ProjectPhase } from "@/hooks/useProjectRoadmap";
 
 interface ParsedPhase {
@@ -51,6 +51,18 @@ export default function RoadmapImportDialog({ existingPhases }: Props) {
   const [markdown, setMarkdown] = useState("");
   const [step, setStep] = useState<"input" | "preview">("input");
   const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setMarkdown(ev.target?.result as string || "");
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
 
   const bulkPhases = useBulkCreatePhases();
   const bulkTasks = useBulkCreateTasks();
@@ -112,13 +124,27 @@ export default function RoadmapImportDialog({ existingPhases }: Props) {
         {step === "input" ? (
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">
-              Pega un documento markdown. Los encabezados (## o ###) se interpretan como fases y los items (- [ ]) como tareas.
+              Sube un archivo .md / .txt o pega el contenido. Los encabezados (## o ###) se interpretan como fases y los items (- [ ]) como tareas.
             </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".md,.txt,.markdown"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full border-dashed h-12 text-xs"
+            >
+              <Upload className="w-4 h-4 mr-2" /> Subir archivo .md o .txt
+            </Button>
             <Textarea
               value={markdown}
               onChange={(e) => setMarkdown(e.target.value)}
               placeholder={`### Fase 1: Nombre\n- [ ] Tarea uno\n- [ ] Tarea dos\n\n### Fase 2: Otra\n- [ ] Tarea tres`}
-              rows={12}
+              rows={10}
               className="text-xs font-mono"
             />
             <Button onClick={() => setStep("preview")} disabled={!markdown.trim()} className="w-full">
