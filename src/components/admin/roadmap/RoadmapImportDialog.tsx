@@ -1,10 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Download, Loader2, Eye } from "lucide-react";
+import { Download, Loader2, Eye, Upload } from "lucide-react";
 import { useBulkCreatePhases, useBulkCreateTasks, ProjectPhase } from "@/hooks/useProjectRoadmap";
 
 interface ParsedPhase {
