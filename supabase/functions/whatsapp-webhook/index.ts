@@ -570,34 +570,58 @@ async function handleIncomingMessagePipeline(
       console.log(`[PIPELINE] Cliente respondió desde no_responden → resueltos_ia (recurrente #${newCount})`);
 
     } else if (tab.startsWith("seguimiento_s")) {
-      // "Never go back" — advance next_s
       const currentS = conv.seguimiento_contact_number || 1;
-      const nextS = Math.min(Math.max((conv.seguimiento_next_s || 0), currentS + 1), 7);
-      const wasRecurrente = conv.seguimiento_is_recurrente;
-      const newCount = wasRecurrente
-        ? (conv.seguimiento_recurrente_count || 0) + 1
-        : 1;
+      const sNumber = parseInt(tab.replace("seguimiento_s", ""));
 
-      await supabase.from("conversations").update({
-        pipeline_tab: "resueltos_ia",
-        seguimiento_is_recurrente: true,
-        seguimiento_recurrente_count: newCount,
-        seguimiento_next_s: nextS,
-        seguimiento_responded_at_s: currentS,
-        seguimiento_contact_number: 0,
-        seguimiento_next_contact_at: null,
-        inactivity_timer_start: null,
-      }).eq("id", conversationId);
+      if (sNumber >= 5) {
+        // === S5/S6: STAY in place, just reset timers and let AI respond ===
+        await supabase.from("conversations").update({
+          // DO NOT change pipeline_tab — stays in S5/S6
+          inactivity_timer_start: null,
+          seguimiento_next_contact_at: null,
+          whatsapp_window_blocked: false,
+          last_client_message_at: new Date().toISOString(),
+        }).eq("id", conversationId);
 
-      await supabase.from("conversation_pipeline_history").insert({
-        conversation_id: conversationId,
-        clinic_id: clinicId,
-        from_tab: tab,
-        to_tab: "resueltos_ia",
-        moved_by: "system",
-        reason: `Cliente respondió durante seguimiento S${currentS} → próximo será S${nextS}`,
-      });
-      console.log(`[PIPELINE] Cliente respondió durante ${tab} → resueltos_ia (next: S${nextS})`);
+        await supabase.from("conversation_pipeline_history").insert({
+          conversation_id: conversationId,
+          clinic_id: clinicId,
+          from_tab: tab,
+          to_tab: tab, // stays in same tab
+          moved_by: "system",
+          reason: `Cliente respondió en ${tab} — se mantiene en ${tab}, IA responde aquí`,
+        });
+        console.log(`[PIPELINE] Cliente respondió en ${tab} — se mantiene, IA responde`);
+
+      } else {
+        // === S1-S4: existing behavior — move to resueltos_ia ===
+        const nextS = Math.min(Math.max((conv.seguimiento_next_s || 0), currentS + 1), 7);
+        const wasRecurrente = conv.seguimiento_is_recurrente;
+        const newCount = wasRecurrente
+          ? (conv.seguimiento_recurrente_count || 0) + 1
+          : 1;
+
+        await supabase.from("conversations").update({
+          pipeline_tab: "resueltos_ia",
+          seguimiento_is_recurrente: true,
+          seguimiento_recurrente_count: newCount,
+          seguimiento_next_s: nextS,
+          seguimiento_responded_at_s: currentS,
+          seguimiento_contact_number: 0,
+          seguimiento_next_contact_at: null,
+          inactivity_timer_start: null,
+        }).eq("id", conversationId);
+
+        await supabase.from("conversation_pipeline_history").insert({
+          conversation_id: conversationId,
+          clinic_id: clinicId,
+          from_tab: tab,
+          to_tab: "resueltos_ia",
+          moved_by: "system",
+          reason: `Cliente respondió durante seguimiento S${currentS} → próximo será S${nextS}`,
+        });
+        console.log(`[PIPELINE] Cliente respondió durante ${tab} → resueltos_ia (next: S${nextS})`);
+      }
 
     } else if (tab === "resueltos_ia") {
       if (conv.inactivity_timer_start) {

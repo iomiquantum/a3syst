@@ -483,12 +483,27 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                     <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-1">
                       <span>🎙️ Nota de voz</span>
                     </div>
-                    {m.media_url && (
-                      <audio controls preload="metadata" className="max-w-full h-8 rounded" style={{ minWidth: "200px" }}>
-                        <source src={m.media_url} type="audio/ogg" />
-                        <source src={m.media_url} type="audio/mpeg" />
-                        Tu navegador no soporta reproducción de audio.
-                      </audio>
+                    {m.media_url && !m.media_url.match(/^\d+$/) ? (
+                      <>
+                        <audio controls preload="metadata" className="max-w-[250px]" onError={(e) => {
+                          console.error("Audio playback error:", e);
+                          (e.target as HTMLAudioElement).style.display = 'none';
+                          const fallback = (e.target as HTMLAudioElement).nextElementSibling;
+                          if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                        }}>
+                          <source src={m.media_url} type="audio/ogg; codecs=opus" />
+                          <source src={m.media_url} type="audio/ogg" />
+                          <source src={m.media_url} type="audio/mpeg" />
+                          Tu navegador no soporta reproducción de audio.
+                        </audio>
+                        <div className="hidden items-center gap-1 text-[10px] text-destructive">
+                          <span>⚠️ No se pudo reproducir el audio</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground italic">
+                        <span>🎤 Nota de voz (audio no disponible para reproducción)</span>
+                      </div>
                     )}
                     {m.content && m.content !== "[Audio]" && m.content !== "[audio]" && m.content !== "[voice]" && (
                       <div className="mt-1.5 px-2 py-1.5 rounded bg-muted/50 border border-border/50">

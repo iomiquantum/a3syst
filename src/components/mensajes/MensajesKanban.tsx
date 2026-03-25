@@ -99,35 +99,44 @@ const MensajesKanban = ({ conversations, onActionComplete }: Props) => {
           />
         </div>
       </div>
-      <div
-        className="grid h-full p-3 gap-2.5 overflow-x-auto"
-        style={{ gridTemplateColumns: `repeat(${KANBAN_COLUMNS.length}, minmax(160px, 1fr))` }}
-      >
-        {KANBAN_COLUMNS.map(col => {
-          const items = sortedConversations.get(col.tab) || [];
-          return (
-            <div key={col.tab} className="flex flex-col min-w-0 rounded-lg border border-border bg-muted/30">
-              <div className="p-2.5 border-b border-border flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <span className={cn("w-2 h-2 rounded-full", col.color)} />
-                  <span className="text-xs font-semibold text-foreground">{col.label}</span>
-                </div>
-                <Badge variant="secondary" className="text-[9px] px-1.5 h-4">{items.length}</Badge>
+      <TooltipProvider delayDuration={300}>
+        <div
+          className="grid h-full p-3 gap-2.5 overflow-x-auto"
+          style={{ gridTemplateColumns: `repeat(${KANBAN_COLUMNS.length}, minmax(160px, 1fr))` }}
+        >
+          {KANBAN_COLUMNS.map(col => {
+            const items = sortedConversations.get(col.tab) || [];
+            return (
+              <div key={col.tab} className="flex flex-col min-w-0 rounded-lg border border-border bg-muted/30">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="p-2.5 border-b border-border flex items-center justify-between cursor-help">
+                      <div className="flex items-center gap-1.5">
+                        <span className={cn("w-2 h-2 rounded-full", col.color)} />
+                        <span className="text-xs font-semibold text-foreground">{col.label}</span>
+                      </div>
+                      <Badge variant="secondary" className="text-[9px] px-1.5 h-4">{items.length}</Badge>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[250px] text-xs">
+                    {col.tooltip}
+                  </TooltipContent>
+                </Tooltip>
+                <ScrollArea className="flex-1">
+                  <div className="p-2 space-y-2">
+                    {items.map(c => (
+                      <ConversationCard key={c.id} conversation={c} onClick={() => handleSelect(c)} variant="kanban" />
+                    ))}
+                    {items.length === 0 && (
+                      <p className="text-center text-[10px] text-muted-foreground py-4">Sin conversaciones</p>
+                    )}
+                  </div>
+                </ScrollArea>
               </div>
-              <ScrollArea className="flex-1">
-                <div className="p-2 space-y-2">
-                  {items.map(c => (
-                    <ConversationCard key={c.id} conversation={c} onClick={() => handleSelect(c)} variant="kanban" />
-                  ))}
-                  {items.length === 0 && (
-                    <p className="text-center text-[10px] text-muted-foreground py-4">Sin conversaciones</p>
-                  )}
-                </div>
-              </ScrollArea>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      </TooltipProvider>
 
       <Sheet open={sheetOpen} onOpenChange={handleSheetChange}>
         <SheetContent side="right" className="w-full sm:max-w-[1100px] p-0">
