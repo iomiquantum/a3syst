@@ -292,7 +292,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
     setInput(e.target.value);
     const el = e.target;
     el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 120) + "px";
+    el.style.height = Math.min(el.scrollHeight, 300) + "px";
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
