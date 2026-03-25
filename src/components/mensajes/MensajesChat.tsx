@@ -355,6 +355,21 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
               {showContactPanel ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
             </Button>
           )}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-violet-500 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-500/10"
+                  onClick={() => setTrainingOpen(true)}
+                >
+                  <GraduationCap className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Entrenar IA con este chat</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
