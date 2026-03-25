@@ -2795,6 +2795,158 @@ export type Database = {
         }
         Relationships: []
       }
+      project_phases: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          phase_number: number
+          status: string | null
+          target_end_date: string | null
+          target_start_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          phase_number: number
+          status?: string | null
+          target_end_date?: string | null
+          target_start_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          phase_number?: number
+          status?: string | null
+          target_end_date?: string | null
+          target_start_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      project_task_notes: {
+        Row: {
+          author_id: string | null
+          content: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          note_type: string | null
+          task_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          content: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          note_type?: string | null
+          task_id: string
+        }
+        Update: {
+          author_id?: string | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          note_type?: string | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_task_notes_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "project_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_tasks: {
+        Row: {
+          actual_hours: number | null
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string | null
+          depends_on: string | null
+          description: string | null
+          estimated_hours: number | null
+          id: string
+          lovable_prompt_id: string | null
+          phase_id: string
+          priority: string | null
+          sort_order: number | null
+          status: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          actual_hours?: number | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          depends_on?: string | null
+          description?: string | null
+          estimated_hours?: number | null
+          id?: string
+          lovable_prompt_id?: string | null
+          phase_id: string
+          priority?: string | null
+          sort_order?: number | null
+          status?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          actual_hours?: number | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          depends_on?: string | null
+          description?: string | null
+          estimated_hours?: number | null
+          id?: string
+          lovable_prompt_id?: string | null
+          phase_id?: string
+          priority?: string | null
+          sort_order?: number | null
+          status?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_tasks_depends_on_fkey"
+            columns: ["depends_on"]
+            isOneToOne: false
+            referencedRelation: "project_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_tasks_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "project_phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prompt_templates: {
         Row: {
           clinic_id: string
