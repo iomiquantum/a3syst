@@ -77,6 +77,9 @@ const MensajesPage = () => {
   }, [resumenPeriod, resumenRange, timeSlot, customTimeStart, customTimeEnd]);
 
   const { tabCounts, resumenStats, loading: statsLoading, refetch: refetchStats } = usePipelineStats(resumenTimeFilter);
+  const { counts: channelCounts, total: channelTotal } = useChannelStats();
+  const { tags: tagStats } = useTagStats();
+  const { tabs: pipelineTabs, subFilterCounts, refetch: refetchTabs } = useClinicPipelineTabs();
 
   const { conversations, loading: convsLoading, refetch: refetchConvs } = useConversationsByPipeline({
     pipelineTab: activeTab,
