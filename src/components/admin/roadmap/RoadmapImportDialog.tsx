@@ -1,10 +1,10 @@
-import { useState, useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Download, Loader2, Eye, Upload } from "lucide-react";
+import { Download, Eye, FileText, Loader2, Upload } from "lucide-react";
 import { useBulkCreatePhases, useBulkCreateTasks, ProjectPhase } from "@/hooks/useProjectRoadmap";
 
 interface ParsedPhase {
@@ -20,25 +20,25 @@ function parseMarkdown(md: string): ParsedPhase[] {
   let phaseNum = 0;
 
   for (const line of lines) {
-    // Match ### or ## headings as phases
     const phaseMatch = line.match(/^#{2,3}\s+(.+)/);
     if (phaseMatch) {
       currentPhase = { name: phaseMatch[1].trim(), phase_number: phaseNum++, tasks: [] };
       phases.push(currentPhase);
       continue;
     }
-    // Match - [ ] or - [x] as tasks
+
     const taskMatch = line.match(/^-\s+\[[ x]\]\s+(.+)/);
     if (taskMatch && currentPhase) {
       currentPhase.tasks.push({ title: taskMatch[1].trim(), description: "" });
       continue;
     }
-    // Match plain - items as tasks too
+
     const plainMatch = line.match(/^-\s+(.{3,})/);
     if (plainMatch && currentPhase && !line.match(/^-\s+\[/)) {
       currentPhase.tasks.push({ title: plainMatch[1].trim(), description: "" });
     }
   }
+
   return phases.filter((p) => p.tasks.length > 0);
 }
 
@@ -51,24 +51,36 @@ export default function RoadmapImportDialog({ existingPhases }: Props) {
   const [markdown, setMarkdown] = useState("");
   const [step, setStep] = useState<"input" | "preview">("input");
   const [importing, setImporting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setMarkdown(ev.target?.result as string || "");
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  };
 
   const bulkPhases = useBulkCreatePhases();
   const bulkTasks = useBulkCreateTasks();
 
   const parsed = useMemo(() => (step === "preview" ? parseMarkdown(markdown) : []), [markdown, step]);
   const totalTasks = parsed.reduce((s, p) => s + p.tasks.length, 0);
+
+  const loadFile = async (file: File) => {
+    const allowed = /\.(md|markdown|txt)$/i.test(file.name);
+    if (!allowed) return;
+    const content = await file.text();
+    setMarkdown(content);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await loadFile(file);
+    e.target.value = "";
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    await loadFile(file);
+  };
 
   const handleImport = async () => {
     if (parsed.length === 0) return;
@@ -102,6 +114,7 @@ export default function RoadmapImportDialog({ existingPhases }: Props) {
       setOpen(false);
       setMarkdown("");
       setStep("input");
+      setIsDragging(false);
     } catch {
       // error handled by hooks
     } finally {
@@ -110,7 +123,16 @@ export default function RoadmapImportDialog({ existingPhases }: Props) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setStep("input"); } }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (!v) {
+          setStep("input");
+          setIsDragging(false);
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="h-8 text-xs">
           <Download className="w-3.5 h-3.5 mr-1.5" /> Importar Markdown
@@ -124,29 +146,55 @@ export default function RoadmapImportDialog({ existingPhases }: Props) {
         {step === "input" ? (
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">
-              Sube un archivo .md / .txt o pega el contenido. Los encabezados (## o ###) se interpretan como fases y los items (- [ ]) como tareas.
+              Sube un archivo .md / .txt, arrástralo aquí o pega el contenido. Los encabezados (## o ###) se interpretan como fases y los items (- [ ]) como tareas.
             </p>
+
             <input
               ref={fileInputRef}
               type="file"
-              accept=".md,.txt,.markdown"
+              accept=".md,.txt,.markdown,text/markdown,text/plain"
               onChange={handleFileUpload}
               className="hidden"
             />
-            <Button
-              variant="outline"
+
+            <button
+              type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="w-full border-dashed h-12 text-xs"
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+              className={`w-full rounded-lg border border-dashed px-4 py-5 text-left transition-colors ${
+                isDragging ? "border-primary bg-accent" : "border-border bg-muted/30 hover:bg-muted/50"
+              }`}
             >
-              <Upload className="w-4 h-4 mr-2" /> Subir archivo .md o .txt
-            </Button>
+              <div className="flex items-start gap-3">
+                <div className="rounded-md bg-background p-2 border border-border">
+                  <Upload className="w-5 h-5 text-primary" />
+                </div>
+                <div className="space-y-1">
+                  <div className="text-sm font-medium text-foreground">Subir archivo Markdown</div>
+                  <p className="text-xs text-muted-foreground">
+                    Haz clic para elegir un archivo o arrastra aquí tu plan maestro.
+                  </p>
+                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                    <FileText className="w-3.5 h-3.5" />
+                    Acepta .md, .markdown y .txt
+                  </div>
+                </div>
+              </div>
+            </button>
+
             <Textarea
               value={markdown}
               onChange={(e) => setMarkdown(e.target.value)}
               placeholder={`### Fase 1: Nombre\n- [ ] Tarea uno\n- [ ] Tarea dos\n\n### Fase 2: Otra\n- [ ] Tarea tres`}
-              rows={10}
+              rows={9}
               className="text-xs font-mono"
             />
+
             <Button onClick={() => setStep("preview")} disabled={!markdown.trim()} className="w-full">
               <Eye className="w-4 h-4 mr-2" /> Vista previa
             </Button>
