@@ -238,11 +238,19 @@ Deno.serve(async (req) => {
             try {
               const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
               if (LOVABLE_API_KEY) {
+                // Convert blob to base64 in chunks to avoid stack overflow on large files
                 const arrayBuf = await audioBlob.arrayBuffer();
-                const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)));
+                const uint8Array = new Uint8Array(arrayBuf);
+                let base64Audio = "";
+                const chunkSize = 8192;
+                for (let i = 0; i < uint8Array.length; i += chunkSize) {
+                  const chunk = uint8Array.slice(i, i + chunkSize);
+                  base64Audio += btoa(String.fromCharCode(...chunk));
+                }
+                
                 const mimeForAI = mediaMimeType || "audio/ogg";
 
-                const transcribeResp = await fetch("https://api.lovable.dev/v1/chat/completions", {
+                const transcribeResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json",
@@ -251,9 +259,9 @@ Deno.serve(async (req) => {
                   body: JSON.stringify({
                     model: "google/gemini-2.5-flash",
                     messages: [
-                      { role: "system", content: "Transcribe the following audio message exactly as spoken. Return ONLY the transcription text, nothing else. If the audio is unclear or empty, return '[Audio inaudible]'." },
+                      { role: "system", content: "Transcribe the following audio message exactly as spoken in the original language. Return ONLY the transcription text, nothing else. If the audio is unclear or empty, return '[Audio inaudible]'." },
                       { role: "user", content: [
-                        { type: "input_audio", input_audio: { data: base64Audio, format: mimeForAI.includes("ogg") ? "ogg" : "wav" } },
+                        { type: "input_audio", input_audio: { data: base64Audio, format: mimeForAI.includes("ogg") ? "ogg" : mimeForAI.includes("mp4") ? "mp4" : "wav" } },
                         { type: "text", text: "Transcribe this voice note:" }
                       ] },
                     ],
@@ -268,10 +276,15 @@ Deno.serve(async (req) => {
                     audioTranscription = transcribedText;
                     content = `🎤 Nota de voz transcrita: ${transcribedText}`;
                     console.log("[WA-Webhook] Audio transcribed:", transcribedText.substring(0, 100));
+                  } else {
+                    console.log("[WA-Webhook] Audio inaudible or empty transcription");
                   }
                 } else {
-                  console.error("[WA-Webhook] Transcription API error:", transcribeResp.status);
+                  const errBody = await transcribeResp.text();
+                  console.error("[WA-Webhook] Transcription API error:", transcribeResp.status, errBody);
                 }
+              } else {
+                console.warn("[WA-Webhook] LOVABLE_API_KEY not set — skipping transcription");
               }
             } catch (transcribeErr) {
               console.error("[WA-Webhook] Transcription error:", transcribeErr);
