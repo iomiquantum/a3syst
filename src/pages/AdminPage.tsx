@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, DollarSign, Key, Rocket, BarChart3, Share2 } from "lucide-react";
+import { Building2, Users, DollarSign, Key, Rocket, BarChart3, Share2, Map } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
 import AdminClinicasTab from "@/components/admin/AdminClinicasTab";
@@ -12,6 +12,7 @@ import AdminLaunchTab from "@/components/admin/AdminLaunchTab";
 import AdminAnalyticsUnified from "@/components/admin/AdminAnalyticsUnified";
 import AdminSocialStatus from "@/components/admin/AdminSocialStatus";
 import AdminMetaURLs from "@/components/admin/AdminMetaURLs";
+import AdminRoadmapTab from "@/components/admin/AdminRoadmapTab";
 
 const AdminPage = () => {
   const { isSuperAdmin } = useClinic();
@@ -86,6 +87,9 @@ const AdminPage = () => {
               <TabsTrigger value="social" className="flex items-center gap-2">
                 <Share2 className="w-4 h-4" /> Redes Sociales
               </TabsTrigger>
+              <TabsTrigger value="roadmap" className="flex items-center gap-2">
+                <Map className="w-4 h-4" /> Roadmap
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="clinicas" className="mt-6">
               <AdminClinicasTab clinics={clinics} roles={roles} onRefresh={fetchData} />
@@ -110,6 +114,9 @@ const AdminPage = () => {
                 <AdminSocialStatus />
                 <AdminMetaURLs />
               </div>
+            </TabsContent>
+            <TabsContent value="roadmap" className="mt-6">
+              <AdminRoadmapTab />
             </TabsContent>
           </Tabs>
         )}
