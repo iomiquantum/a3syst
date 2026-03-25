@@ -225,6 +225,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
     }
 
     setInput("");
+    setAiAssisted(false);
     setSending(false);
   };
 
