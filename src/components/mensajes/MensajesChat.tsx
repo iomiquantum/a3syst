@@ -481,10 +481,13 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                   </span>
                   {m.direction === "outbound" && <MessageStatusIcon status={m.status} />}
                 </div>
-                {m.status === "failed" && (m.error_code || m.error_message) && (
-                  <div className="mt-1 rounded bg-destructive/10 border border-destructive/20 px-2 py-1">
-                    <p className="text-[10px] text-destructive font-medium">
-                      ❌ Error {m.error_code || ""}: {m.error_message || "Error desconocido de Meta"}
+                {m.status === "failed" && (
+                  <div className="mt-1 rounded bg-destructive/10 border border-destructive/20 px-2 py-1.5 space-y-0.5">
+                    <p className="text-[10px] text-destructive font-semibold flex items-center gap-1">
+                      ❌ Mensaje no entregado {m.error_code ? `(${m.error_code})` : ""}
+                    </p>
+                    <p className="text-[10px] text-destructive/80">
+                      {getWhatsAppErrorDescription(m.error_code, m.error_message)}
                     </p>
                   </div>
                 )}
