@@ -264,6 +264,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
     const stageTag = stageLabel ? ` · ${stageLabel}` : "";
 
     if (sender === "human") return { text: `👤 Humano${stageTag}`, color: "text-blue-500" };
+    if (sender === "ai_auto_s5" || sender === "ai_auto_s6") return { text: `🤖 IA respondiendo en ${stageLabel || sender.replace("ai_auto_", "").toUpperCase()}`, color: "text-purple-500" };
     if (sender === "ai_auto" || sender === "ai_agent") return { text: `🤖 ${agentName}${stageTag}`, color: "text-violet-500" };
     if (sender.startsWith("follow_up_s")) {
       const num = sender.replace("follow_up_s", "");
