@@ -1923,6 +1923,8 @@ export type Database = {
           created_at: string
           delivery_status_updated_at: string | null
           direction: string
+          error_code: string | null
+          error_message: string | null
           id: string
           media_url: string | null
           message_type: string
@@ -1938,6 +1940,8 @@ export type Database = {
           created_at?: string
           delivery_status_updated_at?: string | null
           direction?: string
+          error_code?: string | null
+          error_message?: string | null
           id?: string
           media_url?: string | null
           message_type?: string
@@ -1953,6 +1957,8 @@ export type Database = {
           created_at?: string
           delivery_status_updated_at?: string | null
           direction?: string
+          error_code?: string | null
+          error_message?: string | null
           id?: string
           media_url?: string | null
           message_type?: string
