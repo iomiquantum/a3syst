@@ -861,6 +861,57 @@ export type Database = {
           },
         ]
       }
+      chat_training_feedback: {
+        Row: {
+          ai_analysis: string | null
+          clinic_id: string
+          conversation_id: string
+          created_at: string | null
+          created_by: string | null
+          feedback_text: string
+          feedback_type: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          ai_analysis?: string | null
+          clinic_id: string
+          conversation_id: string
+          created_at?: string | null
+          created_by?: string | null
+          feedback_text: string
+          feedback_type?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          ai_analysis?: string | null
+          clinic_id?: string
+          conversation_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          feedback_text?: string
+          feedback_type?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_training_feedback_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_training_feedback_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       click_events: {
         Row: {
           created_at: string
