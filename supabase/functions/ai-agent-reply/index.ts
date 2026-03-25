@@ -622,9 +622,13 @@ REGLAS OBLIGATORIAS:
       }
       savedMsg = sendPayload;
     } else {
+      const nonWaPipelineTab = conversationData.pipeline_tab || "inbox";
+      const nonWaIsS5S6 = nonWaPipelineTab === "seguimiento_s5" || nonWaPipelineTab === "seguimiento_s6";
+      const nonWaAutoOrigin = nonWaIsS5S6 ? `ai_auto_${nonWaPipelineTab.replace("seguimiento_", "")}|${nonWaPipelineTab}` : `ai_auto|${nonWaPipelineTab}`;
+      const nonWaFollowUpOrigin = `follow_up_s${(conversationData.follow_up_count || 0) + 1}|${nonWaPipelineTab}`;
       const { data: insertedMessage, error: msgError } = await supabase.from("messages").insert({
         conversation_id, clinic_id, direction: "outbound", content: reply, message_type: "text", status: "sent",
-        origin: isFollowUp ? `follow_up_s${(conversationData.follow_up_count || 0) + 1}|${conversationData.pipeline_tab || "inbox"}` : `ai_auto|${conversationData.pipeline_tab || "inbox"}`,
+        origin: isFollowUp ? nonWaFollowUpOrigin : nonWaAutoOrigin,
       }).select().single();
       if (msgError) throw msgError;
       savedMsg = insertedMessage;
