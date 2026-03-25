@@ -299,13 +299,15 @@ serve(async (req) => {
       }
     }
 
-    // Fetch recent messages for context (last 6 to save tokens)
+    // Fetch messages for context — more when drafting/prompted
+    const contextLimit = (isDraft || custom_prompt) ? 30 : 12;
     const { data: recentMessages } = await supabase
       .from("messages")
-      .select("direction, content")
+      .select("direction, content, origin, created_at")
       .eq("conversation_id", conversation_id)
+      .not("message_type", "eq", "system_note")
       .order("created_at", { ascending: false })
-      .limit(6);
+      .limit(contextLimit);
 
     if (recentMessages) recentMessages.reverse();
 

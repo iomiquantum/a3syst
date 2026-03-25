@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, MoreVertical, PanelRightOpen, PanelRightClose, LayoutTemplate, ShieldAlert, Lock, ClipboardList, UserX, PhoneOff, RotateCcw, CalendarPlus, MessageSquareText } from "lucide-react";
+import { Send, Bot, MoreVertical, PanelRightOpen, PanelRightClose, LayoutTemplate, ShieldAlert, Lock, ClipboardList, UserX, PhoneOff, RotateCcw, CalendarPlus, MessageSquareText, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -22,6 +22,8 @@ import { useClinicTemplate } from "@/hooks/useClinicTemplate";
 import ClinicChatActions from "./ClinicChatActions";
 import AppointmentBanner from "./AppointmentBanner";
 import WhatsAppTemplateDialog from "./WhatsAppTemplateDialog";
+import ChatTrainingDialog from "./ChatTrainingDialog";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import type { PipelineConversation } from "@/hooks/useConversationsByPipeline";
 
 interface Props {
@@ -96,11 +98,13 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
   const { moveConversation } = usePipelineAction();
   const { templateSlug } = useClinicTemplate();
   const [input, setInput] = useState("");
+  const [aiAssisted, setAiAssisted] = useState(false);
   const [autopilot, setAutopilot] = useState(c.chatbot_active);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(true);
   const [sending, setSending] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [trainingOpen, setTrainingOpen] = useState(false);
   const [windowJustClosed, setWindowJustClosed] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -191,7 +195,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
             content: input.trim(),
             sent_by: user?.id || null,
             conversation_id: c.id,
-            origin: `human|${c.pipeline_tab || "inbox"}`,
+            origin: aiAssisted ? `human_ai_assisted|${c.pipeline_tab || "inbox"}` : `human|${c.pipeline_tab || "inbox"}`,
           },
         });
         if (error) throw error;
@@ -216,11 +220,12 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
         message_type: "text",
         status: "sent",
         sent_by: user?.id || null,
-        origin: `human|${c.pipeline_tab || "inbox"}`,
+        origin: aiAssisted ? `human_ai_assisted|${c.pipeline_tab || "inbox"}` : `human|${c.pipeline_tab || "inbox"}`,
       });
     }
 
     setInput("");
+    setAiAssisted(false);
     setSending(false);
   };
 
@@ -229,8 +234,9 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
     onActionComplete?.();
   };
 
-  const handleInsertText = (text: string) => {
+  const handleInsertText = (text: string, fromAI?: boolean) => {
     setInput(prev => prev + text);
+    if (fromAI) setAiAssisted(true);
     setTimeout(() => textareaRef.current?.focus(), 50);
   };
 
@@ -264,6 +270,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
     const stageTag = stageLabel ? ` · ${stageLabel}` : "";
 
     if (sender === "human") return { text: `👤 Humano${stageTag}`, color: "text-blue-500" };
+    if (sender === "human_ai_assisted") return { text: `👤✨ Humano + IA${stageTag}`, color: "text-indigo-500" };
     if (sender === "ai_auto_s5" || sender === "ai_auto_s6") return { text: `🤖 IA respondiendo en ${stageLabel || sender.replace("ai_auto_", "").toUpperCase()}`, color: "text-purple-500" };
     if (sender === "ai_auto" || sender === "ai_agent") return { text: `🤖 ${agentName}${stageTag}`, color: "text-violet-500" };
     if (sender.startsWith("follow_up_s")) {
@@ -285,7 +292,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
     setInput(e.target.value);
     const el = e.target;
     el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 120) + "px";
+    el.style.height = Math.min(el.scrollHeight, 300) + "px";
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -348,6 +355,21 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
               {showContactPanel ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
             </Button>
           )}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-violet-500 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-500/10"
+                  onClick={() => setTrainingOpen(true)}
+                >
+                  <GraduationCap className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Entrenar IA con este chat</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -648,8 +670,8 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                   value={input}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
-                  className="min-h-[40px] max-h-[120px] text-sm resize-none py-2"
-                  rows={1}
+                  className="min-h-[80px] max-h-[300px] text-sm resize-y py-2"
+                  rows={3}
                 />
               </div>
               <Button onClick={handleSend} disabled={!input.trim() || sending} size="icon" className="shrink-0 h-10 w-10">
@@ -667,6 +689,12 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
         conversationId={c.id}
         toNumber={c.contactPhone}
         contactName={c.contactName}
+      />
+      <ChatTrainingDialog
+        open={trainingOpen}
+        onOpenChange={setTrainingOpen}
+        conversationId={c.id}
+        clinicId={clinicId || ""}
       />
     </div>
   );

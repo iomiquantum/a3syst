@@ -17,7 +17,7 @@ interface SavedSnippet {
 }
 
 interface Props {
-  onInsertText: (text: string) => void;
+  onInsertText: (text: string, fromAI?: boolean) => void;
   onAttach?: (file: File) => void;
   conversationId: string;
   clinicId: string;
@@ -73,7 +73,7 @@ const ChatToolbar = ({ onInsertText, onAttach, conversationId, clinicId }: Props
 
       const reply = data?.reply || data?.content || "";
       if (reply) {
-        onInsertText(reply);
+        onInsertText(reply, true);
         toast.success("Respuesta generada — revísala antes de enviar");
       } else {
         toast.error("No se pudo generar respuesta");
@@ -191,21 +191,34 @@ const ChatToolbar = ({ onInsertText, onAttach, conversationId, clinicId }: Props
             <p className="text-xs font-semibold text-foreground mb-2">¿Qué quieres que responda la IA?</p>
             <div className="relative">
               <Textarea
-                placeholder="Ej: Respóndele que la cita es el jueves a las 3pm..."
+                placeholder={isListening ? "🎤 Escuchando... habla y tu voz se convertirá en texto aquí" : "Ej: Respóndele que la cita es el jueves a las 3pm..."}
                 value={aiPrompt}
                 onChange={e => setAiPrompt(e.target.value)}
                 className="text-xs min-h-[60px] pr-10 resize-none"
                 rows={3}
               />
               {voiceSupported && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={`absolute right-1 bottom-1 h-7 w-7 ${isListening ? "text-red-500 animate-pulse" : "text-muted-foreground"}`}
-                  onClick={toggleListening}
-                >
-                  {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-                </Button>
+                <div className="absolute right-1 bottom-1 flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-7 w-7 transition-all ${
+                      isListening
+                        ? "text-red-500 bg-red-50 dark:bg-red-500/10 ring-2 ring-red-300 ring-offset-1"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={toggleListening}
+                    title={isListening ? "Detener grabación" : "Hablar con voz"}
+                  >
+                    {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                  </Button>
+                  {isListening && (
+                    <div className="flex items-center gap-1 animate-pulse">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">Grabando...</span>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
             <div className="flex justify-end gap-2 mt-2">
