@@ -10,14 +10,16 @@ import MensajesChat from "@/components/mensajes/MensajesChat";
 import MensajesKanban from "@/components/mensajes/MensajesKanban";
 import ContactInfoPanel from "@/components/mensajes/ContactInfoPanel";
 import { useConversationsByPipeline, PipelineConversation, PipelineFilter } from "@/hooks/useConversationsByPipeline";
-import { usePipelineStats } from "@/hooks/usePipelineStats";
+import { usePipelineStats, TimeFilter } from "@/hooks/usePipelineStats";
 import { useChannelStats } from "@/hooks/useChannelStats";
 import { useTagStats } from "@/hooks/useTagStats";
 import { useClinicPipelineTabs } from "@/hooks/useClinicPipelineTabs";
 import { Period, periodToDateRange } from "@/components/mensajes/PeriodSelector";
+import { TimeSlot, getTimeSlotHours } from "@/components/mensajes/TimeSlotSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { DateRange } from "react-day-picker";
+import { startOfDay, endOfDay } from "date-fns";
 
 const VIEW_MODE_KEY = "mensajes-view-mode";
 
@@ -26,6 +28,9 @@ const MensajesPage = () => {
   const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem(VIEW_MODE_KEY) as ViewMode) || "buzon");
   const [resumenPeriod, setResumenPeriod] = useState<Period>("hoy");
   const [resumenRange, setResumenRange] = useState<DateRange | undefined>();
+  const [timeSlot, setTimeSlot] = useState<TimeSlot>("all");
+  const [customTimeStart, setCustomTimeStart] = useState("00:00");
+  const [customTimeEnd, setCustomTimeEnd] = useState("23:59");
   const [pipelinePeriod, setPipelinePeriod] = useState<Period>("max");
   const [pipelineRange, setPipelineRange] = useState<DateRange | undefined>();
   const [activeTab, setActiveTab] = useState<PipelineFilter>("todos");
@@ -49,7 +54,29 @@ const MensajesPage = () => {
     return periodToDateRange(pipelinePeriod);
   }, [pipelinePeriod, pipelineRange]);
 
-  const { tabCounts, resumenStats, loading: statsLoading, refetch: refetchStats } = usePipelineStats();
+  // Compute resumen time filter combining period + time slot
+  const resumenTimeFilter = useMemo<TimeFilter | undefined>(() => {
+    let baseDates: { from?: string; to?: string };
+    if (resumenPeriod === "rango" && resumenRange?.from) {
+      baseDates = { from: startOfDay(resumenRange.from).toISOString(), to: resumenRange.to ? endOfDay(resumenRange.to).toISOString() : endOfDay(resumenRange.from).toISOString() };
+    } else {
+      baseDates = periodToDateRange(resumenPeriod);
+    }
+    if (!baseDates.from) return undefined;
+
+    const fromDate = new Date(baseDates.from);
+    const toDate = baseDates.to ? new Date(baseDates.to) : new Date();
+    const { startHour, startMin, endHour, endMin } = getTimeSlotHours(timeSlot, customTimeStart, customTimeEnd);
+
+    if (timeSlot !== "all") {
+      fromDate.setHours(startHour, startMin, 0, 0);
+      toDate.setHours(endHour, endMin, 59, 999);
+    }
+
+    return { startDate: fromDate.toISOString(), endDate: toDate.toISOString() };
+  }, [resumenPeriod, resumenRange, timeSlot, customTimeStart, customTimeEnd]);
+
+  const { tabCounts, resumenStats, loading: statsLoading, refetch: refetchStats } = usePipelineStats(resumenTimeFilter);
   const { counts: channelCounts, total: channelTotal } = useChannelStats();
   const { tags: tagStats } = useTagStats();
   const { tabs: pipelineTabs, subFilterCounts, refetch: refetchTabs } = useClinicPipelineTabs();
@@ -164,6 +191,9 @@ const MensajesPage = () => {
             loading={statsLoading}
             period={resumenPeriod} onPeriodChange={setResumenPeriod}
             dateRange={resumenRange} onDateRangeChange={setResumenRange}
+            timeSlot={timeSlot} onTimeSlotChange={setTimeSlot}
+            customStart={customTimeStart} customEnd={customTimeEnd}
+            onCustomTimeChange={(s, e) => { setCustomTimeStart(s); setCustomTimeEnd(e); }}
           />
         </div>
 
