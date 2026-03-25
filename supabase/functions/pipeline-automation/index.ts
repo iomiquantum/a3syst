@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
 };
 
 const LOCK_STALE_MS = 4 * 60 * 1000;
@@ -294,12 +294,37 @@ async function sendWhatsAppMessageSmart(
   return { sent: true, type: "template" };
 }
 
+// === DUAL AUTH CHECK ===
+async function verifyAuth(req: Request, supabaseUrl: string): Promise<{ authorized: boolean; source: string }> {
+  const cronSecret = req.headers.get("x-cron-secret");
+  if (cronSecret && cronSecret === Deno.env.get("CRON_SECRET")) return { authorized: true, source: "cron" };
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) return { authorized: false, source: "no_header" };
+  const token = authHeader.replace("Bearer ", "");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  if (token === serviceKey) return { authorized: true, source: "service_role" };
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
+  if (token === anonKey) return { authorized: true, source: "anon_trigger" };
+  try {
+    const { createClient: cc } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const c = cc(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } });
+    const { data, error } = await c.auth.getUser();
+    if (error || !data?.user) return { authorized: false, source: "invalid_jwt" };
+    return { authorized: true, source: "user_jwt" };
+  } catch { return { authorized: false, source: "jwt_error" }; }
+}
+
 // =============== MAIN HANDLER ===============
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const auth = await verifyAuth(req, supabaseUrl);
+  if (!auth.authorized) {
+    return new Response(JSON.stringify({ error: "No autorizado" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseKey);
 

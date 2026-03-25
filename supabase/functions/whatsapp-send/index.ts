@@ -3,8 +3,28 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-cron-secret",
 };
+
+// === DUAL AUTH CHECK ===
+async function verifyAuth(req: Request, supabaseUrl: string): Promise<{ authorized: boolean; source: string }> {
+  const cronSecret = req.headers.get("x-cron-secret");
+  if (cronSecret && cronSecret === Deno.env.get("CRON_SECRET")) return { authorized: true, source: "cron" };
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) return { authorized: false, source: "no_header" };
+  const token = authHeader.replace("Bearer ", "");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  if (token === serviceKey) return { authorized: true, source: "service_role" };
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
+  if (token === anonKey) return { authorized: true, source: "anon_trigger" };
+  try {
+    const { createClient: cc } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const c = cc(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } });
+    const { data, error } = await c.auth.getUser();
+    if (error || !data?.user) return { authorized: false, source: "invalid_jwt" };
+    return { authorized: true, source: "user_jwt" };
+  } catch { return { authorized: false, source: "jwt_error" }; }
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -12,8 +32,14 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const auth = await verifyAuth(req, supabaseUrl);
+    if (!auth.authorized) {
+      return new Response(JSON.stringify({ error: "No autorizado" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
+      supabaseUrl,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
