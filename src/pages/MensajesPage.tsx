@@ -54,10 +54,29 @@ const MensajesPage = () => {
     return periodToDateRange(pipelinePeriod);
   }, [pipelinePeriod, pipelineRange]);
 
-  const { tabCounts, resumenStats, loading: statsLoading, refetch: refetchStats } = usePipelineStats();
-  const { counts: channelCounts, total: channelTotal } = useChannelStats();
-  const { tags: tagStats } = useTagStats();
-  const { tabs: pipelineTabs, subFilterCounts, refetch: refetchTabs } = useClinicPipelineTabs();
+  // Compute resumen time filter combining period + time slot
+  const resumenTimeFilter = useMemo<TimeFilter | undefined>(() => {
+    let baseDates: { from?: string; to?: string };
+    if (resumenPeriod === "rango" && resumenRange?.from) {
+      baseDates = { from: startOfDay(resumenRange.from).toISOString(), to: resumenRange.to ? endOfDay(resumenRange.to).toISOString() : endOfDay(resumenRange.from).toISOString() };
+    } else {
+      baseDates = periodToDateRange(resumenPeriod);
+    }
+    if (!baseDates.from) return undefined;
+
+    const fromDate = new Date(baseDates.from);
+    const toDate = baseDates.to ? new Date(baseDates.to) : new Date();
+    const { startHour, startMin, endHour, endMin } = getTimeSlotHours(timeSlot, customTimeStart, customTimeEnd);
+
+    if (timeSlot !== "all") {
+      fromDate.setHours(startHour, startMin, 0, 0);
+      toDate.setHours(endHour, endMin, 59, 999);
+    }
+
+    return { startDate: fromDate.toISOString(), endDate: toDate.toISOString() };
+  }, [resumenPeriod, resumenRange, timeSlot, customTimeStart, customTimeEnd]);
+
+  const { tabCounts, resumenStats, loading: statsLoading, refetch: refetchStats } = usePipelineStats(resumenTimeFilter);
 
   const { conversations, loading: convsLoading, refetch: refetchConvs } = useConversationsByPipeline({
     pipelineTab: activeTab,
