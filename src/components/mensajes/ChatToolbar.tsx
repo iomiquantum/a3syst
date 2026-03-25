@@ -198,14 +198,27 @@ const ChatToolbar = ({ onInsertText, onAttach, conversationId, clinicId }: Props
                 rows={3}
               />
               {voiceSupported && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={`absolute right-1 bottom-1 h-7 w-7 ${isListening ? "text-red-500 animate-pulse" : "text-muted-foreground"}`}
-                  onClick={toggleListening}
-                >
-                  {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-                </Button>
+                <div className="absolute right-1 bottom-1 flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-7 w-7 transition-all ${
+                      isListening
+                        ? "text-red-500 bg-red-50 dark:bg-red-500/10 ring-2 ring-red-300 ring-offset-1"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={toggleListening}
+                    title={isListening ? "Detener grabación" : "Hablar con voz"}
+                  >
+                    {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                  </Button>
+                  {isListening && (
+                    <div className="flex items-center gap-1 animate-pulse">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">Grabando...</span>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
             <div className="flex justify-end gap-2 mt-2">
