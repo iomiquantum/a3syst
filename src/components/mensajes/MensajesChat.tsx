@@ -690,6 +690,12 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
         toNumber={c.contactPhone}
         contactName={c.contactName}
       />
+      <ChatTrainingDialog
+        open={trainingOpen}
+        onOpenChange={setTrainingOpen}
+        conversationId={c.id}
+        clinicId={clinicId || ""}
+      />
     </div>
   );
 };
