@@ -195,7 +195,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
             content: input.trim(),
             sent_by: user?.id || null,
             conversation_id: c.id,
-            origin: `human|${c.pipeline_tab || "inbox"}`,
+            origin: aiAssisted ? `human_ai_assisted|${c.pipeline_tab || "inbox"}` : `human|${c.pipeline_tab || "inbox"}`,
           },
         });
         if (error) throw error;
