@@ -336,8 +336,12 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props)
         <ManualBookingDialog
           open={bookingOpen}
           onOpenChange={setBookingOpen}
-          conversation={c}
-          onComplete={() => {
+          contactId={c.contact_id}
+          contactName={c.contactName}
+          contactPhone={c.contactPhone}
+          contactEmail={c.contactEmail}
+          conversationId={c.id}
+          onBooked={() => {
             setBookingOpen(false);
             onActionComplete?.();
           }}
