@@ -506,10 +506,18 @@ REGLAS OBLIGATORIAS:
     }
 
     // Build messages array, consolidating consecutive same-role messages
-    const rawMsgs = (recentMessages || []).map((m) => ({
-      role: m.direction === "inbound" ? "user" as const : "assistant" as const,
-      content: m.content || "",
-    }));
+    // Replace [Audio] placeholders so the AI doesn't get confused about audio capability
+    const rawMsgs = (recentMessages || []).map((m) => {
+      let content = m.content || "";
+      // If it's an audio message placeholder, annotate it so AI doesn't respond about audio capability
+      if (content === "[Audio]" || m.message_type === "audio") {
+        content = "(el cliente envió un mensaje de voz que ya fue procesado)";
+      }
+      return {
+        role: m.direction === "inbound" ? "user" as const : "assistant" as const,
+        content,
+      };
+    });
 
     const consolidatedMsgs: { role: string; content: string }[] = [];
     for (const msg of rawMsgs) {
