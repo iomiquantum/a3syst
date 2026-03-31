@@ -13,6 +13,7 @@ import AdminAnalyticsUnified from "@/components/admin/AdminAnalyticsUnified";
 import AdminSocialStatus from "@/components/admin/AdminSocialStatus";
 import AdminMetaURLs from "@/components/admin/AdminMetaURLs";
 import AdminRoadmapTab from "@/components/admin/AdminRoadmapTab";
+import AdminAIConsumption from "@/components/admin/AdminAIConsumption";
 
 const AdminPage = () => {
   const { isSuperAdmin } = useClinic();
