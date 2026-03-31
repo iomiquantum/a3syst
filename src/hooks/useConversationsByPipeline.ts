@@ -143,7 +143,9 @@ export const useConversationsByPipeline = (params: Params) => {
       const q = params.searchQuery.toLowerCase();
       mapped = mapped.filter((c) =>
         c.contactName.toLowerCase().includes(q) ||
-        c.contactPhone.toLowerCase().includes(q)
+        c.contactPhone.toLowerCase().includes(q) ||
+        c.contactEmail.toLowerCase().includes(q) ||
+        c.last_message_preview.toLowerCase().includes(q)
       );
     }
 
