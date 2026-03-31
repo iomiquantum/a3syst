@@ -508,7 +508,7 @@ async function syncToUnifiedMessaging(
           last_inbound_at: nowIso,
           last_client_message_at: nowIso,
           follow_up_count: 0,
-          pipeline_tab: "resueltos_ia",
+          pipeline_tab: "nuevos",
         })
         .select("id")
         .single();
