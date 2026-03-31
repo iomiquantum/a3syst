@@ -921,6 +921,19 @@ Reglas:
 
             if (extractResp.ok) {
               const extractData = await extractResp.json();
+              // Log extraction usage
+              try {
+                const eUsage = extractData.usage;
+                const eIn = eUsage?.prompt_tokens || 0;
+                const eOut = eUsage?.completion_tokens || 0;
+                const eCost = (eIn * 0.075 + eOut * 0.30) / 1_000_000;
+                await supabase.from("ai_token_usage").insert({
+                  clinic_id, user_id: null,
+                  generator_type: "agent_extraction", model: "google/gemini-2.5-flash-lite",
+                  tokens_input: eIn, tokens_output: eOut, cost_usd: eCost,
+                  action_label: "Extracción datos de contacto",
+                });
+              } catch (logErr) { console.error("[EXTRACT] Usage log error:", logErr); }
               const toolCall = extractData.choices?.[0]?.message?.tool_calls?.[0];
               if (toolCall?.function?.arguments) {
                 const parsed = JSON.parse(toolCall.function.arguments);
