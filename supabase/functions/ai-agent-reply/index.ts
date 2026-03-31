@@ -328,8 +328,9 @@ serve(async (req) => {
       }
     }
 
-    // Fetch messages for context — more when drafting/prompted
-    const contextLimit = (isDraft || custom_prompt) ? 30 : 12;
+    // Fetch messages for context — truncated to prevent token overflow
+    // Draft/custom gets more context, normal gets last 20 messages max
+    const contextLimit = (isDraft || custom_prompt) ? 30 : 20;
     const { data: recentMessages } = await supabase
       .from("messages")
       .select("direction, content, origin, created_at, message_type")
