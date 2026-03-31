@@ -332,7 +332,7 @@ serve(async (req) => {
     const contextLimit = (isDraft || custom_prompt) ? 30 : 12;
     const { data: recentMessages } = await supabase
       .from("messages")
-      .select("direction, content, origin, created_at")
+      .select("direction, content, origin, created_at, message_type")
       .eq("conversation_id", conversation_id)
       .not("message_type", "eq", "system_note")
       .order("created_at", { ascending: false })
