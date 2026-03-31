@@ -60,7 +60,13 @@ const MarketingPage = () => {
       case "tokens":
         return <TokenAPIsTab />;
       case "integraciones":
-        return <ChannelSetupWizard />;
+        return (
+          <div className="p-8 text-center text-muted-foreground">
+            <Link2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
+            <p className="font-medium">Integraciones</p>
+            <p className="text-sm mt-1">Configura tus integraciones desde la sección de canales</p>
+          </div>
+        );
       case "agente_ia":
         return (
           <div className="p-8 text-center text-muted-foreground">
