@@ -13,7 +13,6 @@ import DifusionesTab from "@/components/marketing/DifusionesTab";
 import AudienciasTab from "@/components/marketing/AudienciasTab";
 import MarketingContactsTab from "@/components/marketing/MarketingContactsTab";
 import TokenAPIsTab from "@/components/marketing/TokenAPIsTab";
-import ChannelSetupWizard from "@/components/marketing/ChannelSetupWizard";
 
 interface NavItem {
   key: string;
