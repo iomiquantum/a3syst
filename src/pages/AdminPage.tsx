@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, DollarSign, Key, Rocket, BarChart3, Share2, Map } from "lucide-react";
+import { Building2, Users, DollarSign, Key, Rocket, BarChart3, Share2, Map, Brain } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
 import AdminClinicasTab from "@/components/admin/AdminClinicasTab";
