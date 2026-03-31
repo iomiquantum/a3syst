@@ -508,6 +508,7 @@ El paciente responde: "${patient_message}"
 Responde SOLO JSON: { "intent": "CONFIRMED|CANCEL|RESCHEDULE|OTHER" }`;
 
       const aiResp = await callAI(LOVABLE_API_KEY, detectPrompt, "Analiza la intención.");
+      await logAppointmentFlowUsage(supabase, clinic_id, "Detección respuesta a cita");
       let parsed: any = { intent: "OTHER" };
       try {
         const cleaned = aiResp.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
