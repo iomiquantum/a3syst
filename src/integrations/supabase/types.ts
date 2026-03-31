@@ -951,6 +951,53 @@ export type Database = {
         }
         Relationships: []
       }
+      clinic_activity_log: {
+        Row: {
+          action: string
+          clinic_id: string
+          created_at: string | null
+          details: Json | null
+          entity_id: string | null
+          entity_name: string | null
+          entity_type: string
+          id: string
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          action: string
+          clinic_id: string
+          created_at?: string | null
+          details?: Json | null
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type: string
+          id?: string
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          action?: string
+          clinic_id?: string
+          created_at?: string | null
+          details?: Json | null
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type?: string
+          id?: string
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_activity_log_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinic_brand_styles: {
         Row: {
           clinic_id: string
@@ -1110,6 +1157,50 @@ export type Database = {
           },
         ]
       }
+      clinic_trash: {
+        Row: {
+          clinic_id: string
+          deleted_at: string | null
+          deleted_by: string | null
+          entity_data: Json
+          entity_id: string
+          entity_name: string | null
+          entity_type: string
+          expires_at: string | null
+          id: string
+        }
+        Insert: {
+          clinic_id: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          entity_data: Json
+          entity_id: string
+          entity_name?: string | null
+          entity_type: string
+          expires_at?: string | null
+          id?: string
+        }
+        Update: {
+          clinic_id?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          entity_data?: Json
+          entity_id?: string
+          entity_name?: string | null
+          entity_type?: string
+          expires_at?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_trash_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinics: {
         Row: {
           additional_info: string | null
@@ -1118,10 +1209,19 @@ export type Database = {
           business_type: string
           city: string | null
           closing_hour: string | null
+          consent_text: string | null
           created_at: string
           description: string | null
+          facebook_pixel_id: string | null
+          google_analytics_id: string | null
+          google_tag_manager_id: string | null
           id: string
+          landing_hero_subtitle: string | null
+          landing_hero_title: string | null
+          landing_testimonials: Json | null
+          landing_visibility: Json | null
           logo_url: string | null
+          marketing_goals: Json | null
           monthly_token_budget_usd: number | null
           name: string
           onboarding_completed: boolean | null
@@ -1144,10 +1244,19 @@ export type Database = {
           business_type?: string
           city?: string | null
           closing_hour?: string | null
+          consent_text?: string | null
           created_at?: string
           description?: string | null
+          facebook_pixel_id?: string | null
+          google_analytics_id?: string | null
+          google_tag_manager_id?: string | null
           id?: string
+          landing_hero_subtitle?: string | null
+          landing_hero_title?: string | null
+          landing_testimonials?: Json | null
+          landing_visibility?: Json | null
           logo_url?: string | null
+          marketing_goals?: Json | null
           monthly_token_budget_usd?: number | null
           name: string
           onboarding_completed?: boolean | null
@@ -1170,10 +1279,19 @@ export type Database = {
           business_type?: string
           city?: string | null
           closing_hour?: string | null
+          consent_text?: string | null
           created_at?: string
           description?: string | null
+          facebook_pixel_id?: string | null
+          google_analytics_id?: string | null
+          google_tag_manager_id?: string | null
           id?: string
+          landing_hero_subtitle?: string | null
+          landing_hero_title?: string | null
+          landing_testimonials?: Json | null
+          landing_visibility?: Json | null
           logo_url?: string | null
+          marketing_goals?: Json | null
           monthly_token_budget_usd?: number | null
           name?: string
           onboarding_completed?: boolean | null
@@ -1759,6 +1877,213 @@ export type Database = {
           utm_source?: string | null
         }
         Relationships: []
+      }
+      marketing_audiences: {
+        Row: {
+          clinic_id: string
+          contact_count: number | null
+          created_at: string | null
+          description: string | null
+          estimated_count: number | null
+          filters: Json | null
+          id: string
+          last_updated_at: string | null
+          name: string
+          status: string | null
+          type: string | null
+        }
+        Insert: {
+          clinic_id: string
+          contact_count?: number | null
+          created_at?: string | null
+          description?: string | null
+          estimated_count?: number | null
+          filters?: Json | null
+          id?: string
+          last_updated_at?: string | null
+          name: string
+          status?: string | null
+          type?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          contact_count?: number | null
+          created_at?: string | null
+          description?: string | null
+          estimated_count?: number | null
+          filters?: Json | null
+          id?: string
+          last_updated_at?: string | null
+          name?: string
+          status?: string | null
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_audiences_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_broadcasts: {
+        Row: {
+          audience_id: string | null
+          channel: string | null
+          clinic_id: string
+          created_at: string | null
+          created_by: string | null
+          delivered_count: number | null
+          failed_count: number | null
+          id: string
+          name: string
+          read_count: number | null
+          scheduled_at: string | null
+          sent_at: string | null
+          status: string | null
+          template_language: string | null
+          template_name: string | null
+          total_recipients: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          audience_id?: string | null
+          channel?: string | null
+          clinic_id: string
+          created_at?: string | null
+          created_by?: string | null
+          delivered_count?: number | null
+          failed_count?: number | null
+          id?: string
+          name: string
+          read_count?: number | null
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string | null
+          template_language?: string | null
+          template_name?: string | null
+          total_recipients?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          audience_id?: string | null
+          channel?: string | null
+          clinic_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          delivered_count?: number | null
+          failed_count?: number | null
+          id?: string
+          name?: string
+          read_count?: number | null
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string | null
+          template_language?: string | null
+          template_name?: string | null
+          total_recipients?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_broadcasts_audience_id_fkey"
+            columns: ["audience_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_audiences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_broadcasts_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_fragments: {
+        Row: {
+          clinic_id: string
+          content: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          name: string
+          scope: string | null
+          type: string | null
+          updated_at: string | null
+          usage_count: number | null
+        }
+        Insert: {
+          clinic_id: string
+          content: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name: string
+          scope?: string | null
+          type?: string | null
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Update: {
+          clinic_id?: string
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name?: string
+          scope?: string | null
+          type?: string | null
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_fragments_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_tags: {
+        Row: {
+          clinic_id: string
+          color: string | null
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          clinic_id: string
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_tags_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       meeting_bots: {
         Row: {
@@ -2379,6 +2704,44 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pipeline_stages: {
+        Row: {
+          clinic_id: string
+          color: string | null
+          created_at: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          position: number
+        }
+        Insert: {
+          clinic_id: string
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          position?: number
+        }
+        Update: {
+          clinic_id?: string
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_stages_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
