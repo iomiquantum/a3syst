@@ -360,13 +360,11 @@ Deno.serve(async (req) => {
                 .eq("enabled", true)
                 .maybeSingle();
 
-              if (agentConfig && channelConfig) {
+              if (agentConfig && channelConfig && unifiedConvId) {
                 const { data: unifiedConv } = await supabase
                   .from("conversations")
                   .select("id, chatbot_active")
-                  .eq("clinic_id", clinicId)
-                  .eq("channel", "whatsapp")
-                  .eq("visitor_contact", contactPhone)
+                  .eq("id", unifiedConvId)
                   .maybeSingle();
 
                 if (unifiedConv && unifiedConv.chatbot_active !== false) {
@@ -425,7 +423,7 @@ Deno.serve(async (req) => {
                   );
 
                   const agentResult = await agentResponse.json().catch(() => null);
-                  console.log("[WA-Webhook] AI Agent response:", agentResult?.reply ? "OK" : "no reply");
+                  console.log("[WA-Webhook] AI Agent response:", agentResult?.reply ? "OK" : agentResult?.reason || "no reply");
                 }
               }
             } catch (agentError) {
@@ -464,15 +462,16 @@ async function syncToUnifiedMessaging(
 ): Promise<{ conversationId: string; isNew: boolean } | null> {
   try {
     let contactId: string | null = null;
-    const { data: existingContact } = await supabase
+    const { data: existingContacts } = await supabase
       .from("contacts")
-      .select("id")
+      .select("id, updated_at")
       .eq("clinic_id", clinicId)
       .or(`phone.eq.${contactPhone},phone.eq.+${contactPhone}`)
-      .maybeSingle();
+      .order("updated_at", { ascending: false })
+      .limit(1);
 
-    if (existingContact) {
-      contactId = existingContact.id;
+    if (existingContacts?.[0]) {
+      contactId = existingContacts[0].id;
     } else {
       const { data: newContact } = await supabase
         .from("contacts")
@@ -484,14 +483,16 @@ async function syncToUnifiedMessaging(
 
     if (!contactId) return null;
 
-    const { data: existingConv } = await supabase
+    const { data: existingConversations } = await supabase
       .from("conversations")
-      .select("id")
+      .select("id, unread_count, chatbot_active, escalado_reason")
       .eq("clinic_id", clinicId)
       .eq("contact_id", contactId)
       .eq("channel", "whatsapp")
-      .maybeSingle();
+      .order("updated_at", { ascending: false })
+      .limit(1);
 
+    const existingConv = existingConversations?.[0] || null;
     let conversationId = existingConv?.id;
     let isNew = false;
     const nowIso = new Date().toISOString();
@@ -514,11 +515,14 @@ async function syncToUnifiedMessaging(
         .single();
       conversationId = newConv?.id;
     } else {
-      const { data: convData } = await supabase.from("conversations").select("unread_count").eq("id", conversationId).single();
-      await supabase.from("conversations").update({
+      const shouldRecoverAutoEscalatedChatbot =
+        existingConv.chatbot_active === false &&
+        existingConv.escalado_reason === "El flujo de agendamiento no pudo completarse después de múltiples intentos.";
+
+      const updatePayload: Record<string, unknown> = {
         last_message_at: nowIso,
         last_message_preview: content.substring(0, 100),
-        unread_count: (convData?.unread_count || 0) + 1,
+        unread_count: (existingConv.unread_count || 0) + 1,
         status: "open",
         last_inbound_at: nowIso,
         last_client_message_at: nowIso,
@@ -526,7 +530,20 @@ async function syncToUnifiedMessaging(
         whatsapp_window_blocked_at: null,
         whatsapp_window_blocked_reason: null,
         follow_up_count: 0,
-      }).eq("id", conversationId);
+      };
+
+      if (shouldRecoverAutoEscalatedChatbot) {
+        Object.assign(updatePayload, {
+          chatbot_active: true,
+          escalado_at: null,
+          escalado_reason: null,
+          appointment_flow_active: false,
+          appointment_flow_step: null,
+          appointment_flow_data: {},
+        });
+      }
+
+      await supabase.from("conversations").update(updatePayload).eq("id", conversationId);
     }
 
     if (conversationId) {
