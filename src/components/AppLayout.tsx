@@ -296,6 +296,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
           </button>
           <div className="hidden lg:block" />
           <div className="flex items-center gap-3">
+            <CopilotButton />
             <div className="hidden md:flex items-center gap-2.5">
               <Avatar className="w-7 h-7">
                 <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-[9px] font-bold">
