@@ -848,6 +848,16 @@ const MiNegocioPage = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="branding" className="mt-4">
+            {clinic && <BrandingSection clinicId={clinic.id} />}
+          </TabsContent>
+          <TabsContent value="avanzado" className="mt-4">
+            {clinic && <AvanzadoSection clinicId={clinic.id} />}
+          </TabsContent>
+          <TabsContent value="actividad" className="mt-4">
+            {clinic && <ActividadSection clinicId={clinic.id} />}
+          </TabsContent>
         </Tabs>
       </div>
     </AppLayout>
