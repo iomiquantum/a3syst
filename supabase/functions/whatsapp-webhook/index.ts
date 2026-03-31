@@ -279,6 +279,19 @@ Deno.serve(async (req) => {
                   } else {
                     console.log("[WA-Webhook] Audio inaudible or empty transcription");
                   }
+                  // Log voice transcription usage
+                  try {
+                    const tUsage = transcribeData.usage;
+                    const tIn = tUsage?.prompt_tokens || 0;
+                    const tOut = tUsage?.completion_tokens || 0;
+                    const tCost = (tIn * 0.15 + tOut * 0.60) / 1_000_000;
+                    await supabase.from("ai_token_usage").insert({
+                      clinic_id: clinicId, user_id: null,
+                      generator_type: "voice_transcription", model: "google/gemini-2.5-flash",
+                      tokens_input: tIn, tokens_output: tOut, cost_usd: tCost,
+                      action_label: "Transcripción de voz WhatsApp",
+                    });
+                  } catch (logErr) { console.error("[WA-Webhook] Usage log error:", logErr); }
                 } else {
                   const errBody = await transcribeResp.text();
                   console.error("[WA-Webhook] Transcription API error:", transcribeResp.status, errBody);

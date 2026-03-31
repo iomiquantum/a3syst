@@ -754,6 +754,19 @@ Si es "fully_informed", genera un resumen de 2-3 líneas del contexto.`,
 
         if (dispositionResp.ok) {
           const dispositionData = await dispositionResp.json();
+          // Log disposition analysis usage
+          try {
+            const dUsage = dispositionData.usage;
+            const dIn = dUsage?.prompt_tokens || 0;
+            const dOut = dUsage?.completion_tokens || 0;
+            const dCost = (dIn * 0.075 + dOut * 0.30) / 1_000_000; // flash-lite pricing
+            await supabase.from("ai_token_usage").insert({
+              clinic_id, user_id: null,
+              generator_type: "agent_disposition", model: "google/gemini-2.5-flash-lite",
+              tokens_input: dIn, tokens_output: dOut, cost_usd: dCost,
+              action_label: "Análisis de disposición del contacto",
+            });
+          } catch (logErr) { console.error("[DISPOSITION] Usage log error:", logErr); }
           const toolCall = dispositionData.choices?.[0]?.message?.tool_calls?.[0];
           if (toolCall?.function?.arguments) {
             const parsed = JSON.parse(toolCall.function.arguments);
