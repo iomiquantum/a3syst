@@ -265,61 +265,67 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   );
 
   return (
-    <div className="min-h-screen flex bg-background">
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setMobileOpen(false)} />
-      )}
+    <CopilotProvider>
+      <TooltipProvider>
+        <div className="min-h-screen flex bg-background">
+          {/* Mobile overlay */}
+          {mobileOpen && (
+            <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setMobileOpen(false)} />
+          )}
 
-      {/* Mobile drawer */}
-      <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 w-[260px] bg-sidebar transform transition-transform duration-300 lg:hidden",
-        mobileOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-        {sidebarContent}
-      </aside>
+          {/* Mobile drawer */}
+          <aside className={cn(
+            "fixed inset-y-0 left-0 z-50 w-[260px] bg-sidebar transform transition-transform duration-300 lg:hidden",
+            mobileOpen ? "translate-x-0" : "-translate-x-full"
+          )}>
+            {sidebarContent}
+          </aside>
 
-      {/* Desktop sidebar */}
-      <aside className={cn(
-        "hidden lg:flex h-screen sticky top-0 flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300",
-        collapsed ? "w-[60px]" : "w-[240px]"
-      )}>
-        {sidebarContent}
-      </aside>
+          {/* Desktop sidebar */}
+          <aside className={cn(
+            "hidden lg:flex h-screen sticky top-0 flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300",
+            collapsed ? "w-[60px]" : "w-[240px]"
+          )}>
+            {sidebarContent}
+          </aside>
 
-      {/* Main */}
-      <div className="flex-1 flex flex-col min-h-screen min-w-0">
-        {/* Top bar */}
-        <header className="h-14 bg-card/80 backdrop-blur-xl border-b border-border flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30">
-          <button className="lg:hidden p-2 -ml-2 text-muted-foreground hover:text-foreground" onClick={() => setMobileOpen(true)}>
-            <Menu className="w-5 h-5" />
-          </button>
-          <div className="hidden lg:block" />
-          <div className="flex items-center gap-3">
-            <CopilotButton />
-            <div className="hidden md:flex items-center gap-2.5">
-              <Avatar className="w-7 h-7">
-                <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-[9px] font-bold">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-sm text-muted-foreground">{userName}</span>
-            </div>
+          {/* Main */}
+          <div className="flex-1 flex flex-col min-h-screen min-w-0">
+            {/* Top bar */}
+            <header className="h-14 bg-card/80 backdrop-blur-xl border-b border-border flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30">
+              <button className="lg:hidden p-2 -ml-2 text-muted-foreground hover:text-foreground" onClick={() => setMobileOpen(true)}>
+                <Menu className="w-5 h-5" />
+              </button>
+              <div className="hidden lg:block" />
+              <div className="flex items-center gap-3">
+                <CopilotButton />
+                <div className="hidden md:flex items-center gap-2.5">
+                  <Avatar className="w-7 h-7">
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-[9px] font-bold">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm text-muted-foreground">{userName}</span>
+                </div>
+              </div>
+            </header>
+            <main className="flex-1 p-4 lg:p-6 text-foreground">{children}</main>
           </div>
-        </header>
-        <main className="flex-1 p-4 lg:p-6 text-foreground">{children}</main>
-      </div>
 
-      {/* Help system */}
-      <HelpButton onClick={() => setHelpOpen(true)} />
-      <HelpPanel
-        open={helpOpen}
-        onClose={() => setHelpOpen(false)}
-        content={helpContent}
-        onStartTour={() => {/* Tour hidden until app approved */}}
-      />
-      {/* GuidedTour hidden until Meta app is approved */}
-    </div>
+          {/* Copilot panel */}
+          <CopilotPanel />
+
+          {/* Help system */}
+          <HelpButton onClick={() => setHelpOpen(true)} />
+          <HelpPanel
+            open={helpOpen}
+            onClose={() => setHelpOpen(false)}
+            content={helpContent}
+            onStartTour={() => {/* Tour hidden until app approved */}}
+          />
+        </div>
+      </TooltipProvider>
+    </CopilotProvider>
   );
 };
 
