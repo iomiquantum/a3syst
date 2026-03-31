@@ -87,7 +87,11 @@ serve(async (req) => {
     if (conversationError || !conversationData) throw conversationError || new Error("Conversation not found");
 
     // ====== APPOINTMENT FLOW: If active, delegate to appointment-flow function ======
-    if (conversationData.appointment_flow_active && !isDraft && !isFollowUp) {
+    const appointmentFlowEnabledForConversation =
+      conversationData.appointment_flow_active &&
+      conversationData.pipeline_tab === "agendados";
+
+    if (appointmentFlowEnabledForConversation && !isDraft && !isFollowUp) {
       // Get the latest inbound message
       const { data: lastInbound } = await supabase
         .from("messages")
