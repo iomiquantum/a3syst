@@ -143,6 +143,7 @@ Responde SOLO JSON válido:
 }`;
 
       const aiResp = await callAI(LOVABLE_API_KEY, detectPrompt, "Analiza el mensaje.");
+      await logAppointmentFlowUsage(supabase, clinic_id, "Detección de intención de cita");
       let parsed: any = {};
       try {
         const cleaned = aiResp.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
