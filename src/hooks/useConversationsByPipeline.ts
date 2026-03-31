@@ -2,24 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
 
-export type PipelineTab =
-  | "resueltos_ia"
-  | "seguimiento_s1"
-  | "seguimiento_s2"
-  | "seguimiento_s3"
-  | "seguimiento_s4"
-  | "seguimiento_s5"
-  | "seguimiento_s6"
-  | "no_responden"
-  | "no_interesado"
-  | "escalados"
-  | "agendados"
-  | "no_show"
-  | "show_sin_venta"
-  | "pacientes"
-  | "perdidos";
-
-export type PipelineFilter = "todos" | PipelineTab;
+export type PipelineFilter = string;
 
 export interface PipelineConversation {
   id: string;
@@ -32,7 +15,7 @@ export interface PipelineConversation {
   last_outbound_status: string | null;
   unread_count: number;
   chatbot_active: boolean;
-  pipeline_tab: PipelineTab;
+  pipeline_tab: string;
   seguimiento_contact_number: number;
   seguimiento_is_recurrente: boolean;
   seguimiento_recurrente_count: number;
@@ -73,11 +56,6 @@ interface Params {
   subFilter?: string;
 }
 
-const ALL_SEGUIMIENTO_TABS = [
-  "seguimiento_s1", "seguimiento_s2", "seguimiento_s3", "seguimiento_s4", "seguimiento_s5",
-  "seguimiento_s6",
-];
-
 export const useConversationsByPipeline = (params: Params) => {
   const { clinicId } = useClinic();
   const [conversations, setConversations] = useState<PipelineConversation[]>([]);
@@ -95,20 +73,7 @@ export const useConversationsByPipeline = (params: Params) => {
       .order("last_message_at", { ascending: false });
 
     if (params.pipelineTab !== "todos") {
-      if (params.pipelineTab === "seguimiento_s1") {
-        if (params.subFilter && params.subFilter !== "todos") {
-          query = query.eq("pipeline_tab", params.subFilter);
-        } else {
-          query = query.in("pipeline_tab", ALL_SEGUIMIENTO_TABS);
-        }
-      } else if (params.pipelineTab === "agendados") {
-        query = query.eq("pipeline_tab", "agendados");
-        if (params.subFilter && params.subFilter !== "todos") {
-          query = query.eq("appointment_status", params.subFilter);
-        }
-      } else {
-        query = query.eq("pipeline_tab", params.pipelineTab);
-      }
+      query = query.eq("pipeline_tab", params.pipelineTab);
     }
 
     if (params.channel !== "todos") {
@@ -140,7 +105,7 @@ export const useConversationsByPipeline = (params: Params) => {
       last_outbound_status: null,
       unread_count: c.unread_count || 0,
       chatbot_active: c.chatbot_active,
-      pipeline_tab: c.pipeline_tab || "resueltos_ia",
+      pipeline_tab: c.pipeline_tab || "nuevos",
       seguimiento_contact_number: c.seguimiento_contact_number || 0,
       seguimiento_is_recurrente: c.seguimiento_is_recurrente || false,
       seguimiento_recurrente_count: c.seguimiento_recurrente_count || 0,

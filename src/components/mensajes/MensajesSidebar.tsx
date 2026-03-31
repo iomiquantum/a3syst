@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Search, Archive } from "lucide-react";
+import { Search, Archive, ChevronDown, ChevronRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { EMBUDO_STAGES } from "@/hooks/useClinicPipelineTabs";
+import type { PipelineTab } from "@/hooks/useClinicPipelineTabs";
 
 interface TagStat {
   tag: string;
@@ -21,6 +23,10 @@ interface Props {
   onTagsChange: (tags: string[]) => void;
   showArchived: boolean;
   onShowArchivedChange: (v: boolean) => void;
+  // Embudo
+  embudoTabs: PipelineTab[];
+  activeEmbudoKey: string;
+  onEmbudoChange: (key: string) => void;
 }
 
 const CHANNELS = [
@@ -32,8 +38,42 @@ const CHANNELS = [
   { key: "tiktok", label: "TikTok", connected: false },
 ];
 
-const MensajesSidebar = ({ channelCounts, totalConversations, tagStats, selectedChannel, onChannelChange, selectedTags, onTagsChange, showArchived, onShowArchivedChange }: Props) => {
+const STAGE_COLOR_MAP: Record<string, string> = {
+  nuevos: "bg-gray-400",
+  ads: "bg-blue-500",
+  contacto_1: "bg-blue-500",
+  contacto_2: "bg-blue-500",
+  contacto_3: "bg-blue-500",
+  no_responden: "bg-blue-500",
+  no_interesado: "bg-blue-500",
+  pidio_info: "bg-blue-500",
+  interesada: "bg-blue-500",
+  por_agendar: "bg-blue-500",
+  agendado: "bg-emerald-500",
+  paciente_1ra_visita: "bg-blue-500",
+  paciente_tratamiento: "bg-blue-500",
+  otras_ciudades: "bg-blue-500",
+  error_sistema_inicial: "bg-blue-500",
+  notas_de_voz: "bg-gray-400",
+  new_lead: "bg-gray-400",
+  citas_por_recordar: "bg-blue-500",
+  test_audiencia: "bg-blue-500",
+  informacion_otras_clinicas: "bg-blue-500",
+  vitalscan_1: "bg-blue-500",
+  vitalscan_2: "bg-blue-500",
+  vitalscan_3: "bg-blue-500",
+  no_asistio: "bg-blue-500",
+};
+
+const MensajesSidebar = ({
+  channelCounts, totalConversations, tagStats,
+  selectedChannel, onChannelChange,
+  selectedTags, onTagsChange,
+  showArchived, onShowArchivedChange,
+  embudoTabs, activeEmbudoKey, onEmbudoChange,
+}: Props) => {
   const [tagSearch, setTagSearch] = useState("");
+  const [embudoExpanded, setEmbudoExpanded] = useState(true);
 
   const getChannelCount = (ch: string) => {
     if (ch === "todos") return totalConversations;
@@ -54,9 +94,62 @@ const MensajesSidebar = ({ channelCounts, totalConversations, tagStats, selected
 
   const TAG_COLORS = ["bg-violet-400", "bg-blue-400", "bg-emerald-400", "bg-amber-400", "bg-pink-400", "bg-cyan-400", "bg-orange-400"];
 
+  // Embudo stages (skip "todos" — it's handled by the "Todos" button at top)
+  const embudoStages = embudoTabs.filter(t => t.key !== "todos");
+
   return (
     <ScrollArea className="h-full">
       <div className="p-3 space-y-4">
+        {/* Todos */}
+        <button
+          onClick={() => onEmbudoChange("todos")}
+          className={cn(
+            "w-full text-left px-2.5 py-2 rounded-md text-sm flex items-center justify-between transition-colors font-medium",
+            activeEmbudoKey === "todos" ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"
+          )}
+        >
+          <span>Todos</span>
+          <span className="text-xs text-muted-foreground">{totalConversations}</span>
+        </button>
+
+        <div className="border-t border-border" />
+
+        {/* ETAPAS DEL EMBUDO */}
+        <div>
+          <button
+            onClick={() => setEmbudoExpanded(!embudoExpanded)}
+            className="w-full flex items-center justify-between px-1 mb-2"
+          >
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Etapas del Embudo</p>
+            {embudoExpanded ? <ChevronDown className="w-3 h-3 text-muted-foreground" /> : <ChevronRight className="w-3 h-3 text-muted-foreground" />}
+          </button>
+          {embudoExpanded && (
+            <div className="space-y-0.5">
+              {embudoStages.map(stage => {
+                const dotColor = STAGE_COLOR_MAP[stage.key] || "bg-blue-500";
+                return (
+                  <button
+                    key={stage.key}
+                    onClick={() => onEmbudoChange(stage.key)}
+                    className={cn(
+                      "w-full text-left px-2.5 py-1.5 rounded-md text-xs flex items-center justify-between transition-colors",
+                      activeEmbudoKey === stage.key ? "bg-primary/10 text-primary font-medium" : "text-foreground hover:bg-muted"
+                    )}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={cn("w-2 h-2 rounded-full shrink-0", dotColor)} />
+                      <span className="truncate">{stage.label}</span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground ml-2 shrink-0">{stage.count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-border" />
+
         {/* Canales */}
         <div>
           <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Canales</p>
