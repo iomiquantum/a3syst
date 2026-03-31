@@ -116,7 +116,30 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
     : false;
   const isWhatsAppBlocked = c.channel === "whatsapp" && (Boolean((c as any).whatsapp_window_blocked) || windowExpiredByTime || windowJustClosed);
 
-  // Fetch real messages
+  // Notification sound ref
+  const notifAudioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    // Create a simple notification beep using AudioContext
+    notifAudioRef.current = null; // We'll use AudioContext instead
+  }, []);
+
+  const playNotificationSound = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 800;
+      osc.type = "sine";
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.3);
+    } catch {}
+  };
+
+  // Fetch real messages — paginated (last 100)
   useEffect(() => {
     const fetchMessages = async () => {
       setLoadingMsgs(true);
@@ -124,8 +147,9 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
         .from("messages")
         .select("*")
         .eq("conversation_id", c.id)
-        .order("created_at", { ascending: true });
-      if (!error) setMessages((data || []) as ChatMessage[]);
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (!error) setMessages(((data || []) as ChatMessage[]).reverse());
       setLoadingMsgs(false);
     };
     fetchMessages();
@@ -138,10 +162,15 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
         table: "messages",
         filter: `conversation_id=eq.${c.id}`,
       }, (payload) => {
+        const newMsg = payload.new as ChatMessage;
         setMessages(prev => {
-          if (prev.some(m => m.id === (payload.new as any).id)) return prev;
-          return [...prev, payload.new as ChatMessage];
+          if (prev.some(m => m.id === newMsg.id)) return prev;
+          return [...prev, newMsg];
         });
+        // Play sound for inbound messages
+        if (newMsg.direction === "inbound") {
+          playNotificationSound();
+        }
       })
       .on("postgres_changes", {
         event: "UPDATE",
