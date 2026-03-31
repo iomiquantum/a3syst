@@ -1,43 +1,48 @@
 import { useState } from "react";
-import { Search, Download, Upload, UserPlus } from "lucide-react";
+import { Search, Download, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
-interface MarketingContact {
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-  source: string;
-  stage: string;
-  tags: string[];
-  lastActivity: string;
-}
-
-const mockContacts: MarketingContact[] = [
-  { id: "1", name: "Ana García", phone: "+54 11 1234-5678", email: "ana@email.com", source: "WhatsApp", stage: "Interesado", tags: ["ortodoncia"], lastActivity: "Hace 2h" },
-  { id: "2", name: "Carlos Pérez", phone: "+54 11 9876-5432", email: "carlos@email.com", source: "Web Widget", stage: "Nuevo", tags: ["implantes", "urgente"], lastActivity: "Hace 1d" },
-  { id: "3", name: "María López", phone: "+54 11 5555-1234", email: "maria@email.com", source: "Instagram", stage: "Contactado", tags: ["blanqueamiento"], lastActivity: "Hace 3d" },
-  { id: "4", name: "Juan Rodríguez", phone: "+54 11 4444-9876", email: "juan@email.com", source: "Referido", stage: "Cita agendada", tags: [], lastActivity: "Hace 5h" },
-  { id: "5", name: "Laura Fernández", phone: "+54 11 3333-6789", email: "laura@email.com", source: "WhatsApp", stage: "Convertido", tags: ["ortodoncia", "vip"], lastActivity: "Hace 1h" },
-];
+import { supabase } from "@/integrations/supabase/client";
+import { useClinic } from "@/hooks/useClinic";
+import { useQuery } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
 
 const stageColors: Record<string, string> = {
-  Nuevo: "bg-[hsl(var(--info))]/10 text-[hsl(var(--info))]",
-  Contactado: "bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))]",
-  Interesado: "bg-primary/10 text-primary",
-  "Cita agendada": "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]",
-  Convertido: "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]",
+  nuevo: "bg-[hsl(var(--info))]/10 text-[hsl(var(--info))]",
+  contactado: "bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))]",
+  interesado: "bg-primary/10 text-primary",
+  cita_agendada: "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]",
+  convertido: "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]",
 };
 
 const MarketingContactsTab = () => {
+  const { clinicId } = useClinic();
   const [search, setSearch] = useState("");
 
-  const filtered = mockContacts.filter(
+  const { data: contacts = [], isLoading } = useQuery({
+    queryKey: ["marketing-contacts", clinicId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("id, name, phone, email, source, funnel_stage, tags, updated_at")
+        .eq("clinic_id", clinicId!)
+        .order("updated_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!clinicId,
+  });
+
+  const filtered = contacts.filter(
     (c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search)
   );
+
+  if (isLoading) return <Skeleton className="h-64" />;
 
   return (
     <div className="space-y-4">
@@ -52,40 +57,46 @@ const MarketingContactsTab = () => {
         </div>
       </div>
 
-      <div className="border border-border rounded-lg overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Teléfono</TableHead>
-              <TableHead>Origen</TableHead>
-              <TableHead>Etapa</TableHead>
-              <TableHead>Tags</TableHead>
-              <TableHead>Última actividad</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map((c) => (
-              <TableRow key={c.id} className="cursor-pointer">
-                <TableCell className="font-medium text-foreground">{c.name}</TableCell>
-                <TableCell className="text-muted-foreground text-sm">{c.phone}</TableCell>
-                <TableCell className="text-sm">{c.source}</TableCell>
-                <TableCell>
-                  <Badge variant="outline" className={stageColors[c.stage] || ""}>{c.stage}</Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1 flex-wrap">
-                    {c.tags.map((t) => (
-                      <Badge key={t} variant="secondary" className="text-[10px]">{t}</Badge>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">{c.lastActivity}</TableCell>
+      {filtered.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-8">No hay contactos{search ? " que coincidan con la búsqueda" : ""}.</p>
+      ) : (
+        <div className="border border-border rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Teléfono</TableHead>
+                <TableHead>Origen</TableHead>
+                <TableHead>Etapa</TableHead>
+                <TableHead>Tags</TableHead>
+                <TableHead>Última actividad</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((c) => (
+                <TableRow key={c.id} className="cursor-pointer">
+                  <TableCell className="font-medium text-foreground">{c.name}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{c.phone}</TableCell>
+                  <TableCell className="text-sm">{c.source || "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={stageColors[c.funnel_stage] || ""}>{c.funnel_stage}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-1 flex-wrap">
+                      {(c.tags || []).map((t: string) => (
+                        <Badge key={t} variant="secondary" className="text-[10px]">{t}</Badge>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(c.updated_at), { addSuffix: true, locale: es })}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { ExternalLink, Copy, Check, Globe, Store, Briefcase, Eye, Settings2, Sparkles, Plus, Pencil, Trash2, Clock, Building2, MapPin, Phone, Mail, Users } from "lucide-react";
+import { ExternalLink, Copy, Check, Globe, Store, Briefcase, Eye, Settings2, Sparkles, Plus, Pencil, Trash2, Clock, Building2, MapPin, Phone, Mail, Users, Palette, History } from "lucide-react";
+import BrandingSection from "@/components/mi-negocio/BrandingSection";
+import AvanzadoSection from "@/components/mi-negocio/AvanzadoSection";
+import ActividadSection from "@/components/mi-negocio/ActividadSection";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -367,6 +370,9 @@ const MiNegocioPage = () => {
             <TabsTrigger value="servicios" className="gap-1.5"><Briefcase className="w-4 h-4" /> {labels.treatments}</TabsTrigger>
             <TabsTrigger value="profesionales" className="gap-1.5"><Users className="w-4 h-4" /> {labels.professionals}</TabsTrigger>
             <TabsTrigger value="landing" className="gap-1.5"><Globe className="w-4 h-4" /> Landing</TabsTrigger>
+            <TabsTrigger value="branding" className="gap-1.5"><Palette className="w-4 h-4" /> Branding</TabsTrigger>
+            <TabsTrigger value="avanzado" className="gap-1.5"><Settings2 className="w-4 h-4" /> Avanzado</TabsTrigger>
+            <TabsTrigger value="actividad" className="gap-1.5"><History className="w-4 h-4" /> Actividad</TabsTrigger>
           </TabsList>
 
           {/* ══ PERFIL TAB ══ */}
@@ -841,6 +847,16 @@ const MiNegocioPage = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="branding" className="mt-4">
+            {clinic && <BrandingSection clinicId={clinic.id} />}
+          </TabsContent>
+          <TabsContent value="avanzado" className="mt-4">
+            {clinic && <AvanzadoSection clinicId={clinic.id} />}
+          </TabsContent>
+          <TabsContent value="actividad" className="mt-4">
+            {clinic && <ActividadSection clinicId={clinic.id} />}
           </TabsContent>
         </Tabs>
       </div>
