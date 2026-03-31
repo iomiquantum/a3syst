@@ -328,8 +328,9 @@ serve(async (req) => {
       }
     }
 
-    // Fetch messages for context — more when drafting/prompted
-    const contextLimit = (isDraft || custom_prompt) ? 30 : 12;
+    // Fetch messages for context — truncated to prevent token overflow
+    // Draft/custom gets more context, normal gets last 20 messages max
+    const contextLimit = (isDraft || custom_prompt) ? 30 : 20;
     const { data: recentMessages } = await supabase
       .from("messages")
       .select("direction, content, origin, created_at, message_type")
@@ -556,16 +557,27 @@ REGLAS OBLIGATORIAS:
 
     console.log("AI messages count:", aiMessages.length, "last role:", aiMessages[aiMessages.length - 1]?.role, "isDraft:", isDraft);
 
-    // Try primary model, fallback if null response
+    // Try primary model, fallback if null response — with timeout
     const tryModel = async (model: string): Promise<{ reply: string | null; data: any }> => {
-      const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ model, messages: aiMessages, stream: false, max_tokens: 500 }),
-      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 25000); // 25s timeout
+      let resp: Response;
+      try {
+        resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ model, messages: aiMessages, stream: false, max_tokens: 500 }),
+          signal: controller.signal,
+        });
+      } catch (e: any) {
+        clearTimeout(timeout);
+        if (e.name === "AbortError") throw { status: 504, message: "AI response timeout (25s)" };
+        throw e;
+      }
+      clearTimeout(timeout);
 
       if (!resp.ok) {
         const status = resp.status;
@@ -589,7 +601,7 @@ REGLAS OBLIGATORIAS:
       reply = result.reply;
       aiData = result.data;
     } catch (e: any) {
-      if (e.status === 429 || e.status === 402) {
+      if (e.status === 429 || e.status === 402 || e.status === 504) {
         return new Response(JSON.stringify({ error: e.message }), {
           status: e.status,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
