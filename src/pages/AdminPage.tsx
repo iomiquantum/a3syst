@@ -122,6 +122,9 @@ const AdminPage = () => {
             <TabsContent value="roadmap" className="mt-6">
               <AdminRoadmapTab />
             </TabsContent>
+            <TabsContent value="consumo_ia" className="mt-6">
+              <AdminAIConsumption clinics={clinics} />
+            </TabsContent>
           </Tabs>
         )}
       </div>
