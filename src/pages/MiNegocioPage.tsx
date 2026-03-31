@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { ExternalLink, Copy, Check, Globe, Store, Briefcase, Eye, Settings2, Sparkles, Plus, Pencil, Trash2, Clock, Building2, MapPin, Phone, Mail, Users } from "lucide-react";
+import { ExternalLink, Copy, Check, Globe, Store, Briefcase, Eye, Settings2, Sparkles, Plus, Pencil, Trash2, Clock, Building2, MapPin, Phone, Mail, Users, Palette, History } from "lucide-react";
+import BrandingSection from "@/components/mi-negocio/BrandingSection";
+import AvanzadoSection from "@/components/mi-negocio/AvanzadoSection";
+import ActividadSection from "@/components/mi-negocio/ActividadSection";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

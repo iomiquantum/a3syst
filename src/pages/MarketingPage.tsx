@@ -13,6 +13,10 @@ import DifusionesTab from "@/components/marketing/DifusionesTab";
 import AudienciasTab from "@/components/marketing/AudienciasTab";
 import MarketingContactsTab from "@/components/marketing/MarketingContactsTab";
 import TokenAPIsTab from "@/components/marketing/TokenAPIsTab";
+import TagsTab from "@/components/marketing/TagsTab";
+import FragmentosTab from "@/components/marketing/FragmentosTab";
+import EmbudoTab from "@/components/marketing/EmbudoTab";
+import AutomatizacionesTab from "@/components/marketing/AutomatizacionesTab";
 
 interface NavItem {
   key: string;
@@ -29,7 +33,7 @@ const MAIN_ITEMS: NavItem[] = [
   { key: "difusiones", label: "Difusiones", icon: MessageSquare },
   { key: "audiencias", label: "Audiencias", icon: Target },
   { key: "campanas", label: "Campañas", icon: Megaphone, badge: "Próximamente", badgeColor: "bg-primary/10 text-primary" },
-  { key: "formulario", label: "Formulario Mágico", icon: Sparkles, disabled: true },
+  { key: "formulario", label: "Formulario Mágico", icon: Sparkles },
   { key: "agente_ia", label: "Agente IA", icon: Bot },
 ];
 
@@ -58,6 +62,38 @@ const MarketingPage = () => {
         return <AudienciasTab />;
       case "tokens":
         return <TokenAPIsTab />;
+      case "tags":
+        return <TagsTab />;
+      case "fragmentos":
+        return <FragmentosTab />;
+      case "embudo":
+        return <EmbudoTab />;
+      case "automatizaciones":
+        return <AutomatizacionesTab />;
+      case "formulario":
+        return (
+          <div className="p-8 text-center text-muted-foreground">
+            <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-30" />
+            <p className="font-medium">Formulario Mágico</p>
+            <p className="text-sm mt-1">Captura leads automáticamente desde tu sitio web. Próximamente.</p>
+          </div>
+        );
+      case "plantillas":
+        return (
+          <div className="p-8 text-center text-muted-foreground">
+            <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
+            <p className="font-medium">Plantillas</p>
+            <p className="text-sm mt-1">Gestiona tus plantillas de WhatsApp desde Administración → Plantillas</p>
+          </div>
+        );
+      case "campanas":
+        return (
+          <div className="p-8 text-center text-muted-foreground">
+            <Megaphone className="w-12 h-12 mx-auto mb-3 opacity-30" />
+            <p className="font-medium">Campañas</p>
+            <p className="text-sm mt-1">Gestión avanzada de campañas. Próximamente.</p>
+          </div>
+        );
       case "integraciones":
         return (
           <div className="p-8 text-center text-muted-foreground">
@@ -152,7 +188,7 @@ const MarketingPage = () => {
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-w-0 overflow-auto">
+        <div className="flex-1 min-w-0 overflow-auto p-4">
           {renderContent()}
         </div>
       </div>
