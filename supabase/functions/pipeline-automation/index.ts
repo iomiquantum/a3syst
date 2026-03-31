@@ -603,6 +603,19 @@ Formato: Usa emojis para hacerlo visual y fácil de escanear. Máximo 6 líneas.
 
                 if (summaryResp.ok) {
                   const summaryData = await summaryResp.json();
+                  // Log pipeline summary usage
+                  try {
+                    const sUsage = summaryData.usage;
+                    const sIn = sUsage?.prompt_tokens || 0;
+                    const sOut = sUsage?.completion_tokens || 0;
+                    const sCost = (sIn * 0.075 + sOut * 0.30) / 1_000_000;
+                    await supabase.from("ai_token_usage").insert({
+                      clinic_id: conv.clinic_id, user_id: null,
+                      generator_type: "pipeline_summary", model: "google/gemini-2.5-flash-lite",
+                      tokens_input: sIn, tokens_output: sOut, cost_usd: sCost,
+                      action_label: "Resumen ejecutivo escalación S5",
+                    });
+                  } catch (logErr) { console.error("[PIPELINE] Summary usage log error:", logErr); }
                   const summary = summaryData.choices?.[0]?.message?.content?.trim();
 
                   if (summary) {

@@ -165,6 +165,35 @@ ${user_message}`;
       }
     }
 
+    // Log AI usage
+    try {
+      const usage = aiResult.usage;
+      const tokensIn = usage?.prompt_tokens || 0;
+      const tokensOut = usage?.completion_tokens || 0;
+      const costUsd = (tokensIn * 0.15 + tokensOut * 0.60) / 1_000_000;
+      const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+      const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      // Try to find clinic_id from the auth header user
+      const authHeader = req.headers.get("Authorization");
+      if (authHeader?.startsWith("Bearer ")) {
+        const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+        const userClient = createClient(Deno.env.get("SUPABASE_URL")!, anonKey, { global: { headers: { Authorization: authHeader } } });
+        const { data: u } = await userClient.auth.getUser();
+        if (u?.user) {
+          const { data: roles } = await adminClient.from("user_roles").select("clinic_id").eq("user_id", u.user.id).limit(1);
+          const cid = roles?.[0]?.clinic_id;
+          if (cid) {
+            await adminClient.from("ai_token_usage").insert({
+              clinic_id: cid, user_id: u.user.id,
+              generator_type: "onboarding", model: "google/gemini-2.5-flash",
+              tokens_input: tokensIn, tokens_output: tokensOut, cost_usd: costUsd,
+              action_label: "Onboarding conversacional",
+            });
+          }
+        }
+      }
+    } catch (logErr) { console.error("Usage log error:", logErr); }
+
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
