@@ -101,6 +101,27 @@ RESPONDE EXCLUSIVAMENTE en JSON con este formato exacto (sin markdown, sin backt
       throw new Error("Could not parse AI analysis");
     }
 
+    // Log AI usage
+    try {
+      const usage = aiData.usage;
+      const tokensIn = usage?.prompt_tokens || 0;
+      const tokensOut = usage?.completion_tokens || 0;
+      const costUsd = (tokensIn * 0.15 + tokensOut * 0.60) / 1_000_000;
+      // Need service role client for insert
+      const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      // Get clinic_id from styleId or from the user's clinic
+      const { data: userRoles } = await adminClient.from("user_roles").select("clinic_id").eq("user_id", userData.user.id).limit(1);
+      const clinicId = userRoles?.[0]?.clinic_id;
+      if (clinicId) {
+        await adminClient.from("ai_token_usage").insert({
+          clinic_id: clinicId, user_id: userData.user.id,
+          generator_type: "brand_analysis", model: "google/gemini-2.5-flash",
+          tokens_input: tokensIn, tokens_output: tokensOut, cost_usd: costUsd,
+          action_label: "Análisis de marca visual",
+        });
+      }
+    } catch (logErr) { console.error("Usage log error:", logErr); }
+
     return new Response(JSON.stringify({
       palette: parsed.palette || [],
       description: parsed.description || "",
