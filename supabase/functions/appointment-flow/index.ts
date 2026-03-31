@@ -369,6 +369,7 @@ Responde SOLO JSON válido:
 }`;
 
       const aiResp = await callAI(LOVABLE_API_KEY, guidedPrompt, patient_message);
+      await logAppointmentFlowUsage(supabase, clinic_id, "Flujo guiado de cita");
       let parsed: any = {};
       try {
         const cleaned = aiResp.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
