@@ -8,6 +8,10 @@ import {
 } from "lucide-react";
 import HelpButton from "@/components/help/HelpButton";
 import HelpPanel from "@/components/help/HelpPanel";
+import { CopilotProvider } from "@/contexts/CopilotContext";
+import CopilotButton from "@/components/copilot/CopilotButton";
+import CopilotPanel from "@/components/copilot/CopilotPanel";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import GuidedTour from "@/components/help/GuidedTour";
 import { getHelpForRoute } from "@/components/help/helpContent";
 import { cn } from "@/lib/utils";
