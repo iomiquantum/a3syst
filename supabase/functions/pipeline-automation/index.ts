@@ -319,6 +319,14 @@ async function verifyAuth(req: Request, supabaseUrl: string): Promise<{ authoriz
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  // === AUTOMATIONS DISABLED ===
+  // All pipeline automations (S1-S6 seguimiento, inactivity timers, etc.) are disabled.
+  // Only the AI agent with its main prompt remains active.
+  console.log("pipeline-automation: Automations disabled. Returning early.");
+  return new Response(JSON.stringify({ status: "disabled", message: "Pipeline automations are currently disabled. Manual embudo management only." }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const auth = await verifyAuth(req, supabaseUrl);
   if (!auth.authorized) {
