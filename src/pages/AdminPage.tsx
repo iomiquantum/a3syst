@@ -91,6 +91,9 @@ const AdminPage = () => {
               <TabsTrigger value="roadmap" className="flex items-center gap-2">
                 <Map className="w-4 h-4" /> Roadmap
               </TabsTrigger>
+              <TabsTrigger value="consumo_ia" className="flex items-center gap-2">
+                <Brain className="w-4 h-4" /> Consumo IA
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="clinicas" className="mt-6">
               <AdminClinicasTab clinics={clinics} roles={roles} onRefresh={fetchData} />
