@@ -623,7 +623,25 @@ async function callAI(apiKey: string, systemPrompt: string, userMessage: string)
   }
 
   const data = await resp.json();
+  // Store usage for logging
+  callAI._lastUsage = data.usage || null;
   return data.choices?.[0]?.message?.content?.trim() || "";
+}
+callAI._lastUsage = null as any;
+
+async function logAppointmentFlowUsage(supabase: any, clinicId: string, actionLabel: string) {
+  try {
+    const usage = callAI._lastUsage;
+    const tokensIn = usage?.prompt_tokens || 0;
+    const tokensOut = usage?.completion_tokens || 0;
+    const costUsd = (tokensIn * 0.15 + tokensOut * 0.60) / 1_000_000;
+    await supabase.from("ai_token_usage").insert({
+      clinic_id: clinicId, user_id: null,
+      generator_type: "appointment_flow", model: "google/gemini-2.5-flash",
+      tokens_input: tokensIn, tokens_output: tokensOut, cost_usd: costUsd,
+      action_label: actionLabel,
+    });
+  } catch (e) { console.error("[APPT-FLOW] Usage log error:", e); }
 }
 
 async function confirmAppointment(
