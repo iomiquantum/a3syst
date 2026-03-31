@@ -1,9 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
-import { MessageSquare, ArrowLeft, PanelRightOpen } from "lucide-react";
+import { MessageSquare, ArrowLeft } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import MensajesHeader, { ViewMode } from "@/components/mensajes/MensajesHeader";
 import MensajesResumen from "@/components/mensajes/MensajesResumen";
-import MensajesPipelineTabs from "@/components/mensajes/MensajesPipelineTabs";
 import MensajesSidebar from "@/components/mensajes/MensajesSidebar";
 import MensajesConversationList from "@/components/mensajes/MensajesConversationList";
 import MensajesChat from "@/components/mensajes/MensajesChat";
@@ -34,7 +33,6 @@ const MensajesPage = () => {
   const [pipelinePeriod, setPipelinePeriod] = useState<Period>("max");
   const [pipelineRange, setPipelineRange] = useState<DateRange | undefined>();
   const [activeTab, setActiveTab] = useState<PipelineFilter>("todos");
-  const [subFilter, setSubFilter] = useState("todos");
   const [selectedChannel, setSelectedChannel] = useState("todos");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -54,7 +52,6 @@ const MensajesPage = () => {
     return periodToDateRange(pipelinePeriod);
   }, [pipelinePeriod, pipelineRange]);
 
-  // Compute resumen time filter combining period + time slot
   const resumenTimeFilter = useMemo<TimeFilter | undefined>(() => {
     let baseDates: { from?: string; to?: string };
     if (resumenPeriod === "rango" && resumenRange?.from) {
@@ -76,10 +73,10 @@ const MensajesPage = () => {
     return { startDate: fromDate.toISOString(), endDate: toDate.toISOString() };
   }, [resumenPeriod, resumenRange, timeSlot, customTimeStart, customTimeEnd]);
 
-  const { tabCounts, resumenStats, loading: statsLoading, refetch: refetchStats } = usePipelineStats(resumenTimeFilter);
+  const { resumenStats, loading: statsLoading, refetch: refetchStats } = usePipelineStats(resumenTimeFilter);
   const { counts: channelCounts, total: channelTotal } = useChannelStats();
   const { tags: tagStats } = useTagStats();
-  const { tabs: pipelineTabs, subFilterCounts, refetch: refetchTabs } = useClinicPipelineTabs();
+  const { tabs: pipelineTabs, refetch: refetchTabs } = useClinicPipelineTabs();
 
   const { conversations, loading: convsLoading, refetch: refetchConvs } = useConversationsByPipeline({
     pipelineTab: activeTab,
@@ -89,7 +86,6 @@ const MensajesPage = () => {
     periodStart: pipelineDates.from,
     periodEnd: pipelineDates.to,
     showArchived,
-    subFilter: (activeTab === "seguimiento_s1" || activeTab === "agendados") ? subFilter : undefined,
   });
 
   const handleActionComplete = () => {
@@ -146,16 +142,6 @@ const MensajesPage = () => {
           <div className="px-3 py-2 border-b border-border shrink-0 space-y-2">
             <MensajesHeader viewMode={viewMode} onViewModeChange={setViewMode} selectedChannel={selectedChannel} />
           </div>
-          <div className="px-3 py-2 border-b border-border shrink-0">
-            <MensajesPipelineTabs
-              activeTab={activeTab} onTabChange={setActiveTab}
-              tabs={pipelineTabs}
-              period={pipelinePeriod} onPeriodChange={setPipelinePeriod}
-              dateRange={pipelineRange} onDateRangeChange={setPipelineRange}
-              subFilter={subFilter} onSubFilterChange={setSubFilter}
-              subFilterCounts={subFilterCounts}
-            />
-          </div>
           <div className="flex-1 min-h-0 overflow-hidden">
             {viewMode === "pipeline" ? (
               <MensajesKanban conversations={conversations} onActionComplete={handleActionComplete} />
@@ -197,19 +183,8 @@ const MensajesPage = () => {
           />
         </div>
 
-        <div className="px-4 py-2.5 border-b border-border shrink-0">
-          <MensajesPipelineTabs
-            activeTab={activeTab} onTabChange={setActiveTab}
-            tabs={pipelineTabs}
-            period={pipelinePeriod} onPeriodChange={setPipelinePeriod}
-            dateRange={pipelineRange} onDateRangeChange={setPipelineRange}
-            subFilter={subFilter} onSubFilterChange={setSubFilter}
-            subFilterCounts={subFilterCounts}
-          />
-        </div>
-
         <div className="flex-1 min-h-0 overflow-hidden flex">
-          <div className="w-[200px] border-r border-border shrink-0 overflow-hidden hidden md:block">
+          <div className="w-[220px] border-r border-border shrink-0 overflow-hidden hidden md:block">
             <MensajesSidebar
               channelCounts={channelCounts}
               totalConversations={channelTotal}
@@ -220,6 +195,9 @@ const MensajesPage = () => {
               onTagsChange={setSelectedTags}
               showArchived={showArchived}
               onShowArchivedChange={setShowArchived}
+              embudoTabs={pipelineTabs}
+              activeEmbudoKey={activeTab}
+              onEmbudoChange={(key) => setActiveTab(key as PipelineFilter)}
             />
           </div>
 
