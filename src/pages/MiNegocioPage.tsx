@@ -370,6 +370,9 @@ const MiNegocioPage = () => {
             <TabsTrigger value="servicios" className="gap-1.5"><Briefcase className="w-4 h-4" /> {labels.treatments}</TabsTrigger>
             <TabsTrigger value="profesionales" className="gap-1.5"><Users className="w-4 h-4" /> {labels.professionals}</TabsTrigger>
             <TabsTrigger value="landing" className="gap-1.5"><Globe className="w-4 h-4" /> Landing</TabsTrigger>
+            <TabsTrigger value="branding" className="gap-1.5"><Palette className="w-4 h-4" /> Branding</TabsTrigger>
+            <TabsTrigger value="avanzado" className="gap-1.5"><Settings2 className="w-4 h-4" /> Avanzado</TabsTrigger>
+            <TabsTrigger value="actividad" className="gap-1.5"><History className="w-4 h-4" /> Actividad</TabsTrigger>
           </TabsList>
 
           {/* ══ PERFIL TAB ══ */}
