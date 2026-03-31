@@ -12,7 +12,7 @@ import { CopilotProvider } from "@/contexts/CopilotContext";
 import CopilotButton from "@/components/copilot/CopilotButton";
 import CopilotPanel from "@/components/copilot/CopilotPanel";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import GuidedTour from "@/components/help/GuidedTour";
+
 import { getHelpForRoute } from "@/components/help/helpContent";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
