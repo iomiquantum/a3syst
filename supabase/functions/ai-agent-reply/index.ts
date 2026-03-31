@@ -557,16 +557,27 @@ REGLAS OBLIGATORIAS:
 
     console.log("AI messages count:", aiMessages.length, "last role:", aiMessages[aiMessages.length - 1]?.role, "isDraft:", isDraft);
 
-    // Try primary model, fallback if null response
+    // Try primary model, fallback if null response — with timeout
     const tryModel = async (model: string): Promise<{ reply: string | null; data: any }> => {
-      const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ model, messages: aiMessages, stream: false, max_tokens: 500 }),
-      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 25000); // 25s timeout
+      let resp: Response;
+      try {
+        resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ model, messages: aiMessages, stream: false, max_tokens: 500 }),
+          signal: controller.signal,
+        });
+      } catch (e: any) {
+        clearTimeout(timeout);
+        if (e.name === "AbortError") throw { status: 504, message: "AI response timeout (25s)" };
+        throw e;
+      }
+      clearTimeout(timeout);
 
       if (!resp.ok) {
         const status = resp.status;
