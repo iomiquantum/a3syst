@@ -1,4 +1,4 @@
-import { Users, UserPlus, AlertTriangle, CalendarCheck, Clock, XCircle } from "lucide-react";
+import { Users, UserPlus, CalendarCheck, XCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import PeriodSelector, { Period } from "./PeriodSelector";
 import TimeSlotSelector, { TimeSlot } from "./TimeSlotSelector";
@@ -24,10 +24,8 @@ const MensajesResumen = ({ stats, loading, period, onPeriodChange, dateRange, on
   const cards = [
     { label: "Clientes únicos", value: stats.clientesUnicos, icon: Users, color: "text-violet-500", bg: "bg-violet-100 dark:bg-violet-500/20", tooltip: "Contactos únicos que enviaron al menos un mensaje en el período" },
     { label: "Nuevos", value: stats.nuevosClientes, icon: UserPlus, color: "text-emerald-500", bg: "bg-emerald-100 dark:bg-emerald-500/20", tooltip: "Contactos cuya primera conversación inició en el período" },
-    { label: "Escalados", sublabel: "a humano", value: stats.escalados, icon: AlertTriangle, color: "text-orange-500", bg: "bg-orange-100 dark:bg-orange-500/20", tooltip: "Conversaciones escaladas a agente humano en el período" },
-    { label: "Agendados", value: stats.agendados, icon: CalendarCheck, color: "text-blue-500", bg: "bg-blue-100 dark:bg-blue-500/20", tooltip: "Conversaciones con cita agendada en el período" },
-    { label: "Seguimiento", sublabel: `S1:${stats.seguimiento.s1} S2:${stats.seguimiento.s2} S3:${stats.seguimiento.s3} S4:${stats.seguimiento.s4} S5:${stats.seguimiento.s5} S6:${stats.seguimiento.s6}`, value: stats.seguimiento.total, icon: Clock, color: "text-cyan-500", bg: "bg-cyan-100 dark:bg-cyan-500/20", tooltip: "Contactos actualmente en seguimiento (S1-S6)" },
-    { label: "No responden", value: stats.noRespondieron, icon: XCircle, color: "text-red-500", bg: "bg-red-100 dark:bg-red-500/20", tooltip: "Contactos que no respondieron al seguimiento completo" },
+    { label: "Agendados", value: stats.agendados, icon: CalendarCheck, color: "text-blue-500", bg: "bg-blue-100 dark:bg-blue-500/20", tooltip: "Conversaciones movidas a Agendado en el período" },
+    { label: "No responden", value: stats.noRespondieron, icon: XCircle, color: "text-red-500", bg: "bg-red-100 dark:bg-red-500/20", tooltip: "Contactos en etapa 'No responden'" },
   ];
 
   return (
@@ -48,7 +46,7 @@ const MensajesResumen = ({ stats, loading, period, onPeriodChange, dateRange, on
                       ) : (
                         <p className="text-base font-bold text-foreground leading-none">{c.value}</p>
                       )}
-                      <p className="text-[9px] text-muted-foreground mt-0.5">{'sublabel' in c && c.sublabel ? c.sublabel : c.label}</p>
+                      <p className="text-[9px] text-muted-foreground mt-0.5">{c.label}</p>
                     </div>
                   </div>
                 </TooltipTrigger>
