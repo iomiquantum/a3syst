@@ -993,6 +993,26 @@ const WORKING_DAY_MAP: Record<string, number> = {
   "Domingo": 0, "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6,
 };
 
+const SCHEDULE_KEY_TO_SHORT: Record<string, string> = {
+  "domingo": "Dom", "lunes": "Lun", "martes": "Mar", "miercoles": "Mié",
+  "jueves": "Jue", "viernes": "Vie", "sabado": "Sáb",
+};
+
+/** Derive working days from working_schedule (source of truth from UI), falling back to working_days column */
+function deriveWorkingDays(workingSchedule: Record<string, { enabled: boolean }> | null | undefined, workingDaysCol: string[] | null | undefined): string[] {
+  if (workingSchedule && typeof workingSchedule === "object") {
+    const days: string[] = [];
+    for (const [key, val] of Object.entries(workingSchedule)) {
+      if (val && val.enabled) {
+        const short = SCHEDULE_KEY_TO_SHORT[key];
+        if (short) days.push(short);
+      }
+    }
+    if (days.length > 0) return days;
+  }
+  return (workingDaysCol as string[]) || ["Lun", "Mar", "Mié", "Jue", "Vie"];
+}
+
 function getWorkingWeekdayIndices(workingDays: string[]): Set<number> {
   const indices = new Set<number>();
   for (const d of workingDays) {
