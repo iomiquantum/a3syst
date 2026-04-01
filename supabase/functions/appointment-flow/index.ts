@@ -259,9 +259,10 @@ Responde SOLO JSON válido:
 
       const { data: clinic } = await supabase
         .from("clinics")
-        .select("name, timezone")
+        .select("name, timezone, working_days, opening_hour, closing_hour")
         .eq("id", clinic_id)
         .single();
+      const guidedWorkingDays: string[] = (clinic?.working_days as string[]) || ["Lun","Mar","Mié","Jue","Vie"];
 
       const flowData = (conv.appointment_flow_data || {}) as Record<string, any>;
       const agentName = agentConfig?.agent_name || "Asistente";
