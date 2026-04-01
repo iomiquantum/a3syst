@@ -461,6 +461,13 @@ PASO ACTUAL: ${conv.appointment_flow_step}
 18. Si el paso actual es "confirm" y el paciente dice "sí", "confirmo", "dale", "ok", "listo", "confirmar", "si por favor" o similar, DEBES responder con flow_complete=true. No escales por una confirmación.
 19. Si el paciente dice "no tengo correo", "no tengo email", o envía datos personales no solicitados, ignóralos completamente y continúa con el flujo normalmente.
 20. HORARIOS DISPONIBLES: Cuando ofrezcas horarios al paciente, calcula TODOS los slots disponibles desde la hora de apertura hasta la hora de "última cita" (o cierre si no hay última cita) en intervalos de 1 hora. Ejemplo: si la sede abre a las 08:00 y la última cita es a las 17:00, ofrece: 08:00, 09:00, 10:00, 11:00, 12:00, 13:00, 14:00, 15:00, 16:00, 17:00. NO omitas slots intermedios.
+21. 🚨 COMUNICACIÓN AL CLIENTE — PROHIBIDO revelar detalles internos de la agenda:
+   - NUNCA digas qué otros días están bloqueados, cerrados o sin servicio.
+   - NUNCA digas "el sábado también está bloqueado y el domingo cerramos".
+   - Si un día no está disponible, solo di: "Ese día no tenemos disponibilidad" y sugiere 1-2 alternativas cercanas.
+   - Ejemplo CORRECTO: "Lo siento, ese día no tenemos disponibilidad. ¿Te funciona el martes 7 de abril?"
+   - Ejemplo INCORRECTO: "El viernes está bloqueado, el sábado también y el domingo cerramos. Te ofrezco el martes."
+22. 🚨 INTERPRETACIÓN DE FECHA — PRIORIDAD ABSOLUTA: Si el bloque "INTERPRETACIÓN DE FECHA RESUELTA POR SISTEMA" está presente arriba, ESA es la fecha correcta. IGNORA completamente el historial de conversación previo sobre otras fechas. El sistema ya calculó la fecha exacta — úsala SIN cuestionarla.
 
 Responde SOLO JSON válido:
 {
