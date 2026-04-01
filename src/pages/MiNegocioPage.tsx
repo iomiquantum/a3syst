@@ -21,7 +21,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { treatmentSchema, specialtySchema, professionalSchema, branchSchema, getValidationError } from "@/lib/validations";
 
-interface DaySchedule { enabled: boolean; open: string; close: string; }
+interface DaySchedule { enabled: boolean; open: string; close: string; last_appointment?: string; }
 interface WorkingSchedule { [key: string]: DaySchedule; }
 
 const DEFAULT_SCHEDULE: WorkingSchedule = {
