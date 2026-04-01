@@ -102,7 +102,6 @@ serve(async (req) => {
       const dayOfWeek = DAY_NAMES_ES[todayInfo.weekday];
       const calRefDetect = buildCalendarReference(todayInfo, 14, workingDays);
       const detectedDateResolution = resolveDateReferenceFromMessage(patient_message, tz);
-      console.log("[appointment-flow] detect_intent debug:", { today: todayInfo.iso, weekday: todayInfo.weekday, dayOfWeek, detectedDateResolution, workingDays, patient_message });
 
       // Fetch blocked days
       const { data: blockedDaysData } = await supabase
