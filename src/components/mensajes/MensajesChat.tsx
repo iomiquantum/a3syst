@@ -12,7 +12,7 @@ import WhatsAppWindowBadge from "./WhatsAppWindowBadge";
 import ChannelIcon from "@/components/messaging/ChannelIcon";
 import ChatToolbar from "./ChatToolbar";
 import MessageStatusIcon from "./MessageStatusIcon";
-import AntiSpamBadge from "./AntiSpamBadge";
+
 import { usePipelineAction } from "@/hooks/usePipelineAction";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
