@@ -364,14 +364,19 @@ Responde SOLO JSON válido:
       const todayStr = todayLocalInfo.iso;
       const dayOfWeekStr = DAY_NAMES_ES[todayLocalInfo.weekday];
 
-      // Fetch blocked days
+      // Fetch blocked days — include ALL (global + branch-specific)
       const { data: blockedDaysData } = await supabase
         .from("blocked_days")
         .select("date, reason, branch_id")
         .eq("clinic_id", clinic_id);
+      // For calendar display and validation, use ALL blocked days (global + any branch)
+      const allBlockedDates = new Set((blockedDaysData || []).map((b: any) => b.date));
       const globalBlocked2 = (blockedDaysData || []).filter((b: any) => b.branch_id === null);
       const blockedDaysSet = new Set(globalBlocked2.map((b: any) => b.date));
-      const blockedDaysList = globalBlocked2.map((b: any) => `${b.date}${b.reason ? ` (${b.reason})` : ""}`).join(", ");
+      const blockedDaysList = (blockedDaysData || []).map((b: any) => {
+        const branchNote = b.branch_id ? " (sede específica)" : " (global)";
+        return `${b.date}${b.reason ? ` (${b.reason})` : ""}${branchNote}`;
+      }).join(", ");
 
       // Safety net: hard limit at 6 messages in the CURRENT flow session (last 2 hours)
       const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
