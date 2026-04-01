@@ -443,10 +443,10 @@ Tono: ${agentConfig.tone}
 
 NEGOCIO: ${clinicInfo?.name || ""}
 
-DATOS DEL CONTACTO ACTUAL:
+DATOS DEL CONTACTO ACTUAL (pueden NO ser confiables, los nombres de WhatsApp suelen ser apodos):
 - Nombre registrado: ${contactName || "(sin nombre)"}
 - Teléfono registrado: ${contactPhone || "(sin teléfono)"}
-${contactName && contactPhone ? "- Ya tienes nombre y teléfono, NO los pidas de nuevo a menos que el paciente quiera corregirlos." : "- Faltan datos. Recuerda pedirlos según las reglas de recopilación."}
+- IMPORTANTE: Aunque ya existan datos, SIEMPRE debes VERIFICAR nombre y teléfono con el paciente porque los nombres de WhatsApp frecuentemente no son los reales. Pregunta amablemente para confirmar o corregir.
 
 SEDES Y HORARIOS DE ATENCIÓN:
 ${branchesBlock}
