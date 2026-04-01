@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import PipelineBadge from "./PipelineBadge";
 import WhatsAppWindowBadge from "./WhatsAppWindowBadge";
-import PipelineProgressBar from "./PipelineProgressBar";
+
 import ChannelIcon from "@/components/messaging/ChannelIcon";
 import ChatToolbar from "./ChatToolbar";
 import MessageStatusIcon from "./MessageStatusIcon";
