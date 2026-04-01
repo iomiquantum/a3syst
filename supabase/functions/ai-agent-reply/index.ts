@@ -87,9 +87,7 @@ serve(async (req) => {
     if (conversationError || !conversationData) throw conversationError || new Error("Conversation not found");
 
     // ====== APPOINTMENT FLOW: If active, delegate to appointment-flow function ======
-    const appointmentFlowEnabledForConversation =
-      conversationData.appointment_flow_active &&
-      conversationData.pipeline_tab === "agendados";
+    const appointmentFlowEnabledForConversation = conversationData.appointment_flow_active === true;
 
     if (appointmentFlowEnabledForConversation && !isDraft && !isFollowUp) {
       // Get the latest inbound message
