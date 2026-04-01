@@ -802,9 +802,179 @@ Formato: Usa emojis para hacerlo visual y fácil de escanear. Máximo 6 líneas.
 
     // We check send window per-clinic below, so always run this block
 
-    if (!isWithinReminderWindow) {
-      console.log(`[PIPELINE] Outside send window, skipping appointment reminders`);
-    } else {
+    {
+      const { data: reminderConfigs } = await supabase
+        .from("appointment_reminder_config")
+        .select("*")
+        .eq("is_active", true);
+
+      if (reminderConfigs && reminderConfigs.length > 0) {
+        const configByClinic: Record<string, any[]> = {};
+        for (const rc of reminderConfigs) {
+          if (!configByClinic[rc.clinic_id]) configByClinic[rc.clinic_id] = [];
+          configByClinic[rc.clinic_id].push(rc);
+        }
+
+        const nowDate = new Date();
+        const todayStart = new Date(nowDate);
+        todayStart.setUTCHours(0, 0, 0, 0);
+
+        // Helper: parse appointment date+time in clinic timezone → UTC Date
+        function getAppointmentUtc(dateStr: string, timeStr: string | null, tz: string): Date {
+          const d = new Date(dateStr);
+          const year = d.getUTCFullYear();
+          const month = d.getUTCMonth() + 1;
+          const day = d.getUTCDate();
+          let hh = 9, mm = 0;
+          if (timeStr) {
+            const parts = timeStr.split(":").map(Number);
+            hh = parts[0] || 0;
+            mm = parts[1] || 0;
+          }
+          return zonedTimeToUtc(tz, year, month, day, hh, mm, 0);
+        }
+
+        // Helper: format date in clinic timezone
+        function formatDateInTz(utcDate: Date, tz: string): string {
+          return utcDate.toLocaleDateString("es", { timeZone: tz, weekday: "long", day: "numeric", month: "long" });
+        }
+
+        // REMINDER 1
+        const { data: reminder1Convs } = await supabase
+          .from("conversations")
+          .select("id, clinic_id, contact_id, channel, visitor_contact, appointment_date, appointment_time, appointment_service, appointment_confirmed, last_client_message_at")
+          .eq("pipeline_tab", "agendados")
+          .eq("appointment_reminder_1_sent", false)
+          .not("appointment_date", "is", null)
+          .gte("appointment_date", todayStart.toISOString());
+
+        for (const conv of reminder1Convs || []) {
+          try {
+            if (conv.appointment_confirmed) continue;
+            const clinicConfigs = configByClinic[conv.clinic_id];
+            const r1Config = clinicConfigs?.find((c: any) => c.reminder_number === 1);
+            if (!r1Config) continue;
+
+            const clinicTz = await getClinicTimezone(conv.clinic_id);
+            const clinicHour = getNowHourInTz(clinicTz);
+            if (clinicHour < sendWindowStart || clinicHour >= sendWindowEnd) continue;
+
+            const appointmentUtc = getAppointmentUtc(conv.appointment_date, conv.appointment_time, clinicTz);
+            const hoursUntil = (appointmentUtc.getTime() - nowDate.getTime()) / (1000 * 60 * 60);
+            if (hoursUntil <= 0 || hoursUntil > r1Config.hours_before_appointment) continue;
+
+            const { data: existingReminder } = await supabase
+              .from("pipeline_message_queue")
+              .select("id")
+              .eq("conversation_id", conv.id)
+              .eq("message_type", "recordatorio_cita_1")
+              .in("status", ["pending", "processing", "retry"])
+              .maybeSingle();
+
+            if (existingReminder) continue;
+
+            let contactName = "cliente";
+            if (conv.contact_id) {
+              const { data: contact } = await supabase.from("contacts").select("name").eq("id", conv.contact_id).single();
+              if (contact?.name) contactName = contact.name.split(" ")[0];
+            }
+
+            const fecha = formatDateInTz(appointmentUtc, clinicTz);
+            const hora = conv.appointment_time || appointmentUtc.toLocaleTimeString("es", { timeZone: clinicTz, hour: "2-digit", minute: "2-digit" });
+            const servicio = conv.appointment_service || "tu cita";
+
+            const message = (r1Config.message_template || "")
+              .replace(/\{\{nombre\}\}/g, contactName)
+              .replace(/\{\{fecha\}\}/g, fecha)
+              .replace(/\{\{hora\}\}/g, hora)
+              .replace(/\{\{servicio\}\}/g, servicio);
+
+            await supabase.from("pipeline_message_queue").insert({
+              conversation_id: conv.id,
+              clinic_id: conv.clinic_id,
+              contact_number: 0,
+              message_type: "recordatorio_cita_1",
+              status: "pending",
+              priority: 100,
+              scheduled_at: new Date().toISOString(),
+              generated_message: message,
+            });
+
+            tarea5Reminder1++;
+          } catch (e) {
+            errors.push({ conversation_id: conv.id, error: e instanceof Error ? e.message : String(e) });
+          }
+        }
+
+        // REMINDER 2
+        const { data: reminder2Convs } = await supabase
+          .from("conversations")
+          .select("id, clinic_id, contact_id, channel, visitor_contact, appointment_date, appointment_time, appointment_service, appointment_confirmed, last_client_message_at")
+          .eq("pipeline_tab", "agendados")
+          .eq("appointment_reminder_1_sent", true)
+          .eq("appointment_reminder_2_sent", false)
+          .eq("appointment_confirmed", false)
+          .not("appointment_date", "is", null)
+          .gte("appointment_date", todayStart.toISOString());
+
+        for (const conv of reminder2Convs || []) {
+          try {
+            const clinicConfigs = configByClinic[conv.clinic_id];
+            const r2Config = clinicConfigs?.find((c: any) => c.reminder_number === 2);
+            if (!r2Config) continue;
+
+            const clinicTz = await getClinicTimezone(conv.clinic_id);
+            const clinicHour = getNowHourInTz(clinicTz);
+            if (clinicHour < sendWindowStart || clinicHour >= sendWindowEnd) continue;
+
+            const appointmentUtc = getAppointmentUtc(conv.appointment_date, conv.appointment_time, clinicTz);
+            const hoursUntil = (appointmentUtc.getTime() - nowDate.getTime()) / (1000 * 60 * 60);
+            if (hoursUntil <= 0 || hoursUntil > r2Config.hours_before_appointment) continue;
+
+            const { data: existingReminder } = await supabase
+              .from("pipeline_message_queue")
+              .select("id")
+              .eq("conversation_id", conv.id)
+              .eq("message_type", "recordatorio_cita_2")
+              .in("status", ["pending", "processing", "retry"])
+              .maybeSingle();
+
+            if (existingReminder) continue;
+
+            let contactName = "cliente";
+            if (conv.contact_id) {
+              const { data: contact } = await supabase.from("contacts").select("name").eq("id", conv.contact_id).single();
+              if (contact?.name) contactName = contact.name.split(" ")[0];
+            }
+
+            const fecha = formatDateInTz(appointmentUtc, clinicTz);
+            const hora = conv.appointment_time || appointmentUtc.toLocaleTimeString("es", { timeZone: clinicTz, hour: "2-digit", minute: "2-digit" });
+            const servicio = conv.appointment_service || "tu cita";
+
+            const message = (r2Config.message_template || "")
+              .replace(/\{\{nombre\}\}/g, contactName)
+              .replace(/\{\{fecha\}\}/g, fecha)
+              .replace(/\{\{hora\}\}/g, hora)
+              .replace(/\{\{servicio\}\}/g, servicio);
+
+            await supabase.from("pipeline_message_queue").insert({
+              conversation_id: conv.id,
+              clinic_id: conv.clinic_id,
+              contact_number: 0,
+              message_type: "recordatorio_cita_2",
+              status: "pending",
+              priority: 100,
+              scheduled_at: new Date().toISOString(),
+              generated_message: message,
+            });
+
+            tarea5Reminder2++;
+          } catch (e) {
+            errors.push({ conversation_id: conv.id, error: e instanceof Error ? e.message : String(e) });
+          }
+        }
+      }
+    }
       const { data: reminderConfigs } = await supabase
         .from("appointment_reminder_config")
         .select("*")
