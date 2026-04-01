@@ -434,6 +434,14 @@ Responde SOLO JSON válido:
         parsed.flow_complete = false;
       }
 
+      // Validate date not blocked
+      if (flowData.date && blockedDaysSet.has(flowData.date)) {
+        const blockedReason = (blockedDaysData || []).find((b: any) => b.date === flowData.date)?.reason;
+        flowData.date = null;
+        parsed.response_text = `Lo siento, el día que elegiste no está disponible${blockedReason ? ` (${blockedReason})` : ""}. ¿Te funciona otro día?`;
+        parsed.flow_complete = false;
+      }
+
       if (parsed.patient_cancelled) {
         await supabase.from("conversations").update({
           appointment_flow_active: false,
