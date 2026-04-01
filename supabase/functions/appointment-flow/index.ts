@@ -495,6 +495,26 @@ Responde SOLO JSON válido:
         return jsonResponse({ error: "Incomplete data", flow_data: flowData });
       }
 
+      // Validate blocked day at confirmation time
+      const { data: blockedCheck } = await supabase
+        .from("blocked_days")
+        .select("date, reason")
+        .eq("clinic_id", clinic_id)
+        .eq("date", flowData.date)
+        .maybeSingle();
+      if (blockedCheck) {
+        // Reactivate flow to pick a new date
+        await supabase.from("conversations").update({
+          appointment_flow_step: "date",
+          appointment_flow_data: { ...flowData, date: null },
+        }).eq("id", conversation_id);
+        return jsonResponse({
+          response_text: `Lo siento, el día ${flowData.date} ya no está disponible${blockedCheck.reason ? ` (${blockedCheck.reason})` : ""}. ¿Qué otro día te funciona?`,
+          flow_complete: false,
+          blocked_day: true,
+        });
+      }
+
       const { data: agentConfig } = await supabase.from("ai_agent_config")
         .select("agent_name, locations_text").eq("clinic_id", clinic_id).maybeSingle();
       const { data: clinic } = await supabase.from("clinics").select("name").eq("id", clinic_id).single();
