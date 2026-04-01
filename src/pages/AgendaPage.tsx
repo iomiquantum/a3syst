@@ -495,10 +495,20 @@ const AgendaPage = () => {
                           {blocked && <Lock className="w-3 h-3 text-destructive mx-auto mt-0.5" />}
                           <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
                             {blocked ? (
-                              <button onClick={() => handleUnblockDay(dateStr)}
-                                className="p-0.5 rounded hover:bg-muted" title="Desbloquear día">
-                                <Check className="w-3 h-3 text-[hsl(var(--success))]" />
-                              </button>
+                              <>
+                                <button onClick={() => {
+                                  const entry = blockedDays.find(b => b.date === dateStr);
+                                  setBlockReason(entry?.reason || "");
+                                  setBlockBranchId(entry?.branch_id || "all");
+                                  setBlockReasonOpen(dateStr);
+                                }} className="p-0.5 rounded hover:bg-muted" title="Editar bloqueo">
+                                  <Pencil className="w-3 h-3 text-muted-foreground" />
+                                </button>
+                                <button onClick={() => handleUnblockDay(dateStr)}
+                                  className="p-0.5 rounded hover:bg-muted" title="Desbloquear día">
+                                  <Check className="w-3 h-3 text-[hsl(var(--success))]" />
+                                </button>
+                              </>
                             ) : (
                               <button onClick={() => setBlockReasonOpen(dateStr)}
                                 className="p-0.5 rounded hover:bg-muted" title="Bloquear día">
