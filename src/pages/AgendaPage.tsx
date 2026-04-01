@@ -144,8 +144,9 @@ const AgendaPage = () => {
     let list = appointments;
     if (filterPro !== "todos") list = list.filter(a => a.professional_id === filterPro);
     if (filterStatus !== "todos") list = list.filter(a => a.status === filterStatus);
+    if (filterTreatment !== "todos") list = list.filter(a => a.treatment_id === filterTreatment);
     return list;
-  }, [appointments, filterPro, filterStatus]);
+  }, [appointments, filterPro, filterStatus, filterTreatment]);
 
   const getAptsForSlot = (dateStr: string, time: string) =>
     filteredAppts.filter(a => a.date === dateStr && a.time?.substring(0, 5) === time);
