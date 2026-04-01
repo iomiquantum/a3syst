@@ -478,17 +478,6 @@ REGLAS OBLIGATORIAS:
           ? `${Math.floor(timeSince / 60)} horas`
           : `${timeSince} minutos`;
 
-      // Load ALL strategies (S1-S6 tactics) to give the AI a toolkit
-      const { data: allStrategies } = await supabase
-        .from("seguimiento_strategies")
-        .select("contact_number, strategy_name, prompt_instruction, rules, psychological_principle")
-        .lte("contact_number", 6)
-        .order("contact_number", { ascending: true });
-
-      const strategyCatalog = (allStrategies || []).map(s =>
-        `TÁCTICA ${s.contact_number} — "${s.strategy_name}" (${s.psychological_principle}):\n${s.prompt_instruction}\nReglas: ${s.rules}`
-      ).join("\n\n");
-
       systemPrompt += `\n\n=== MODO SEGUIMIENTO — VALOR PRIMERO (Contacto #${followUpCount} de 4 automáticos) ===
 El contacto no ha respondido en ${timeLabel}.
 
@@ -497,15 +486,9 @@ Tu objetivo NO es vender ni presionar para agendar. Tu objetivo es ENAMORAR al c
 El cliente debe sentir: "esta empresa genuinamente quiere ayudarme y sabe de lo que habla".
 Si el cliente se siente cuidado e informado, la venta llegará sola.
 
-TÁCTICAS DISPONIBLES — Elige la más apropiada según el contexto del chat:
-${strategyCatalog}
-
-INSTRUCCIONES PARA ELEGIR LA TÁCTICA:
-- Analiza el historial del chat: ¿qué preguntó? ¿qué duda quedó pendiente? ¿qué le interesaba?
+INSTRUCCIONES PARA EL CONTACTO:
 - Contacto #${followUpCount}: ${followUpCount === 1 ? "Es el primer re-contacto. PRIORIZA responder la duda que tenía o darle valor educativo sobre lo que preguntó. NO menciones agendar." : followUpCount === 2 ? "Ya intentamos una vez. Comparte un dato nuevo o personaliza la info. Al final puedes agregar algo sutil como 'recuerda que puedes agendar cuando quieras o preguntarme cualquier duda 😊'." : followUpCount === 3 ? "Tercer contacto. Combina valor con recordatorio natural: 'estoy aquí para resolver tus dudas o ayudarte a agendar cuando te sientas listo/a'." : "Último contacto automático. Ofrece ayuda genuina + recordatorio cálido de que puede agendar o preguntar lo que necesite."}
-- Elige la táctica que mejor encaje con el estado de la conversación. NO uses siempre la misma.
-- Si los mensajes anteriores ya dieron valor educativo, cambia de ángulo (personalización, prueba social, etc.)
-- Si los mensajes anteriores fueron de enamoramiento, ahora sí puedes sugerir agendar suavemente.
+- Varía el enfoque y la información en cada contacto. NO repitas el mismo contenido.
 
 REGLAS OBLIGATORIAS:
 - Máximo 3 oraciones y 250 caracteres.
