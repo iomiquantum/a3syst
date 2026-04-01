@@ -80,13 +80,7 @@ const MarketingPage = () => {
           </div>
         );
       case "plantillas":
-        return (
-          <div className="p-8 text-center text-muted-foreground">
-            <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="font-medium">Plantillas</p>
-            <p className="text-sm mt-1">Gestiona tus plantillas de WhatsApp desde Administración → Plantillas</p>
-          </div>
-        );
+        return <PlantillasTab />;
       case "campanas":
         return (
           <div className="p-8 text-center text-muted-foreground">
