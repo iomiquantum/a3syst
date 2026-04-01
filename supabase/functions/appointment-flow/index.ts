@@ -100,7 +100,7 @@ serve(async (req) => {
       const todayInfo = getLocalDateInfo(tz);
       const today = todayInfo.iso;
       const dayOfWeek = DAY_NAMES_ES[todayInfo.weekday];
-      const calRefDetect = buildCalendarReference(todayInfo, 14, workingDays);
+      const calRefDetect = buildCalendarReference(todayInfo, 14, workingDays, blockedDaysSet);
       const detectedDateResolution = resolveDateReferenceFromMessage(patient_message, tz);
 
       // Fetch blocked days (global ones for detection phase — branch-specific checked at confirmation)
@@ -364,14 +364,19 @@ Responde SOLO JSON válido:
       const todayStr = todayLocalInfo.iso;
       const dayOfWeekStr = DAY_NAMES_ES[todayLocalInfo.weekday];
 
-      // Fetch blocked days
+      // Fetch blocked days — include ALL (global + branch-specific)
       const { data: blockedDaysData } = await supabase
         .from("blocked_days")
         .select("date, reason, branch_id")
         .eq("clinic_id", clinic_id);
+      // For calendar display and validation, use ALL blocked days (global + any branch)
+      const allBlockedDates = new Set((blockedDaysData || []).map((b: any) => b.date));
       const globalBlocked2 = (blockedDaysData || []).filter((b: any) => b.branch_id === null);
       const blockedDaysSet = new Set(globalBlocked2.map((b: any) => b.date));
-      const blockedDaysList = globalBlocked2.map((b: any) => `${b.date}${b.reason ? ` (${b.reason})` : ""}`).join(", ");
+      const blockedDaysList = (blockedDaysData || []).map((b: any) => {
+        const branchNote = b.branch_id ? " (sede específica)" : " (global)";
+        return `${b.date}${b.reason ? ` (${b.reason})` : ""}${branchNote}`;
+      }).join(", ");
 
       // Safety net: hard limit at 6 messages in the CURRENT flow session (last 2 hours)
       const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
@@ -391,7 +396,7 @@ Responde SOLO JSON válido:
         );
       }
 
-      const calendarRef = buildCalendarReference(todayLocalInfo, 14, guidedWorkingDays);
+      const calendarRef = buildCalendarReference(todayLocalInfo, 14, guidedWorkingDays, allBlockedDates);
       const resolvedDate = resolveDateReferenceFromMessage(patient_message, clinicTz);
       const dateInstruction = buildDateResolutionInstruction(resolvedDate);
       const guidedNonWorkingInfo = buildNonWorkingDaysInfo(guidedWorkingDays);
@@ -441,15 +446,23 @@ PASO ACTUAL: ${conv.appointment_flow_step}
 9. No aceptes fechas en el pasado.
 10. PRIORIDAD DE HORARIOS: Si las INSTRUCCIONES ESPECIALES contienen horarios específicos, USA ESOS. Prevalecen sobre el HORARIO GENÉRICO.
 11. NUNCA ofrezcas citas fuera del horario válido. Sugiere el siguiente día hábil si pide un día no laborable.
+11B. DÍAS BLOQUEADOS: Si un día aparece como 🔒 BLOQUEADO en el calendario, NUNCA ofrezcas citas ese día. Di que ese día no hay disponibilidad y sugiere el día hábil más cercano NO bloqueado.
 12. Tono cálido y breve (máximo 2-3 oraciones).
 13. Si el paciente menciona fecha relativa ("mañana", "el viernes"), resuélvela a YYYY-MM-DD usando la FECHA DE HOY como referencia. VERIFICA QUE EL DÍA DE LA SEMANA CORRESPONDA A LA FECHA CALCULADA. Ejemplo: si hoy es domingo 23 y dice "el sábado", el próximo sábado es el 29, NO el 28. Haz la aritmética correctamente.
 14. NUNCA inventes servicios, precios, horarios ni datos que no aparezcan aquí.
 15A. IMPORTANTE: Cuando menciones una fecha al paciente, SIEMPRE verifica que el día de la semana sea correcto para esa fecha. Si dices "sábado 29 de marzo" asegúrate que el 29 de marzo realmente caiga sábado.
 15. NO repitas preguntas que ya se respondieron en el historial. Lee el historial antes de preguntar.
 16. Si el paciente parece frustrado o repite información, discúlpate brevemente y ve directo al punto.
-17. ESCALACIÓN INTELIGENTE: SOLO escala (should_escalate=true) si el paciente EXPLÍCITAMENTE pide hablar con una persona, o pide algo completamente fuera de tu alcance (ej: servicio que no existe). NO escales si el paciente simplemente dice que no tiene correo, no tiene email, da su nombre, o responde algo que no entiendes — simplemente ignora ese dato y pregunta por lo que falta (servicio, fecha, hora). NO escales si el paciente confirma la cita.
+17. ESCALACIÓN — REGLA ESTRICTA: SOLO puedes escalar (should_escalate=true) si el paciente dice TEXTUALMENTE que quiere hablar con una persona/humano/asesor. NUNCA escales por:
+   - El paciente da su teléfono, nombre, o cualquier dato personal → ignóralo y continúa
+   - El paciente pide una fecha u hora → resuélvelo tú
+   - El paciente dice algo que no entiendes → pide aclaración amablemente
+   - El paciente repite información → discúlpate y avanza
+   - El paciente no tiene email → ignóralo y continúa
+   SOLO escala si dice algo como "quiero hablar con alguien", "pásame con un humano", "necesito un asesor".
 18. Si el paso actual es "confirm" y el paciente dice "sí", "confirmo", "dale", "ok", "listo", "confirmar", "si por favor" o similar, DEBES responder con flow_complete=true. No escales por una confirmación.
 19. Si el paciente dice "no tengo correo", "no tengo email", o envía datos personales no solicitados, ignóralos completamente y continúa con el flujo normalmente.
+20. HORARIOS DISPONIBLES: Cuando ofrezcas horarios al paciente, calcula TODOS los slots disponibles desde la hora de apertura hasta la hora de "última cita" (o cierre si no hay última cita) en intervalos de 1 hora. Ejemplo: si la sede abre a las 08:00 y la última cita es a las 17:00, ofrece: 08:00, 09:00, 10:00, 11:00, 12:00, 13:00, 14:00, 15:00, 16:00, 17:00. NO omitas slots intermedios.
 
 Responde SOLO JSON válido:
 {
@@ -503,8 +516,8 @@ Responde SOLO JSON válido:
         parsed.flow_complete = false;
       }
 
-      // Validate date not blocked
-      if (flowData.date && blockedDaysSet.has(flowData.date)) {
+      // Validate date not blocked (check ALL blocked days — global and branch-specific)
+      if (flowData.date && allBlockedDates.has(flowData.date)) {
         const blockedReason = (blockedDaysData || []).find((b: any) => b.date === flowData.date)?.reason;
         flowData.date = null;
         parsed.response_text = `Lo siento, el día que elegiste no está disponible${blockedReason ? ` (${blockedReason})` : ""}. ¿Te funciona otro día?`;
@@ -1097,12 +1110,17 @@ function buildNonWorkingDaysInfo(workingDays: string[]): string {
   return `\n⚠️ DÍAS SIN SERVICIO: ${nonWorking.join(", ")}. NUNCA ofrezcas citas estos días.`;
 }
 
-function buildCalendarReference(base: LocalDateInfo, totalDays = 14, workingDays?: string[]): string[] {
+function buildCalendarReference(base: LocalDateInfo, totalDays = 14, workingDays?: string[], blockedDates?: Set<string>): string[] {
   const indices = workingDays ? getWorkingWeekdayIndices(workingDays) : null;
   return Array.from({ length: totalDays }, (_, index) => {
     const info = addDaysToLocalDate(base, index);
-    const closed = indices && !indices.has(info.weekday) ? " ❌ CERRADO" : "";
-    return `${DAY_NAMES_ES[info.weekday]} ${pad2(info.day)}/${pad2(info.month)}/${info.year} → ${info.iso}${closed}`;
+    let status = "";
+    if (indices && !indices.has(info.weekday)) {
+      status = " ❌ CERRADO";
+    } else if (blockedDates && blockedDates.has(info.iso)) {
+      status = " 🔒 BLOQUEADO";
+    }
+    return `${DAY_NAMES_ES[info.weekday]} ${pad2(info.day)}/${pad2(info.month)}/${info.year} → ${info.iso}${status}`;
   });
 }
 

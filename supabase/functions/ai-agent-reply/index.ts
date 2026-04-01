@@ -83,7 +83,7 @@ serve(async (req) => {
       .select("date, reason, branch_id")
       .eq("clinic_id", clinic_id);
     const blockedDatesSet = new Set(
-      (blockedDaysRaw || []).filter((b: any) => b.branch_id === null).map((b: any) => b.date)
+      (blockedDaysRaw || []).map((b: any) => b.date)
     );
 
     const { data: conversationData, error: conversationError } = await supabase
