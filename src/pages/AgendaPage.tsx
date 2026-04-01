@@ -58,6 +58,9 @@ const AgendaPage = () => {
   const [treatments, setTreatments] = useState<any[]>([]);
   const [professionals, setProfessionals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [blockedDays, setBlockedDays] = useState<{ date: string; reason: string }[]>([]);
+  const [blockReasonOpen, setBlockReasonOpen] = useState<string | null>(null);
+  const [blockReason, setBlockReason] = useState("");
 
   // Filters
   const [filterPro, setFilterPro] = useState("todos");
