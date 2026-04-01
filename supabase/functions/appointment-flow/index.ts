@@ -337,6 +337,7 @@ ZONA HORARIA: ${clinicTz}
 
 CALENDARIO DE REFERENCIA (próximos 14 días):
 ${calendarRef.join("\n")}
+${blockedDaysList ? `\n🚫 DÍAS BLOQUEADOS (NO AGENDAR en estas fechas): ${blockedDaysList}\nSi el paciente pide un día bloqueado, explica que no hay disponibilidad ese día y sugiere el día hábil más cercano.` : ""}
 ${dateInstruction ? `\n${dateInstruction}\n` : ""}
 
 
