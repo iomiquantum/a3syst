@@ -103,13 +103,15 @@ serve(async (req) => {
       const calRefDetect = buildCalendarReference(todayInfo, 14, workingDays);
       const detectedDateResolution = resolveDateReferenceFromMessage(patient_message, tz);
 
-      // Fetch blocked days
+      // Fetch blocked days (global ones for detection phase — branch-specific checked at confirmation)
       const { data: blockedDaysData } = await supabase
         .from("blocked_days")
-        .select("date, reason")
+        .select("date, reason, branch_id")
         .eq("clinic_id", clinic_id);
-      const blockedDaysSet = new Set((blockedDaysData || []).map((b: any) => b.date));
-      const blockedDaysList = (blockedDaysData || []).map((b: any) => `${b.date}${b.reason ? ` (${b.reason})` : ""}`).join(", ");
+      // For calendar display, show globally blocked days (branch_id is null)
+      const globalBlocked = (blockedDaysData || []).filter((b: any) => b.branch_id === null);
+      const blockedDaysSet = new Set(globalBlocked.map((b: any) => b.date));
+      const blockedDaysList = globalBlocked.map((b: any) => `${b.date}${b.reason ? ` (${b.reason})` : ""}`).join(", ");
 
       // Build non-working days info
       const nonWorkingDaysInfo = buildNonWorkingDaysInfo(workingDays);
@@ -323,10 +325,11 @@ Responde SOLO JSON válido:
       // Fetch blocked days
       const { data: blockedDaysData } = await supabase
         .from("blocked_days")
-        .select("date, reason")
+        .select("date, reason, branch_id")
         .eq("clinic_id", clinic_id);
-      const blockedDaysSet = new Set((blockedDaysData || []).map((b: any) => b.date));
-      const blockedDaysList = (blockedDaysData || []).map((b: any) => `${b.date}${b.reason ? ` (${b.reason})` : ""}`).join(", ");
+      const globalBlocked2 = (blockedDaysData || []).filter((b: any) => b.branch_id === null);
+      const blockedDaysSet = new Set(globalBlocked2.map((b: any) => b.date));
+      const blockedDaysList = globalBlocked2.map((b: any) => `${b.date}${b.reason ? ` (${b.reason})` : ""}`).join(", ");
 
       // Safety net: hard limit at 6 messages (reduced from 12)
       const { count: flowMsgCount } = await supabase
@@ -523,13 +526,16 @@ Responde SOLO JSON válido:
         return jsonResponse({ error: "Incomplete data", flow_data: flowData });
       }
 
-      // Validate blocked day at confirmation time
-      const { data: blockedCheck } = await supabase
+      // Validate blocked day at confirmation time (global or branch-specific)
+      const { data: blockedEntries } = await supabase
         .from("blocked_days")
-        .select("date, reason")
+        .select("date, reason, branch_id")
         .eq("clinic_id", clinic_id)
-        .eq("date", flowData.date)
-        .maybeSingle();
+        .eq("date", flowData.date);
+      const selectedBranch = flowData.branch_id || null;
+      const blockedCheck = (blockedEntries || []).find((b: any) =>
+        b.branch_id === null || !selectedBranch || b.branch_id === selectedBranch
+      );
       if (blockedCheck) {
         // Reactivate flow to pick a new date
         await supabase.from("conversations").update({

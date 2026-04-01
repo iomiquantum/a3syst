@@ -64,16 +64,23 @@ const ManualBookingDialog = ({
     setSaving(true);
 
     try {
-      // Validate blocked day
-      const { data: blockedCheck } = await (supabase as any)
+      // Validate blocked day (global or branch-specific)
+      let blockedQuery = (supabase as any)
         .from("blocked_days")
-        .select("date, reason")
+        .select("date, reason, branch_id")
         .eq("clinic_id", clinicId)
-        .eq("date", form.date)
-        .maybeSingle();
+        .eq("date", form.date);
 
-      if (blockedCheck) {
-        toast.error(`🔒 Ese día está bloqueado${blockedCheck.reason ? `: ${blockedCheck.reason}` : ""}`);
+      const { data: blockedEntries } = await blockedQuery;
+      const isBlocked = (blockedEntries || []).some((b: any) =>
+        b.branch_id === null || !form.branch_id || b.branch_id === form.branch_id
+      );
+      const blockedEntry = (blockedEntries || []).find((b: any) =>
+        b.branch_id === null || !form.branch_id || b.branch_id === form.branch_id
+      );
+
+      if (isBlocked) {
+        toast.error(`🔒 Ese día está bloqueado${blockedEntry?.reason ? `: ${blockedEntry.reason}` : ""}`);
         setSaving(false);
         return;
       }

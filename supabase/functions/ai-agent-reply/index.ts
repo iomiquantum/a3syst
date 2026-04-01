@@ -77,6 +77,15 @@ serve(async (req) => {
       .eq("active", true)
       .order("created_at");
 
+    // Fetch blocked days (global only for AI context calendar)
+    const { data: blockedDaysRaw } = await supabase
+      .from("blocked_days")
+      .select("date, reason, branch_id")
+      .eq("clinic_id", clinic_id);
+    const blockedDatesSet = new Set(
+      (blockedDaysRaw || []).filter((b: any) => b.branch_id === null).map((b: any) => b.date)
+    );
+
     const { data: conversationData, error: conversationError } = await supabase
       .from("conversations")
       .select("id, channel, visitor_contact, contact_id, chatbot_active, follow_up_count, last_inbound_at, appointment_flow_active, appointment_flow_step, appointment_flow_data, pipeline_tab, appointment_confirmed, seguimiento_last_completed_s, seguimiento_is_recurrente, seguimiento_recurrente_count")

@@ -57,14 +57,17 @@ const AgendaPage = () => {
   const [patients, setPatients] = useState<any[]>([]);
   const [treatments, setTreatments] = useState<any[]>([]);
   const [professionals, setProfessionals] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [blockedDays, setBlockedDays] = useState<{ date: string; reason: string }[]>([]);
+  const [blockedDays, setBlockedDays] = useState<{ date: string; reason: string; branch_id: string | null; id: string }[]>([]);
   const [blockReasonOpen, setBlockReasonOpen] = useState<string | null>(null);
   const [blockReason, setBlockReason] = useState("");
+  const [blockBranchId, setBlockBranchId] = useState<string>("all");
 
   // Filters
   const [filterPro, setFilterPro] = useState("todos");
   const [filterStatus, setFilterStatus] = useState("todos");
+  const [filterBranch, setFilterBranch] = useState("todos");
 
   // Modals
   const [createOpen, setCreateOpen] = useState(false);
@@ -99,7 +102,7 @@ const AgendaPage = () => {
     const startDate = fmtDate(weekDates[0]);
     const endDate = fmtDate(weekDates[6]);
 
-    const [{ data: a }, { data: p }, { data: t }, { data: pr }, { data: pm }, { data: bd }] = await Promise.all([
+    const [{ data: a }, { data: p }, { data: t }, { data: pr }, { data: pm }, { data: bd }, { data: br }] = await Promise.all([
       supabase.from("appointments")
         .select("*, patients(first_name, last_name), treatments(name, price), professionals(full_name)")
         .eq("clinic_id", clinicId).gte("date", startDate).lte("date", endDate)
@@ -108,14 +111,16 @@ const AgendaPage = () => {
       supabase.from("treatments").select("id, name, duration, price").eq("clinic_id", clinicId),
       supabase.from("professionals").select("id, full_name").eq("clinic_id", clinicId).eq("active", true),
       supabase.from("payment_methods").select("id, name").eq("clinic_id", clinicId),
-      (supabase as any).from("blocked_days").select("date, reason").eq("clinic_id", clinicId),
+      (supabase as any).from("blocked_days").select("id, date, reason, branch_id").eq("clinic_id", clinicId),
+      supabase.from("branches").select("id, name").eq("clinic_id", clinicId).eq("active", true),
     ]);
     setAppointments(a || []);
     setPatients(p || []);
     setTreatments(t || []);
     setProfessionals(pr || []);
     setPaymentMethods(pm || []);
-    setBlockedDays((bd || []).map((b: any) => ({ date: b.date, reason: b.reason || "" })));
+    setBranches(br || []);
+    setBlockedDays((bd || []).map((b: any) => ({ id: b.id, date: b.date, reason: b.reason || "", branch_id: b.branch_id || null })));
     setLoading(false);
   }, [clinicId, weekDates]);
 
@@ -247,31 +252,41 @@ const AgendaPage = () => {
     setCurrentDate(d);
   };
 
-  const isBlockedDay = (dateStr: string) => blockedDays.some(b => b.date === dateStr);
+  // A day is blocked if there's a global block (branch_id=null) or a block matching the current branch filter
+  const isBlockedDay = (dateStr: string) => blockedDays.some(b =>
+    b.date === dateStr && (b.branch_id === null || filterBranch === "todos" || b.branch_id === filterBranch)
+  );
 
-  const handleBlockDay = async (dateStr: string) => {
+  const getBlockedEntry = (dateStr: string) => blockedDays.find(b =>
+    b.date === dateStr && (b.branch_id === null || filterBranch === "todos" || b.branch_id === filterBranch)
+  );
+
+  const handleUnblockDay = async (dateStr: string) => {
     if (!clinicId) return;
-    if (isBlockedDay(dateStr)) {
-      // Unblock
-      const { error } = await (supabase as any).from("blocked_days").delete().eq("clinic_id", clinicId).eq("date", dateStr);
-      if (error) { toast.error(error.message); return; }
-      setBlockedDays(prev => prev.filter(b => b.date !== dateStr));
-      toast.success("✅ Día desbloqueado");
-    } else {
-      setBlockReasonOpen(dateStr);
+    // Find matching blocked entries for the current filter
+    const entries = blockedDays.filter(b =>
+      b.date === dateStr && (filterBranch === "todos" ? true : (b.branch_id === null || b.branch_id === filterBranch))
+    );
+    if (entries.length === 0) return;
+    for (const entry of entries) {
+      await (supabase as any).from("blocked_days").delete().eq("id", entry.id);
     }
+    setBlockedDays(prev => prev.filter(b => !entries.some(e => e.id === b.id)));
+    toast.success("✅ Día desbloqueado");
   };
 
   const confirmBlockDay = async () => {
     if (!clinicId || !blockReasonOpen) return;
-    const { error } = await (supabase as any).from("blocked_days").insert({
-      clinic_id: clinicId, date: blockReasonOpen, reason: blockReason,
-    });
+    const branchId = blockBranchId === "all" ? null : blockBranchId;
+    const { data, error } = await (supabase as any).from("blocked_days").insert({
+      clinic_id: clinicId, date: blockReasonOpen, reason: blockReason, branch_id: branchId,
+    }).select("id").single();
     if (error) { toast.error(error.message); return; }
-    setBlockedDays(prev => [...prev, { date: blockReasonOpen, reason: blockReason }]);
+    setBlockedDays(prev => [...prev, { id: data.id, date: blockReasonOpen, reason: blockReason, branch_id: branchId }]);
     toast.success("🔒 Día bloqueado");
     setBlockReasonOpen(null);
     setBlockReason("");
+    setBlockBranchId("all");
   };
 
   const openSlot = (dateStr: string, time: string) => {
@@ -396,6 +411,15 @@ const AgendaPage = () => {
 
             {/* Filters */}
             <div className="flex items-center gap-3 mb-4 flex-wrap">
+              {branches.length > 0 && (
+                <Select value={filterBranch} onValueChange={setFilterBranch}>
+                  <SelectTrigger className="w-48 h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todas las sucursales</SelectItem>
+                    {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
               <Select value={filterPro} onValueChange={setFilterPro}>
                 <SelectTrigger className="w-44 h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -451,13 +475,19 @@ const AgendaPage = () => {
                             {date.getDate()}
                           </p>
                           {blocked && <Lock className="w-3 h-3 text-destructive mx-auto mt-0.5" />}
-                          <button
-                            onClick={() => handleBlockDay(dateStr)}
-                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted"
-                            title={blocked ? "Desbloquear día" : "Bloquear día"}
-                          >
-                            {blocked ? <Check className="w-3 h-3 text-[hsl(var(--success))]" /> : <Ban className="w-3 h-3 text-destructive" />}
-                          </button>
+                          <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
+                            {blocked ? (
+                              <button onClick={() => handleUnblockDay(dateStr)}
+                                className="p-0.5 rounded hover:bg-muted" title="Desbloquear día">
+                                <Check className="w-3 h-3 text-[hsl(var(--success))]" />
+                              </button>
+                            ) : (
+                              <button onClick={() => setBlockReasonOpen(dateStr)}
+                                className="p-0.5 rounded hover:bg-muted" title="Bloquear día">
+                                <Ban className="w-3 h-3 text-destructive" />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
@@ -753,20 +783,32 @@ const AgendaPage = () => {
       </Dialog>
 
       {/* ═══ BLOCK DAY DIALOG ═══ */}
-      <Dialog open={!!blockReasonOpen} onOpenChange={o => { if (!o) { setBlockReasonOpen(null); setBlockReason(""); } }}>
+      <Dialog open={!!blockReasonOpen} onOpenChange={o => { if (!o) { setBlockReasonOpen(null); setBlockReason(""); setBlockBranchId("all"); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>🔒 Bloquear día</DialogTitle></DialogHeader>
           <div className="space-y-4 pt-2">
             <p className="text-sm text-muted-foreground">
               Bloquear el día <span className="text-foreground font-medium">{blockReasonOpen}</span>. No se podrán agendar citas.
             </p>
+            {branches.length > 0 && (
+              <div>
+                <Label className="text-xs text-muted-foreground">Sucursal</Label>
+                <Select value={blockBranchId} onValueChange={setBlockBranchId}>
+                  <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las sucursales</SelectItem>
+                    {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <Label className="text-xs text-muted-foreground">Razón (opcional)</Label>
               <Input value={blockReason} onChange={e => setBlockReason(e.target.value)}
                 className="h-9 mt-1" placeholder="Feriado, mantenimiento..." maxLength={200} />
             </div>
             <div className="flex gap-3 pt-1">
-              <Button variant="outline" onClick={() => { setBlockReasonOpen(null); setBlockReason(""); }} className="flex-1">Cancelar</Button>
+              <Button variant="outline" onClick={() => { setBlockReasonOpen(null); setBlockReason(""); setBlockBranchId("all"); }} className="flex-1">Cancelar</Button>
               <Button onClick={confirmBlockDay} className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90">
                 <Lock className="w-3.5 h-3.5 mr-1.5" /> Bloquear
               </Button>
