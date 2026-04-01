@@ -456,6 +456,15 @@ const AgendaPage = () => {
                   ))}
                 </SelectContent>
               </Select>
+              <Select value={filterTreatment} onValueChange={setFilterTreatment}>
+                <SelectTrigger className="w-44 h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos los tratamientos</SelectItem>
+                  {treatments.map(t => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {/* Legend */}
               <div className="flex items-center gap-3 ml-auto flex-wrap">
                 {(Object.entries(STATUS_CFG) as [AptStatus, typeof STATUS_CFG[AptStatus]][]).map(([k, v]) => (
