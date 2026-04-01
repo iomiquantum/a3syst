@@ -386,6 +386,27 @@ serve(async (req) => {
     const todayDay = todayLocal.dayNameES;
     const dayNames = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 
+    // Derive working day indices from branches' working_schedule
+    // Map day keys to JS weekday indices: domingo=0, lunes=1, ..., sabado=6
+    const dayKeyToIndex: Record<string, number> = { domingo: 0, lunes: 1, martes: 2, miercoles: 3, jueves: 4, viernes: 5, sabado: 6 };
+    const workingDayIndices = new Set<number>();
+    if (branchesData && branchesData.length > 0) {
+      for (const b of branchesData as any[]) {
+        const ws = b.working_schedule as Record<string, { enabled: boolean }> | null;
+        if (ws) {
+          for (const [key, val] of Object.entries(ws)) {
+            if (val?.enabled && dayKeyToIndex[key] !== undefined) {
+              workingDayIndices.add(dayKeyToIndex[key]);
+            }
+          }
+        }
+      }
+    }
+    // If no branches have schedule configured, assume all days are working
+    if (workingDayIndices.size === 0) {
+      for (let i = 0; i < 7; i++) workingDayIndices.add(i);
+    }
+
     const calendarRef = Array.from({ length: 21 }, (_, index) => {
       const d = addDaysReply(todayLocal, index);
       let marker = "";
