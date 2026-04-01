@@ -233,6 +233,37 @@ Responde SOLO JSON válido:
         return jsonResponse({ error: "Flow not active" });
       }
 
+      // ====== DETERMINISTIC CONFIRMATION: If step is "confirm" and all data present, check for clear confirmation ======
+      const flowDataPre = (conv.appointment_flow_data || {}) as Record<string, any>;
+      if (conv.appointment_flow_step === "confirm" && flowDataPre.service && flowDataPre.date && flowDataPre.time) {
+        const msgLower = (patient_message || "").toLowerCase().trim().replace(/[.,!¡¿?]/g, "");
+        const confirmPatterns = [
+          "confirmar", "confirmo", "si", "sí", "ok", "dale", "listo", "perfecto",
+          "si por favor", "sí por favor", "va", "claro", "de acuerdo", "bueno",
+          "esta bien", "está bien", "genial", "me parece bien", "reserva",
+          "agendame", "agéndame", "si quiero", "sí quiero", "afirmativo",
+          "correcto", "exacto", "eso", "si confirmo", "sí confirmo",
+        ];
+        const isConfirmation = confirmPatterns.some(p => msgLower === p || msgLower.startsWith(p + " ") || msgLower.endsWith(" " + p));
+        const cancelPatterns = ["no", "cancelar", "cancela", "no quiero", "mejor no", "dejalo", "déjalo"];
+        const isCancellation = cancelPatterns.some(p => msgLower === p || msgLower.startsWith(p + " "));
+
+        if (isConfirmation && !isCancellation) {
+          console.log("[appointment-flow] Deterministic confirmation detected, booking directly");
+          const { data: agentCfgDirect } = await supabase.from("ai_agent_config")
+            .select("agent_name, locations_text").eq("clinic_id", clinic_id).maybeSingle();
+          const { data: clinicDirect } = await supabase.from("clinics").select("name").eq("id", clinic_id).single();
+          const { data: branchesDirect } = await supabase.from("branches")
+            .select("id, name, address, google_maps_url").eq("clinic_id", clinic_id).eq("active", true);
+
+          return await confirmAppointment(
+            supabase, supabaseUrl, supabaseKey, conv, flowDataPre, clinic_id,
+            agentCfgDirect?.agent_name || "Asistente", clinicDirect?.name || "el negocio", branchesDirect,
+            agentCfgDirect?.locations_text || null,
+          );
+        }
+      }
+
       // Fetch recent conversation history for context (last 15 messages)
       const { data: recentMsgs } = await supabase
         .from("messages")
