@@ -977,8 +977,6 @@ Formato: Usa emojis para hacerlo visual y fácil de escanear. Máximo 6 líneas.
     }
 
 
-        const configByClinic: Record<string, any[]> = {};
-        for (const rc of reminderConfigs) {
           if (!configByClinic[rc.clinic_id]) configByClinic[rc.clinic_id] = [];
           configByClinic[rc.clinic_id].push(rc);
         }
