@@ -903,7 +903,10 @@ async function escalateConversation(
       .eq("id", conv.contact_id)
       .maybeSingle();
 
-    const timestamp = new Date().toLocaleString("es", { timeZone: "America/Guayaquil" });
+    // Use clinic timezone for escalation notes — fetch from clinic record
+    const { data: clinicTzData } = await supabase.from("clinics").select("timezone").eq("id", clinic_id).maybeSingle();
+    const escalationTz = clinicTzData?.timezone || "America/Guayaquil";
+    const timestamp = new Date().toLocaleString("es", { timeZone: escalationTz });
     const newNote = `[${timestamp}] 🔴 Escalado IA: ${reason}`;
     const existingNotes = currentNotes?.data?.notes || "";
     const updatedNotes = existingNotes ? `${existingNotes}\n${newNote}` : newNote;
