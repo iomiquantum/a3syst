@@ -664,9 +664,6 @@ const AgendaPage = () => {
                   </div>
                 )}
               </div>
-            </div>
-              </div>
-            </div>
 
             <div>
               <Label className="text-xs text-muted-foreground">Servicio</Label>
