@@ -325,10 +325,11 @@ Responde SOLO JSON válido:
       // Fetch blocked days
       const { data: blockedDaysData } = await supabase
         .from("blocked_days")
-        .select("date, reason")
+        .select("date, reason, branch_id")
         .eq("clinic_id", clinic_id);
-      const blockedDaysSet = new Set((blockedDaysData || []).map((b: any) => b.date));
-      const blockedDaysList = (blockedDaysData || []).map((b: any) => `${b.date}${b.reason ? ` (${b.reason})` : ""}`).join(", ");
+      const globalBlocked2 = (blockedDaysData || []).filter((b: any) => b.branch_id === null);
+      const blockedDaysSet = new Set(globalBlocked2.map((b: any) => b.date));
+      const blockedDaysList = globalBlocked2.map((b: any) => `${b.date}${b.reason ? ` (${b.reason})` : ""}`).join(", ");
 
       // Safety net: hard limit at 6 messages (reduced from 12)
       const { count: flowMsgCount } = await supabase
