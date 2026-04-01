@@ -64,6 +64,19 @@ const ManualBookingDialog = ({
     setSaving(true);
 
     try {
+      // Validate blocked day
+      const { data: blockedCheck } = await (supabase as any)
+        .from("blocked_days")
+        .select("date, reason")
+        .eq("clinic_id", clinicId)
+        .eq("date", form.date)
+        .maybeSingle();
+
+      if (blockedCheck) {
+        toast.error(`🔒 Ese día está bloqueado${blockedCheck.reason ? `: ${blockedCheck.reason}` : ""}`);
+        setSaving(false);
+        return;
+      }
       // 1. Find or create a patient from the contact
       let patientId: string | null = null;
 

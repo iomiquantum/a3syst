@@ -185,6 +185,12 @@ const AgendaPage = () => {
     if (!clinicId) return;
     try {
       const validated = appointmentSchema.parse({ ...form, duration: parseInt(form.duration) || 30 });
+      // Validate blocked day
+      if (isBlockedDay(validated.date)) {
+        const blocked = blockedDays.find(b => b.date === validated.date);
+        toast.error(`🔒 Ese día está bloqueado${blocked?.reason ? `: ${blocked.reason}` : ""}`);
+        return;
+      }
       const { error } = await supabase.from("appointments").insert({
         clinic_id: clinicId,
         patient_id: validated.patient_id,
