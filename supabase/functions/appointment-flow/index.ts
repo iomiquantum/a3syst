@@ -501,6 +501,25 @@ Responde SOLO JSON válido:
       if (resolvedDate?.type === "single") {
         updated.date = resolvedDate.iso;
         parsed.response_text = harmonizeResponseDate(parsed.response_text, resolvedDate);
+        // If AI generated text mentioning a DIFFERENT date than the resolved one, override completely
+        const resolvedLabel = formatDateLabelES(resolvedDate.iso, false);
+        const responseHasWrongDate = parsed.response_text && (
+          /bloqueado|no.*disponib|no.*citas|no podemos/i.test(parsed.response_text) &&
+          !parsed.response_text.includes(resolvedLabel)
+        );
+        if (responseHasWrongDate && !allBlockedDates.has(resolvedDate.iso) && isWorkingDay(resolvedDate.iso, guidedWorkingDays)) {
+          // The system-resolved date is valid but AI talked about a different blocked date — override
+          const missingNow = [];
+          if (!flowData.service && !updated.service) missingNow.push("service");
+          if (!flowData.time && !updated.time) missingNow.push("time");
+          if (missingNow.length === 0) {
+            parsed.response_text = `Perfecto, ¿confirmo tu cita para el ${resolvedLabel}${flowData.time || updated.time ? ` a las ${flowData.time || updated.time}` : ""}${flowData.service || updated.service ? ` — ${flowData.service || updated.service}` : ""}?`;
+          } else if (missingNow.includes("time")) {
+            parsed.response_text = `¡Perfecto! Agendamos para el ${resolvedLabel}. ¿A qué hora te gustaría?`;
+          } else {
+            parsed.response_text = `¡Perfecto! Agendamos para el ${resolvedLabel}. ¿Qué servicio necesitas?`;
+          }
+        }
       }
 
       if (resolvedDate?.type === "ambiguous") {
