@@ -297,10 +297,21 @@ Responde SOLO JSON válido:
           if (b.whatsapp) parts.push(`  WA: ${b.whatsapp}`);
           if (b.arrival_instructions) parts.push(`  Llegada: ${b.arrival_instructions}`);
           if (b.preparation_notes) parts.push(`  Preparación: ${b.preparation_notes}`);
-          const ws = b.working_schedule as Record<string, { enabled: boolean; open: string; close: string }> | null;
+          const ws = b.working_schedule as Record<string, { enabled: boolean; open: string; close: string; last_appointment?: string }> | null;
           if (ws) {
-            const lines = Object.entries(dayLabels).map(([k, l]) => ws[k]?.enabled ? `    • ${l}: ${ws[k].open} a ${ws[k].close}` : `    • ${l}: CERRADO`);
+            const hasAppointmentCutoff = Object.values(ws).some(v => v?.last_appointment);
+            const lines = Object.entries(dayLabels).map(([k, l]) => {
+              if (!ws[k]?.enabled) return `    • ${l}: CERRADO`;
+              let line = `    • ${l}: ${ws[k].open} a ${ws[k].close}`;
+              if (hasAppointmentCutoff && ws[k].last_appointment) {
+                line += ` (última cita: ${ws[k].last_appointment})`;
+              }
+              return line;
+            });
             parts.push(`  Horario:\n${lines.join("\n")}`);
+            if (hasAppointmentCutoff) {
+              parts.push(`  ⚠️ Las citas solo se agendan hasta la hora de "última cita".`);
+            }
           }
           return parts.join("\n");
         });
@@ -331,13 +342,15 @@ Responde SOLO JSON válido:
       const blockedDaysSet = new Set(globalBlocked2.map((b: any) => b.date));
       const blockedDaysList = globalBlocked2.map((b: any) => `${b.date}${b.reason ? ` (${b.reason})` : ""}`).join(", ");
 
-      // Safety net: hard limit at 6 messages (reduced from 12)
+      // Safety net: hard limit at 6 messages in the CURRENT flow session (last 2 hours)
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
       const { count: flowMsgCount } = await supabase
         .from("messages")
         .select("id", { count: "exact", head: true })
         .eq("conversation_id", conversation_id)
         .eq("direction", "outbound")
-        .like("origin", "appointment_flow%");
+        .like("origin", "appointment_flow%")
+        .gte("created_at", twoHoursAgo);
 
       if ((flowMsgCount || 0) > 6) {
         return await escalateConversation(
