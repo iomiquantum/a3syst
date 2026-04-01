@@ -17,6 +17,7 @@ import TagsTab from "@/components/marketing/TagsTab";
 import FragmentosTab from "@/components/marketing/FragmentosTab";
 import EmbudoTab from "@/components/marketing/EmbudoTab";
 import AutomatizacionesTab from "@/components/marketing/AutomatizacionesTab";
+import PlantillasTab from "@/components/marketing/PlantillasTab";
 
 interface NavItem {
   key: string;
