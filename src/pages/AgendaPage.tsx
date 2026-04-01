@@ -111,7 +111,7 @@ const AgendaPage = () => {
       supabase.from("treatments").select("id, name, duration, price").eq("clinic_id", clinicId),
       supabase.from("professionals").select("id, full_name").eq("clinic_id", clinicId).eq("active", true),
       supabase.from("payment_methods").select("id, name").eq("clinic_id", clinicId),
-      (supabase as any).from("blocked_days").select("id, date, reason, branch_id").eq("clinic_id", clinicId),
+      supabase.from("blocked_days").select("id, date, reason, branch_id").eq("clinic_id", clinicId),
       supabase.from("branches").select("id, name").eq("clinic_id", clinicId).eq("active", true),
     ]);
     setAppointments(a || []);

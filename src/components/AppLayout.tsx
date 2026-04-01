@@ -31,7 +31,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, signOut } = useAuth();
-  const { clinicName, isSuperAdmin, allClinics, selectClinic, clinicId } = useClinic();
+  const { clinicName, isSuperAdmin, allClinics, selectClinic, clinicId, userRole, userPermissions } = useClinic();
   const { labels } = useBusinessLabels();
   const { theme, toggleTheme } = useTheme();
 
