@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   ChevronLeft, ChevronRight, Plus, Clock, X, Check, Calendar as CalIcon,
-  Search, Bot, CheckCircle2, XCircle, AlertCircle, User
+  Search, Bot, CheckCircle2, XCircle, AlertCircle, User, Ban, Lock
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
