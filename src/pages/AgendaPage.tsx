@@ -252,31 +252,41 @@ const AgendaPage = () => {
     setCurrentDate(d);
   };
 
-  const isBlockedDay = (dateStr: string) => blockedDays.some(b => b.date === dateStr);
+  // A day is blocked if there's a global block (branch_id=null) or a block matching the current branch filter
+  const isBlockedDay = (dateStr: string) => blockedDays.some(b =>
+    b.date === dateStr && (b.branch_id === null || filterBranch === "todos" || b.branch_id === filterBranch)
+  );
 
-  const handleBlockDay = async (dateStr: string) => {
+  const getBlockedEntry = (dateStr: string) => blockedDays.find(b =>
+    b.date === dateStr && (b.branch_id === null || filterBranch === "todos" || b.branch_id === filterBranch)
+  );
+
+  const handleUnblockDay = async (dateStr: string) => {
     if (!clinicId) return;
-    if (isBlockedDay(dateStr)) {
-      // Unblock
-      const { error } = await (supabase as any).from("blocked_days").delete().eq("clinic_id", clinicId).eq("date", dateStr);
-      if (error) { toast.error(error.message); return; }
-      setBlockedDays(prev => prev.filter(b => b.date !== dateStr));
-      toast.success("✅ Día desbloqueado");
-    } else {
-      setBlockReasonOpen(dateStr);
+    // Find matching blocked entries for the current filter
+    const entries = blockedDays.filter(b =>
+      b.date === dateStr && (filterBranch === "todos" ? true : (b.branch_id === null || b.branch_id === filterBranch))
+    );
+    if (entries.length === 0) return;
+    for (const entry of entries) {
+      await (supabase as any).from("blocked_days").delete().eq("id", entry.id);
     }
+    setBlockedDays(prev => prev.filter(b => !entries.some(e => e.id === b.id)));
+    toast.success("✅ Día desbloqueado");
   };
 
   const confirmBlockDay = async () => {
     if (!clinicId || !blockReasonOpen) return;
-    const { error } = await (supabase as any).from("blocked_days").insert({
-      clinic_id: clinicId, date: blockReasonOpen, reason: blockReason,
-    });
+    const branchId = blockBranchId === "all" ? null : blockBranchId;
+    const { data, error } = await (supabase as any).from("blocked_days").insert({
+      clinic_id: clinicId, date: blockReasonOpen, reason: blockReason, branch_id: branchId,
+    }).select("id").single();
     if (error) { toast.error(error.message); return; }
-    setBlockedDays(prev => [...prev, { date: blockReasonOpen, reason: blockReason }]);
+    setBlockedDays(prev => [...prev, { id: data.id, date: blockReasonOpen, reason: blockReason, branch_id: branchId }]);
     toast.success("🔒 Día bloqueado");
     setBlockReasonOpen(null);
     setBlockReason("");
+    setBlockBranchId("all");
   };
 
   const openSlot = (dateStr: string, time: string) => {
