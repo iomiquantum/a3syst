@@ -302,6 +302,14 @@ Responde SOLO JSON válido:
       const todayStr = todayLocalInfo.iso;
       const dayOfWeekStr = DAY_NAMES_ES[todayLocalInfo.weekday];
 
+      // Fetch blocked days
+      const { data: blockedDaysData } = await supabase
+        .from("blocked_days")
+        .select("date, reason")
+        .eq("clinic_id", clinic_id);
+      const blockedDaysSet = new Set((blockedDaysData || []).map((b: any) => b.date));
+      const blockedDaysList = (blockedDaysData || []).map((b: any) => `${b.date}${b.reason ? ` (${b.reason})` : ""}`).join(", ");
+
       // Safety net: hard limit at 6 messages (reduced from 12)
       const { count: flowMsgCount } = await supabase
         .from("messages")
