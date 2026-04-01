@@ -278,7 +278,7 @@ const AgendaPage = () => {
   const confirmBlockDay = async () => {
     if (!clinicId || !blockReasonOpen) return;
     const branchId = blockBranchId === "all" ? null : blockBranchId;
-    const { data, error } = await (supabase as any).from("blocked_days").insert({
+    const { data, error } = await supabase.from("blocked_days").insert({
       clinic_id: clinicId, date: blockReasonOpen, reason: blockReason, branch_id: branchId,
     }).select("id").single();
     if (error) { toast.error(error.message); return; }
