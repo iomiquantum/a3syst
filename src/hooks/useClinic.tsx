@@ -1,6 +1,11 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { Permissions, validatePermissions } from "@/lib/permissions";
+
+const ALL_PERMISSIONS: Permissions = {
+  agenda: true, pacientes: true, ventas: true, configuracion: true, reportes: true,
+};
 
 interface ClinicContextType {
   clinicId: string | null;
@@ -9,6 +14,8 @@ interface ClinicContextType {
   isSuperAdmin: boolean;
   needsOnboarding: boolean;
   allClinics: { id: string; name: string }[];
+  userRole: string | null;
+  userPermissions: Permissions;
   selectClinic: (id: string, name: string) => void;
   refreshClinic: () => void;
 }
@@ -23,6 +30,32 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [allClinics, setAllClinics] = useState<{ id: string; name: string }[]>([]);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userPermissions, setUserPermissions] = useState<Permissions>(ALL_PERMISSIONS);
+
+  const fetchRoleForClinic = async (userId: string, cId: string, isOwner: boolean) => {
+    // Owners and super admins always get full permissions
+    if (isOwner) {
+      setUserRole("admin");
+      setUserPermissions(ALL_PERMISSIONS);
+      return;
+    }
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role, permissions")
+      .eq("user_id", userId)
+      .eq("clinic_id", cId)
+      .maybeSingle();
+
+    if (data) {
+      setUserRole(data.role);
+      const perms = validatePermissions(data.permissions);
+      setUserPermissions(perms || ALL_PERMISSIONS);
+    } else {
+      setUserRole(null);
+      setUserPermissions(ALL_PERMISSIONS);
+    }
+  };
 
   const fetchClinic = async () => {
     if (!user) {
@@ -30,6 +63,8 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
       setIsSuperAdmin(false);
       setNeedsOnboarding(false);
       setAllClinics([]);
+      setUserRole(null);
+      setUserPermissions(ALL_PERMISSIONS);
       setLoading(false);
       return;
     }
@@ -39,7 +74,9 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
     setIsSuperAdmin(isSuper);
 
     if (isSuper) {
-      const { data: clinics } = await (supabase as any)
+      setUserRole("super_admin");
+      setUserPermissions(ALL_PERMISSIONS);
+      const { data: clinics } = await supabase
         .from("clinics")
         .select("id, name, business_type")
         .order("created_at");
@@ -57,7 +94,7 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
     const allUserClinics: { id: string; name: string; onboarding_completed?: boolean; isOwned: boolean }[] = [];
 
     // 1. Check owned clinics
-    const { data: ownedClinics } = await (supabase as any)
+    const { data: ownedClinics } = await supabase
       .from("clinics")
       .select("id, name, business_type, onboarding_completed")
       .eq("owner_id", user.id);
@@ -89,8 +126,12 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
       setClinicName(preferred.name);
       const ownedMatch = ownedClinics?.find((c: any) => c.id === preferred.id);
       setNeedsOnboarding(ownedMatch ? !ownedMatch.onboarding_completed : false);
+      // Fetch role for the selected clinic
+      await fetchRoleForClinic(user.id, preferred.id, preferred.isOwned);
     } else if (allUserClinics.length > 0 && clinicId) {
-      // Keep current selection
+      // Keep current selection, but refresh role
+      const match = allUserClinics.find(c => c.id === clinicId);
+      await fetchRoleForClinic(user.id, clinicId, match?.isOwned ?? false);
     } else {
       setNeedsOnboarding(true);
     }
@@ -101,9 +142,18 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
     fetchClinic();
   }, [user]);
 
-  const selectClinic = (id: string, name: string) => {
+  const selectClinic = async (id: string, name: string) => {
     setClinicId(id);
     setClinicName(name);
+    if (user && !isSuperAdmin) {
+      const { data: owned } = await supabase
+        .from("clinics")
+        .select("id")
+        .eq("id", id)
+        .eq("owner_id", user.id)
+        .maybeSingle();
+      await fetchRoleForClinic(user.id, id, !!owned);
+    }
   };
 
   const refreshClinic = () => {
@@ -112,7 +162,7 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <ClinicContext.Provider value={{ clinicId, clinicName, loading, isSuperAdmin, needsOnboarding, allClinics, selectClinic, refreshClinic }}>
+    <ClinicContext.Provider value={{ clinicId, clinicName, loading, isSuperAdmin, needsOnboarding, allClinics, userRole, userPermissions, selectClinic, refreshClinic }}>
       {children}
     </ClinicContext.Provider>
   );
