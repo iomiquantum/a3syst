@@ -178,6 +178,18 @@ Responde SOLO JSON válido:
         if (parsed.has_date) flowData.date = parsed.date_mentioned;
         if (parsed.has_time) flowData.time = parsed.time_mentioned;
 
+        // Validate date against working days
+        if (flowData.date && !isWorkingDay(flowData.date, workingDays)) {
+          console.log(`[appointment-flow] Date ${flowData.date} is NOT a working day, clearing it`);
+          flowData.date = null;
+        }
+
+        // Validate date against blocked days
+        if (flowData.date && blockedDaysSet.has(flowData.date)) {
+          console.log(`[appointment-flow] Date ${flowData.date} is blocked, clearing it`);
+          flowData.date = null;
+        }
+
         const missingFields = [];
         if (!flowData.service) missingFields.push("service");
         if (!flowData.date) missingFields.push("date");
