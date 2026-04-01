@@ -426,11 +426,27 @@ serve(async (req) => {
       return `${dayNames[d.weekday]} ${d.dd}/${d.mm}/${d.year} → ${d.iso}${marker}`;
     }).join("\n");
 
+    // Fetch contact data for the system prompt (name, phone)
+    let contactName = "";
+    let contactPhone = conversationData.visitor_contact || "";
+    if (conversationData.contact_id) {
+      const { data: contactInfo } = await supabase.from("contacts").select("name, phone, email").eq("id", conversationData.contact_id).maybeSingle();
+      if (contactInfo) {
+        contactName = contactInfo.name || "";
+        contactPhone = contactInfo.phone || contactPhone;
+      }
+    }
+
     let systemPrompt = `Eres "${agentConfig.agent_name}", un asistente virtual del negocio.
 Idioma: ${langLabel}
 Tono: ${agentConfig.tone}
 
 NEGOCIO: ${clinicInfo?.name || ""}
+
+DATOS DEL CONTACTO ACTUAL:
+- Nombre registrado: ${contactName || "(sin nombre)"}
+- Teléfono registrado: ${contactPhone || "(sin teléfono)"}
+${contactName && contactPhone ? "- Ya tienes nombre y teléfono, NO los pidas de nuevo a menos que el paciente quiera corregirlos." : "- Faltan datos. Recuerda pedirlos según las reglas de recopilación."}
 
 SEDES Y HORARIOS DE ATENCIÓN:
 ${branchesBlock}
@@ -476,7 +492,12 @@ REGLAS OBLIGATORIAS:
 - PRIORIDAD DE HORARIOS: Si las INSTRUCCIONES ESPECIALES contienen horarios de atención específicos (días, horas), USA ESOS horarios. Las instrucciones especiales SIEMPRE prevalecen sobre el HORARIO DE ATENCIÓN genérico mostrado arriba.
 - Si mencionas una fecha o un día de la semana, DEBES verificarlo contra el CALENDARIO DE REFERENCIA antes de responder.
 - Basa tu respuesta EXCLUSIVAMENTE en la información proporcionada en este prompt. No agregues datos, servicios, horarios, direcciones ni detalles que no aparezcan explícitamente aquí.
-- PROHIBIDO pedir nombre, apellido, correo electrónico, teléfono u otros datos personales al cliente. Los datos del contacto YA están registrados. Si el cliente menciona que no tiene correo o envía datos personales, simplemente ignóralos y continúa la conversación normalmente.`;
+- RECOPILACIÓN DE DATOS DEL PACIENTE: Para registrar al paciente necesitas mínimo 2 datos: nombre completo y teléfono. Sigue estas reglas:
+  • NOMBRE: Si aún no tienes el nombre del paciente, pídelo amablemente ("¿Me compartes tu nombre completo?").
+  • TELÉFONO: El paciente está escribiendo desde un número. Confírmalo mostrándole el número y preguntando: "¿El número desde el que nos escribes es tu número de contacto, o prefieres que usemos otro?". Si da otro número, guárdalo.
+  • EMAIL: Es OPCIONAL. Puedes preguntarlo UNA vez ("¿Tienes un correo electrónico donde podamos enviarte información?"). Si dice que no tiene o no quiere darlo, NO insistas y continúa normalmente.
+  • Si ya tienes nombre y teléfono (mínimo 2 datos), puedes continuar sin pedir más datos personales.
+  • NUNCA bloquees el flujo ni escales por falta de email. Solo necesitas nombre + teléfono para proceder.`;
 
     // Follow-up mode — VALUE-FIRST philosophy
     if (isFollowUp) {
