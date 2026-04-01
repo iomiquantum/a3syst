@@ -800,9 +800,7 @@ Formato: Usa emojis para hacerlo visual y fácil de escanear. Máximo 6 líneas.
     // ========== TAREA 5: APPOINTMENT REMINDERS ==========
     console.log("[PIPELINE] TAREA 5: Appointment reminders...");
 
-    const defaultTz = Object.values(clinicTimezoneCache)[0] || "America/Guayaquil";
-    const reminderHour = getNowHourInTz(defaultTz);
-    const isWithinReminderWindow = reminderHour >= sendWindowStart && reminderHour < sendWindowEnd;
+    // We check send window per-clinic below, so always run this block
 
     if (!isWithinReminderWindow) {
       console.log(`[PIPELINE] Outside send window, skipping appointment reminders`);
