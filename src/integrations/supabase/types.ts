@@ -663,6 +663,41 @@ export type Database = {
           },
         ]
       }
+      blocked_days: {
+        Row: {
+          blocked_by: string | null
+          clinic_id: string
+          created_at: string | null
+          date: string
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          blocked_by?: string | null
+          clinic_id: string
+          created_at?: string | null
+          date: string
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          blocked_by?: string | null
+          clinic_id?: string
+          created_at?: string | null
+          date?: string
+          id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blocked_days_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branches: {
         Row: {
           active: boolean
@@ -1197,6 +1232,79 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinical_notes: {
+        Row: {
+          assessment: string | null
+          attachments: string[] | null
+          clinic_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          note_date: string
+          objective: string | null
+          patient_id: string
+          plan: string | null
+          professional_id: string | null
+          subjective: string | null
+          updated_at: string | null
+          vitals: Json | null
+        }
+        Insert: {
+          assessment?: string | null
+          attachments?: string[] | null
+          clinic_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          note_date?: string
+          objective?: string | null
+          patient_id: string
+          plan?: string | null
+          professional_id?: string | null
+          subjective?: string | null
+          updated_at?: string | null
+          vitals?: Json | null
+        }
+        Update: {
+          assessment?: string | null
+          attachments?: string[] | null
+          clinic_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          note_date?: string
+          objective?: string | null
+          patient_id?: string
+          plan?: string | null
+          professional_id?: string | null
+          subjective?: string | null
+          updated_at?: string | null
+          vitals?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_notes_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_notes_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_notes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -2472,43 +2580,76 @@ export type Database = {
       }
       patients: {
         Row: {
+          address: string | null
+          allergies: string | null
+          blood_type: string | null
+          chronic_conditions: string | null
           clinic_id: string
           created_at: string
+          current_medications: string | null
           date_of_birth: string | null
           document: string | null
           email: string
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
           first_name: string
+          gender: string | null
           id: string
+          insurance_number: string | null
+          insurance_provider: string | null
           last_name: string
           notes: string | null
+          occupation: string | null
           phone: string | null
           status: string
           updated_at: string
         }
         Insert: {
+          address?: string | null
+          allergies?: string | null
+          blood_type?: string | null
+          chronic_conditions?: string | null
           clinic_id: string
           created_at?: string
+          current_medications?: string | null
           date_of_birth?: string | null
           document?: string | null
           email?: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           first_name: string
+          gender?: string | null
           id?: string
+          insurance_number?: string | null
+          insurance_provider?: string | null
           last_name: string
           notes?: string | null
+          occupation?: string | null
           phone?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
+          address?: string | null
+          allergies?: string | null
+          blood_type?: string | null
+          chronic_conditions?: string | null
           clinic_id?: string
           created_at?: string
+          current_medications?: string | null
           date_of_birth?: string | null
           document?: string | null
           email?: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           first_name?: string
+          gender?: string | null
           id?: string
+          insurance_number?: string | null
+          insurance_provider?: string | null
           last_name?: string
           notes?: string | null
+          occupation?: string | null
           phone?: string | null
           status?: string
           updated_at?: string

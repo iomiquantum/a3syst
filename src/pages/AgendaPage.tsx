@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   ChevronLeft, ChevronRight, Plus, Clock, X, Check, Calendar as CalIcon,
-  Search, Bot, CheckCircle2, XCircle, AlertCircle, User
+  Search, Bot, CheckCircle2, XCircle, AlertCircle, User, Ban, Lock
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -58,6 +58,9 @@ const AgendaPage = () => {
   const [treatments, setTreatments] = useState<any[]>([]);
   const [professionals, setProfessionals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [blockedDays, setBlockedDays] = useState<{ date: string; reason: string }[]>([]);
+  const [blockReasonOpen, setBlockReasonOpen] = useState<string | null>(null);
+  const [blockReason, setBlockReason] = useState("");
 
   // Filters
   const [filterPro, setFilterPro] = useState("todos");
@@ -94,7 +97,7 @@ const AgendaPage = () => {
     const startDate = fmtDate(weekDates[0]);
     const endDate = fmtDate(weekDates[6]);
 
-    const [{ data: a }, { data: p }, { data: t }, { data: pr }, { data: pm }] = await Promise.all([
+    const [{ data: a }, { data: p }, { data: t }, { data: pr }, { data: pm }, { data: bd }] = await Promise.all([
       supabase.from("appointments")
         .select("*, patients(first_name, last_name), treatments(name, price), professionals(full_name)")
         .eq("clinic_id", clinicId).gte("date", startDate).lte("date", endDate)
@@ -103,12 +106,14 @@ const AgendaPage = () => {
       supabase.from("treatments").select("id, name, duration, price").eq("clinic_id", clinicId),
       supabase.from("professionals").select("id, full_name").eq("clinic_id", clinicId).eq("active", true),
       supabase.from("payment_methods").select("id, name").eq("clinic_id", clinicId),
+      (supabase as any).from("blocked_days").select("date, reason").eq("clinic_id", clinicId),
     ]);
     setAppointments(a || []);
     setPatients(p || []);
     setTreatments(t || []);
     setProfessionals(pr || []);
     setPaymentMethods(pm || []);
+    setBlockedDays((bd || []).map((b: any) => ({ date: b.date, reason: b.reason || "" })));
     setLoading(false);
   }, [clinicId, weekDates]);
 
@@ -212,7 +217,38 @@ const AgendaPage = () => {
     setCurrentDate(d);
   };
 
+  const isBlockedDay = (dateStr: string) => blockedDays.some(b => b.date === dateStr);
+
+  const handleBlockDay = async (dateStr: string) => {
+    if (!clinicId) return;
+    if (isBlockedDay(dateStr)) {
+      // Unblock
+      const { error } = await (supabase as any).from("blocked_days").delete().eq("clinic_id", clinicId).eq("date", dateStr);
+      if (error) { toast.error(error.message); return; }
+      setBlockedDays(prev => prev.filter(b => b.date !== dateStr));
+      toast.success("✅ Día desbloqueado");
+    } else {
+      setBlockReasonOpen(dateStr);
+    }
+  };
+
+  const confirmBlockDay = async () => {
+    if (!clinicId || !blockReasonOpen) return;
+    const { error } = await (supabase as any).from("blocked_days").insert({
+      clinic_id: clinicId, date: blockReasonOpen, reason: blockReason,
+    });
+    if (error) { toast.error(error.message); return; }
+    setBlockedDays(prev => [...prev, { date: blockReasonOpen, reason: blockReason }]);
+    toast.success("🔒 Día bloqueado");
+    setBlockReasonOpen(null);
+    setBlockReason("");
+  };
+
   const openSlot = (dateStr: string, time: string) => {
+    if (isBlockedDay(dateStr)) {
+      toast.error("Este día está bloqueado");
+      return;
+    }
     setForm({ ...form, date: dateStr, time });
     setCreateOpen(true);
   };
@@ -376,10 +412,22 @@ const AgendaPage = () => {
                     <div className="p-2" />
                     {weekDates.map((date, i) => {
                       const isToday = fmtDate(date) === todayStr;
+                      const dateStr = fmtDate(date);
+                      const blocked = isBlockedDay(dateStr);
                       return (
-                        <div key={i} className={cn("p-2 text-center border-l border-border", isToday && "bg-primary/5")}>
+                        <div key={i} className={cn("p-2 text-center border-l border-border relative group", isToday && "bg-primary/5", blocked && "bg-destructive/5")}>
                           <p className="text-[10px] text-muted-foreground">{DAYS[i]}</p>
-                          <p className={cn("text-sm font-semibold mt-0.5", isToday ? "text-primary" : "text-foreground")}>{date.getDate()}</p>
+                          <p className={cn("text-sm font-semibold mt-0.5", blocked ? "text-destructive" : isToday ? "text-primary" : "text-foreground")}>
+                            {date.getDate()}
+                          </p>
+                          {blocked && <Lock className="w-3 h-3 text-destructive mx-auto mt-0.5" />}
+                          <button
+                            onClick={() => handleBlockDay(dateStr)}
+                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted"
+                            title={blocked ? "Desbloquear día" : "Bloquear día"}
+                          >
+                            {blocked ? <Check className="w-3 h-3 text-[hsl(var(--success))]" /> : <Ban className="w-3 h-3 text-destructive" />}
+                          </button>
                         </div>
                       );
                     })}
@@ -394,11 +442,12 @@ const AgendaPage = () => {
                         </div>
                         {weekDates.map((date, di) => {
                           const dateStr = fmtDate(date);
+                          const blocked = isBlockedDay(dateStr);
                           const slotApts = getAptsForSlot(dateStr, time);
                           return (
                             <div key={di}
-                              className="border-l border-border/30 p-0.5 cursor-pointer hover:bg-muted/30 transition-colors"
-                              onClick={() => slotApts.length === 0 && openSlot(dateStr, time)}>
+                              className={cn("border-l border-border/30 p-0.5 transition-colors", blocked ? "bg-destructive/5 cursor-not-allowed" : "cursor-pointer hover:bg-muted/30")}
+                              onClick={() => !blocked && slotApts.length === 0 && openSlot(dateStr, time)}>
                               {slotApts.map(apt => {
                                 const cfg = STATUS_CFG[apt.status as AptStatus] || STATUS_CFG.pendiente;
                                 return (
@@ -614,6 +663,29 @@ const AgendaPage = () => {
               <Button onClick={handleRegisterSale} disabled={!saleAmount}
                 className="flex-1 bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] hover:opacity-90">
                 Registrar venta
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══ BLOCK DAY DIALOG ═══ */}
+      <Dialog open={!!blockReasonOpen} onOpenChange={o => { if (!o) { setBlockReasonOpen(null); setBlockReason(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>🔒 Bloquear día</DialogTitle></DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Bloquear el día <span className="text-foreground font-medium">{blockReasonOpen}</span>. No se podrán agendar citas.
+            </p>
+            <div>
+              <Label className="text-xs text-muted-foreground">Razón (opcional)</Label>
+              <Input value={blockReason} onChange={e => setBlockReason(e.target.value)}
+                className="h-9 mt-1" placeholder="Feriado, mantenimiento..." maxLength={200} />
+            </div>
+            <div className="flex gap-3 pt-1">
+              <Button variant="outline" onClick={() => { setBlockReasonOpen(null); setBlockReason(""); }} className="flex-1">Cancelar</Button>
+              <Button onClick={confirmBlockDay} className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                <Lock className="w-3.5 h-3.5 mr-1.5" /> Bloquear
               </Button>
             </div>
           </div>

@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { patientSchema, getValidationError } from "@/lib/validations";
 import { formatDistanceToNow, format } from "date-fns";
 import { es } from "date-fns/locale";
+import PatientFilePanel from "@/components/patients/PatientFilePanel";
 
 const PAGE_SIZE = 20;
 
@@ -77,7 +78,7 @@ const PacientesPage = () => {
     setLoading(true);
 
     const [{ data: pats }, { data: appts }] = await Promise.all([
-      supabase.from("patients").select("*").eq("clinic_id", clinicId).order("created_at", { ascending: false }),
+      (supabase as any).from("patients").select("*").eq("clinic_id", clinicId).order("created_at", { ascending: false }),
       supabase.from("appointments").select("patient_id, date").eq("clinic_id", clinicId).order("date", { ascending: false }),
     ]);
 
@@ -373,118 +374,14 @@ const PacientesPage = () => {
         </div>
 
         {/* ═══ RIGHT: DETAIL PANEL ═══ */}
-        {selectedPatient && (
-          <div className="w-full lg:w-[420px] shrink-0 space-y-5 overflow-y-auto">
-            {/* Back button mobile */}
-            <button onClick={() => setSelectedPatient(null)} className="lg:hidden flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-2">
-              <ChevronLeft className="w-4 h-4" /> Volver
-            </button>
-
-            {/* Patient header */}
-            <Card className="border-white/10 bg-white/[0.03] backdrop-blur-sm">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#8B5CF6] to-[#6D28D9] flex items-center justify-center">
-                      <span className="text-lg font-bold text-white">{initials(selectedPatient)}</span>
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-bold text-foreground">{selectedPatient.first_name} {selectedPatient.last_name}</h2>
-                      <p className="text-xs text-muted-foreground">{selectedPatient.email}</p>
-                      {selectedPatient.phone && <p className="text-xs text-muted-foreground">{selectedPatient.phone}</p>}
-                    </div>
-                  </div>
-                  <button onClick={() => setSelectedPatient(null)} className="hidden lg:block p-1 hover:bg-white/5 rounded"><X className="w-4 h-4 text-muted-foreground" /></button>
-                </div>
-
-                <div className="flex items-center gap-2 mt-4">
-                  {(() => { const b = getActivityBadge(selectedPatient.activity); return <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full ${b.cls}`}>{b.label}</span>; })()}
-                  {selectedPatient.date_of_birth && <span className="text-xs text-muted-foreground">📅 {format(new Date(selectedPatient.date_of_birth), "dd/MM/yyyy")}</span>}
-                </div>
-
-                <div className="flex gap-2 mt-4">
-                  <Button size="sm" variant="outline" className="border-white/10 text-foreground hover:bg-white/5" onClick={() => openEdit(selectedPatient)}>
-                    <Pencil className="w-3.5 h-3.5 mr-1.5" /> Editar
-                  </Button>
-                  <Button size="sm" className="bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white hover:opacity-90">
-                    <Calendar className="w-3.5 h-3.5 mr-1.5" /> Agendar cita
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* AI Suggestions */}
-            {selectedPatient.activity === "inactivo" && (
-              <Card className="border-[#8B5CF6]/20 bg-[#8B5CF6]/5">
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <Bot className="w-5 h-5 text-[#A78BFA] mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-sm text-foreground">
-                        Este paciente no viene hace {monthsSinceLastAppt(selectedPatient) || "mucho"} meses.
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">¿Enviar oferta de reactivación?</p>
-                      <Button size="sm" className="mt-2 bg-[#8B5CF6]/20 text-[#A78BFA] hover:bg-[#8B5CF6]/30 text-xs h-7">
-                        <Bot className="w-3 h-3 mr-1" /> Reactivar con IA
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Appointments history */}
-            <Card className="border-white/5 bg-white/[0.03]">
-              <CardContent className="p-4">
-                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-muted-foreground" /> Historial de citas
-                </h3>
-                {detailLoading ? (
-                  <div className="space-y-2">{[1, 2, 3].map(i => <Skeleton key={i} className="h-10 bg-white/5" />)}</div>
-                ) : detailAppts.length === 0 ? (
-                  <p className="text-xs text-muted-foreground py-4 text-center">No hay citas registradas</p>
-                ) : (
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {detailAppts.map((a: any) => (
-                      <div key={a.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-white/[0.02] transition-colors">
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium text-foreground">{a.treatments?.name || "Sin servicio"}</p>
-                          <p className="text-[10px] text-muted-foreground">{a.date} · {a.time?.slice(0, 5)} {a.professionals?.full_name ? `· ${a.professionals.full_name}` : ""}</p>
-                        </div>
-                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${apptStatusBadge(a.status)}`}>{a.status}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Sales history */}
-            <Card className="border-white/5 bg-white/[0.03]">
-              <CardContent className="p-4">
-                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-muted-foreground" /> Historial de ventas
-                </h3>
-                {detailLoading ? (
-                  <div className="space-y-2">{[1, 2].map(i => <Skeleton key={i} className="h-10 bg-white/5" />)}</div>
-                ) : detailSales.length === 0 ? (
-                  <p className="text-xs text-muted-foreground py-4 text-center">No hay ventas registradas</p>
-                ) : (
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {detailSales.map((s: any) => (
-                      <div key={s.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-white/[0.02] transition-colors">
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium text-foreground">{s.treatments?.name || "Venta"}</p>
-                          <p className="text-[10px] text-muted-foreground">{format(new Date(s.created_at), "dd/MM/yyyy")}</p>
-                        </div>
-                        <span className="text-xs font-semibold text-foreground">${Number(s.amount).toLocaleString()}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+        {selectedPatient && clinicId && (
+          <PatientFilePanel
+            patient={selectedPatient}
+            clinicId={clinicId}
+            onClose={() => setSelectedPatient(null)}
+            onEdit={openEdit}
+            onRefresh={fetchPatients}
+          />
         )}
       </div>
 
