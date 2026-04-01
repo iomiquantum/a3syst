@@ -92,11 +92,11 @@ serve(async (req) => {
       // Fetch clinic timezone and working days
       const { data: clinicData } = await supabase
         .from("clinics")
-        .select("timezone, working_days, opening_hour, closing_hour")
+        .select("timezone, working_days, opening_hour, closing_hour, working_schedule")
         .eq("id", clinic_id)
         .maybeSingle();
       const tz = clinicData?.timezone || "America/Guayaquil";
-      const workingDays: string[] = (clinicData?.working_days as string[]) || ["Lun","Mar","Mié","Jue","Vie"];
+      const workingDays: string[] = deriveWorkingDays(clinicData?.working_schedule as any, clinicData?.working_days as any);
       const todayInfo = getLocalDateInfo(tz);
       const today = todayInfo.iso;
       const dayOfWeek = DAY_NAMES_ES[todayInfo.weekday];
@@ -259,10 +259,10 @@ Responde SOLO JSON válido:
 
       const { data: clinic } = await supabase
         .from("clinics")
-        .select("name, timezone, working_days, opening_hour, closing_hour")
+        .select("name, timezone, working_days, opening_hour, closing_hour, working_schedule")
         .eq("id", clinic_id)
         .single();
-      const guidedWorkingDays: string[] = (clinic?.working_days as string[]) || ["Lun","Mar","Mié","Jue","Vie"];
+      const guidedWorkingDays: string[] = deriveWorkingDays(clinic?.working_schedule as any, clinic?.working_days as any);
 
       const flowData = (conv.appointment_flow_data || {}) as Record<string, any>;
       const agentName = agentConfig?.agent_name || "Asistente";
@@ -992,6 +992,26 @@ const WORKING_DAY_MAP: Record<string, number> = {
   "Dom": 0, "Lun": 1, "Mar": 2, "Mié": 3, "Jue": 4, "Vie": 5, "Sáb": 6,
   "Domingo": 0, "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6,
 };
+
+const SCHEDULE_KEY_TO_SHORT: Record<string, string> = {
+  "domingo": "Dom", "lunes": "Lun", "martes": "Mar", "miercoles": "Mié",
+  "jueves": "Jue", "viernes": "Vie", "sabado": "Sáb",
+};
+
+/** Derive working days from working_schedule (source of truth from UI), falling back to working_days column */
+function deriveWorkingDays(workingSchedule: Record<string, { enabled: boolean }> | null | undefined, workingDaysCol: string[] | null | undefined): string[] {
+  if (workingSchedule && typeof workingSchedule === "object") {
+    const days: string[] = [];
+    for (const [key, val] of Object.entries(workingSchedule)) {
+      if (val && val.enabled) {
+        const short = SCHEDULE_KEY_TO_SHORT[key];
+        if (short) days.push(short);
+      }
+    }
+    if (days.length > 0) return days;
+  }
+  return (workingDaysCol as string[]) || ["Lun", "Mar", "Mié", "Jue", "Vie"];
+}
 
 function getWorkingWeekdayIndices(workingDays: string[]): Set<number> {
   const indices = new Set<number>();
