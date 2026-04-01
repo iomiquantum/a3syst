@@ -366,10 +366,21 @@ serve(async (req) => {
         if (b.arrival_instructions) parts.push(`Instrucciones de llegada: ${b.arrival_instructions}`);
         if (b.preparation_notes) parts.push(`Notas de preparación: ${b.preparation_notes}`);
         // Schedule
-        const ws = b.working_schedule as Record<string, { enabled: boolean; open: string; close: string }> | null;
+        const ws = b.working_schedule as Record<string, { enabled: boolean; open: string; close: string; last_appointment?: string }> | null;
         if (ws) {
-          const lines = Object.entries(dayLabels).map(([k, l]) => ws[k]?.enabled ? `  • ${l}: ${ws[k].open} a ${ws[k].close}` : `  • ${l}: CERRADO`);
-          parts.push(`Horario:\n${lines.join("\n")}`);
+          const hasAppointmentCutoff = Object.values(ws).some(v => v?.last_appointment);
+          const lines = Object.entries(dayLabels).map(([k, l]) => {
+            if (!ws[k]?.enabled) return `  • ${l}: CERRADO`;
+            let line = `  • ${l}: ${ws[k].open} a ${ws[k].close}`;
+            if (hasAppointmentCutoff && ws[k].last_appointment) {
+              line += ` (última cita: ${ws[k].last_appointment})`;
+            }
+            return line;
+          });
+          parts.push(`Horario de atención:\n${lines.join("\n")}`);
+          if (hasAppointmentCutoff) {
+            parts.push(`⚠️ IMPORTANTE: Las citas solo se pueden agendar hasta la hora indicada como "última cita". Después de esa hora, el negocio sigue atendiendo pero NO se aceptan nuevas citas.`);
+          }
         } else {
           parts.push(`Horario: (no configurado para esta sede)`);
         }
