@@ -547,12 +547,21 @@ async function syncToUnifiedMessaging(
     }
 
     if (conversationId) {
-      await supabase.from("messages").insert({
-        conversation_id: conversationId, clinic_id: clinicId,
-        direction: "inbound", content, message_type: messageType,
-        whatsapp_message_id: waMessageId, status: "received",
-        media_url: mediaUrl || null,
-      });
+      // Deduplicate: check if this whatsapp_message_id already exists
+      const { data: existingMsg } = await supabase
+        .from("messages")
+        .select("id")
+        .eq("whatsapp_message_id", waMessageId)
+        .maybeSingle();
+
+      if (!existingMsg) {
+        await supabase.from("messages").insert({
+          conversation_id: conversationId, clinic_id: clinicId,
+          direction: "inbound", content, message_type: messageType,
+          whatsapp_message_id: waMessageId, status: "received",
+          media_url: mediaUrl || null,
+        });
+      }
     }
 
     return conversationId ? { conversationId, isNew } : null;

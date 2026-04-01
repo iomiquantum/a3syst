@@ -89,17 +89,18 @@ serve(async (req) => {
       const availableServices = ((agentCfg?.services || []) as { name: string }[]).map(s => s.name).join(", ");
       const treatmentsRef = agentCfg?.treatments_text || "";
 
-      // Fetch clinic timezone
-      const { data: clinicTz } = await supabase
+      // Fetch clinic timezone and working days
+      const { data: clinicData } = await supabase
         .from("clinics")
-        .select("timezone")
+        .select("timezone, working_days, opening_hour, closing_hour")
         .eq("id", clinic_id)
         .maybeSingle();
-      const tz = clinicTz?.timezone || "America/Guayaquil";
+      const tz = clinicData?.timezone || "America/Guayaquil";
+      const workingDays: string[] = (clinicData?.working_days as string[]) || ["Lun","Mar","Mié","Jue","Vie"];
       const todayInfo = getLocalDateInfo(tz);
       const today = todayInfo.iso;
       const dayOfWeek = DAY_NAMES_ES[todayInfo.weekday];
-      const calRefDetect = buildCalendarReference(todayInfo, 14);
+      const calRefDetect = buildCalendarReference(todayInfo, 14, workingDays);
       const detectedDateResolution = resolveDateReferenceFromMessage(patient_message, tz);
 
       // Fetch blocked days
@@ -110,12 +111,16 @@ serve(async (req) => {
       const blockedDaysSet = new Set((blockedDaysData || []).map((b: any) => b.date));
       const blockedDaysList = (blockedDaysData || []).map((b: any) => `${b.date}${b.reason ? ` (${b.reason})` : ""}`).join(", ");
 
+      // Build non-working days info
+      const nonWorkingDaysInfo = buildNonWorkingDaysInfo(workingDays);
+
       const detectPrompt = `Analiza el mensaje del paciente en contexto de TODA la conversación.
 
 FECHA DE HOY: ${today} (${dayOfWeek})
 
-CALENDARIO (próximos 14 días):
+CALENDARIO (próximos 14 días — los días marcados ❌ NO tienen servicio):
 ${calRefDetect.join("\n")}
+${nonWorkingDaysInfo}
 ${blockedDaysList ? `\n🚫 DÍAS BLOQUEADOS (NO se pueden agendar citas): ${blockedDaysList}` : ""}
 ${detectedDateResolution ? `\n${buildDateResolutionInstruction(detectedDateResolution)}\n` : ""}
 
@@ -172,6 +177,18 @@ Responde SOLO JSON válido:
         if (parsed.has_service) flowData.service = parsed.service_mentioned;
         if (parsed.has_date) flowData.date = parsed.date_mentioned;
         if (parsed.has_time) flowData.time = parsed.time_mentioned;
+
+        // Validate date against working days
+        if (flowData.date && !isWorkingDay(flowData.date, workingDays)) {
+          console.log(`[appointment-flow] Date ${flowData.date} is NOT a working day, clearing it`);
+          flowData.date = null;
+        }
+
+        // Validate date against blocked days
+        if (flowData.date && blockedDaysSet.has(flowData.date)) {
+          console.log(`[appointment-flow] Date ${flowData.date} is blocked, clearing it`);
+          flowData.date = null;
+        }
 
         const missingFields = [];
         if (!flowData.service) missingFields.push("service");
@@ -242,9 +259,10 @@ Responde SOLO JSON válido:
 
       const { data: clinic } = await supabase
         .from("clinics")
-        .select("name, timezone")
+        .select("name, timezone, working_days, opening_hour, closing_hour")
         .eq("id", clinic_id)
         .single();
+      const guidedWorkingDays: string[] = (clinic?.working_days as string[]) || ["Lun","Mar","Mié","Jue","Vie"];
 
       const flowData = (conv.appointment_flow_data || {}) as Record<string, any>;
       const agentName = agentConfig?.agent_name || "Asistente";
@@ -326,17 +344,19 @@ Responde SOLO JSON válido:
         );
       }
 
-      const calendarRef = buildCalendarReference(todayLocalInfo, 14);
+      const calendarRef = buildCalendarReference(todayLocalInfo, 14, guidedWorkingDays);
       const resolvedDate = resolveDateReferenceFromMessage(patient_message, clinicTz);
       const dateInstruction = buildDateResolutionInstruction(resolvedDate);
+      const guidedNonWorkingInfo = buildNonWorkingDaysInfo(guidedWorkingDays);
 
       const guidedPrompt = `Eres ${agentName} de ${clinicName}. Estás ayudando a un paciente a agendar una cita.
 
 FECHA DE HOY: ${todayStr} (${dayOfWeekStr})
 ZONA HORARIA: ${clinicTz}
 
-CALENDARIO DE REFERENCIA (próximos 14 días):
+CALENDARIO DE REFERENCIA (próximos 14 días — ❌ = cerrado):
 ${calendarRef.join("\n")}
+${guidedNonWorkingInfo}
 ${blockedDaysList ? `\n🚫 DÍAS BLOQUEADOS (NO AGENDAR en estas fechas): ${blockedDaysList}\nSi el paciente pide un día bloqueado, explica que no hay disponibilidad ese día y sugiere el día hábil más cercano.` : ""}
 ${dateInstruction ? `\n${dateInstruction}\n` : ""}
 
@@ -439,6 +459,14 @@ Responde SOLO JSON válido:
         const blockedReason = (blockedDaysData || []).find((b: any) => b.date === flowData.date)?.reason;
         flowData.date = null;
         parsed.response_text = `Lo siento, el día que elegiste no está disponible${blockedReason ? ` (${blockedReason})` : ""}. ¿Te funciona otro día?`;
+        parsed.flow_complete = false;
+      }
+
+      // Validate date is a working day
+      if (flowData.date && !isWorkingDay(flowData.date, guidedWorkingDays)) {
+        const dayName = getDayNameFromDate(flowData.date);
+        flowData.date = null;
+        parsed.response_text = `Lo siento, no atendemos los ${dayName}. Nuestros días de atención son de lunes a viernes. ¿Qué otro día te funciona?`;
         parsed.flow_complete = false;
       }
 
@@ -960,10 +988,46 @@ function addDaysToLocalDate(base: LocalDateInfo, days: number): LocalDateInfo {
   return createLocalDateInfo(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate());
 }
 
-function buildCalendarReference(base: LocalDateInfo, totalDays = 14): string[] {
+const WORKING_DAY_MAP: Record<string, number> = {
+  "Dom": 0, "Lun": 1, "Mar": 2, "Mié": 3, "Jue": 4, "Vie": 5, "Sáb": 6,
+  "Domingo": 0, "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6,
+};
+
+function getWorkingWeekdayIndices(workingDays: string[]): Set<number> {
+  const indices = new Set<number>();
+  for (const d of workingDays) {
+    const idx = WORKING_DAY_MAP[d];
+    if (idx !== undefined) indices.add(idx);
+  }
+  return indices;
+}
+
+function isWorkingDay(dateStr: string, workingDays: string[]): boolean {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  const weekday = date.getUTCDay();
+  return getWorkingWeekdayIndices(workingDays).has(weekday);
+}
+
+function getDayNameFromDate(dateStr: string): string {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  return DAY_NAMES_ES[date.getUTCDay()];
+}
+
+function buildNonWorkingDaysInfo(workingDays: string[]): string {
+  const indices = getWorkingWeekdayIndices(workingDays);
+  const nonWorking = DAY_NAMES_ES.filter((_, i) => !indices.has(i));
+  if (nonWorking.length === 0) return "";
+  return `\n⚠️ DÍAS SIN SERVICIO: ${nonWorking.join(", ")}. NUNCA ofrezcas citas estos días.`;
+}
+
+function buildCalendarReference(base: LocalDateInfo, totalDays = 14, workingDays?: string[]): string[] {
+  const indices = workingDays ? getWorkingWeekdayIndices(workingDays) : null;
   return Array.from({ length: totalDays }, (_, index) => {
     const info = addDaysToLocalDate(base, index);
-    return `${DAY_NAMES_ES[info.weekday]} ${pad2(info.day)}/${pad2(info.month)}/${info.year} → ${info.iso}`;
+    const closed = indices && !indices.has(info.weekday) ? " ❌ CERRADO" : "";
+    return `${DAY_NAMES_ES[info.weekday]} ${pad2(info.day)}/${pad2(info.month)}/${info.year} → ${info.iso}${closed}`;
   });
 }
 
