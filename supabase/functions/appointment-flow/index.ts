@@ -92,11 +92,11 @@ serve(async (req) => {
       // Fetch clinic timezone and working days
       const { data: clinicData } = await supabase
         .from("clinics")
-        .select("timezone, working_days, opening_hour, closing_hour")
+        .select("timezone, working_days, opening_hour, closing_hour, working_schedule")
         .eq("id", clinic_id)
         .maybeSingle();
       const tz = clinicData?.timezone || "America/Guayaquil";
-      const workingDays: string[] = (clinicData?.working_days as string[]) || ["Lun","Mar","Mié","Jue","Vie"];
+      const workingDays: string[] = deriveWorkingDays(clinicData?.working_schedule as any, clinicData?.working_days as any);
       const todayInfo = getLocalDateInfo(tz);
       const today = todayInfo.iso;
       const dayOfWeek = DAY_NAMES_ES[todayInfo.weekday];
