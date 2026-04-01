@@ -526,13 +526,16 @@ Responde SOLO JSON válido:
         return jsonResponse({ error: "Incomplete data", flow_data: flowData });
       }
 
-      // Validate blocked day at confirmation time
-      const { data: blockedCheck } = await supabase
+      // Validate blocked day at confirmation time (global or branch-specific)
+      const { data: blockedEntries } = await supabase
         .from("blocked_days")
-        .select("date, reason")
+        .select("date, reason, branch_id")
         .eq("clinic_id", clinic_id)
-        .eq("date", flowData.date)
-        .maybeSingle();
+        .eq("date", flowData.date);
+      const selectedBranch = flowData.branch_id || null;
+      const blockedCheck = (blockedEntries || []).find((b: any) =>
+        b.branch_id === null || !selectedBranch || b.branch_id === selectedBranch
+      );
       if (blockedCheck) {
         // Reactivate flow to pick a new date
         await supabase.from("conversations").update({
