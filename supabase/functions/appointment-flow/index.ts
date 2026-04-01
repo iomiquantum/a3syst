@@ -331,13 +331,15 @@ Responde SOLO JSON válido:
       const blockedDaysSet = new Set(globalBlocked2.map((b: any) => b.date));
       const blockedDaysList = globalBlocked2.map((b: any) => `${b.date}${b.reason ? ` (${b.reason})` : ""}`).join(", ");
 
-      // Safety net: hard limit at 6 messages (reduced from 12)
+      // Safety net: hard limit at 6 messages in the CURRENT flow session (last 2 hours)
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
       const { count: flowMsgCount } = await supabase
         .from("messages")
         .select("id", { count: "exact", head: true })
         .eq("conversation_id", conversation_id)
         .eq("direction", "outbound")
-        .like("origin", "appointment_flow%");
+        .like("origin", "appointment_flow%")
+        .gte("created_at", twoHoursAgo);
 
       if ((flowMsgCount || 0) > 6) {
         return await escalateConversation(
