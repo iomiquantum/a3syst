@@ -410,15 +410,6 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
       {/* Appointment Banner */}
       <AppointmentBanner conversation={c} onActionComplete={onActionComplete} />
 
-      {/* Anti-spam Banner */}
-      {c.pipeline_tab === "no_responden" && (c as any).seguimiento_spam_protection_triggered && (
-        <AntiSpamBadge
-          consecutiveReadNoReply={(c as any).seguimiento_consecutive_read_no_reply || 0}
-          spamProtectionTriggered={true}
-          spamJumpedFromS={(c as any).seguimiento_spam_jumped_from_s}
-          variant="banner"
-        />
-      )}
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3">
