@@ -102,12 +102,21 @@ serve(async (req) => {
       const calRefDetect = buildCalendarReference(todayInfo, 14);
       const detectedDateResolution = resolveDateReferenceFromMessage(patient_message, tz);
 
+      // Fetch blocked days
+      const { data: blockedDaysData } = await supabase
+        .from("blocked_days")
+        .select("date, reason")
+        .eq("clinic_id", clinic_id);
+      const blockedDaysSet = new Set((blockedDaysData || []).map((b: any) => b.date));
+      const blockedDaysList = (blockedDaysData || []).map((b: any) => `${b.date}${b.reason ? ` (${b.reason})` : ""}`).join(", ");
+
       const detectPrompt = `Analiza el mensaje del paciente en contexto de TODA la conversación.
 
 FECHA DE HOY: ${today} (${dayOfWeek})
 
 CALENDARIO (próximos 14 días):
 ${calRefDetect.join("\n")}
+${blockedDaysList ? `\n🚫 DÍAS BLOQUEADOS (NO se pueden agendar citas): ${blockedDaysList}` : ""}
 ${detectedDateResolution ? `\n${buildDateResolutionInstruction(detectedDateResolution)}\n` : ""}
 
 SERVICIOS DISPONIBLES DEL NEGOCIO:
@@ -293,6 +302,14 @@ Responde SOLO JSON válido:
       const todayStr = todayLocalInfo.iso;
       const dayOfWeekStr = DAY_NAMES_ES[todayLocalInfo.weekday];
 
+      // Fetch blocked days
+      const { data: blockedDaysData } = await supabase
+        .from("blocked_days")
+        .select("date, reason")
+        .eq("clinic_id", clinic_id);
+      const blockedDaysSet = new Set((blockedDaysData || []).map((b: any) => b.date));
+      const blockedDaysList = (blockedDaysData || []).map((b: any) => `${b.date}${b.reason ? ` (${b.reason})` : ""}`).join(", ");
+
       // Safety net: hard limit at 6 messages (reduced from 12)
       const { count: flowMsgCount } = await supabase
         .from("messages")
@@ -320,6 +337,7 @@ ZONA HORARIA: ${clinicTz}
 
 CALENDARIO DE REFERENCIA (próximos 14 días):
 ${calendarRef.join("\n")}
+${blockedDaysList ? `\n🚫 DÍAS BLOQUEADOS (NO AGENDAR en estas fechas): ${blockedDaysList}\nSi el paciente pide un día bloqueado, explica que no hay disponibilidad ese día y sugiere el día hábil más cercano.` : ""}
 ${dateInstruction ? `\n${dateInstruction}\n` : ""}
 
 
@@ -416,6 +434,14 @@ Responde SOLO JSON válido:
         parsed.flow_complete = false;
       }
 
+      // Validate date not blocked
+      if (flowData.date && blockedDaysSet.has(flowData.date)) {
+        const blockedReason = (blockedDaysData || []).find((b: any) => b.date === flowData.date)?.reason;
+        flowData.date = null;
+        parsed.response_text = `Lo siento, el día que elegiste no está disponible${blockedReason ? ` (${blockedReason})` : ""}. ¿Te funciona otro día?`;
+        parsed.flow_complete = false;
+      }
+
       if (parsed.patient_cancelled) {
         await supabase.from("conversations").update({
           appointment_flow_active: false,
@@ -467,6 +493,26 @@ Responde SOLO JSON válido:
       const flowData = (conv.appointment_flow_data || {}) as Record<string, any>;
       if (!flowData.service || !flowData.date || !flowData.time) {
         return jsonResponse({ error: "Incomplete data", flow_data: flowData });
+      }
+
+      // Validate blocked day at confirmation time
+      const { data: blockedCheck } = await supabase
+        .from("blocked_days")
+        .select("date, reason")
+        .eq("clinic_id", clinic_id)
+        .eq("date", flowData.date)
+        .maybeSingle();
+      if (blockedCheck) {
+        // Reactivate flow to pick a new date
+        await supabase.from("conversations").update({
+          appointment_flow_step: "date",
+          appointment_flow_data: { ...flowData, date: null },
+        }).eq("id", conversation_id);
+        return jsonResponse({
+          response_text: `Lo siento, el día ${flowData.date} ya no está disponible${blockedCheck.reason ? ` (${blockedCheck.reason})` : ""}. ¿Qué otro día te funciona?`,
+          flow_complete: false,
+          blocked_day: true,
+        });
       }
 
       const { data: agentConfig } = await supabase.from("ai_agent_config")
