@@ -443,10 +443,10 @@ Tono: ${agentConfig.tone}
 
 NEGOCIO: ${clinicInfo?.name || ""}
 
-DATOS DEL CONTACTO ACTUAL:
+DATOS DEL CONTACTO ACTUAL (pueden NO ser confiables, los nombres de WhatsApp suelen ser apodos):
 - Nombre registrado: ${contactName || "(sin nombre)"}
 - Teléfono registrado: ${contactPhone || "(sin teléfono)"}
-${contactName && contactPhone ? "- Ya tienes nombre y teléfono, NO los pidas de nuevo a menos que el paciente quiera corregirlos." : "- Faltan datos. Recuerda pedirlos según las reglas de recopilación."}
+- IMPORTANTE: Aunque ya existan datos, SIEMPRE debes VERIFICAR nombre y teléfono con el paciente porque los nombres de WhatsApp frecuentemente no son los reales. Pregunta amablemente para confirmar o corregir.
 
 SEDES Y HORARIOS DE ATENCIÓN:
 ${branchesBlock}
@@ -492,11 +492,11 @@ REGLAS OBLIGATORIAS:
 - PRIORIDAD DE HORARIOS: Si las INSTRUCCIONES ESPECIALES contienen horarios de atención específicos (días, horas), USA ESOS horarios. Las instrucciones especiales SIEMPRE prevalecen sobre el HORARIO DE ATENCIÓN genérico mostrado arriba.
 - Si mencionas una fecha o un día de la semana, DEBES verificarlo contra el CALENDARIO DE REFERENCIA antes de responder.
 - Basa tu respuesta EXCLUSIVAMENTE en la información proporcionada en este prompt. No agregues datos, servicios, horarios, direcciones ni detalles que no aparezcan explícitamente aquí.
-- RECOPILACIÓN DE DATOS DEL PACIENTE: Para registrar al paciente necesitas mínimo 2 datos: nombre completo y teléfono. Sigue estas reglas:
-  • NOMBRE: Si aún no tienes el nombre del paciente, pídelo amablemente ("¿Me compartes tu nombre completo?").
-  • TELÉFONO: El paciente está escribiendo desde un número. Confírmalo mostrándole el número y preguntando: "¿El número desde el que nos escribes es tu número de contacto, o prefieres que usemos otro?". Si da otro número, guárdalo.
-  • EMAIL: Es OPCIONAL. Puedes preguntarlo UNA vez ("¿Tienes un correo electrónico donde podamos enviarte información?"). Si dice que no tiene o no quiere darlo, NO insistas y continúa normalmente.
-  • Si ya tienes nombre y teléfono (mínimo 2 datos), puedes continuar sin pedir más datos personales.
+- RECOPILACIÓN DE DATOS DEL PACIENTE: SIEMPRE debes verificar nombre y teléfono, incluso si ya están registrados (los nombres de WhatsApp no son confiables). Sigue estas reglas:
+  • NOMBRE: SIEMPRE pide el nombre completo real. Si ya hay nombre registrado, muéstralo y pregunta: "Tengo registrado el nombre [nombre], ¿es correcto o prefieres que lo actualice?". Si no hay nombre, pídelo directamente.
+  • TELÉFONO: Confirma el número mostrándolo: "¿El número [teléfono] es tu número de contacto, o prefieres que usemos otro?". Si da otro número, guárdalo.
+  • EMAIL: Es OPCIONAL. Puedes preguntarlo UNA vez. Si dice que no tiene o no quiere darlo, NO insistas y continúa normalmente.
+  • Con nombre + teléfono verificados (mínimo 2 datos), puedes continuar sin pedir más datos personales.
   • NUNCA bloquees el flujo ni escales por falta de email. Solo necesitas nombre + teléfono para proceder.`;
 
     // Follow-up mode — VALUE-FIRST philosophy
