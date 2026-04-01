@@ -666,6 +666,7 @@ export type Database = {
       blocked_days: {
         Row: {
           blocked_by: string | null
+          branch_id: string | null
           clinic_id: string
           created_at: string | null
           date: string
@@ -674,6 +675,7 @@ export type Database = {
         }
         Insert: {
           blocked_by?: string | null
+          branch_id?: string | null
           clinic_id: string
           created_at?: string | null
           date: string
@@ -682,6 +684,7 @@ export type Database = {
         }
         Update: {
           blocked_by?: string | null
+          branch_id?: string | null
           clinic_id?: string
           created_at?: string | null
           date?: string
@@ -689,6 +692,13 @@ export type Database = {
           reason?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "blocked_days_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "blocked_days_clinic_id_fkey"
             columns: ["clinic_id"]

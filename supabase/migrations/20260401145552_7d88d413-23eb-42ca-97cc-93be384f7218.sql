@@ -1,0 +1,1 @@
+ALTER TABLE public.blocked_days ADD COLUMN branch_id UUID REFERENCES public.branches(id) ON DELETE CASCADE DEFAULT NULL;
