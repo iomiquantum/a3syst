@@ -212,7 +212,29 @@ const AgendaPage = () => {
     } catch (e) { toast.error(getValidationError(e)); }
   };
 
-  const resetForm = () => setForm({ patient_id: "", treatment_id: "", professional_id: "", date: "", time: "", duration: "30", notes: "" });
+  const resetForm = () => {
+    setForm({ patient_id: "", treatment_id: "", professional_id: "", date: "", time: "", duration: "30", notes: "" });
+    setShowNewPatient(false);
+    setNewPatientForm({ first_name: "", last_name: "", phone: "", email: "" });
+  };
+
+  const handleCreatePatientInline = async () => {
+    if (!clinicId || !newPatientForm.first_name.trim()) return;
+    const { data, error } = await supabase.from("patients").insert({
+      clinic_id: clinicId,
+      first_name: newPatientForm.first_name.trim(),
+      last_name: newPatientForm.last_name.trim(),
+      phone: newPatientForm.phone.trim() || null,
+      email: newPatientForm.email.trim() || null,
+    }).select("id, first_name, last_name").single();
+    if (error) { toast.error(error.message); return; }
+    setPatients(prev => [data, ...prev]);
+    setForm(f => ({ ...f, patient_id: data.id }));
+    setShowNewPatient(false);
+    setNewPatientForm({ first_name: "", last_name: "", phone: "", email: "" });
+    setPatientSearch("");
+    toast.success("✅ Paciente creado");
+  };
 
   const handleTreatmentChange = (tid: string) => {
     const t = treatments.find(x => x.id === tid);
