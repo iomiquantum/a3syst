@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   ChevronLeft, ChevronRight, Plus, Clock, X, Check, Calendar as CalIcon,
-  Search, Bot, CheckCircle2, XCircle, AlertCircle, User, Ban, Lock
+  Search, Bot, CheckCircle2, XCircle, AlertCircle, User, Ban, Lock, Pencil
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -278,12 +278,30 @@ const AgendaPage = () => {
   const confirmBlockDay = async () => {
     if (!clinicId || !blockReasonOpen) return;
     const branchId = blockBranchId === "all" ? null : blockBranchId;
-    const { data, error } = await supabase.from("blocked_days").insert({
-      clinic_id: clinicId, date: blockReasonOpen, reason: blockReason, branch_id: branchId,
-    }).select("id").single();
-    if (error) { toast.error(error.message); return; }
-    setBlockedDays(prev => [...prev, { id: data.id, date: blockReasonOpen, reason: blockReason, branch_id: branchId }]);
-    toast.success("🔒 Día bloqueado");
+    // Check if an entry already exists for this date+clinic (to handle edits)
+    const existing = blockedDays.find(b => b.date === blockReasonOpen && b.branch_id === branchId);
+    if (existing) {
+      // Update existing entry
+      const { error } = await supabase.from("blocked_days").update({
+        reason: blockReason, branch_id: branchId,
+      }).eq("id", existing.id);
+      if (error) { toast.error(error.message); return; }
+      setBlockedDays(prev => prev.map(b => b.id === existing.id ? { ...b, reason: blockReason, branch_id: branchId } : b));
+      toast.success("✅ Bloqueo actualizado");
+    } else {
+      // Delete any existing entry for this date (constraint is clinic_id+date unique)
+      const existingForDate = blockedDays.find(b => b.date === blockReasonOpen);
+      if (existingForDate) {
+        await supabase.from("blocked_days").delete().eq("id", existingForDate.id);
+        setBlockedDays(prev => prev.filter(b => b.id !== existingForDate.id));
+      }
+      const { data, error } = await supabase.from("blocked_days").insert({
+        clinic_id: clinicId, date: blockReasonOpen, reason: blockReason, branch_id: branchId,
+      }).select("id").single();
+      if (error) { toast.error(error.message); return; }
+      setBlockedDays(prev => [...prev, { id: data.id, date: blockReasonOpen, reason: blockReason, branch_id: branchId }]);
+      toast.success("🔒 Día bloqueado");
+    }
     setBlockReasonOpen(null);
     setBlockReason("");
     setBlockBranchId("all");
@@ -477,10 +495,20 @@ const AgendaPage = () => {
                           {blocked && <Lock className="w-3 h-3 text-destructive mx-auto mt-0.5" />}
                           <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
                             {blocked ? (
-                              <button onClick={() => handleUnblockDay(dateStr)}
-                                className="p-0.5 rounded hover:bg-muted" title="Desbloquear día">
-                                <Check className="w-3 h-3 text-[hsl(var(--success))]" />
-                              </button>
+                              <>
+                                <button onClick={() => {
+                                  const entry = blockedDays.find(b => b.date === dateStr);
+                                  setBlockReason(entry?.reason || "");
+                                  setBlockBranchId(entry?.branch_id || "all");
+                                  setBlockReasonOpen(dateStr);
+                                }} className="p-0.5 rounded hover:bg-muted" title="Editar bloqueo">
+                                  <Pencil className="w-3 h-3 text-muted-foreground" />
+                                </button>
+                                <button onClick={() => handleUnblockDay(dateStr)}
+                                  className="p-0.5 rounded hover:bg-muted" title="Desbloquear día">
+                                  <Check className="w-3 h-3 text-[hsl(var(--success))]" />
+                                </button>
+                              </>
                             ) : (
                               <button onClick={() => setBlockReasonOpen(dateStr)}
                                 className="p-0.5 rounded hover:bg-muted" title="Bloquear día">
