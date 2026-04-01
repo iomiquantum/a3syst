@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { patientSchema, getValidationError } from "@/lib/validations";
 import { formatDistanceToNow, format } from "date-fns";
 import { es } from "date-fns/locale";
+import PatientFilePanel from "@/components/patients/PatientFilePanel";
 
 const PAGE_SIZE = 20;
 
