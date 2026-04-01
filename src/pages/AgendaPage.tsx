@@ -74,6 +74,8 @@ const AgendaPage = () => {
   const [saleAmount, setSaleAmount] = useState("");
   const [salePaymentMethod, setSalePaymentMethod] = useState("");
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [showNewPatient, setShowNewPatient] = useState(false);
+  const [newPatientForm, setNewPatientForm] = useState({ first_name: "", last_name: "", phone: "", email: "" });
 
   const [form, setForm] = useState({
     patient_id: "", treatment_id: "", professional_id: "",
