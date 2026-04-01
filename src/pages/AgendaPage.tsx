@@ -74,6 +74,8 @@ const AgendaPage = () => {
   const [saleAmount, setSaleAmount] = useState("");
   const [salePaymentMethod, setSalePaymentMethod] = useState("");
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [showNewPatient, setShowNewPatient] = useState(false);
+  const [newPatientForm, setNewPatientForm] = useState({ first_name: "", last_name: "", phone: "", email: "" });
 
   const [form, setForm] = useState({
     patient_id: "", treatment_id: "", professional_id: "",
@@ -210,7 +212,29 @@ const AgendaPage = () => {
     } catch (e) { toast.error(getValidationError(e)); }
   };
 
-  const resetForm = () => setForm({ patient_id: "", treatment_id: "", professional_id: "", date: "", time: "", duration: "30", notes: "" });
+  const resetForm = () => {
+    setForm({ patient_id: "", treatment_id: "", professional_id: "", date: "", time: "", duration: "30", notes: "" });
+    setShowNewPatient(false);
+    setNewPatientForm({ first_name: "", last_name: "", phone: "", email: "" });
+  };
+
+  const handleCreatePatientInline = async () => {
+    if (!clinicId || !newPatientForm.first_name.trim()) return;
+    const { data, error } = await supabase.from("patients").insert({
+      clinic_id: clinicId,
+      first_name: newPatientForm.first_name.trim(),
+      last_name: newPatientForm.last_name.trim(),
+      phone: newPatientForm.phone.trim() || null,
+      email: newPatientForm.email.trim() || null,
+    }).select("id, first_name, last_name").single();
+    if (error) { toast.error(error.message); return; }
+    setPatients(prev => [data, ...prev]);
+    setForm(f => ({ ...f, patient_id: data.id }));
+    setShowNewPatient(false);
+    setNewPatientForm({ first_name: "", last_name: "", phone: "", email: "" });
+    setPatientSearch("");
+    toast.success("✅ Paciente creado");
+  };
 
   const handleTreatmentChange = (tid: string) => {
     const t = treatments.find(x => x.id === tid);
@@ -568,22 +592,75 @@ const AgendaPage = () => {
             <div>
               <Label className="text-xs text-muted-foreground">Paciente *</Label>
               <div className="mt-1">
-                <Input placeholder="Buscar paciente..." value={patientSearch} onChange={e => setPatientSearch(e.target.value)}
-                  className="h-9 mb-1" />
-                {form.patient_id && (
-                  <span className="text-xs text-primary">
-                    ✓ {patients.find(p => p.id === form.patient_id)?.first_name} {patients.find(p => p.id === form.patient_id)?.last_name}
-                  </span>
-                )}
-                {patientSearch && !form.patient_id && (
-                  <div className="max-h-32 overflow-y-auto rounded-lg border border-border bg-popover">
-                    {filteredPatients.map(p => (
-                      <button key={p.id} onClick={() => { setForm({ ...form, patient_id: p.id }); setPatientSearch(""); }}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted truncate">
-                        {p.first_name} {p.last_name}
+                {!showNewPatient ? (
+                  <>
+                    <Input placeholder="Buscar paciente..." value={patientSearch} onChange={e => { setPatientSearch(e.target.value); setForm(f => ({ ...f, patient_id: "" })); }}
+                      className="h-9 mb-1" />
+                    {form.patient_id && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-primary">
+                          ✓ {patients.find(p => p.id === form.patient_id)?.first_name} {patients.find(p => p.id === form.patient_id)?.last_name}
+                        </span>
+                        <button onClick={() => setForm(f => ({ ...f, patient_id: "" }))} className="text-xs text-muted-foreground hover:text-foreground">✕</button>
+                      </div>
+                    )}
+                    {patientSearch && !form.patient_id && (
+                      <div className="max-h-40 overflow-y-auto rounded-lg border border-border bg-popover">
+                        {filteredPatients.map(p => (
+                          <button key={p.id} onClick={() => { setForm({ ...form, patient_id: p.id }); setPatientSearch(""); }}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-muted truncate">
+                            {p.first_name} {p.last_name}
+                          </button>
+                        ))}
+                        {filteredPatients.length === 0 && <p className="px-3 py-2 text-xs text-muted-foreground">Sin resultados</p>}
+                        <button
+                          onClick={() => {
+                            const parts = patientSearch.trim().split(" ");
+                            setNewPatientForm({ first_name: parts[0] || "", last_name: parts.slice(1).join(" ") || "", phone: "", email: "" });
+                            setShowNewPatient(true);
+                            setPatientSearch("");
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm font-medium text-primary hover:bg-primary/5 border-t border-border flex items-center gap-1.5"
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Crear nuevo paciente
+                        </button>
+                      </div>
+                    )}
+                    {!patientSearch && !form.patient_id && (
+                      <button onClick={() => setShowNewPatient(true)}
+                        className="text-xs text-primary hover:underline mt-1 flex items-center gap-1">
+                        <Plus className="w-3 h-3" /> Crear nuevo paciente
                       </button>
-                    ))}
-                    {filteredPatients.length === 0 && <p className="px-3 py-2 text-xs text-muted-foreground">Sin resultados</p>}
+                    )}
+                  </>
+                ) : (
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
+                    <p className="text-xs font-medium text-foreground">Nuevo paciente</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input placeholder="Nombre *" value={newPatientForm.first_name}
+                        onChange={e => setNewPatientForm(f => ({ ...f, first_name: e.target.value }))}
+                        className="h-8 text-sm" />
+                      <Input placeholder="Apellido" value={newPatientForm.last_name}
+                        onChange={e => setNewPatientForm(f => ({ ...f, last_name: e.target.value }))}
+                        className="h-8 text-sm" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input placeholder="Teléfono" value={newPatientForm.phone}
+                        onChange={e => setNewPatientForm(f => ({ ...f, phone: e.target.value }))}
+                        className="h-8 text-sm" />
+                      <Input placeholder="Email" value={newPatientForm.email}
+                        onChange={e => setNewPatientForm(f => ({ ...f, email: e.target.value }))}
+                        className="h-8 text-sm" />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setShowNewPatient(false); setNewPatientForm({ first_name: "", last_name: "", phone: "", email: "" }); }}>
+                        Cancelar
+                      </Button>
+                      <Button size="sm" className="h-7 text-xs gradient-primary text-primary-foreground" disabled={!newPatientForm.first_name.trim()}
+                        onClick={handleCreatePatientInline}>
+                        Crear y seleccionar
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
