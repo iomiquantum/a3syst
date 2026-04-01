@@ -102,6 +102,14 @@ serve(async (req) => {
       const calRefDetect = buildCalendarReference(todayInfo, 14);
       const detectedDateResolution = resolveDateReferenceFromMessage(patient_message, tz);
 
+      // Fetch blocked days
+      const { data: blockedDaysData } = await supabase
+        .from("blocked_days")
+        .select("date, reason")
+        .eq("clinic_id", clinic_id);
+      const blockedDaysSet = new Set((blockedDaysData || []).map((b: any) => b.date));
+      const blockedDaysList = (blockedDaysData || []).map((b: any) => `${b.date}${b.reason ? ` (${b.reason})` : ""}`).join(", ");
+
       const detectPrompt = `Analiza el mensaje del paciente en contexto de TODA la conversación.
 
 FECHA DE HOY: ${today} (${dayOfWeek})
