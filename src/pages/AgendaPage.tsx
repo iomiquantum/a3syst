@@ -412,10 +412,22 @@ const AgendaPage = () => {
                     <div className="p-2" />
                     {weekDates.map((date, i) => {
                       const isToday = fmtDate(date) === todayStr;
+                      const dateStr = fmtDate(date);
+                      const blocked = isBlockedDay(dateStr);
                       return (
-                        <div key={i} className={cn("p-2 text-center border-l border-border", isToday && "bg-primary/5")}>
+                        <div key={i} className={cn("p-2 text-center border-l border-border relative group", isToday && "bg-primary/5", blocked && "bg-destructive/5")}>
                           <p className="text-[10px] text-muted-foreground">{DAYS[i]}</p>
-                          <p className={cn("text-sm font-semibold mt-0.5", isToday ? "text-primary" : "text-foreground")}>{date.getDate()}</p>
+                          <p className={cn("text-sm font-semibold mt-0.5", blocked ? "text-destructive" : isToday ? "text-primary" : "text-foreground")}>
+                            {date.getDate()}
+                          </p>
+                          {blocked && <Lock className="w-3 h-3 text-destructive mx-auto mt-0.5" />}
+                          <button
+                            onClick={() => handleBlockDay(dateStr)}
+                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted"
+                            title={blocked ? "Desbloquear día" : "Bloquear día"}
+                          >
+                            {blocked ? <Check className="w-3 h-3 text-[hsl(var(--success))]" /> : <Ban className="w-3 h-3 text-destructive" />}
+                          </button>
                         </div>
                       );
                     })}
