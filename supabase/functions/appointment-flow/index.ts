@@ -470,6 +470,7 @@ Responde SOLO JSON válido:
         parsed.flow_complete = false;
       }
 
+      if (parsed.patient_cancelled) {
         await supabase.from("conversations").update({
           appointment_flow_active: false,
           appointment_flow_step: null,
