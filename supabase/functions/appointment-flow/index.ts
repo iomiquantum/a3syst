@@ -233,6 +233,37 @@ Responde SOLO JSON válido:
         return jsonResponse({ error: "Flow not active" });
       }
 
+      // ====== DETERMINISTIC CONFIRMATION: If step is "confirm" and all data present, check for clear confirmation ======
+      const flowDataPre = (conv.appointment_flow_data || {}) as Record<string, any>;
+      if (conv.appointment_flow_step === "confirm" && flowDataPre.service && flowDataPre.date && flowDataPre.time) {
+        const msgLower = (patient_message || "").toLowerCase().trim().replace(/[.,!¡¿?]/g, "");
+        const confirmPatterns = [
+          "confirmar", "confirmo", "si", "sí", "ok", "dale", "listo", "perfecto",
+          "si por favor", "sí por favor", "va", "claro", "de acuerdo", "bueno",
+          "esta bien", "está bien", "genial", "me parece bien", "reserva",
+          "agendame", "agéndame", "si quiero", "sí quiero", "afirmativo",
+          "correcto", "exacto", "eso", "si confirmo", "sí confirmo",
+        ];
+        const isConfirmation = confirmPatterns.some(p => msgLower === p || msgLower.startsWith(p + " ") || msgLower.endsWith(" " + p));
+        const cancelPatterns = ["no", "cancelar", "cancela", "no quiero", "mejor no", "dejalo", "déjalo"];
+        const isCancellation = cancelPatterns.some(p => msgLower === p || msgLower.startsWith(p + " "));
+
+        if (isConfirmation && !isCancellation) {
+          console.log("[appointment-flow] Deterministic confirmation detected, booking directly");
+          const { data: agentCfgDirect } = await supabase.from("ai_agent_config")
+            .select("agent_name, locations_text").eq("clinic_id", clinic_id).maybeSingle();
+          const { data: clinicDirect } = await supabase.from("clinics").select("name").eq("id", clinic_id).single();
+          const { data: branchesDirect } = await supabase.from("branches")
+            .select("id, name, address, google_maps_url").eq("clinic_id", clinic_id).eq("active", true);
+
+          return await confirmAppointment(
+            supabase, supabaseUrl, supabaseKey, conv, flowDataPre, clinic_id,
+            agentCfgDirect?.agent_name || "Asistente", clinicDirect?.name || "el negocio", branchesDirect,
+            agentCfgDirect?.locations_text || null,
+          );
+        }
+      }
+
       // Fetch recent conversation history for context (last 15 messages)
       const { data: recentMsgs } = await supabase
         .from("messages")
@@ -416,7 +447,9 @@ PASO ACTUAL: ${conv.appointment_flow_step}
 15A. IMPORTANTE: Cuando menciones una fecha al paciente, SIEMPRE verifica que el día de la semana sea correcto para esa fecha. Si dices "sábado 29 de marzo" asegúrate que el 29 de marzo realmente caiga sábado.
 15. NO repitas preguntas que ya se respondieron en el historial. Lee el historial antes de preguntar.
 16. Si el paciente parece frustrado o repite información, discúlpate brevemente y ve directo al punto.
-17. ESCALACIÓN INTELIGENTE: Si detectas que NO puedes ayudar al paciente (pide algo fuera de tu alcance, está frustrado y repite lo mismo, pregunta algo que no está en tus datos, o el flujo está estancado), responde con should_escalate=true y en escalation_reason explica brevemente POR QUÉ escalas (ej: "El paciente solicita un servicio no disponible", "El paciente necesita información que no tengo").
+17. ESCALACIÓN INTELIGENTE: SOLO escala (should_escalate=true) si el paciente EXPLÍCITAMENTE pide hablar con una persona, o pide algo completamente fuera de tu alcance (ej: servicio que no existe). NO escales si el paciente simplemente dice que no tiene correo, no tiene email, da su nombre, o responde algo que no entiendes — simplemente ignora ese dato y pregunta por lo que falta (servicio, fecha, hora). NO escales si el paciente confirma la cita.
+18. Si el paso actual es "confirm" y el paciente dice "sí", "confirmo", "dale", "ok", "listo", "confirmar", "si por favor" o similar, DEBES responder con flow_complete=true. No escales por una confirmación.
+19. Si el paciente dice "no tengo correo", "no tengo email", o envía datos personales no solicitados, ignóralos completamente y continúa con el flujo normalmente.
 
 Responde SOLO JSON válido:
 {

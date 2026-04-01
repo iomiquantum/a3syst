@@ -475,7 +475,8 @@ REGLAS OBLIGATORIAS:
 - Cuando el cliente pregunte sobre un servicio o tema específico, responde directamente sobre eso. No des respuestas genéricas.
 - PRIORIDAD DE HORARIOS: Si las INSTRUCCIONES ESPECIALES contienen horarios de atención específicos (días, horas), USA ESOS horarios. Las instrucciones especiales SIEMPRE prevalecen sobre el HORARIO DE ATENCIÓN genérico mostrado arriba.
 - Si mencionas una fecha o un día de la semana, DEBES verificarlo contra el CALENDARIO DE REFERENCIA antes de responder.
-- Basa tu respuesta EXCLUSIVAMENTE en la información proporcionada en este prompt. No agregues datos, servicios, horarios, direcciones ni detalles que no aparezcan explícitamente aquí.`;
+- Basa tu respuesta EXCLUSIVAMENTE en la información proporcionada en este prompt. No agregues datos, servicios, horarios, direcciones ni detalles que no aparezcan explícitamente aquí.
+- PROHIBIDO pedir nombre, apellido, correo electrónico, teléfono u otros datos personales al cliente. Los datos del contacto YA están registrados. Si el cliente menciona que no tiene correo o envía datos personales, simplemente ignóralos y continúa la conversación normalmente.`;
 
     // Follow-up mode — VALUE-FIRST philosophy
     if (isFollowUp) {
