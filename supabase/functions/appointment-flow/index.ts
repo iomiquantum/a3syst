@@ -89,17 +89,18 @@ serve(async (req) => {
       const availableServices = ((agentCfg?.services || []) as { name: string }[]).map(s => s.name).join(", ");
       const treatmentsRef = agentCfg?.treatments_text || "";
 
-      // Fetch clinic timezone
-      const { data: clinicTz } = await supabase
+      // Fetch clinic timezone and working days
+      const { data: clinicData } = await supabase
         .from("clinics")
-        .select("timezone")
+        .select("timezone, working_days, opening_hour, closing_hour")
         .eq("id", clinic_id)
         .maybeSingle();
-      const tz = clinicTz?.timezone || "America/Guayaquil";
+      const tz = clinicData?.timezone || "America/Guayaquil";
+      const workingDays: string[] = (clinicData?.working_days as string[]) || ["Lun","Mar","Mié","Jue","Vie"];
       const todayInfo = getLocalDateInfo(tz);
       const today = todayInfo.iso;
       const dayOfWeek = DAY_NAMES_ES[todayInfo.weekday];
-      const calRefDetect = buildCalendarReference(todayInfo, 14);
+      const calRefDetect = buildCalendarReference(todayInfo, 14, workingDays);
       const detectedDateResolution = resolveDateReferenceFromMessage(patient_message, tz);
 
       // Fetch blocked days
@@ -109,6 +110,9 @@ serve(async (req) => {
         .eq("clinic_id", clinic_id);
       const blockedDaysSet = new Set((blockedDaysData || []).map((b: any) => b.date));
       const blockedDaysList = (blockedDaysData || []).map((b: any) => `${b.date}${b.reason ? ` (${b.reason})` : ""}`).join(", ");
+
+      // Build non-working days info
+      const nonWorkingDaysInfo = buildNonWorkingDaysInfo(workingDays);
 
       const detectPrompt = `Analiza el mensaje del paciente en contexto de TODA la conversación.
 
