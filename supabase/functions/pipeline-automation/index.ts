@@ -977,9 +977,8 @@ Formato: Usa emojis para hacerlo visual y fácil de escanear. Máximo 6 líneas.
     }
 
 
-          if (!configByClinic[rc.clinic_id]) configByClinic[rc.clinic_id] = [];
-          configByClinic[rc.clinic_id].push(rc);
-        }
+
+
 
         const nowDate = new Date();
         const todayStart = new Date(nowDate);
