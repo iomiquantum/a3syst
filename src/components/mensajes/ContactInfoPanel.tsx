@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { Phone, Mail, MapPin, Tag, FileText, ExternalLink, UserPlus, Calendar, Pencil, Check, X, Plus, Pin, Archive, Copy, PhoneCall } from "lucide-react";
+import { Phone, Mail, MapPin, FileText, ExternalLink, UserPlus, Calendar, Pencil, Check, X, Plus, Pin, Archive, Copy, PhoneCall, Building2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -35,6 +35,26 @@ interface ContactData {
   branch_id: string | null;
 }
 
+interface PatientSummary {
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone: string | null;
+  email: string | null;
+  status: string | null;
+}
+
+interface AppointmentSummary {
+  id: string;
+  date: string;
+  time: string | null;
+  status: string | null;
+  notes: string | null;
+  treatment_name: string | null;
+  professional_name: string | null;
+  branch_name: string | null;
+}
+
 interface Props {
   conversation: PipelineConversation;
   onActionComplete?: () => void;
@@ -45,6 +65,8 @@ type EditField = "name" | "phone" | "phone2" | "email" | "location" | "notes" | 
 
 const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props) => {
   const [contact, setContact] = useState<ContactData | null>(null);
+  const [patient, setPatient] = useState<PatientSummary | null>(null);
+  const [latestAppointment, setLatestAppointment] = useState<AppointmentSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [editField, setEditField] = useState<EditField>(null);
   const [editValue, setEditValue] = useState("");
@@ -53,25 +75,84 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props)
   const [bookingOpen, setBookingOpen] = useState(false);
 
   const fetchContact = useCallback(async () => {
-    if (!c.contact_id) return;
+    if (!c.contact_id) {
+      setContact(null);
+      setPatient(null);
+      setLatestAppointment(null);
+      setLoading(false);
+      return;
+    }
+
     const { data } = await supabase
       .from("contacts")
       .select("id, name, phone, phone2, email, alternative_phone, alternative_phone_label, location, funnel_stage, patient_id, tags, notes, source, branch_id")
       .eq("id", c.contact_id)
       .single();
+
+    if (!data) {
+      setContact(null);
+      setPatient(null);
+      setLatestAppointment(null);
+      setLoading(false);
+      return;
+    }
+
+    const nextContact: ContactData = {
+      ...(data as ContactData),
+      tags: (data as ContactData).tags || [],
+    };
+
+    if (nextContact.patient_id) {
+      const [{ data: patientData }, { data: appointmentData }] = await Promise.all([
+        (supabase as any)
+          .from("patients")
+          .select("id, first_name, last_name, phone, email, status")
+          .eq("id", nextContact.patient_id)
+          .maybeSingle(),
+        (supabase as any)
+          .from("appointments")
+          .select("id, date, time, status, notes, treatments(name), professionals(full_name), branches(name)")
+          .eq("patient_id", nextContact.patient_id)
+          .order("date", { ascending: false })
+          .order("time", { ascending: false })
+          .limit(1),
+      ]);
+
+      setPatient((patientData as PatientSummary | null) || null);
+
+      const appointment = appointmentData?.[0];
+      setLatestAppointment(
+        appointment
+          ? {
+              id: appointment.id,
+              date: appointment.date,
+              time: appointment.time || null,
+              status: appointment.status || null,
+              notes: appointment.notes || null,
+              treatment_name: appointment.treatments?.name || null,
+              professional_name: appointment.professionals?.full_name || null,
+              branch_name: appointment.branches?.name || null,
+            }
+          : null,
+      );
+    } else {
+      setPatient(null);
+      setLatestAppointment(null);
+    }
+
     if (data) {
       setContact(prev => {
         if (prev) {
           const changedFields: string[] = [];
-          if (prev.email !== (data as any).email && (data as any).email) changedFields.push("email");
-          if (prev.alternative_phone !== (data as any).alternative_phone && (data as any).alternative_phone) changedFields.push("alternative_phone");
-          if (prev.notes !== (data as any).notes && (data as any).notes) changedFields.push("notes");
+          if (prev.email !== nextContact.email && nextContact.email) changedFields.push("email");
+          if (prev.alternative_phone !== nextContact.alternative_phone && nextContact.alternative_phone) changedFields.push("alternative_phone");
+          if (prev.notes !== nextContact.notes && nextContact.notes) changedFields.push("notes");
           if (changedFields.length > 0) {
             setHighlightedField(changedFields[0]);
             setTimeout(() => setHighlightedField(null), 2500);
           }
         }
-        return data as ContactData;
+        return nextContact;
       });
     }
     setLoading(false);
@@ -98,6 +179,36 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props)
   if (loading || !contact) return null;
 
   const initials = contact.name?.split(" ").slice(0, 2).map(w => w[0] || "").join("").toUpperCase() || "??";
+  const patientName = patient ? [patient.first_name, patient.last_name].filter(Boolean).join(" ") : null;
+  const appointmentDetails: AppointmentSummary | null = latestAppointment || (c.appointment_date
+    ? {
+        id: `conversation-${c.id}`,
+        date: c.appointment_date,
+        time: c.appointment_time,
+        status: c.appointment_status,
+        notes: null,
+        treatment_name: c.appointment_service,
+        professional_name: null,
+        branch_name: null,
+      }
+    : null);
+
+  const formatAppointmentDate = (value: string) => {
+    try {
+      return new Date(value).toLocaleDateString("es-ES", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    } catch {
+      return value;
+    }
+  };
+
+  const formatStatus = (value: string | null | undefined) => {
+    if (!value) return "pendiente";
+    return value.replace(/_/g, " ");
+  };
 
   const startEdit = (field: EditField, val: string) => {
     setEditField(field);
@@ -291,6 +402,78 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props)
         </div>
 
         <div className="border-t border-border" />
+
+        {/* Tags */}
+        {(contact.patient_id || appointmentDetails) && (
+          <>
+            <div className="space-y-2">
+              <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Paciente y cita</p>
+
+              {contact.patient_id && (
+                <Card className="shadow-none">
+                  <CardContent className="p-3 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <UserPlus className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] text-muted-foreground">Paciente vinculado</p>
+                        <p className="text-sm font-medium text-foreground truncate">{patientName || contact.name}</p>
+                        {(patient?.phone || patient?.email) && (
+                          <p className="text-xs text-muted-foreground break-all">
+                            {[patient?.phone, patient?.email].filter(Boolean).join(" · ")}
+                          </p>
+                        )}
+                      </div>
+                      <Badge variant="secondary" className="text-[10px] capitalize shrink-0">
+                        {patient?.status ? formatStatus(patient.status) : "vinculado"}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {appointmentDetails && (
+                <Card className="shadow-none">
+                  <CardContent className="p-3 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <Calendar className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] text-muted-foreground">Última cita registrada</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {formatAppointmentDate(appointmentDetails.date)}
+                          {appointmentDetails.time ? ` · ${appointmentDetails.time}` : ""}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="text-[10px] capitalize shrink-0">
+                        {formatStatus(appointmentDetails.status)}
+                      </Badge>
+                    </div>
+
+                    {appointmentDetails.treatment_name && (
+                      <div className="text-xs text-muted-foreground">
+                        Tratamiento: <span className="text-foreground">{appointmentDetails.treatment_name}</span>
+                      </div>
+                    )}
+
+                    {appointmentDetails.professional_name && (
+                      <div className="text-xs text-muted-foreground">
+                        Profesional: <span className="text-foreground">{appointmentDetails.professional_name}</span>
+                      </div>
+                    )}
+
+                    {appointmentDetails.branch_name && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Building2 className="w-3 h-3 shrink-0" />
+                        <span className="text-foreground">{appointmentDetails.branch_name}</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            <div className="border-t border-border" />
+          </>
+        )}
 
         {/* Tags */}
         <div className="space-y-2">
