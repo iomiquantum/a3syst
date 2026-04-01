@@ -117,7 +117,7 @@ const MensajesKanban = ({ conversations, onActionComplete }: Props) => {
       <Sheet open={sheetOpen} onOpenChange={handleSheetChange}>
         <SheetContent side="right" className="w-full sm:max-w-[1100px] p-0">
           {selectedConv && (
-            <div className="relative flex h-full">
+            <div className="flex h-full">
               <div className="flex-1 min-w-0 overflow-hidden">
                 <MensajesChat
                   conversation={selectedConv}
@@ -128,7 +128,7 @@ const MensajesKanban = ({ conversations, onActionComplete }: Props) => {
               </div>
 
               {showContactPanel && (
-                <div className="absolute inset-y-0 right-0 z-20 hidden w-[320px] border-l border-border bg-card shadow-lg md:block">
+                <div className="w-[320px] shrink-0 border-l border-border bg-card hidden md:block overflow-y-auto">
                   <ContactInfoPanel
                     conversation={selectedConv}
                     onActionComplete={onActionComplete}
