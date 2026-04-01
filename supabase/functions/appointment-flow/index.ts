@@ -100,18 +100,16 @@ serve(async (req) => {
       const todayInfo = getLocalDateInfo(tz);
       const today = todayInfo.iso;
       const dayOfWeek = DAY_NAMES_ES[todayInfo.weekday];
-      const calRefDetect = buildCalendarReference(todayInfo, 14, workingDays, blockedDaysSet);
       const detectedDateResolution = resolveDateReferenceFromMessage(patient_message, tz);
 
-      // Fetch blocked days (global ones for detection phase — branch-specific checked at confirmation)
+      // Fetch blocked days before building calendar reference
       const { data: blockedDaysData } = await supabase
         .from("blocked_days")
         .select("date, reason, branch_id")
         .eq("clinic_id", clinic_id);
-      // For calendar display, show globally blocked days (branch_id is null)
-      const globalBlocked = (blockedDaysData || []).filter((b: any) => b.branch_id === null);
-      const blockedDaysSet = new Set(globalBlocked.map((b: any) => b.date));
-      const blockedDaysList = globalBlocked.map((b: any) => `${b.date}${b.reason ? ` (${b.reason})` : ""}`).join(", ");
+      const allBlockedDates = new Set((blockedDaysData || []).map((b: any) => b.date));
+      const blockedDaysList = (blockedDaysData || []).map((b: any) => `${b.date}${b.reason ? ` (${b.reason})` : ""}`).join(", ");
+      const calRefDetect = buildCalendarReference(todayInfo, 14, workingDays, allBlockedDates);
 
       // Build non-working days info
       const nonWorkingDaysInfo = buildNonWorkingDaysInfo(workingDays);
@@ -378,21 +376,21 @@ Responde SOLO JSON válido:
         return `${b.date}${b.reason ? ` (${b.reason})` : ""}${branchNote}`;
       }).join(", ");
 
-      // Safety net: hard limit at 6 messages in the CURRENT flow session (last 2 hours)
-      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+      // Safety net: avoid premature escalation; only trigger after many bot attempts in a short recent window
+      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
       const { count: flowMsgCount } = await supabase
         .from("messages")
         .select("id", { count: "exact", head: true })
         .eq("conversation_id", conversation_id)
         .eq("direction", "outbound")
         .like("origin", "appointment_flow%")
-        .gte("created_at", twoHoursAgo);
+        .gte("created_at", thirtyMinutesAgo);
 
-      if ((flowMsgCount || 0) > 6) {
+      if ((flowMsgCount || 0) > 10) {
         return await escalateConversation(
           supabase, conversation_id, clinic_id,
           conv.pipeline_tab || "resueltos_ia",
-          "El flujo de agendamiento no pudo completarse después de múltiples intentos."
+          "El flujo de agendamiento no pudo completarse después de múltiples intentos recientes."
         );
       }
 
