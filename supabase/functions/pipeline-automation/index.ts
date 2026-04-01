@@ -975,10 +975,6 @@ Formato: Usa emojis para hacerlo visual y fácil de escanear. Máximo 6 líneas.
         }
       }
     }
-      const { data: reminderConfigs } = await supabase
-        .from("appointment_reminder_config")
-        .select("*")
-        .eq("is_active", true);
 
       if (reminderConfigs && reminderConfigs.length > 0) {
         const configByClinic: Record<string, any[]> = {};
