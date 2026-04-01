@@ -116,6 +116,7 @@ FECHA DE HOY: ${today} (${dayOfWeek})
 
 CALENDARIO (próximos 14 días):
 ${calRefDetect.join("\n")}
+${blockedDaysList ? `\n🚫 DÍAS BLOQUEADOS (NO se pueden agendar citas): ${blockedDaysList}` : ""}
 ${detectedDateResolution ? `\n${buildDateResolutionInstruction(detectedDateResolution)}\n` : ""}
 
 SERVICIOS DISPONIBLES DEL NEGOCIO:
