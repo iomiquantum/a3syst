@@ -278,12 +278,30 @@ const AgendaPage = () => {
   const confirmBlockDay = async () => {
     if (!clinicId || !blockReasonOpen) return;
     const branchId = blockBranchId === "all" ? null : blockBranchId;
-    const { data, error } = await supabase.from("blocked_days").insert({
-      clinic_id: clinicId, date: blockReasonOpen, reason: blockReason, branch_id: branchId,
-    }).select("id").single();
-    if (error) { toast.error(error.message); return; }
-    setBlockedDays(prev => [...prev, { id: data.id, date: blockReasonOpen, reason: blockReason, branch_id: branchId }]);
-    toast.success("🔒 Día bloqueado");
+    // Check if an entry already exists for this date+clinic (to handle edits)
+    const existing = blockedDays.find(b => b.date === blockReasonOpen && b.branch_id === branchId);
+    if (existing) {
+      // Update existing entry
+      const { error } = await supabase.from("blocked_days").update({
+        reason: blockReason, branch_id: branchId,
+      }).eq("id", existing.id);
+      if (error) { toast.error(error.message); return; }
+      setBlockedDays(prev => prev.map(b => b.id === existing.id ? { ...b, reason: blockReason, branch_id: branchId } : b));
+      toast.success("✅ Bloqueo actualizado");
+    } else {
+      // Delete any existing entry for this date (constraint is clinic_id+date unique)
+      const existingForDate = blockedDays.find(b => b.date === blockReasonOpen);
+      if (existingForDate) {
+        await supabase.from("blocked_days").delete().eq("id", existingForDate.id);
+        setBlockedDays(prev => prev.filter(b => b.id !== existingForDate.id));
+      }
+      const { data, error } = await supabase.from("blocked_days").insert({
+        clinic_id: clinicId, date: blockReasonOpen, reason: blockReason, branch_id: branchId,
+      }).select("id").single();
+      if (error) { toast.error(error.message); return; }
+      setBlockedDays(prev => [...prev, { id: data.id, date: blockReasonOpen, reason: blockReason, branch_id: branchId }]);
+      toast.success("🔒 Día bloqueado");
+    }
     setBlockReasonOpen(null);
     setBlockReason("");
     setBlockBranchId("all");
