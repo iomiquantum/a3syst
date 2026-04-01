@@ -1,10 +1,8 @@
 import { cn } from "@/lib/utils";
 import { Pin, CalendarPlus, Clock } from "lucide-react";
 import PipelineBadge from "./PipelineBadge";
-import SeguimientoCountdown from "./SeguimientoCountdown";
 import ChannelIcon from "@/components/messaging/ChannelIcon";
 import MessageStatusIcon from "./MessageStatusIcon";
-import AntiSpamBadge from "./AntiSpamBadge";
 import WhatsAppWindowBadge from "./WhatsAppWindowBadge";
 import type { PipelineConversation } from "@/hooks/useConversationsByPipeline";
 
@@ -50,26 +48,6 @@ function hashColor(name: string): string {
   return colors[Math.abs(h) % colors.length];
 }
 
-const CountdownBadges = ({ c }: { c: PipelineConversation }) => (
-  <SeguimientoCountdown
-    pipelineTab={c.pipeline_tab}
-    seguimientoNextContactAt={c.seguimiento_next_contact_at}
-    seguimientoNextS={c.seguimiento_next_s}
-    seguimientoRespondedAtS={c.seguimiento_responded_at_s}
-    seguimientoIsRecurrente={c.seguimiento_is_recurrente}
-    seguimientoRecurrenteCount={c.seguimiento_recurrente_count}
-    inactivityTimerStart={c.inactivity_timer_start}
-  />
-);
-
-const SpamBadge = ({ c }: { c: PipelineConversation }) => (
-  <AntiSpamBadge
-    consecutiveReadNoReply={c.seguimiento_consecutive_read_no_reply}
-    spamProtectionTriggered={c.seguimiento_spam_protection_triggered}
-    spamJumpedFromS={c.seguimiento_spam_jumped_from_s}
-  />
-);
-
 const DatesBadge = ({ c }: { c: PipelineConversation }) => (
   <div className="flex flex-col gap-0.5">
     {c.created_at && (
@@ -86,8 +64,6 @@ const DatesBadge = ({ c }: { c: PipelineConversation }) => (
 );
 
 const ConversationCard = ({ conversation: c, selected, onClick, variant = "list" }: Props) => {
-  const isSpamProtected = c.seguimiento_spam_protection_triggered && c.pipeline_tab === "no_responden";
-
   const windowBadge = (
     <WhatsAppWindowBadge
       lastClientMessageAt={c.last_client_message_at}
@@ -101,18 +77,13 @@ const ConversationCard = ({ conversation: c, selected, onClick, variant = "list"
     return (
       <div
         onClick={onClick}
-        className={cn(
-          "rounded-md border bg-card p-3 cursor-pointer transition-all hover:shadow-md space-y-1.5",
-          isSpamProtected ? "border-l-4 border-l-orange-400 border-t-border border-r-border border-b-border" : "border-border"
-        )}
+        className="rounded-md border border-border bg-card p-3 cursor-pointer transition-all hover:shadow-md space-y-1.5"
       >
         <p className="text-sm font-medium text-foreground leading-tight truncate">{c.contactName}</p>
         <div className="flex items-center gap-1">
           {c.last_outbound_status && <MessageStatusIcon status={c.last_outbound_status} />}
           <p className="text-[11px] text-muted-foreground line-clamp-2">{c.last_message_preview}</p>
         </div>
-        <CountdownBadges c={c} />
-        <SpamBadge c={c} />
         {windowBadge}
         <DatesBadge c={c} />
         <div className="flex flex-col items-start gap-1">
@@ -153,10 +124,8 @@ const ConversationCard = ({ conversation: c, selected, onClick, variant = "list"
           </div>
           <div className="flex flex-col gap-0.5 mt-1">
             <div className="flex items-center justify-between">
-              <CountdownBadges c={c} />
               <PipelineBadge tab={c.pipeline_tab} />
             </div>
-            <SpamBadge c={c} />
             {windowBadge}
             <DatesBadge c={c} />
             {c.contactTags.length > 0 && (
