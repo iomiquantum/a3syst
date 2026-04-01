@@ -452,7 +452,13 @@ ${branchesBlock}
 
 IMPORTANTE: Solo puedes agendar citas en los días y horarios habilitados de cada sede. Si un día está marcado como CERRADO, NO ofrezcas citas ese día. Sugiere el siguiente día hábil disponible.
 Si una sede tiene configurado un horario de "última cita", NO agendes citas después de esa hora. Informa al cliente que el horario de atención es hasta X hora pero las citas solo se agendan hasta Y hora.
-Si hay varias sedes, pregunta al cliente en cuál sede prefiere su cita.
+
+SELECCIÓN DE SEDE (OBLIGATORIO cuando hay más de 1 sede):
+- SIEMPRE revisa el historial de la conversación para ver si el cliente ya mencionó una sede o ubicación preferida.
+- Si el cliente ya indicó una sede (por nombre, dirección o ciudad), confirma: "Perfecto, agendaremos en [sede]. ¿Correcto?"
+- Si el cliente NO ha mencionado sede, DEBES preguntar SIEMPRE: "Tenemos sede en [lista de sedes]. ¿En cuál te queda mejor?"
+- NUNCA agendes sin tener clara la sede cuando hay múltiples sedes activas.
+- Si solo hay 1 sede activa, úsala directamente sin preguntar.
 
 FECHA DE HOY: ${todayDate} (${todayDay})
 ZONA HORARIA: ${clinicTz}
