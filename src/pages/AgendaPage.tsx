@@ -111,7 +111,7 @@ const AgendaPage = () => {
       supabase.from("treatments").select("id, name, duration, price").eq("clinic_id", clinicId),
       supabase.from("professionals").select("id, full_name").eq("clinic_id", clinicId).eq("active", true),
       supabase.from("payment_methods").select("id, name").eq("clinic_id", clinicId),
-      (supabase as any).from("blocked_days").select("id, date, reason, branch_id").eq("clinic_id", clinicId),
+      supabase.from("blocked_days").select("id, date, reason, branch_id").eq("clinic_id", clinicId),
       supabase.from("branches").select("id, name").eq("clinic_id", clinicId).eq("active", true),
     ]);
     setAppointments(a || []);
@@ -269,7 +269,7 @@ const AgendaPage = () => {
     );
     if (entries.length === 0) return;
     for (const entry of entries) {
-      await (supabase as any).from("blocked_days").delete().eq("id", entry.id);
+      await supabase.from("blocked_days").delete().eq("id", entry.id);
     }
     setBlockedDays(prev => prev.filter(b => !entries.some(e => e.id === b.id)));
     toast.success("✅ Día desbloqueado");
@@ -278,7 +278,7 @@ const AgendaPage = () => {
   const confirmBlockDay = async () => {
     if (!clinicId || !blockReasonOpen) return;
     const branchId = blockBranchId === "all" ? null : blockBranchId;
-    const { data, error } = await (supabase as any).from("blocked_days").insert({
+    const { data, error } = await supabase.from("blocked_days").insert({
       clinic_id: clinicId, date: blockReasonOpen, reason: blockReason, branch_id: branchId,
     }).select("id").single();
     if (error) { toast.error(error.message); return; }
