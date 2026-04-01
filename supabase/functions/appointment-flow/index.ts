@@ -508,8 +508,8 @@ Responde SOLO JSON válido:
         parsed.flow_complete = false;
       }
 
-      // Validate date not blocked
-      if (flowData.date && blockedDaysSet.has(flowData.date)) {
+      // Validate date not blocked (check ALL blocked days — global and branch-specific)
+      if (flowData.date && allBlockedDates.has(flowData.date)) {
         const blockedReason = (blockedDaysData || []).find((b: any) => b.date === flowData.date)?.reason;
         flowData.date = null;
         parsed.response_text = `Lo siento, el día que elegiste no está disponible${blockedReason ? ` (${blockedReason})` : ""}. ¿Te funciona otro día?`;
