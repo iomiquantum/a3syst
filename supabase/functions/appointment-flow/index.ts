@@ -1081,8 +1081,10 @@ function resolveDateReferenceFromMessage(message: string, timeZone: string): Dat
     return { type: "single", iso: target.iso, label: formatDateLabelES(target.iso) };
   }
 
-  // Match "mañana" only as "tomorrow", not "de la mañana" (morning)
-  if (/(?<!\bde\s+la\s+)\bmanana\b(?!\s+(?:de|a\s+la|por\s+la))/.test(normalized) && !/\b(de la|por la|en la)\s+manana\b/.test(normalized)) {
+  // Match "mañana" only as "tomorrow", exclude "de la mañana" / "por la mañana" / "en la mañana" (= morning)
+  const hasMorningPhrase = /\b(?:de|por|en)\s+la\s+manana\b/.test(normalized) || /\ba\s+las\s+\d{1,2}.*\bmanana\b/.test(normalized);
+  const hasTomorrow = /\bmanana\b/.test(normalized);
+  if (hasTomorrow && !hasMorningPhrase) {
     const target = addDaysToLocalDate(today, 1);
     return { type: "single", iso: target.iso, label: formatDateLabelES(target.iso) };
   }
