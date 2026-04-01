@@ -476,7 +476,12 @@ REGLAS OBLIGATORIAS:
 - PRIORIDAD DE HORARIOS: Si las INSTRUCCIONES ESPECIALES contienen horarios de atención específicos (días, horas), USA ESOS horarios. Las instrucciones especiales SIEMPRE prevalecen sobre el HORARIO DE ATENCIÓN genérico mostrado arriba.
 - Si mencionas una fecha o un día de la semana, DEBES verificarlo contra el CALENDARIO DE REFERENCIA antes de responder.
 - Basa tu respuesta EXCLUSIVAMENTE en la información proporcionada en este prompt. No agregues datos, servicios, horarios, direcciones ni detalles que no aparezcan explícitamente aquí.
-- PROHIBIDO pedir nombre, apellido, correo electrónico, teléfono u otros datos personales al cliente. Los datos del contacto YA están registrados. Si el cliente menciona que no tiene correo o envía datos personales, simplemente ignóralos y continúa la conversación normalmente.`;
+- RECOPILACIÓN DE DATOS DEL PACIENTE: Para registrar al paciente necesitas mínimo 2 datos: nombre completo y teléfono. Sigue estas reglas:
+  • NOMBRE: Si aún no tienes el nombre del paciente, pídelo amablemente ("¿Me compartes tu nombre completo?").
+  • TELÉFONO: El paciente está escribiendo desde un número. Confírmalo mostrándole el número y preguntando: "¿El número desde el que nos escribes es tu número de contacto, o prefieres que usemos otro?". Si da otro número, guárdalo.
+  • EMAIL: Es OPCIONAL. Puedes preguntarlo UNA vez ("¿Tienes un correo electrónico donde podamos enviarte información?"). Si dice que no tiene o no quiere darlo, NO insistas y continúa normalmente.
+  • Si ya tienes nombre y teléfono (mínimo 2 datos), puedes continuar sin pedir más datos personales.
+  • NUNCA bloquees el flujo ni escales por falta de email. Solo necesitas nombre + teléfono para proceder.`;
 
     // Follow-up mode — VALUE-FIRST philosophy
     if (isFollowUp) {
