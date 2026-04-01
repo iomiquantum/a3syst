@@ -62,10 +62,10 @@ serve(async (req) => {
       });
     }
 
-    // Fetch clinic info (no schedule — schedule comes from branches now)
+    // Fetch clinic info including working_schedule for deriving working days
     const { data: clinicInfo } = await supabase
       .from("clinics")
-      .select("name, timezone")
+      .select("name, timezone, working_schedule")
       .eq("id", clinic_id)
       .single();
 
