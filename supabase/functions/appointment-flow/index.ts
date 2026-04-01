@@ -118,8 +118,9 @@ serve(async (req) => {
 
 FECHA DE HOY: ${today} (${dayOfWeek})
 
-CALENDARIO (próximos 14 días):
+CALENDARIO (próximos 14 días — los días marcados ❌ NO tienen servicio):
 ${calRefDetect.join("\n")}
+${nonWorkingDaysInfo}
 ${blockedDaysList ? `\n🚫 DÍAS BLOQUEADOS (NO se pueden agendar citas): ${blockedDaysList}` : ""}
 ${detectedDateResolution ? `\n${buildDateResolutionInstruction(detectedDateResolution)}\n` : ""}
 
