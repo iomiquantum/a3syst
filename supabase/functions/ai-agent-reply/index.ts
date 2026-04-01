@@ -426,11 +426,27 @@ serve(async (req) => {
       return `${dayNames[d.weekday]} ${d.dd}/${d.mm}/${d.year} → ${d.iso}${marker}`;
     }).join("\n");
 
+    // Fetch contact data for the system prompt (name, phone)
+    let contactName = "";
+    let contactPhone = conversationData.visitor_contact || "";
+    if (conversationData.contact_id) {
+      const { data: contactInfo } = await supabase.from("contacts").select("name, phone, email").eq("id", conversationData.contact_id).maybeSingle();
+      if (contactInfo) {
+        contactName = contactInfo.name || "";
+        contactPhone = contactInfo.phone || contactPhone;
+      }
+    }
+
     let systemPrompt = `Eres "${agentConfig.agent_name}", un asistente virtual del negocio.
 Idioma: ${langLabel}
 Tono: ${agentConfig.tone}
 
 NEGOCIO: ${clinicInfo?.name || ""}
+
+DATOS DEL CONTACTO ACTUAL:
+- Nombre registrado: ${contactName || "(sin nombre)"}
+- Teléfono registrado: ${contactPhone || "(sin teléfono)"}
+${contactName && contactPhone ? "- Ya tienes nombre y teléfono, NO los pidas de nuevo a menos que el paciente quiera corregirlos." : "- Faltan datos. Recuerda pedirlos según las reglas de recopilación."}
 
 SEDES Y HORARIOS DE ATENCIÓN:
 ${branchesBlock}
