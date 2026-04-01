@@ -455,9 +455,9 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                           size="sm"
                           variant="outline"
                           className="text-[10px] h-7 gap-1"
-                          onClick={() => handleAction("seguimiento_s1")}
+                          onClick={() => handleAction("nuevos")}
                         >
-                          <RotateCcw className="w-3 h-3" /> Reiniciar S1
+                          <RotateCcw className="w-3 h-3" /> Mover a Nuevos
                         </Button>
                         <Button
                           size="sm"
