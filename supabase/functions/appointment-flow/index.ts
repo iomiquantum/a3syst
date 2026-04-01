@@ -285,6 +285,13 @@ Responde SOLO JSON válido:
 
       // Include special_instructions if they contain schedule overrides
       const specialInstructions = agentConfig?.special_instructions || "";
+      const professionalsText = agentConfig?.professionals_text || "";
+
+      // Compute local date info for this clinic
+      const clinicTz = clinic?.timezone || "America/Guayaquil";
+      const todayLocalInfo = getLocalDateInfo(clinicTz);
+      const todayStr = todayLocalInfo.iso;
+      const dayOfWeekStr = DAY_NAMES_ES[todayLocalInfo.weekday];
 
       // Safety net: hard limit at 6 messages (reduced from 12)
       const { count: flowMsgCount } = await supabase
