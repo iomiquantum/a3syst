@@ -462,7 +462,14 @@ Responde SOLO JSON válido:
         parsed.flow_complete = false;
       }
 
-      if (parsed.patient_cancelled) {
+      // Validate date is a working day
+      if (flowData.date && !isWorkingDay(flowData.date, guidedWorkingDays)) {
+        const dayName = getDayNameFromDate(flowData.date);
+        flowData.date = null;
+        parsed.response_text = `Lo siento, no atendemos los ${dayName}. Nuestros días de atención son de lunes a viernes. ¿Qué otro día te funciona?`;
+        parsed.flow_complete = false;
+      }
+
         await supabase.from("conversations").update({
           appointment_flow_active: false,
           appointment_flow_step: null,
