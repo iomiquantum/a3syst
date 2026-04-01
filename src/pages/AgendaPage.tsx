@@ -783,20 +783,32 @@ const AgendaPage = () => {
       </Dialog>
 
       {/* ═══ BLOCK DAY DIALOG ═══ */}
-      <Dialog open={!!blockReasonOpen} onOpenChange={o => { if (!o) { setBlockReasonOpen(null); setBlockReason(""); } }}>
+      <Dialog open={!!blockReasonOpen} onOpenChange={o => { if (!o) { setBlockReasonOpen(null); setBlockReason(""); setBlockBranchId("all"); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>🔒 Bloquear día</DialogTitle></DialogHeader>
           <div className="space-y-4 pt-2">
             <p className="text-sm text-muted-foreground">
               Bloquear el día <span className="text-foreground font-medium">{blockReasonOpen}</span>. No se podrán agendar citas.
             </p>
+            {branches.length > 0 && (
+              <div>
+                <Label className="text-xs text-muted-foreground">Sucursal</Label>
+                <Select value={blockBranchId} onValueChange={setBlockBranchId}>
+                  <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las sucursales</SelectItem>
+                    {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <Label className="text-xs text-muted-foreground">Razón (opcional)</Label>
               <Input value={blockReason} onChange={e => setBlockReason(e.target.value)}
                 className="h-9 mt-1" placeholder="Feriado, mantenimiento..." maxLength={200} />
             </div>
             <div className="flex gap-3 pt-1">
-              <Button variant="outline" onClick={() => { setBlockReasonOpen(null); setBlockReason(""); }} className="flex-1">Cancelar</Button>
+              <Button variant="outline" onClick={() => { setBlockReasonOpen(null); setBlockReason(""); setBlockBranchId("all"); }} className="flex-1">Cancelar</Button>
               <Button onClick={confirmBlockDay} className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90">
                 <Lock className="w-3.5 h-3.5 mr-1.5" /> Bloquear
               </Button>
