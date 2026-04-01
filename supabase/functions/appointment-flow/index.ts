@@ -42,7 +42,6 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -286,6 +285,13 @@ Responde SOLO JSON válido:
 
       // Include special_instructions if they contain schedule overrides
       const specialInstructions = agentConfig?.special_instructions || "";
+      const professionalsText = agentConfig?.professionals_text || "";
+
+      // Compute local date info for this clinic
+      const clinicTz = clinic?.timezone || "America/Guayaquil";
+      const todayLocalInfo = getLocalDateInfo(clinicTz);
+      const todayStr = todayLocalInfo.iso;
+      const dayOfWeekStr = DAY_NAMES_ES[todayLocalInfo.weekday];
 
       // Safety net: hard limit at 6 messages (reduced from 12)
       const { count: flowMsgCount } = await supabase
@@ -698,6 +704,52 @@ async function confirmAppointment(
     status: "cancelled",
     last_error: "Appointment confirmed, queue cleared",
   }).eq("conversation_id", conv.id).in("status", ["pending", "retry", "processing"]);
+
+  // 2b. Create appointment record in the appointments table
+  // Find or create patient from contact
+  let patientId: string | null = null;
+  if (conv.contact_id) {
+    const { data: contact } = await supabase.from("contacts").select("patient_id, name, phone, email").eq("id", conv.contact_id).single();
+    if (contact?.patient_id) {
+      patientId = contact.patient_id;
+    } else if (contact) {
+      // Create patient from contact data
+      const nameParts = (contact.name || "").split(" ");
+      const { data: newPatient } = await supabase.from("patients").insert({
+        clinic_id: clinicId,
+        first_name: nameParts[0] || "Paciente",
+        last_name: nameParts.slice(1).join(" ") || "",
+        phone: contact.phone,
+        email: contact.email || null,
+      }).select("id").single();
+      if (newPatient) {
+        patientId = newPatient.id;
+        // Link patient to contact
+        await supabase.from("contacts").update({ patient_id: patientId }).eq("id", conv.contact_id);
+      }
+    }
+  }
+
+  if (patientId) {
+    // Find treatment by name match
+    let treatmentId: string | null = null;
+    const { data: treatment } = await supabase.from("treatments")
+      .select("id").eq("clinic_id", clinicId)
+      .ilike("name", `%${flowData.service}%`).limit(1).maybeSingle();
+    if (treatment) treatmentId = treatment.id;
+
+    await supabase.from("appointments").insert({
+      clinic_id: clinicId,
+      patient_id: patientId,
+      date: flowData.date,
+      time: flowData.time,
+      treatment_id: treatmentId,
+      branch_id: branch?.id || null,
+      booking_source: "ai_auto",
+      status: "scheduled",
+      notes: `Servicio: ${flowData.service}. Agendado automáticamente por IA.`,
+    });
+  }
 
   // 3. Build confirmation message with location from agent config or branches
   const dateFormatted = formatDateES(flowData.date);
