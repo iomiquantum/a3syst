@@ -78,7 +78,7 @@ const PacientesPage = () => {
     setLoading(true);
 
     const [{ data: pats }, { data: appts }] = await Promise.all([
-      supabase.from("patients").select("*").eq("clinic_id", clinicId).order("created_at", { ascending: false }),
+      (supabase as any).from("patients").select("*").eq("clinic_id", clinicId).order("created_at", { ascending: false }),
       supabase.from("appointments").select("patient_id, date").eq("clinic_id", clinicId).order("date", { ascending: false }),
     ]);
 
