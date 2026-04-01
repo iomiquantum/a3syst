@@ -800,13 +800,9 @@ Formato: Usa emojis para hacerlo visual y fácil de escanear. Máximo 6 líneas.
     // ========== TAREA 5: APPOINTMENT REMINDERS ==========
     console.log("[PIPELINE] TAREA 5: Appointment reminders...");
 
-    const defaultTz = Object.values(clinicTimezoneCache)[0] || "America/Guayaquil";
-    const reminderHour = getNowHourInTz(defaultTz);
-    const isWithinReminderWindow = reminderHour >= sendWindowStart && reminderHour < sendWindowEnd;
+    // We check send window per-clinic below, so always run this block
 
-    if (!isWithinReminderWindow) {
-      console.log(`[PIPELINE] Outside send window, skipping appointment reminders`);
-    } else {
+    {
       const { data: reminderConfigs } = await supabase
         .from("appointment_reminder_config")
         .select("*")
@@ -823,7 +819,27 @@ Formato: Usa emojis para hacerlo visual y fácil de escanear. Máximo 6 líneas.
         const todayStart = new Date(nowDate);
         todayStart.setUTCHours(0, 0, 0, 0);
 
-        // REMINDER 1 - use gte to include today's appointments
+        // Helper: parse appointment date+time in clinic timezone → UTC Date
+        function getAppointmentUtc(dateStr: string, timeStr: string | null, tz: string): Date {
+          const d = new Date(dateStr);
+          const year = d.getUTCFullYear();
+          const month = d.getUTCMonth() + 1;
+          const day = d.getUTCDate();
+          let hh = 9, mm = 0;
+          if (timeStr) {
+            const parts = timeStr.split(":").map(Number);
+            hh = parts[0] || 0;
+            mm = parts[1] || 0;
+          }
+          return zonedTimeToUtc(tz, year, month, day, hh, mm, 0);
+        }
+
+        // Helper: format date in clinic timezone
+        function formatDateInTz(utcDate: Date, tz: string): string {
+          return utcDate.toLocaleDateString("es", { timeZone: tz, weekday: "long", day: "numeric", month: "long" });
+        }
+
+        // REMINDER 1
         const { data: reminder1Convs } = await supabase
           .from("conversations")
           .select("id, clinic_id, contact_id, channel, visitor_contact, appointment_date, appointment_time, appointment_service, appointment_confirmed, last_client_message_at")
@@ -839,16 +855,14 @@ Formato: Usa emojis para hacerlo visual y fácil de escanear. Máximo 6 líneas.
             const r1Config = clinicConfigs?.find((c: any) => c.reminder_number === 1);
             if (!r1Config) continue;
 
-            const appointmentDate = new Date(conv.appointment_date);
-            // Combine date + time for accurate hours calculation
-            if (conv.appointment_time) {
-              const [hh, mm] = conv.appointment_time.split(":").map(Number);
-              appointmentDate.setUTCHours(hh || 0, mm || 0, 0, 0);
-            }
-            const hoursUntil = (appointmentDate.getTime() - nowDate.getTime()) / (1000 * 60 * 60);
+            const clinicTz = await getClinicTimezone(conv.clinic_id);
+            const clinicHour = getNowHourInTz(clinicTz);
+            if (clinicHour < sendWindowStart || clinicHour >= sendWindowEnd) continue;
+
+            const appointmentUtc = getAppointmentUtc(conv.appointment_date, conv.appointment_time, clinicTz);
+            const hoursUntil = (appointmentUtc.getTime() - nowDate.getTime()) / (1000 * 60 * 60);
             if (hoursUntil <= 0 || hoursUntil > r1Config.hours_before_appointment) continue;
 
-            // Enqueue reminder instead of sending directly
             const { data: existingReminder } = await supabase
               .from("pipeline_message_queue")
               .select("id")
@@ -865,8 +879,8 @@ Formato: Usa emojis para hacerlo visual y fácil de escanear. Máximo 6 líneas.
               if (contact?.name) contactName = contact.name.split(" ")[0];
             }
 
-            const fecha = appointmentDate.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" });
-            const hora = conv.appointment_time || appointmentDate.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+            const fecha = formatDateInTz(appointmentUtc, clinicTz);
+            const hora = conv.appointment_time || appointmentUtc.toLocaleTimeString("es", { timeZone: clinicTz, hour: "2-digit", minute: "2-digit" });
             const servicio = conv.appointment_service || "tu cita";
 
             const message = (r1Config.message_template || "")
@@ -909,12 +923,12 @@ Formato: Usa emojis para hacerlo visual y fácil de escanear. Máximo 6 líneas.
             const r2Config = clinicConfigs?.find((c: any) => c.reminder_number === 2);
             if (!r2Config) continue;
 
-            const appointmentDate = new Date(conv.appointment_date);
-            if (conv.appointment_time) {
-              const [hh, mm] = conv.appointment_time.split(":").map(Number);
-              appointmentDate.setUTCHours(hh || 0, mm || 0, 0, 0);
-            }
-            const hoursUntil = (appointmentDate.getTime() - nowDate.getTime()) / (1000 * 60 * 60);
+            const clinicTz = await getClinicTimezone(conv.clinic_id);
+            const clinicHour = getNowHourInTz(clinicTz);
+            if (clinicHour < sendWindowStart || clinicHour >= sendWindowEnd) continue;
+
+            const appointmentUtc = getAppointmentUtc(conv.appointment_date, conv.appointment_time, clinicTz);
+            const hoursUntil = (appointmentUtc.getTime() - nowDate.getTime()) / (1000 * 60 * 60);
             if (hoursUntil <= 0 || hoursUntil > r2Config.hours_before_appointment) continue;
 
             const { data: existingReminder } = await supabase
@@ -933,8 +947,8 @@ Formato: Usa emojis para hacerlo visual y fácil de escanear. Máximo 6 líneas.
               if (contact?.name) contactName = contact.name.split(" ")[0];
             }
 
-            const fecha = appointmentDate.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" });
-            const hora = conv.appointment_time || appointmentDate.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+            const fecha = formatDateInTz(appointmentUtc, clinicTz);
+            const hora = conv.appointment_time || appointmentUtc.toLocaleTimeString("es", { timeZone: clinicTz, hour: "2-digit", minute: "2-digit" });
             const servicio = conv.appointment_service || "tu cita";
 
             const message = (r2Config.message_template || "")

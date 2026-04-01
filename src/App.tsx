@@ -35,7 +35,7 @@ import AdsPage from "./pages/AdsPage";
 import ContentPage from "./pages/ContentPage";
 import PsychoMatrixPage from "./pages/PsychoMatrixPage";
 import PlanificacionPage from "./pages/PlanificacionPage";
-import PipelineConfigPage from "./pages/PipelineConfigPage";
+
 import ReunionesPage from "./pages/ReunionesPage";
 import LandingPage from "./pages/LandingPage";
 import PreLaunchPage from "./pages/PreLaunchPage";
@@ -113,7 +113,7 @@ const App = () => (
               <Route path="/admin/plantillas" element={<ProtectedRoute><AdminPlantillasPage /></ProtectedRoute>} />
               <Route path="/admin/plantillas/nueva" element={<ProtectedRoute><AdminPlantillaEditorPage /></ProtectedRoute>} />
               <Route path="/admin/plantillas/:id/editar" element={<ProtectedRoute><AdminPlantillaEditorPage /></ProtectedRoute>} />
-              <Route path="/configuracion/pipeline" element={<ProtectedRoute><PipelineConfigPage /></ProtectedRoute>} />
+              
               <Route path="/ads" element={<ProtectedRoute><AdsPage /></ProtectedRoute>} />
               <Route path="/contenido" element={<ProtectedRoute><ContentPage /></ProtectedRoute>} />
               <Route path="/psycho-matrix" element={<ProtectedRoute><PsychoMatrixPage /></ProtectedRoute>} />

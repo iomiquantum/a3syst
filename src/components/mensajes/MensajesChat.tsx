@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, MoreVertical, PanelRightOpen, PanelRightClose, LayoutTemplate, ShieldAlert, Lock, ClipboardList, UserX, PhoneOff, RotateCcw, CalendarPlus, MessageSquareText, GraduationCap } from "lucide-react";
+import { Send, Bot, MoreVertical, PanelRightOpen, PanelRightClose, LayoutTemplate, Lock, ClipboardList, UserX, PhoneOff, RotateCcw, CalendarPlus, MessageSquareText, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -8,11 +8,11 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import PipelineBadge from "./PipelineBadge";
 import WhatsAppWindowBadge from "./WhatsAppWindowBadge";
-import PipelineProgressBar from "./PipelineProgressBar";
+
 import ChannelIcon from "@/components/messaging/ChannelIcon";
 import ChatToolbar from "./ChatToolbar";
 import MessageStatusIcon from "./MessageStatusIcon";
-import AntiSpamBadge from "./AntiSpamBadge";
+
 import { usePipelineAction } from "@/hooks/usePipelineAction";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
@@ -355,16 +355,6 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                 <span key={t} className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">{t}</span>
               ))}
             </div>
-            {/* Pipeline Progress Bar */}
-            {(c.seguimiento_last_completed_s > 0 || c.seguimiento_next_s > 0) && (
-              <PipelineProgressBar
-                lastCompletedS={c.seguimiento_last_completed_s}
-                nextS={c.seguimiento_next_s}
-                currentTab={c.pipeline_tab}
-                isRecurrente={c.seguimiento_is_recurrente}
-                recurrenteCount={c.seguimiento_recurrente_count}
-              />
-            )}
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -409,7 +399,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
               <DropdownMenuItem onClick={() => handleAction("no_interesado")}>Marcar como no interesado</DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAction("escalados")}>Escalar a humano</DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAction("pacientes")}>Convertir a paciente</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAction("resueltos_ia")}>Reiniciar seguimiento</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAction("nuevos")}>Mover a Nuevos</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => toast.info("Ir a CRM (pendiente)")}>Ver contacto en CRM</DropdownMenuItem>
             </DropdownMenuContent>
@@ -420,15 +410,6 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
       {/* Appointment Banner */}
       <AppointmentBanner conversation={c} onActionComplete={onActionComplete} />
 
-      {/* Anti-spam Banner */}
-      {c.pipeline_tab === "no_responden" && (c as any).seguimiento_spam_protection_triggered && (
-        <AntiSpamBadge
-          consecutiveReadNoReply={(c as any).seguimiento_consecutive_read_no_reply || 0}
-          spamProtectionTriggered={true}
-          spamJumpedFromS={(c as any).seguimiento_spam_jumped_from_s}
-          variant="banner"
-        />
-      )}
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3">
@@ -474,9 +455,9 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                           size="sm"
                           variant="outline"
                           className="text-[10px] h-7 gap-1"
-                          onClick={() => handleAction("seguimiento_s1")}
+                          onClick={() => handleAction("nuevos")}
                         >
-                          <RotateCcw className="w-3 h-3" /> Reiniciar S1
+                          <RotateCcw className="w-3 h-3" /> Mover a Nuevos
                         </Button>
                         <Button
                           size="sm"
@@ -602,27 +583,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
             );
           })}
 
-          {c.pipeline_tab === "resueltos_ia" && (
-            <p className="text-center text-[11px] text-muted-foreground italic py-2">
-              Si no responde en 15 min pasa a Seguimiento S1
-            </p>
-          )}
 
-          {/* WhatsApp window closed alert for manual stages */}
-          {c.channel === "whatsapp" && (c.pipeline_tab === "seguimiento_s5" || c.pipeline_tab === "seguimiento_s6") && (c as any).whatsapp_window_blocked && (
-            <div className="mx-auto max-w-sm bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg p-3 text-center space-y-2">
-              <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
-                ⚠️ La ventana de WhatsApp está cerrada.
-              </p>
-              <p className="text-[10px] text-amber-600 dark:text-amber-400">
-                El cliente no ha escrito en más de 24 horas. Al enviar, se usará un template para reabrir la conversación.
-              </p>
-              <Button size="sm" onClick={() => setTemplateDialogOpen(true)}>
-                <LayoutTemplate className="w-4 h-4" />
-                Elegir template aprobado
-              </Button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -636,12 +597,6 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
           </div>
         )}
 
-        {(c.pipeline_tab === "seguimiento_s5" || c.pipeline_tab === "seguimiento_s6") && autopilot && !isWhatsAppBlocked && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 text-xs border border-purple-200 dark:border-purple-500/20">
-            <Bot className="w-3.5 h-3.5 shrink-0" />
-            <span>🤖 La IA está respondiendo en esta etapa de seguimiento manual ({c.pipeline_tab === "seguimiento_s5" ? "S5" : "S6"}). El contacto NO se moverá a Resueltos IA.</span>
-          </div>
-        )}
 
         {/* WhatsApp window BLOCKED — replace entire input with template-only mode */}
         {isWhatsAppBlocked ? (
