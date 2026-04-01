@@ -366,10 +366,21 @@ serve(async (req) => {
         if (b.arrival_instructions) parts.push(`Instrucciones de llegada: ${b.arrival_instructions}`);
         if (b.preparation_notes) parts.push(`Notas de preparación: ${b.preparation_notes}`);
         // Schedule
-        const ws = b.working_schedule as Record<string, { enabled: boolean; open: string; close: string }> | null;
+        const ws = b.working_schedule as Record<string, { enabled: boolean; open: string; close: string; last_appointment?: string }> | null;
         if (ws) {
-          const lines = Object.entries(dayLabels).map(([k, l]) => ws[k]?.enabled ? `  • ${l}: ${ws[k].open} a ${ws[k].close}` : `  • ${l}: CERRADO`);
-          parts.push(`Horario:\n${lines.join("\n")}`);
+          const hasAppointmentCutoff = Object.values(ws).some(v => v?.last_appointment);
+          const lines = Object.entries(dayLabels).map(([k, l]) => {
+            if (!ws[k]?.enabled) return `  • ${l}: CERRADO`;
+            let line = `  • ${l}: ${ws[k].open} a ${ws[k].close}`;
+            if (hasAppointmentCutoff && ws[k].last_appointment) {
+              line += ` (última cita: ${ws[k].last_appointment})`;
+            }
+            return line;
+          });
+          parts.push(`Horario de atención:\n${lines.join("\n")}`);
+          if (hasAppointmentCutoff) {
+            parts.push(`⚠️ IMPORTANTE: Las citas solo se pueden agendar hasta la hora indicada como "última cita". Después de esa hora, el negocio sigue atendiendo pero NO se aceptan nuevas citas.`);
+          }
         } else {
           parts.push(`Horario: (no configurado para esta sede)`);
         }
@@ -425,6 +436,7 @@ SEDES Y HORARIOS DE ATENCIÓN:
 ${branchesBlock}
 
 IMPORTANTE: Solo puedes agendar citas en los días y horarios habilitados de cada sede. Si un día está marcado como CERRADO, NO ofrezcas citas ese día. Sugiere el siguiente día hábil disponible.
+Si una sede tiene configurado un horario de "última cita", NO agendes citas después de esa hora. Informa al cliente que el horario de atención es hasta X hora pero las citas solo se agendan hasta Y hora.
 Si hay varias sedes, pregunta al cliente en cuál sede prefiere su cita.
 
 FECHA DE HOY: ${todayDate} (${todayDay})

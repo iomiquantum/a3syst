@@ -21,7 +21,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { treatmentSchema, specialtySchema, professionalSchema, branchSchema, getValidationError } from "@/lib/validations";
 
-interface DaySchedule { enabled: boolean; open: string; close: string; }
+interface DaySchedule { enabled: boolean; open: string; close: string; last_appointment?: string; }
 interface WorkingSchedule { [key: string]: DaySchedule; }
 
 const DEFAULT_SCHEDULE: WorkingSchedule = {
@@ -528,23 +528,54 @@ const MiNegocioPage = () => {
                             setBranchForm(f => ({ ...f, working_schedule: current }));
                           };
                           return (
-                            <div key={key} className={cn("flex items-center gap-3 rounded-lg border p-2.5 transition-colors", day.enabled ? "bg-background border-border" : "bg-muted/50 border-transparent")}>
-                              <label className="flex items-center gap-2 min-w-[110px] cursor-pointer">
-                                <input type="checkbox" checked={day.enabled} onChange={e => updateBranchDay("enabled", e.target.checked)} className="rounded border-input" />
-                                <span className={cn("text-sm font-medium", !day.enabled && "text-muted-foreground")}>{label}</span>
-                              </label>
-                              {day.enabled ? (
-                                <div className="flex items-center gap-2 flex-1">
-                                  <Input type="time" value={day.open} onChange={e => updateBranchDay("open", e.target.value)} className="h-8 text-sm w-[120px]" />
-                                  <span className="text-xs text-muted-foreground">a</span>
-                                  <Input type="time" value={day.close} onChange={e => updateBranchDay("close", e.target.value)} className="h-8 text-sm w-[120px]" />
+                            <div key={key} className={cn("rounded-lg border p-2.5 transition-colors space-y-1.5", day.enabled ? "bg-background border-border" : "bg-muted/50 border-transparent")}>
+                              <div className="flex items-center gap-3">
+                                <label className="flex items-center gap-2 min-w-[110px] cursor-pointer">
+                                  <input type="checkbox" checked={day.enabled} onChange={e => updateBranchDay("enabled", e.target.checked)} className="rounded border-input" />
+                                  <span className={cn("text-sm font-medium", !day.enabled && "text-muted-foreground")}>{label}</span>
+                                </label>
+                                {day.enabled ? (
+                                  <div className="flex items-center gap-2 flex-1">
+                                    <Input type="time" value={day.open} onChange={e => updateBranchDay("open", e.target.value)} className="h-8 text-sm w-[120px]" />
+                                    <span className="text-xs text-muted-foreground">a</span>
+                                    <Input type="time" value={day.close} onChange={e => updateBranchDay("close", e.target.value)} className="h-8 text-sm w-[120px]" />
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">Cerrado</span>
+                                )}
+                              </div>
+                              {day.enabled && day.last_appointment !== undefined && (
+                                <div className="flex items-center gap-2 pl-[126px]">
+                                  <span className="text-xs text-muted-foreground whitespace-nowrap">Última cita:</span>
+                                  <Input type="time" value={day.last_appointment || day.close} onChange={e => updateBranchDay("last_appointment", e.target.value)} className="h-7 text-xs w-[110px]" />
                                 </div>
-                              ) : (
-                                <span className="text-xs text-muted-foreground">Cerrado</span>
                               )}
                             </div>
                           );
                         })}
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        <input
+                          type="checkbox"
+                          id="use-appointment-cutoff"
+                          checked={Object.values(branchForm.working_schedule ?? {}).some((d: any) => d.last_appointment !== undefined)}
+                          onChange={e => {
+                            const current = { ...(branchForm.working_schedule ?? DEFAULT_SCHEDULE) };
+                            for (const key of Object.keys(current)) {
+                              if (e.target.checked) {
+                                current[key] = { ...current[key], last_appointment: current[key].close };
+                              } else {
+                                const { last_appointment, ...rest } = current[key] as any;
+                                current[key] = rest;
+                              }
+                            }
+                            setBranchForm(f => ({ ...f, working_schedule: current }));
+                          }}
+                          className="rounded border-input"
+                        />
+                        <label htmlFor="use-appointment-cutoff" className="text-xs text-muted-foreground cursor-pointer">
+                          Configurar horario límite para agendar citas (diferente al horario de atención)
+                        </label>
                       </div>
 
                       <Button onClick={handleSaveBranch} className="w-full gradient-primary text-primary-foreground" disabled={!branchForm.name || !branchForm.address}>
