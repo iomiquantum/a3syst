@@ -442,11 +442,12 @@ const AgendaPage = () => {
                         </div>
                         {weekDates.map((date, di) => {
                           const dateStr = fmtDate(date);
+                          const blocked = isBlockedDay(dateStr);
                           const slotApts = getAptsForSlot(dateStr, time);
                           return (
                             <div key={di}
-                              className="border-l border-border/30 p-0.5 cursor-pointer hover:bg-muted/30 transition-colors"
-                              onClick={() => slotApts.length === 0 && openSlot(dateStr, time)}>
+                              className={cn("border-l border-border/30 p-0.5 transition-colors", blocked ? "bg-destructive/5 cursor-not-allowed" : "cursor-pointer hover:bg-muted/30")}
+                              onClick={() => !blocked && slotApts.length === 0 && openSlot(dateStr, time)}>
                               {slotApts.map(apt => {
                                 const cfg = STATUS_CFG[apt.status as AptStatus] || STATUS_CFG.pendiente;
                                 return (
