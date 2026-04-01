@@ -987,10 +987,46 @@ function addDaysToLocalDate(base: LocalDateInfo, days: number): LocalDateInfo {
   return createLocalDateInfo(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate());
 }
 
-function buildCalendarReference(base: LocalDateInfo, totalDays = 14): string[] {
+const WORKING_DAY_MAP: Record<string, number> = {
+  "Dom": 0, "Lun": 1, "Mar": 2, "Mié": 3, "Jue": 4, "Vie": 5, "Sáb": 6,
+  "Domingo": 0, "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6,
+};
+
+function getWorkingWeekdayIndices(workingDays: string[]): Set<number> {
+  const indices = new Set<number>();
+  for (const d of workingDays) {
+    const idx = WORKING_DAY_MAP[d];
+    if (idx !== undefined) indices.add(idx);
+  }
+  return indices;
+}
+
+function isWorkingDay(dateStr: string, workingDays: string[]): boolean {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  const weekday = date.getUTCDay();
+  return getWorkingWeekdayIndices(workingDays).has(weekday);
+}
+
+function getDayNameFromDate(dateStr: string): string {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  return DAY_NAMES_ES[date.getUTCDay()];
+}
+
+function buildNonWorkingDaysInfo(workingDays: string[]): string {
+  const indices = getWorkingWeekdayIndices(workingDays);
+  const nonWorking = DAY_NAMES_ES.filter((_, i) => !indices.has(i));
+  if (nonWorking.length === 0) return "";
+  return `\n⚠️ DÍAS SIN SERVICIO: ${nonWorking.join(", ")}. NUNCA ofrezcas citas estos días.`;
+}
+
+function buildCalendarReference(base: LocalDateInfo, totalDays = 14, workingDays?: string[]): string[] {
+  const indices = workingDays ? getWorkingWeekdayIndices(workingDays) : null;
   return Array.from({ length: totalDays }, (_, index) => {
     const info = addDaysToLocalDate(base, index);
-    return `${DAY_NAMES_ES[info.weekday]} ${pad2(info.day)}/${pad2(info.month)}/${info.year} → ${info.iso}`;
+    const closed = indices && !indices.has(info.weekday) ? " ❌ CERRADO" : "";
+    return `${DAY_NAMES_ES[info.weekday]} ${pad2(info.day)}/${pad2(info.month)}/${info.year} → ${info.iso}${closed}`;
   });
 }
 
