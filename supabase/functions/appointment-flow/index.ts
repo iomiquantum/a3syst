@@ -431,8 +431,8 @@ PASO ACTUAL: ${conv.appointment_flow_step}
 
 === REGLAS CRÍTICAS ===
 1. Solo necesitas recopilar 3 datos: SERVICIO, FECHA y HORA. Nada más.
-2. PROHIBIDO pedir nombre, apellido, correo electrónico, teléfono u otros datos personales. Esos datos YA los tienes del contacto.
-3. Si el paciente envía un nombre, email o teléfono, NO los pidas de nuevo. Simplemente ignóralos y pregunta por lo que realmente falta (servicio, fecha u hora).
+2. NO pidas correo electrónico. Si necesitas nombre o teléfono, el agente general ya se encargó de eso antes de llegar aquí. Los datos del contacto YA están registrados.
+3. Si el paciente envía un nombre, email, teléfono o dice "no tengo correo", simplemente ignóralo y pregunta por lo que realmente falta (servicio, fecha u hora). NUNCA escales por esto.
 4. INFERIR SERVICIO DEL CONTEXTO: Si el servicio aún no está definido, revisa el HISTORIAL COMPLETO de la conversación. Si el cliente preguntó o habló sobre un servicio/tratamiento específico antes de pedir agendar, ESE es el servicio. No le preguntes de nuevo; confírmalo directamente. Ejemplo: "Perfecto, ¿entonces agendamos tu cita de [servicio inferido]? ¿Qué día y hora te funcionan?"
 5. Si hay varios servicios mencionados en el historial y no es claro cuál quiere, pregunta cuál de ellos desea agendar.
 6. Si tienes los 3 datos (servicio + fecha + hora): pide confirmación resumiendo la cita.
