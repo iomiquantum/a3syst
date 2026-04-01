@@ -1050,3 +1050,45 @@ function estimateTokenCost(model: string, tokensInput: number, tokensOutput: num
   if (!pricing) return (tokensInput * 0.15 + tokensOutput * 0.60) / 1_000_000;
   return (tokensInput * pricing.input + tokensOutput * pricing.output) / 1_000_000;
 }
+
+// === Robust timezone helpers (same approach as appointment-flow) ===
+type LocalDateReply = { year: number; month: number; day: number; weekday: number; iso: string; dd: string; mm: string; dayNameES: string };
+
+function getLocalDateInfoReply(timeZone: string, source = new Date()): LocalDateReply {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" })
+      .formatToParts(source)
+      .filter(p => p.type !== "literal")
+      .map(p => [p.type, p.value])
+  );
+  const year = Number(parts.year);
+  const month = Number(parts.month);
+  const day = Number(parts.day);
+  const d = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  const weekday = d.getUTCDay();
+  const dayNames = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+  return {
+    year, month, day, weekday,
+    iso: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+    dd: String(day).padStart(2, "0"),
+    mm: String(month).padStart(2, "0"),
+    dayNameES: dayNames[weekday],
+  };
+}
+
+function addDaysReply(base: LocalDateReply, days: number): LocalDateReply {
+  const d = new Date(Date.UTC(base.year, base.month - 1, base.day, 12, 0, 0));
+  d.setUTCDate(d.getUTCDate() + days);
+  const year = d.getUTCFullYear();
+  const month = d.getUTCMonth() + 1;
+  const day = d.getUTCDate();
+  const weekday = d.getUTCDay();
+  const dayNames = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+  return {
+    year, month, day, weekday,
+    iso: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+    dd: String(day).padStart(2, "0"),
+    mm: String(month).padStart(2, "0"),
+    dayNameES: dayNames[weekday],
+  };
+}
