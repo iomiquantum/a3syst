@@ -1097,12 +1097,17 @@ function buildNonWorkingDaysInfo(workingDays: string[]): string {
   return `\n⚠️ DÍAS SIN SERVICIO: ${nonWorking.join(", ")}. NUNCA ofrezcas citas estos días.`;
 }
 
-function buildCalendarReference(base: LocalDateInfo, totalDays = 14, workingDays?: string[]): string[] {
+function buildCalendarReference(base: LocalDateInfo, totalDays = 14, workingDays?: string[], blockedDates?: Set<string>): string[] {
   const indices = workingDays ? getWorkingWeekdayIndices(workingDays) : null;
   return Array.from({ length: totalDays }, (_, index) => {
     const info = addDaysToLocalDate(base, index);
-    const closed = indices && !indices.has(info.weekday) ? " ❌ CERRADO" : "";
-    return `${DAY_NAMES_ES[info.weekday]} ${pad2(info.day)}/${pad2(info.month)}/${info.year} → ${info.iso}${closed}`;
+    let status = "";
+    if (indices && !indices.has(info.weekday)) {
+      status = " ❌ CERRADO";
+    } else if (blockedDates && blockedDates.has(info.iso)) {
+      status = " 🔒 BLOQUEADO";
+    }
+    return `${DAY_NAMES_ES[info.weekday]} ${pad2(info.day)}/${pad2(info.month)}/${info.year} → ${info.iso}${status}`;
   });
 }
 
