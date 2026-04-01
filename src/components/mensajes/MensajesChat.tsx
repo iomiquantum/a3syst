@@ -583,11 +583,6 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
             );
           })}
 
-          {c.pipeline_tab === "resueltos_ia" && (
-            <p className="text-center text-[11px] text-muted-foreground italic py-2">
-              Si no responde en 15 min pasa a Seguimiento S1
-            </p>
-          )}
 
           {/* WhatsApp window closed alert for manual stages */}
           {c.channel === "whatsapp" && (c.pipeline_tab === "seguimiento_s5" || c.pipeline_tab === "seguimiento_s6") && (c as any).whatsapp_window_blocked && (
