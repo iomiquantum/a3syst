@@ -102,7 +102,7 @@ const AgendaPage = () => {
     const startDate = fmtDate(weekDates[0]);
     const endDate = fmtDate(weekDates[6]);
 
-    const [{ data: a }, { data: p }, { data: t }, { data: pr }, { data: pm }, { data: bd }] = await Promise.all([
+    const [{ data: a }, { data: p }, { data: t }, { data: pr }, { data: pm }, { data: bd }, { data: br }] = await Promise.all([
       supabase.from("appointments")
         .select("*, patients(first_name, last_name), treatments(name, price), professionals(full_name)")
         .eq("clinic_id", clinicId).gte("date", startDate).lte("date", endDate)
@@ -111,14 +111,16 @@ const AgendaPage = () => {
       supabase.from("treatments").select("id, name, duration, price").eq("clinic_id", clinicId),
       supabase.from("professionals").select("id, full_name").eq("clinic_id", clinicId).eq("active", true),
       supabase.from("payment_methods").select("id, name").eq("clinic_id", clinicId),
-      (supabase as any).from("blocked_days").select("date, reason").eq("clinic_id", clinicId),
+      (supabase as any).from("blocked_days").select("id, date, reason, branch_id").eq("clinic_id", clinicId),
+      supabase.from("branches").select("id, name").eq("clinic_id", clinicId).eq("active", true),
     ]);
     setAppointments(a || []);
     setPatients(p || []);
     setTreatments(t || []);
     setProfessionals(pr || []);
     setPaymentMethods(pm || []);
-    setBlockedDays((bd || []).map((b: any) => ({ date: b.date, reason: b.reason || "" })));
+    setBranches(br || []);
+    setBlockedDays((bd || []).map((b: any) => ({ id: b.id, date: b.date, reason: b.reason || "", branch_id: b.branch_id || null })));
     setLoading(false);
   }, [clinicId, weekDates]);
 
