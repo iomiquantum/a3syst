@@ -67,6 +67,7 @@ const AgendaPage = () => {
   // Filters
   const [filterPro, setFilterPro] = useState("todos");
   const [filterStatus, setFilterStatus] = useState("todos");
+  const [filterBranch, setFilterBranch] = useState("todos");
 
   // Modals
   const [createOpen, setCreateOpen] = useState(false);
