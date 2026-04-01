@@ -376,13 +376,44 @@ serve(async (req) => {
     const todayDate = `${nowInClinicTz.getFullYear()}-${String(nowInClinicTz.getMonth() + 1).padStart(2, "0")}-${String(nowInClinicTz.getDate()).padStart(2, "0")}`;
     const todayDay = nowInClinicTz.toLocaleDateString("es", { weekday: "long" });
     const dayNames = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+
+    // Derive working day indices from working_schedule (source of truth) or branches
+    const scheduleKeyToDay: Record<string, number> = { domingo: 0, lunes: 1, martes: 2, miercoles: 3, jueves: 4, viernes: 5, sabado: 6 };
+    const workingDayIndices = new Set<number>();
+    const clinicWs = (clinicInfo as any)?.working_schedule as Record<string, { enabled: boolean }> | null;
+    if (clinicWs) {
+      for (const [key, val] of Object.entries(clinicWs)) {
+        if (val?.enabled) { const idx = scheduleKeyToDay[key]; if (idx !== undefined) workingDayIndices.add(idx); }
+      }
+    }
+    // Fallback: derive from branches if clinic-level schedule is empty
+    if (workingDayIndices.size === 0 && branchesData && branchesData.length > 0) {
+      for (const b of branchesData) {
+        const ws = b.working_schedule as Record<string, { enabled: boolean }> | null;
+        if (ws) { for (const [key, val] of Object.entries(ws)) { if (val?.enabled) { const idx = scheduleKeyToDay[key]; if (idx !== undefined) workingDayIndices.add(idx); } } }
+      }
+    }
+    // Fallback: Mon-Fri if nothing configured
+    if (workingDayIndices.size === 0) { [1, 2, 3, 4, 5].forEach(i => workingDayIndices.add(i)); }
+
+    // Fetch blocked days
+    const { data: blockedDaysData } = await supabase
+      .from("blocked_days")
+      .select("date, reason")
+      .eq("clinic_id", clinic_id);
+    const blockedDatesSet = new Set((blockedDaysData || []).map((bd: any) => bd.date));
+
     const calendarRef = Array.from({ length: 21 }, (_, index) => {
       const d = new Date(nowInClinicTz);
       d.setDate(d.getDate() + index);
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, "0");
       const dd = String(d.getDate()).padStart(2, "0");
-      return `${dayNames[d.getDay()]} ${dd}/${mm}/${yyyy} → ${yyyy}-${mm}-${dd}`;
+      const iso = `${yyyy}-${mm}-${dd}`;
+      let marker = "";
+      if (!workingDayIndices.has(d.getDay())) marker = " ❌ CERRADO";
+      else if (blockedDatesSet.has(iso)) marker = " 🔒 BLOQUEADO";
+      return `${dayNames[d.getDay()]} ${dd}/${mm}/${yyyy} → ${iso}${marker}`;
     }).join("\n");
 
     let systemPrompt = `Eres "${agentConfig.agent_name}", un asistente virtual del negocio.
