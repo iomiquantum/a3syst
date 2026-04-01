@@ -57,10 +57,12 @@ const AgendaPage = () => {
   const [patients, setPatients] = useState<any[]>([]);
   const [treatments, setTreatments] = useState<any[]>([]);
   const [professionals, setProfessionals] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [blockedDays, setBlockedDays] = useState<{ date: string; reason: string }[]>([]);
+  const [blockedDays, setBlockedDays] = useState<{ date: string; reason: string; branch_id: string | null; id: string }[]>([]);
   const [blockReasonOpen, setBlockReasonOpen] = useState<string | null>(null);
   const [blockReason, setBlockReason] = useState("");
+  const [blockBranchId, setBlockBranchId] = useState<string>("all");
 
   // Filters
   const [filterPro, setFilterPro] = useState("todos");
