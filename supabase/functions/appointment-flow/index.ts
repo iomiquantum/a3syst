@@ -344,17 +344,19 @@ Responde SOLO JSON válido:
         );
       }
 
-      const calendarRef = buildCalendarReference(todayLocalInfo, 14);
+      const calendarRef = buildCalendarReference(todayLocalInfo, 14, guidedWorkingDays);
       const resolvedDate = resolveDateReferenceFromMessage(patient_message, clinicTz);
       const dateInstruction = buildDateResolutionInstruction(resolvedDate);
+      const guidedNonWorkingInfo = buildNonWorkingDaysInfo(guidedWorkingDays);
 
       const guidedPrompt = `Eres ${agentName} de ${clinicName}. Estás ayudando a un paciente a agendar una cita.
 
 FECHA DE HOY: ${todayStr} (${dayOfWeekStr})
 ZONA HORARIA: ${clinicTz}
 
-CALENDARIO DE REFERENCIA (próximos 14 días):
+CALENDARIO DE REFERENCIA (próximos 14 días — ❌ = cerrado):
 ${calendarRef.join("\n")}
+${guidedNonWorkingInfo}
 ${blockedDaysList ? `\n🚫 DÍAS BLOQUEADOS (NO AGENDAR en estas fechas): ${blockedDaysList}\nSi el paciente pide un día bloqueado, explica que no hay disponibilidad ese día y sugiere el día hábil más cercano.` : ""}
 ${dateInstruction ? `\n${dateInstruction}\n` : ""}
 
