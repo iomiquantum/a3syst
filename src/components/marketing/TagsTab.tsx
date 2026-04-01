@@ -6,11 +6,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useMarketingTags } from "@/hooks/useMarketingTags";
+import { useTagStats } from "@/hooks/useTagStats";
+import { Badge } from "@/components/ui/badge";
 
 const COLORS = ["#10B981", "#3B82F6", "#EF4444", "#F59E0B", "#8B5CF6", "#EC4899", "#F97316", "#6B7280"];
 
 const TagsTab = () => {
   const { tags, isLoading, createTag, deleteTag } = useMarketingTags();
+  const { tags: contactTagStats } = useTagStats();
   const [name, setName] = useState("");
   const [color, setColor] = useState(COLORS[0]);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -47,7 +50,7 @@ const TagsTab = () => {
       </div>
 
       {tags.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">No hay tags creados. Crea tu primer tag para organizar contactos.</p>
+        <p className="text-sm text-muted-foreground text-center py-4">No hay tags personalizados. Crea tu primer tag.</p>
       ) : (
         <div className="space-y-1.5">
           {tags.map(tag => (
@@ -59,6 +62,20 @@ const TagsTab = () => {
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Contact tags in use */}
+      {contactTagStats.length > 0 && (
+        <div className="space-y-2 pt-2 border-t border-border">
+          <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Etiquetas en uso en contactos</p>
+          <div className="flex flex-wrap gap-2">
+            {contactTagStats.map(t => (
+              <Badge key={t.tag} variant="secondary" className="text-xs gap-1">
+                {t.tag} <span className="text-muted-foreground font-normal">({t.count})</span>
+              </Badge>
+            ))}
+          </div>
         </div>
       )}
 

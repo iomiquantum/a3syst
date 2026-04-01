@@ -56,17 +56,23 @@ export const useMarketingKPIs = (): MarketingKPIData => {
       ]);
 
       // Compute funnel counts
-      const stageCounts: Record<string, number> = {};
-      (allContactsRes.data || []).forEach((c: any) => {
-        const s = c.funnel_stage || "nuevos";
-        stageCounts[s] = (stageCounts[s] || 0) + 1;
+      // Use pipeline_tab from conversations for a more accurate funnel view
+      const { data: convs } = await supabase
+        .from("conversations")
+        .select("pipeline_tab")
+        .eq("clinic_id", clinicId!)
+        .eq("archived", false);
+
+      const pipelineCounts: Record<string, number> = {};
+      (convs || []).forEach((c: any) => {
+        const tab = c.pipeline_tab || "nuevos";
+        pipelineCounts[tab] = (pipelineCounts[tab] || 0) + 1;
       });
 
-      const funnelOrder = ["nuevos", "contactado", "interesado", "cita_agendada", "convertido", "perdido"];
-      const funnelCounts = funnelOrder.map(stage => ({
-        stage,
-        count: stageCounts[stage] || 0,
-      }));
+      const funnelCounts = Object.entries(pipelineCounts)
+        .map(([stage, count]) => ({ stage, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 12);
 
       setData({
         totalContacts: totalRes.count || 0,

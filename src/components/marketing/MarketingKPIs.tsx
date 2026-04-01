@@ -3,14 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMarketingKPIs } from "@/hooks/useMarketingKPIs";
 
-const stageLabels: Record<string, string> = {
-  nuevos: "Nuevos",
-  contactado: "Contactados",
-  interesado: "Interesados",
-  cita_agendada: "Cita agendada",
-  convertido: "Convertidos",
-  perdido: "Perdidos",
-};
+import { EMBUDO_STAGES } from "@/hooks/useClinicPipelineTabs";
+
+const stageLabels: Record<string, string> = Object.fromEntries(
+  EMBUDO_STAGES.filter(s => s.key !== "todos").map(s => [s.key, s.label])
+);
 
 const calcChange = (current: number, previous: number): string => {
   if (previous === 0) return current > 0 ? "+100%" : "0%";

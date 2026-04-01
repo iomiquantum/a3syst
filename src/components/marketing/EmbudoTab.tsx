@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -7,8 +7,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinic } from "@/hooks/useClinic";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { EMBUDO_STAGES, useClinicPipelineTabs } from "@/hooks/useClinicPipelineTabs";
 
 interface Stage {
   id?: string;
@@ -32,11 +33,9 @@ const COLOR_OPTIONS = [
 const EmbudoTab = () => {
   const { clinicId } = useClinic();
   const queryClient = useQueryClient();
-  const [stages, setStages] = useState<Stage[]>([]);
-  const [dirty, setDirty] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const { tabs: pipelineTabs, loading: tabsLoading } = useClinicPipelineTabs();
 
-  const { data: dbStages, isLoading } = useQuery({
+  const { data: customStages = [], isLoading: customLoading } = useQuery({
     queryKey: ["pipeline-stages", clinicId],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
@@ -50,118 +49,85 @@ const EmbudoTab = () => {
     enabled: !!clinicId,
   });
 
-  useEffect(() => {
-    if (dbStages) setStages(dbStages);
-  }, [dbStages]);
+  const [newStageName, setNewStageName] = useState("");
+  const [newStageColor, setNewStageColor] = useState("#3B82F6");
 
-  const addStage = () => {
-    setStages(prev => [...prev, { name: "", color: "#3B82F6", position: prev.length, is_default: false }]);
-    setDirty(true);
-  };
+  const allStages = useMemo(() => {
+    const hardcoded = EMBUDO_STAGES.filter(s => s.key !== "todos").map(s => {
+      const tab = pipelineTabs.find(t => t.key === s.key);
+      return { key: s.key, label: s.label, color: s.color, count: tab?.count || 0, isHardcoded: true, id: undefined as string | undefined };
+    });
+    const custom = (customStages as Stage[])
+      .filter(cs => !hardcoded.some(h => h.label.toLowerCase() === cs.name.toLowerCase()))
+      .map(cs => ({ key: cs.name.toLowerCase().replace(/\s+/g, "_"), label: cs.name, color: "bg-muted text-muted-foreground", count: 0, isHardcoded: false, id: cs.id }));
+    return [...hardcoded, ...custom];
+  }, [pipelineTabs, customStages]);
 
-  const removeStage = (idx: number) => {
-    setStages(prev => prev.filter((_, i) => i !== idx).map((s, i) => ({ ...s, position: i })));
-    setDirty(true);
-  };
+  const addCustomStage = useMutation({
+    mutationFn: async () => {
+      if (!clinicId || !newStageName.trim()) return;
+      const { error } = await (supabase as any).from("pipeline_stages").insert({ clinic_id: clinicId, name: newStageName.trim(), color: newStageColor, position: (customStages as Stage[]).length, is_default: false });
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["pipeline-stages", clinicId] }); setNewStageName(""); toast.success("Etapa personalizada añadida"); },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
-  const moveStage = (idx: number, dir: -1 | 1) => {
-    const ni = idx + dir;
-    if (ni < 0 || ni >= stages.length) return;
-    const copy = [...stages];
-    [copy[idx], copy[ni]] = [copy[ni], copy[idx]];
-    setStages(copy.map((s, i) => ({ ...s, position: i })));
-    setDirty(true);
-  };
+  const deleteCustomStage = useMutation({
+    mutationFn: async (id: string) => { const { error } = await (supabase as any).from("pipeline_stages").delete().eq("id", id); if (error) throw error; },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["pipeline-stages", clinicId] }); toast.success("Etapa eliminada"); },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
-  const updateStage = (idx: number, field: keyof Stage, value: any) => {
-    setStages(prev => prev.map((s, i) => i === idx ? { ...s, [field]: value } : s));
-    setDirty(true);
-  };
+  if (tabsLoading || customLoading) return <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-12" />)}</div>;
 
-  const handleSave = async () => {
-    if (!clinicId) return;
-    setSaving(true);
-    try {
-      // Delete existing
-      await (supabase as any).from("pipeline_stages").delete().eq("clinic_id", clinicId);
-      // Insert all
-      const toInsert = stages.filter(s => s.name.trim()).map((s, i) => ({
-        clinic_id: clinicId,
-        name: s.name,
-        color: s.color,
-        position: i,
-        is_default: s.is_default,
-      }));
-      if (toInsert.length) {
-        const { error } = await (supabase as any).from("pipeline_stages").insert(toInsert);
-        if (error) throw error;
-      }
-      toast.success("Embudo guardado");
-      setDirty(false);
-      queryClient.invalidateQueries({ queryKey: ["pipeline-stages", clinicId] });
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (isLoading) return <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-12" />)}</div>;
+  const totalConversations = pipelineTabs.find(t => t.key === "todos")?.count || 0;
 
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-sm text-muted-foreground">Personaliza las etapas del proceso comercial de tu clínica</p>
+        <p className="text-sm text-muted-foreground">Etapas del embudo comercial — {totalConversations} conversaciones activas</p>
       </div>
 
       {/* Preview pills */}
-      {stages.length > 0 && (
+      {allStages.length > 0 && (
         <div className="flex flex-wrap gap-2 p-3 bg-muted/50 rounded-lg">
-          {stages.filter(s => s.name.trim()).map((s, i) => (
-            <span key={i} className="px-3 py-1 rounded-full text-xs font-medium text-white" style={{ backgroundColor: s.color }}>
-              {s.name}
-            </span>
+          {allStages.map(s => (
+            <Badge key={s.key} variant="secondary" className={`text-xs gap-1 ${s.color}`}>
+              {s.label} {s.count > 0 && <span className="font-bold">({s.count})</span>}
+            </Badge>
           ))}
         </div>
       )}
 
-      {/* Editable list */}
+      {/* Stage list */}
       <div className="space-y-2">
-        {stages.map((stage, idx) => (
-          <div key={idx} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border">
-            <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
-            <span className="text-xs text-muted-foreground w-6">#{idx + 1}</span>
-            <Input value={stage.name} onChange={e => updateStage(idx, "name", e.target.value)} placeholder="Nombre de la etapa" className="flex-1 h-8" />
-            <Select value={stage.color} onValueChange={v => updateStage(idx, "color", v)}>
-              <SelectTrigger className="w-[120px] h-8">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: stage.color }} />
-                  <SelectValue />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                {COLOR_OPTIONS.map(c => (
-                  <SelectItem key={c.value} value={c.value}>
-                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: c.value }} />{c.label}</div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {stage.is_default && <Badge variant="secondary" className="text-[10px]">Default</Badge>}
-            <button onClick={() => moveStage(idx, -1)} disabled={idx === 0} className="p-1 rounded hover:bg-muted disabled:opacity-30"><ChevronUp className="w-4 h-4" /></button>
-            <button onClick={() => moveStage(idx, 1)} disabled={idx === stages.length - 1} className="p-1 rounded hover:bg-muted disabled:opacity-30"><ChevronDown className="w-4 h-4" /></button>
-            <button onClick={() => removeStage(idx)} className="p-1 rounded hover:bg-destructive/10"><Trash2 className="w-4 h-4 text-destructive" /></button>
+        {allStages.map((stage, idx) => (
+          <div key={stage.key} className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border hover:bg-muted/50 transition-colors group">
+            <span className="text-xs text-muted-foreground w-6 shrink-0">#{idx + 1}</span>
+            <Badge variant="secondary" className={`text-[10px] shrink-0 ${stage.color}`}>{stage.label}</Badge>
+            <span className="flex-1" />
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Users className="w-3 h-3" /><span>{stage.count}</span></div>
+            {!stage.isHardcoded && stage.id && (
+              <button onClick={() => deleteCustomStage.mutate(stage.id!)} className="p-1 rounded hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-3.5 h-3.5 text-destructive" /></button>
+            )}
+            {stage.isHardcoded && <Badge variant="outline" className="text-[9px] opacity-50">Sistema</Badge>}
           </div>
         ))}
       </div>
 
-      {stages.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-8">No hay etapas configuradas. Crea tu primera etapa del embudo.</p>
-      )}
-
-      <div className="flex items-center justify-between">
-        <Button variant="outline" size="sm" onClick={addStage}><Plus className="w-4 h-4 mr-1" /> Nueva etapa</Button>
-        {dirty && <Button onClick={handleSave} disabled={saving}>{saving ? "Guardando..." : "Guardar cambios"}</Button>}
+      {/* Add custom stage */}
+      <div className="flex items-center gap-2 pt-2 border-t border-border">
+        <Input value={newStageName} onChange={e => setNewStageName(e.target.value)} placeholder="Nueva etapa personalizada..." className="flex-1 h-8" onKeyDown={e => e.key === "Enter" && newStageName.trim() && addCustomStage.mutate()} />
+        <Select value={newStageColor} onValueChange={setNewStageColor}>
+          <SelectTrigger className="w-[100px] h-8">
+            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: newStageColor }} /><SelectValue /></div>
+          </SelectTrigger>
+          <SelectContent>
+            {COLOR_OPTIONS.map(c => (<SelectItem key={c.value} value={c.value}><div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: c.value }} />{c.label}</div></SelectItem>))}
+          </SelectContent>
+        </Select>
+        <Button variant="outline" size="sm" onClick={() => addCustomStage.mutate()} disabled={!newStageName.trim() || addCustomStage.isPending}><Plus className="w-4 h-4 mr-1" /> Añadir</Button>
       </div>
     </div>
   );
