@@ -396,7 +396,7 @@ Responde SOLO JSON válido:
         );
       }
 
-      const calendarRef = buildCalendarReference(todayLocalInfo, 14, guidedWorkingDays);
+      const calendarRef = buildCalendarReference(todayLocalInfo, 14, guidedWorkingDays, allBlockedDates);
       const resolvedDate = resolveDateReferenceFromMessage(patient_message, clinicTz);
       const dateInstruction = buildDateResolutionInstruction(resolvedDate);
       const guidedNonWorkingInfo = buildNonWorkingDaysInfo(guidedWorkingDays);
