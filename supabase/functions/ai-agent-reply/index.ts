@@ -436,6 +436,7 @@ SEDES Y HORARIOS DE ATENCIÓN:
 ${branchesBlock}
 
 IMPORTANTE: Solo puedes agendar citas en los días y horarios habilitados de cada sede. Si un día está marcado como CERRADO, NO ofrezcas citas ese día. Sugiere el siguiente día hábil disponible.
+Si una sede tiene configurado un horario de "última cita", NO agendes citas después de esa hora. Informa al cliente que el horario de atención es hasta X hora pero las citas solo se agendan hasta Y hora.
 Si hay varias sedes, pregunta al cliente en cuál sede prefiere su cita.
 
 FECHA DE HOY: ${todayDate} (${todayDay})
