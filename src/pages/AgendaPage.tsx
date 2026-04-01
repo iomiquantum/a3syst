@@ -411,6 +411,15 @@ const AgendaPage = () => {
 
             {/* Filters */}
             <div className="flex items-center gap-3 mb-4 flex-wrap">
+              {branches.length > 0 && (
+                <Select value={filterBranch} onValueChange={setFilterBranch}>
+                  <SelectTrigger className="w-48 h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todas las sucursales</SelectItem>
+                    {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
               <Select value={filterPro} onValueChange={setFilterPro}>
                 <SelectTrigger className="w-44 h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
