@@ -67,6 +67,10 @@ const AppLayout = ({ children }: AppLayoutProps) => {
     navigate("/");
   };
 
+  // Full access roles get all items without filtering
+  const hasFullAccess = isSuperAdmin || ["admin", "manager", "super_admin"].includes(userRole || "");
+  const p = userPermissions;
+
   const navGroups = [
     ...(isSuperAdmin ? [{
       label: "ADMIN",
@@ -79,33 +83,33 @@ const AppLayout = ({ children }: AppLayoutProps) => {
     {
       label: "MI EMPRESA",
       items: [
-        { icon: Store, label: "Mi Negocio", path: "/mi-negocio" },
-        { icon: Users, label: labels.patients, path: "/pacientes" },
+        ...(hasFullAccess || p.configuracion ? [{ icon: Store, label: "Mi Negocio", path: "/mi-negocio" }] : []),
+        ...(hasFullAccess || p.pacientes ? [{ icon: Users, label: labels.patients, path: "/pacientes" }] : []),
       ],
     },
     {
       label: "AUTOPILOTOS",
       items: [
-        { icon: MessageSquare, label: "Mensajes", path: "/mensajes", badge: unreadMessages },
-        { icon: MessageSquare, label: "WhatsApp", path: "/whatsapp", color: "#25d366", isNew: true },
-        { icon: Calendar, label: "Agenda", path: "/agenda", badge: todayAppointments },
-        { icon: BarChart3, label: "CRM", path: "/crm" },
-        { icon: Megaphone, label: "Marketing", path: "/marketing" },
-        { icon: Palette, label: "Contenido", path: "/contenido" },
-        { icon: Rocket, label: "Ads", path: "/ads" },
-        { icon: DollarSign, label: "Ventas", path: "/ventas" },
-        { icon: Brain, label: "Psycho-Matrix", path: "/psycho-matrix" },
+        ...(hasFullAccess || p.agenda ? [{ icon: MessageSquare, label: "Mensajes", path: "/mensajes", badge: unreadMessages }] : []),
+        ...(hasFullAccess || p.agenda ? [{ icon: MessageSquare, label: "WhatsApp", path: "/whatsapp", color: "#25d366", isNew: true }] : []),
+        ...(hasFullAccess || p.agenda ? [{ icon: Calendar, label: "Agenda", path: "/agenda", badge: todayAppointments }] : []),
+        ...(hasFullAccess || p.reportes ? [{ icon: BarChart3, label: "CRM", path: "/crm" }] : []),
+        ...(hasFullAccess ? [{ icon: Megaphone, label: "Marketing", path: "/marketing" }] : []),
+        ...(hasFullAccess ? [{ icon: Palette, label: "Contenido", path: "/contenido" }] : []),
+        ...(hasFullAccess ? [{ icon: Rocket, label: "Ads", path: "/ads" }] : []),
+        ...(hasFullAccess || p.ventas ? [{ icon: DollarSign, label: "Ventas", path: "/ventas" }] : []),
+        ...(hasFullAccess ? [{ icon: Brain, label: "Psycho-Matrix", path: "/psycho-matrix" }] : []),
       ],
     },
     {
       label: "CONFIGURACIÓN",
       items: [
-        { icon: Bot, label: "Configuración IA", path: "/configuracion/agente-ia" },
-        { icon: TrendingUp, label: "Analytics", path: "/analytics" },
+        ...(hasFullAccess || p.configuracion ? [{ icon: Bot, label: "Configuración IA", path: "/configuracion/agente-ia" }] : []),
+        ...(hasFullAccess || p.reportes ? [{ icon: TrendingUp, label: "Analytics", path: "/analytics" }] : []),
         { icon: User, label: "Mi cuenta", path: "/mi-cuenta" },
       ],
     },
-  ];
+  ].filter(g => g.items.length > 0);
 
   const handleNav = (path: string) => {
     navigate(path);
