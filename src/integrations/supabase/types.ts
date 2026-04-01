@@ -2599,7 +2599,7 @@ export type Database = {
           current_medications: string | null
           date_of_birth: string | null
           document: string | null
-          email: string
+          email: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           first_name: string
@@ -2624,7 +2624,7 @@ export type Database = {
           current_medications?: string | null
           date_of_birth?: string | null
           document?: string | null
-          email?: string
+          email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           first_name: string
@@ -2649,7 +2649,7 @@ export type Database = {
           current_medications?: string | null
           date_of_birth?: string | null
           document?: string | null
-          email?: string
+          email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           first_name?: string
