@@ -217,7 +217,38 @@ const AgendaPage = () => {
     setCurrentDate(d);
   };
 
+  const isBlockedDay = (dateStr: string) => blockedDays.some(b => b.date === dateStr);
+
+  const handleBlockDay = async (dateStr: string) => {
+    if (!clinicId) return;
+    if (isBlockedDay(dateStr)) {
+      // Unblock
+      const { error } = await (supabase as any).from("blocked_days").delete().eq("clinic_id", clinicId).eq("date", dateStr);
+      if (error) { toast.error(error.message); return; }
+      setBlockedDays(prev => prev.filter(b => b.date !== dateStr));
+      toast.success("✅ Día desbloqueado");
+    } else {
+      setBlockReasonOpen(dateStr);
+    }
+  };
+
+  const confirmBlockDay = async () => {
+    if (!clinicId || !blockReasonOpen) return;
+    const { error } = await (supabase as any).from("blocked_days").insert({
+      clinic_id: clinicId, date: blockReasonOpen, reason: blockReason,
+    });
+    if (error) { toast.error(error.message); return; }
+    setBlockedDays(prev => [...prev, { date: blockReasonOpen, reason: blockReason }]);
+    toast.success("🔒 Día bloqueado");
+    setBlockReasonOpen(null);
+    setBlockReason("");
+  };
+
   const openSlot = (dateStr: string, time: string) => {
+    if (isBlockedDay(dateStr)) {
+      toast.error("Este día está bloqueado");
+      return;
+    }
     setForm({ ...form, date: dateStr, time });
     setCreateOpen(true);
   };
