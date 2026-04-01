@@ -68,6 +68,7 @@ const AgendaPage = () => {
   const [filterPro, setFilterPro] = useState("todos");
   const [filterStatus, setFilterStatus] = useState("todos");
   const [filterBranch, setFilterBranch] = useState("todos");
+  const [filterTreatment, setFilterTreatment] = useState("todos");
 
   // Modals
   const [createOpen, setCreateOpen] = useState(false);
@@ -143,8 +144,9 @@ const AgendaPage = () => {
     let list = appointments;
     if (filterPro !== "todos") list = list.filter(a => a.professional_id === filterPro);
     if (filterStatus !== "todos") list = list.filter(a => a.status === filterStatus);
+    if (filterTreatment !== "todos") list = list.filter(a => a.treatment_id === filterTreatment);
     return list;
-  }, [appointments, filterPro, filterStatus]);
+  }, [appointments, filterPro, filterStatus, filterTreatment]);
 
   const getAptsForSlot = (dateStr: string, time: string) =>
     filteredAppts.filter(a => a.date === dateStr && a.time?.substring(0, 5) === time);
@@ -451,6 +453,15 @@ const AgendaPage = () => {
                   <SelectItem value="todos">Todos</SelectItem>
                   {(Object.keys(STATUS_CFG) as AptStatus[]).map(s => (
                     <SelectItem key={s} value={s}>{STATUS_CFG[s].label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterTreatment} onValueChange={setFilterTreatment}>
+                <SelectTrigger className="w-44 h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos los tratamientos</SelectItem>
+                  {treatments.map(t => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
