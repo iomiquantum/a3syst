@@ -100,7 +100,7 @@ serve(async (req) => {
       const todayInfo = getLocalDateInfo(tz);
       const today = todayInfo.iso;
       const dayOfWeek = DAY_NAMES_ES[todayInfo.weekday];
-      const calRefDetect = buildCalendarReference(todayInfo, 14, workingDays);
+      const calRefDetect = buildCalendarReference(todayInfo, 14, workingDays, blockedDaysSet);
       const detectedDateResolution = resolveDateReferenceFromMessage(patient_message, tz);
 
       // Fetch blocked days (global ones for detection phase — branch-specific checked at confirmation)
