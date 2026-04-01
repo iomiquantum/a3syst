@@ -88,6 +88,23 @@ const MensajesPage = () => {
     showArchived,
   });
 
+  useEffect(() => {
+    if (!selectedConv) return;
+
+    const refreshedConversation = conversations.find((conversation) => conversation.id === selectedConv.id);
+
+    if (!refreshedConversation) {
+      setSelectedConv(null);
+      setShowContactPanel(false);
+      if (isMobile) setMobileView("list");
+      return;
+    }
+
+    if (refreshedConversation !== selectedConv) {
+      setSelectedConv(refreshedConversation);
+    }
+  }, [conversations, selectedConv, isMobile]);
+
   const handleActionComplete = () => {
     refetchConvs();
     refetchStats();

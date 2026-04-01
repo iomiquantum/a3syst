@@ -4,7 +4,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Search } from "lucide-react";
 import ConversationCard from "./ConversationCard";
 import MensajesChat from "./MensajesChat";
@@ -61,6 +61,23 @@ const MensajesKanban = ({ conversations, onActionComplete }: Props) => {
     }
     return grouped;
   }, [filteredConversations]);
+
+  useEffect(() => {
+    if (!selectedConv) return;
+
+    const refreshedConversation = conversations.find((conversation) => conversation.id === selectedConv.id);
+
+    if (!refreshedConversation) {
+      setSelectedConv(null);
+      setShowContactPanel(false);
+      setSheetOpen(false);
+      return;
+    }
+
+    if (refreshedConversation !== selectedConv) {
+      setSelectedConv(refreshedConversation);
+    }
+  }, [conversations, selectedConv]);
 
   return (
     <>
