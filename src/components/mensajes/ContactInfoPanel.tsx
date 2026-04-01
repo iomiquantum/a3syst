@@ -215,8 +215,9 @@ const ContactInfoPanel = ({ conversation: c, onActionComplete, onClose }: Props)
       <div className="p-4 space-y-4">
         {/* Close button */}
         {onClose && (
-          <div className="flex justify-end">
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+          <div className="flex justify-between items-center">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ficha de contacto</p>
+            <Button variant="outline" size="icon" className="h-7 w-7" onClick={onClose}>
               <X className="w-4 h-4" />
             </Button>
           </div>
