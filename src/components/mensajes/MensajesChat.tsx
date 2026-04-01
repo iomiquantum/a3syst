@@ -584,21 +584,6 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
           })}
 
 
-          {/* WhatsApp window closed alert for manual stages */}
-          {c.channel === "whatsapp" && (c.pipeline_tab === "seguimiento_s5" || c.pipeline_tab === "seguimiento_s6") && (c as any).whatsapp_window_blocked && (
-            <div className="mx-auto max-w-sm bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg p-3 text-center space-y-2">
-              <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
-                ⚠️ La ventana de WhatsApp está cerrada.
-              </p>
-              <p className="text-[10px] text-amber-600 dark:text-amber-400">
-                El cliente no ha escrito en más de 24 horas. Al enviar, se usará un template para reabrir la conversación.
-              </p>
-              <Button size="sm" onClick={() => setTemplateDialogOpen(true)}>
-                <LayoutTemplate className="w-4 h-4" />
-                Elegir template aprobado
-              </Button>
-            </div>
-          )}
         </div>
       </div>
 
