@@ -597,12 +597,6 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
           </div>
         )}
 
-        {(c.pipeline_tab === "seguimiento_s5" || c.pipeline_tab === "seguimiento_s6") && autopilot && !isWhatsAppBlocked && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 text-xs border border-purple-200 dark:border-purple-500/20">
-            <Bot className="w-3.5 h-3.5 shrink-0" />
-            <span>🤖 La IA está respondiendo en esta etapa de seguimiento manual ({c.pipeline_tab === "seguimiento_s5" ? "S5" : "S6"}). El contacto NO se moverá a Resueltos IA.</span>
-          </div>
-        )}
 
         {/* WhatsApp window BLOCKED — replace entire input with template-only mode */}
         {isWhatsAppBlocked ? (
