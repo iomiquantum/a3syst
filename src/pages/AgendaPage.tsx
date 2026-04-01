@@ -269,7 +269,7 @@ const AgendaPage = () => {
     );
     if (entries.length === 0) return;
     for (const entry of entries) {
-      await (supabase as any).from("blocked_days").delete().eq("id", entry.id);
+      await supabase.from("blocked_days").delete().eq("id", entry.id);
     }
     setBlockedDays(prev => prev.filter(b => !entries.some(e => e.id === b.id)));
     toast.success("✅ Día desbloqueado");
