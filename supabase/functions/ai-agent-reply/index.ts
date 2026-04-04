@@ -26,6 +26,51 @@ async function verifyAuth(req: Request, supabaseUrl: string): Promise<{ authoriz
   } catch { return { authorized: false, source: "jwt_error" }; }
 }
 
+async function sendConversationReply(
+  supabase: ReturnType<typeof createClient>,
+  supabaseUrl: string,
+  supabaseKey: string,
+  conversationData: { channel: string; visitor_contact: string | null; contact_id: string | null; pipeline_tab: string | null },
+  clinicId: string,
+  conversationId: string,
+  reply: string,
+  origin: string,
+) {
+  if (conversationData.channel === "whatsapp") {
+    let toNumber = conversationData.visitor_contact;
+    if (!toNumber && conversationData.contact_id) {
+      const { data: contactData } = await supabase.from("contacts").select("phone").eq("id", conversationData.contact_id).maybeSingle();
+      toNumber = contactData?.phone || null;
+    }
+    if (!toNumber) return null;
+
+    const sendResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ clinic_id: clinicId, to_number: toNumber, message_type: "text", content: reply, conversation_id: conversationId, origin }),
+    });
+
+    return await sendResponse.json().catch(() => null);
+  }
+
+  const { data: insertedMessage } = await supabase.from("messages").insert({
+    conversation_id: conversationId,
+    clinic_id: clinicId,
+    direction: "outbound",
+    content: reply,
+    message_type: "text",
+    status: "sent",
+    origin,
+  }).select().single();
+
+  await supabase.from("conversations").update({
+    last_message_at: new Date().toISOString(),
+    last_message_preview: reply.substring(0, 100),
+  }).eq("id", conversationId);
+
+  return insertedMessage;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -126,34 +171,17 @@ serve(async (req) => {
       console.log("Appointment flow result:", JSON.stringify(flowResult));
 
       if (flowResult.response_text) {
-        // Send the appointment flow response
         const reply = flowResult.response_text;
-        let savedMsg: unknown = null;
-
-        if (conversationData.channel === "whatsapp") {
-          let toNumber = conversationData.visitor_contact;
-          if (!toNumber && conversationData.contact_id) {
-            const { data: contactData } = await supabase.from("contacts").select("phone").eq("id", conversationData.contact_id).maybeSingle();
-            toNumber = contactData?.phone || null;
-          }
-          if (toNumber) {
-            const sendResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
-              method: "POST",
-              headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
-               body: JSON.stringify({ clinic_id, to_number: toNumber, message_type: "text", content: reply, conversation_id, origin: `appointment_flow|${conversationData.pipeline_tab || "inbox"}` }),
-            });
-            savedMsg = await sendResponse.json().catch(() => null);
-          }
-        } else {
-          const { data: insertedMessage } = await supabase.from("messages").insert({
-            conversation_id, clinic_id, direction: "outbound", content: reply, message_type: "text", status: "sent", origin: `appointment_flow|${conversationData.pipeline_tab || "inbox"}`,
-          }).select().single();
-          savedMsg = insertedMessage;
-          await supabase.from("conversations").update({
-            last_message_at: new Date().toISOString(),
-            last_message_preview: reply.substring(0, 100),
-          }).eq("id", conversation_id);
-        }
+        const savedMsg = await sendConversationReply(
+          supabase,
+          supabaseUrl,
+          supabaseKey,
+          conversationData,
+          clinic_id,
+          conversation_id,
+          reply,
+          `appointment_flow|${conversationData.pipeline_tab || "inbox"}`,
+        );
 
         // If flow completed (confirmed appointment), the appointment-flow function already updated the conversation
         return new Response(JSON.stringify({
@@ -310,7 +338,7 @@ serve(async (req) => {
 
       const { data: latestInbound } = await supabase
         .from("messages")
-        .select("created_at")
+        .select("created_at, content")
         .eq("conversation_id", conversation_id)
         .eq("direction", "inbound")
         .order("created_at", { ascending: false })
@@ -331,6 +359,65 @@ serve(async (req) => {
           return new Response(JSON.stringify({ skipped: true, reason: "already replied" }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
+        }
+      }
+
+      if (triggered_by === "auto" && conversationData.pipeline_tab !== "agendados" && latestInbound?.[0]?.content) {
+        try {
+          const detectResp = await fetch(`${supabaseUrl}/functions/v1/appointment-flow`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "detect_intent",
+              conversation_id,
+              clinic_id,
+              patient_message: latestInbound[0].content,
+            }),
+          });
+          const detectResult = await detectResp.json();
+          console.log("Pre-reply appointment intent detection:", JSON.stringify(detectResult));
+
+          if (detectResult?.flow_activated) {
+            const flowResp = await fetch(`${supabaseUrl}/functions/v1/appointment-flow`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action: "guided_flow",
+                conversation_id,
+                clinic_id,
+                patient_message: latestInbound[0].content,
+              }),
+            });
+
+            const flowResult = await flowResp.json();
+            console.log("Pre-reply appointment flow result:", JSON.stringify(flowResult));
+
+            if (flowResult?.response_text) {
+              const reply = flowResult.response_text;
+              const savedMsg = await sendConversationReply(
+                supabase,
+                supabaseUrl,
+                supabaseKey,
+                conversationData,
+                clinic_id,
+                conversation_id,
+                reply,
+                `appointment_flow|${conversationData.pipeline_tab || "inbox"}`,
+              );
+
+              return new Response(JSON.stringify({
+                reply,
+                message: savedMsg,
+                appointment_flow: true,
+                flow_complete: flowResult.confirmed || false,
+                appointment: flowResult.appointment || null,
+              }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+          }
+        } catch (error) {
+          console.error("Pre-reply appointment detection failed:", error);
         }
       }
     }
