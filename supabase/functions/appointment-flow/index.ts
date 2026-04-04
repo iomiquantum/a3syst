@@ -108,7 +108,7 @@ serve(async (req) => {
         .select("date, reason, branch_id")
         .eq("clinic_id", clinic_id);
       const allBlockedDates = new Set((blockedDaysData || []).map((b: any) => b.date));
-      const blockedDaysList = (blockedDaysData || []).map((b: any) => `${b.date}${b.reason ? ` (${b.reason})` : ""}`).join(", ");
+      const blockedDaysList = (blockedDaysData || []).map((b: any) => `${b.date}${b.branch_id ? " (sede específica)" : " (global)"}`).join(", ");
       const calRefDetect = buildCalendarReference(todayInfo, 14, workingDays, allBlockedDates);
 
       // Build non-working days info
@@ -185,7 +185,7 @@ Responde SOLO JSON válido:
         }
 
         // Validate date against blocked days
-        if (flowData.date && blockedDaysSet.has(flowData.date)) {
+        if (flowData.date && allBlockedDates.has(flowData.date)) {
           console.log(`[appointment-flow] Date ${flowData.date} is blocked, clearing it`);
           flowData.date = null;
         }
@@ -373,7 +373,7 @@ Responde SOLO JSON válido:
       const blockedDaysSet = new Set(globalBlocked2.map((b: any) => b.date));
       const blockedDaysList = (blockedDaysData || []).map((b: any) => {
         const branchNote = b.branch_id ? " (sede específica)" : " (global)";
-        return `${b.date}${b.reason ? ` (${b.reason})` : ""}${branchNote}`;
+        return `${b.date}${branchNote}`;
       }).join(", ");
 
       // Safety net: avoid premature escalation; only trigger after many bot attempts in a short recent window
@@ -542,17 +542,17 @@ Responde SOLO JSON válido:
 
       // Validate date not blocked (check ALL blocked days — global and branch-specific)
       if (flowData.date && allBlockedDates.has(flowData.date)) {
-        const blockedReason = (blockedDaysData || []).find((b: any) => b.date === flowData.date)?.reason;
+        const suggestion = buildAvailabilitySuggestion(flowData.date, guidedWorkingDays, allBlockedDates);
         flowData.date = null;
-        parsed.response_text = `Lo siento, el día que elegiste no está disponible${blockedReason ? ` (${blockedReason})` : ""}. ¿Te funciona otro día?`;
+        parsed.response_text = `Lo siento, ese día no tenemos disponibilidad.${suggestion}`;
         parsed.flow_complete = false;
       }
 
       // Validate date is a working day
       if (flowData.date && !isWorkingDay(flowData.date, guidedWorkingDays)) {
-        const dayName = getDayNameFromDate(flowData.date);
+        const suggestion = buildAvailabilitySuggestion(flowData.date, guidedWorkingDays, allBlockedDates);
         flowData.date = null;
-        parsed.response_text = `Lo siento, no atendemos los ${dayName}. Nuestros días de atención son de lunes a viernes. ¿Qué otro día te funciona?`;
+        parsed.response_text = `Lo siento, ese día no tenemos atención.${suggestion}`;
         parsed.flow_complete = false;
       }
 
@@ -620,13 +620,15 @@ Responde SOLO JSON válido:
         b.branch_id === null || !selectedBranch || b.branch_id === selectedBranch
       );
       if (blockedCheck) {
+        const blockedDates = new Set((blockedEntries || []).map((b: any) => b.date));
+        const suggestion = buildAvailabilitySuggestion(flowData.date, deriveWorkingDays(null, ["Lun", "Mar", "Mié", "Jue", "Vie"]), blockedDates);
         // Reactivate flow to pick a new date
         await supabase.from("conversations").update({
           appointment_flow_step: "date",
           appointment_flow_data: { ...flowData, date: null },
         }).eq("id", conversation_id);
         return jsonResponse({
-          response_text: `Lo siento, el día ${flowData.date} ya no está disponible${blockedCheck.reason ? ` (${blockedCheck.reason})` : ""}. ¿Qué otro día te funciona?`,
+          response_text: `Lo siento, ese día ya no está disponible.${suggestion}`,
           flow_complete: false,
           blocked_day: true,
         });
@@ -1148,6 +1150,80 @@ function buildCalendarReference(base: LocalDateInfo, totalDays = 14, workingDays
   });
 }
 
+const MONTH_NAME_TO_NUMBER: Record<string, number> = {
+  enero: 1,
+  febrero: 2,
+  marzo: 3,
+  abril: 4,
+  mayo: 5,
+  junio: 6,
+  julio: 7,
+  agosto: 8,
+  septiembre: 9,
+  setiembre: 9,
+  octubre: 10,
+  noviembre: 11,
+  diciembre: 12,
+};
+
+function isValidCalendarDate(year: number, month: number, day: number): boolean {
+  const date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  return date.getUTCFullYear() === year && date.getUTCMonth() + 1 === month && date.getUTCDate() === day;
+}
+
+function resolveAbsoluteDate(day: number, month: number, timeZone: string, rawYear?: number): LocalDateInfo | null {
+  const today = getLocalDateInfo(timeZone);
+  let year = rawYear ?? today.year;
+
+  if (year < 100) year += 2000;
+  if (!isValidCalendarDate(year, month, day)) return null;
+
+  let target = createLocalDateInfo(year, month, day);
+  if (!rawYear && target.iso < today.iso) {
+    const nextYear = year + 1;
+    if (!isValidCalendarDate(nextYear, month, day)) return null;
+    target = createLocalDateInfo(nextYear, month, day);
+  }
+
+  return target;
+}
+
+function parseExplicitDateReference(message: string, timeZone: string): DateResolution {
+  const normalized = normalizeText(message || "");
+  const monthNames = Object.keys(MONTH_NAME_TO_NUMBER).join("|");
+  const textualMatch = normalized.match(new RegExp(`\\b(?:el\\s+)?(?:(lunes|martes|miercoles|jueves|viernes|sabado|domingo)\\s+)?(\\d{1,2})\\s+(?:de\\s+)?(${monthNames})(?:\\s+de\\s+(\\d{2,4}))?\\b`));
+
+  if (textualMatch) {
+    const [, , dayText, monthText, yearText] = textualMatch;
+    const resolved = resolveAbsoluteDate(Number(dayText), MONTH_NAME_TO_NUMBER[monthText], timeZone, yearText ? Number(yearText) : undefined);
+    if (resolved) return { type: "single", iso: resolved.iso, label: formatDateLabelES(resolved.iso) };
+  }
+
+  return null;
+}
+
+function buildAvailabilitySuggestion(dateStr: string, workingDays: string[], blockedDates: Set<string>, totalSuggestions = 2): string {
+  const alternatives = findNextAvailableDates(dateStr, workingDays, blockedDates, totalSuggestions);
+  if (alternatives.length === 0) return " ¿Te funciona otro día?";
+  if (alternatives.length === 1) return ` ¿Te funciona ${formatDateLabelES(alternatives[0], false)}?`;
+  return ` ¿Te funciona ${formatDateLabelES(alternatives[0], false)} o ${formatDateLabelES(alternatives[1], false)}?`;
+}
+
+function findNextAvailableDates(dateStr: string, workingDays: string[], blockedDates: Set<string>, totalSuggestions = 2): string[] {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const start = createLocalDateInfo(year, month, day);
+  const suggestions: string[] = [];
+
+  for (let offset = 1; offset <= 30 && suggestions.length < totalSuggestions; offset += 1) {
+    const candidate = addDaysToLocalDate(start, offset);
+    if (!isWorkingDay(candidate.iso, workingDays)) continue;
+    if (blockedDates.has(candidate.iso)) continue;
+    suggestions.push(candidate.iso);
+  }
+
+  return suggestions;
+}
+
 function formatDateES(dateStr: string): string {
   return formatDateLabelES(dateStr, false);
 }
@@ -1169,6 +1245,9 @@ function formatDateLabelES(dateStr: string, includeYear = true): string {
 }
 
 function resolveDateReferenceFromMessage(message: string, timeZone: string): DateResolution {
+  const explicitDate = parseExplicitDateReference(message, timeZone);
+  if (explicitDate) return explicitDate;
+
   const normalized = normalizeText(message || "");
   const today = getLocalDateInfo(timeZone);
 

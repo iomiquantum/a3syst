@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bot, Save, Plus, Trash2, GripVertical, Loader2, Calendar, Users, Megaphone } from "lucide-react";
+import { Bot, Save, Plus, Trash2, GripVertical, Loader2, Calendar, Users, Megaphone, MessageSquareText } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { useAIAgentConfig, ServiceItem } from "@/hooks/useAIAgentConfig";
 import HealthBusinessFields from "@/components/ai/HealthBusinessFields";
 import { Skeleton } from "@/components/ui/skeleton";
 import AIUsageHistory from "@/components/ai/AIUsageHistory";
-import ChannelPromptsSection from "@/components/ai/ChannelPromptsSection";
+import PromptStudioSection from "@/components/ai/PromptStudioSection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
@@ -76,6 +76,7 @@ const AIAgentConfigPage = () => {
         <Tabs defaultValue="agente" className="space-y-4">
           <TabsList className="w-full justify-start">
             <TabsTrigger value="agente" className="gap-1.5"><Bot className="w-3.5 h-3.5" /> Agente IA</TabsTrigger>
+            <TabsTrigger value="prompts" className="gap-1.5"><MessageSquareText className="w-3.5 h-3.5" /> Prompts</TabsTrigger>
             <TabsTrigger value="agenda" className="gap-1.5"><Calendar className="w-3.5 h-3.5" /> Agenda</TabsTrigger>
             <TabsTrigger value="crm" className="gap-1.5"><Users className="w-3.5 h-3.5" /> CRM</TabsTrigger>
             <TabsTrigger value="marketing" className="gap-1.5"><Megaphone className="w-3.5 h-3.5" /> Marketing</TabsTrigger>
@@ -184,62 +185,17 @@ const AIAgentConfigPage = () => {
               <HealthBusinessFields config={config} onUpdate={update} />
             )}
 
-            {/* Special Instructions */}
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle className="text-base">Instrucciones especiales</CardTitle>
-                <CardDescription>Reglas específicas que el agente debe seguir.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Textarea value={config.special_instructions} onChange={(e) => update("special_instructions", e.target.value)} rows={6} className="font-mono text-sm" />
-              </CardContent>
-            </Card>
-
-            {/* Preview */}
-            <Card className="shadow-card border-primary/20">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Bot className="w-4 h-4 text-primary" /> Vista previa del prompt
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-muted rounded-lg p-4 text-xs font-mono text-muted-foreground leading-relaxed whitespace-pre-wrap">
-{`Eres "${config.agent_name}", un asistente virtual del negocio.
-Idioma: ${config.language === "es" ? "Español" : config.language === "en" ? "English" : "Português"}
-Tono: ${config.tone}
-
-OBJETIVO:
-${config.objective}
-
-SERVICIOS DISPONIBLES:
-${config.services.map((s) => `• ${s.name} — $${s.price} — ${s.description}`).join("\n") || "(sin servicios)"}${isHealthBusiness && config.treatments_text ? `
-
-TRATAMIENTOS:
-${config.treatments_text}` : ""}${isHealthBusiness && config.prices_text ? `
-
-PRECIOS:
-${config.prices_text}` : ""}${isHealthBusiness && config.locations_text ? `
-
-UBICACIONES:
-${config.locations_text}` : ""}${isHealthBusiness && config.professionals_text ? `
-
-PROFESIONALES:
-${config.professionals_text}` : ""}
-
-INSTRUCCIONES:
-${config.special_instructions}
-
-SALUDO INICIAL:
-${config.greeting}`}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Channel Prompts Section */}
-            <ChannelPromptsSection agentConfig={config} />
-
             <Separator />
             <AIUsageHistory />
+          </TabsContent>
+
+          <TabsContent value="prompts" className="space-y-6">
+            <PromptStudioSection
+              agentConfig={config}
+              onSaveBase={() => save(config)}
+              onUpdateBase={update}
+              savingBase={saving}
+            />
           </TabsContent>
 
           {/* ═══ AGENDA TAB ═══ */}
