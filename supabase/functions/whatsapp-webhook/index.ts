@@ -23,29 +23,55 @@ Deno.serve(async (req) => {
     const token = url.searchParams.get("hub.verify_token");
     const challenge = url.searchParams.get("hub.challenge");
 
+    console.log("[WA-Webhook][GET] Verification request received", {
+      mode,
+      token,
+      hasChallenge: Boolean(challenge),
+    });
+
     if (mode === "subscribe" && token) {
-      const { data: connection } = await supabase
+      const { data: connection, error: connectionError } = await supabase
         .from("whatsapp_connections")
-        .select("id, clinic_id, business_name")
+        .select("id, clinic_id, business_name, phone_number_id, webhook_verify_token, status, webhook_configured")
         .eq("webhook_verify_token", token)
         .maybeSingle();
 
+      if (connectionError) {
+        console.error("[WA-Webhook][GET] Error looking up token in DB", connectionError);
+      }
+
       if (connection) {
+        console.log("[WA-Webhook][GET] Token matched DB connection", {
+          business_name: connection.business_name,
+          phone_number_id: connection.phone_number_id,
+          incoming_token: token,
+          db_token: connection.webhook_verify_token,
+          status: connection.status,
+          webhook_configured: connection.webhook_configured,
+        });
+
         await supabase.from("whatsapp_connections")
           .update({ webhook_configured: true, status: "active" })
           .eq("id", connection.id);
-        console.log("[WA-Webhook] Verified for:", connection.business_name);
+
+        console.log("[WA-Webhook][GET] Verified for:", connection.business_name);
         return new Response(challenge, { status: 200, headers: { "Content-Type": "text/plain" } });
       }
 
       const expectedToken = Deno.env.get("WHATSAPP_VERIFY_TOKEN");
+      console.warn("[WA-Webhook][GET] Token did not match any DB row", {
+        incoming_token: token,
+        global_token: expectedToken,
+        global_match: token === expectedToken,
+      });
+
       if (token === expectedToken) {
-        console.log("[WA-Webhook] Verified with global token");
+        console.log("[WA-Webhook][GET] Verified with global token");
         return new Response(challenge, { status: 200, headers: { "Content-Type": "text/plain" } });
       }
     }
 
-    console.warn("[WA-Webhook] Verification failed", { mode, token });
+    console.warn("[WA-Webhook][GET] Verification failed", { mode, token });
     return new Response("Forbidden", { status: 403 });
   }
 
@@ -53,30 +79,54 @@ Deno.serve(async (req) => {
   if (req.method === "POST") {
     try {
       const body = await req.json();
-      console.log("[WA-Webhook] POST:", JSON.stringify(body).substring(0, 500));
+      console.log("[WA-Webhook][POST] Full payload from Meta:", JSON.stringify(body));
 
       const entry = body?.entry?.[0];
-      if (!entry) return respondOk("no entry");
+      if (!entry) {
+        console.warn("[WA-Webhook][POST] Request arrived without entry", body);
+        return respondOk("no entry");
+      }
 
       const changes = entry.changes?.[0];
       const value = changes?.value;
-      if (!value) return respondOk("no value");
+      if (!value) {
+        console.warn("[WA-Webhook][POST] Request arrived without value", body);
+        return respondOk("no value");
+      }
 
       const phoneNumberId = value.metadata?.phone_number_id;
       const displayPhoneNumber = value.metadata?.display_phone_number;
-      if (!phoneNumberId) return respondOk("no phone_number_id");
+      console.log("[WA-Webhook][POST] Parsed metadata", {
+        phone_number_id: phoneNumberId,
+        display_phone_number: displayPhoneNumber,
+        messages_count: value.messages?.length || 0,
+        statuses_count: value.statuses?.length || 0,
+      });
+
+      if (!phoneNumberId) {
+        console.warn("[WA-Webhook][POST] No phone_number_id in payload", body);
+        return respondOk("no phone_number_id");
+      }
 
       const { data: connection, error: connError } = await supabase
         .from("whatsapp_connections")
-        .select("id, clinic_id, access_token, business_name")
+        .select("id, clinic_id, access_token, business_name, phone_number_id, status, webhook_configured")
         .eq("phone_number_id", phoneNumberId)
         .maybeSingle();
 
-      if (connError) console.error("[WA-Webhook] Connection lookup error:", connError);
+      if (connError) console.error("[WA-Webhook][POST] Connection lookup error:", connError);
       if (!connection) {
-        console.error("[WA-Webhook] No connection for phone_number_id:", phoneNumberId);
+        console.error("[WA-Webhook][POST] No connection for phone_number_id:", phoneNumberId);
         return respondOk("no connection");
       }
+
+      console.log("[WA-Webhook][POST] Connection matched", {
+        connection_id: connection.id,
+        business_name: connection.business_name,
+        phone_number_id: connection.phone_number_id,
+        status: connection.status,
+        webhook_configured: connection.webhook_configured,
+      });
 
       const { id: connectionId, clinic_id: clinicId } = connection;
 
