@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from "react";
 import { Search, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -23,7 +24,26 @@ interface Props {
   loading?: boolean;
 }
 
+const DEBOUNCE_MS = 400;
+
 const MensajesConversationList = ({ conversations, selectedId, onSelect, searchQuery, onSearchChange, activeFilters, onRemoveFilter, loading }: Props) => {
+  const [localQuery, setLocalQuery] = useState(searchQuery);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync external resets (e.g. filter clear)
+  useEffect(() => {
+    if (searchQuery !== localQuery) setLocalQuery(searchQuery);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
+
+  const handleChange = (value: string) => {
+    setLocalQuery(value);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => onSearchChange(value), DEBOUNCE_MS);
+  };
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
   if (loading) {
     return (
       <div className="h-full flex flex-col">
@@ -44,8 +64,8 @@ const MensajesConversationList = ({ conversations, selectedId, onSelect, searchQ
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
             placeholder="Buscar por nombre, teléfono, email o mensaje..."
-            value={searchQuery}
-            onChange={e => onSearchChange(e.target.value)}
+            value={localQuery}
+            onChange={e => handleChange(e.target.value)}
             className="h-8 text-xs pl-8"
           />
         </div>
