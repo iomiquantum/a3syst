@@ -1,20 +1,17 @@
 import { useState, useRef } from "react";
-import { Paperclip, Smile, BookmarkIcon, Sparkles, Wand2, Mic, MicOff, X, Loader2 } from "lucide-react";
+import { Paperclip, Smile, BookmarkIcon, Sparkles, Wand2, Mic, MicOff, Loader2, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
+import { useMarketingFragmentos } from "@/hooks/useMarketingFragmentos";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const EMOJIS = ["😊","👍","❤️","🙏","✅","⭐","🎉","💪","📌","🔥","😂","👏","💡","📞","📋","🏥","💊","🩺","📅","⏰"];
-
-interface SavedSnippet {
-  id: string;
-  title: string;
-  content: string;
-}
 
 interface Props {
   onInsertText: (text: string, fromAI?: boolean) => void;
@@ -25,18 +22,20 @@ interface Props {
 
 const ChatToolbar = ({ onInsertText, onAttach, conversationId, clinicId }: Props) => {
   const [aiOpen, setAiOpen] = useState(false);
-  const [aiMode, setAiMode] = useState<"auto" | "prompt" | null>(null);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [snippetsOpen, setSnippetsOpen] = useState(false);
+  const [snippetSearch, setSnippetSearch] = useState("");
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newContent, setNewContent] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Saved snippets (basic hardcoded for now, can be DB-driven later)
-  const snippets: SavedSnippet[] = [
-    { id: "1", title: "Saludo", content: "¡Hola! Gracias por comunicarse con nosotros. ¿En qué podemos ayudarle?" },
-    { id: "2", title: "Horarios", content: "Nuestro horario de atención es de lunes a viernes de 9:00 a 18:00." },
-    { id: "3", title: "Despedida", content: "¡Gracias por su confianza! Estamos a su disposición. Que tenga un excelente día." },
-  ];
+  const { fragments, isLoading: fragmentsLoading, createFragment } = useMarketingFragmentos();
+
+  const filteredFragments = fragments.filter(f =>
+    !snippetSearch || f.name.toLowerCase().includes(snippetSearch.toLowerCase()) || f.content.toLowerCase().includes(snippetSearch.toLowerCase())
+  );
 
   const { isListening, isSupported: voiceSupported, toggleListening } = useVoiceInput({
     onResult: (transcript) => {
@@ -68,9 +67,7 @@ const ChatToolbar = ({ onInsertText, onAttach, conversationId, clinicId }: Props
           custom_prompt: mode === "prompt" ? aiPrompt.trim() : undefined,
         },
       });
-
       if (error) throw error;
-
       const reply = data?.reply || data?.content || "";
       if (reply) {
         onInsertText(reply, true);
@@ -83,9 +80,22 @@ const ChatToolbar = ({ onInsertText, onAttach, conversationId, clinicId }: Props
     } finally {
       setAiLoading(false);
       setAiOpen(false);
-      setAiMode(null);
       setAiPrompt("");
     }
+  };
+
+  const handleCreateFragment = () => {
+    if (!newName.trim() || !newContent.trim()) return;
+    createFragment.mutate({ name: newName.trim(), content: newContent.trim(), type: "respuesta_rapida", scope: "chat" });
+    setNewName("");
+    setNewContent("");
+    setShowCreateForm(false);
+  };
+
+  const handleSelectFragment = (content: string) => {
+    onInsertText(content);
+    setSnippetsOpen(false);
+    setSnippetSearch("");
   };
 
   return (
@@ -125,32 +135,108 @@ const ChatToolbar = ({ onInsertText, onAttach, conversationId, clinicId }: Props
           </PopoverContent>
         </Popover>
 
-        {/* Saved snippets */}
-        <Popover open={snippetsOpen} onOpenChange={setSnippetsOpen}>
+        {/* Fragments / Quick replies */}
+        <Popover open={snippetsOpen} onOpenChange={(open) => { setSnippetsOpen(open); if (!open) { setSnippetSearch(""); setShowCreateForm(false); } }}>
           <Tooltip>
             <TooltipTrigger asChild>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground relative">
                   <BookmarkIcon className="w-4 h-4" />
+                  {fragments.length > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-primary text-primary-foreground text-[8px] flex items-center justify-center font-bold">
+                      {fragments.length > 99 ? "99" : fragments.length}
+                    </span>
+                  )}
                 </Button>
               </PopoverTrigger>
             </TooltipTrigger>
-            <TooltipContent>Respuestas guardadas</TooltipContent>
+            <TooltipContent>Fragmentos / Respuestas rápidas</TooltipContent>
           </Tooltip>
-          <PopoverContent className="w-64 p-2" align="start" side="top">
-            <p className="text-[10px] text-muted-foreground uppercase font-semibold mb-2 px-1">Fragmentos</p>
-            <div className="space-y-1">
-              {snippets.map(s => (
-                <button
-                  key={s.id}
-                  onClick={() => { onInsertText(s.content); setSnippetsOpen(false); }}
-                  className="w-full text-left px-2 py-1.5 rounded-md hover:bg-muted text-xs"
+          <PopoverContent className="w-80 p-0" align="start" side="top">
+            <div className="p-2 border-b border-border">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-[10px] text-muted-foreground uppercase font-semibold px-1">Fragmentos</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-[10px] gap-1 text-primary"
+                  onClick={() => setShowCreateForm(!showCreateForm)}
                 >
-                  <p className="font-medium text-foreground">{s.title}</p>
-                  <p className="text-muted-foreground truncate">{s.content}</p>
-                </button>
-              ))}
+                  <Plus className="w-3 h-3" />
+                  Crear
+                </Button>
+              </div>
+              {fragments.length > 3 && (
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar fragmento..."
+                    value={snippetSearch}
+                    onChange={e => setSnippetSearch(e.target.value)}
+                    className="h-7 text-xs pl-7"
+                  />
+                </div>
+              )}
             </div>
+
+            {showCreateForm && (
+              <div className="p-2 border-b border-border space-y-1.5 bg-muted/30">
+                <Input
+                  placeholder="Nombre del fragmento"
+                  value={newName}
+                  onChange={e => setNewName(e.target.value)}
+                  className="h-7 text-xs"
+                />
+                <Textarea
+                  placeholder="Contenido del fragmento... (puedes usar {{nombre}} para variables)"
+                  value={newContent}
+                  onChange={e => setNewContent(e.target.value)}
+                  className="text-xs min-h-[50px] resize-none"
+                  rows={2}
+                />
+                <div className="flex justify-end gap-1">
+                  <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => { setShowCreateForm(false); setNewName(""); setNewContent(""); }}>
+                    Cancelar
+                  </Button>
+                  <Button size="sm" className="h-6 text-[10px]" disabled={!newName.trim() || !newContent.trim() || createFragment.isPending} onClick={handleCreateFragment}>
+                    {createFragment.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Guardar"}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <ScrollArea className="max-h-[240px]">
+              <div className="p-1">
+                {fragmentsLoading ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                  </div>
+                ) : filteredFragments.length === 0 ? (
+                  <div className="text-center py-6 px-3">
+                    <BookmarkIcon className="w-6 h-6 mx-auto mb-2 text-muted-foreground/40" />
+                    <p className="text-xs text-muted-foreground">
+                      {snippetSearch ? "Sin resultados" : "No hay fragmentos aún"}
+                    </p>
+                    {!snippetSearch && !showCreateForm && (
+                      <Button variant="link" size="sm" className="text-[10px] h-6 mt-1" onClick={() => setShowCreateForm(true)}>
+                        Crear tu primer fragmento
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  filteredFragments.map(f => (
+                    <button
+                      key={f.id}
+                      onClick={() => handleSelectFragment(f.content)}
+                      className="w-full text-left px-2 py-1.5 rounded-md hover:bg-muted text-xs group"
+                    >
+                      <p className="font-medium text-foreground">{f.name}</p>
+                      <p className="text-muted-foreground line-clamp-2 text-[11px]">{f.content}</p>
+                    </button>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
           </PopoverContent>
         </Popover>
 
