@@ -82,19 +82,34 @@ const PeriodSelector = ({ label, value, onChange, dateRange, onDateRangeChange, 
         </ToggleGroup>
       </div>
       {value === "dia" && (
-        <ToggleGroup
-          type="single"
-          value={selectedDayOfWeek !== undefined ? String(selectedDayOfWeek) : undefined}
-          onValueChange={v => v !== undefined && onDayOfWeekChange?.(Number(v))}
-          size="sm"
-          className="gap-0 border border-border rounded-md overflow-hidden"
-        >
-          {DAY_NAMES.map((name, i) => (
-            <ToggleGroupItem key={i} value={String(i)} className="px-2 py-1 text-[10px] font-medium rounded-none data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-              {name}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <ToggleGroup
+            type="single"
+            value={String(weekOffset)}
+            onValueChange={v => v !== undefined && onWeekOffsetChange?.(Number(v))}
+            size="sm"
+            className="gap-0 border border-border rounded-md overflow-hidden"
+          >
+            {WEEK_LABELS.map((wl, i) => (
+              <ToggleGroupItem key={i} value={String(i)} className="px-2.5 py-1 text-[10px] font-medium rounded-none data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                {wl}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          <ToggleGroup
+            type="single"
+            value={selectedDayOfWeek !== undefined ? String(selectedDayOfWeek) : undefined}
+            onValueChange={v => v !== undefined && onDayOfWeekChange?.(Number(v))}
+            size="sm"
+            className="gap-0 border border-border rounded-md overflow-hidden"
+          >
+            {DAY_NAMES.map((name, i) => (
+              <ToggleGroupItem key={i} value={String(i)} className="px-2 py-1 text-[10px] font-medium rounded-none data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                {name}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
       )}
       {value === "rango" && (
         <Popover open={calOpen} onOpenChange={setCalOpen}>
