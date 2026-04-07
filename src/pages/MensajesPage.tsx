@@ -55,16 +55,10 @@ const MensajesPage = () => {
   }, [resumenPeriod, resumenRange]);
 
   const resumenTimeFilter = useMemo<TimeFilter | undefined>(() => {
-    let baseDates: { from?: string; to?: string };
-    if (resumenPeriod === "rango" && resumenRange?.from) {
-      baseDates = { from: startOfDay(resumenRange.from).toISOString(), to: resumenRange.to ? endOfDay(resumenRange.to).toISOString() : endOfDay(resumenRange.from).toISOString() };
-    } else {
-      baseDates = periodToDateRange(resumenPeriod);
-    }
-    if (!baseDates.from) return undefined;
+    if (!unifiedDates.from) return undefined;
 
-    const fromDate = new Date(baseDates.from);
-    const toDate = baseDates.to ? new Date(baseDates.to) : new Date();
+    const fromDate = new Date(unifiedDates.from);
+    const toDate = unifiedDates.to ? new Date(unifiedDates.to) : new Date();
     const { startHour, startMin, endHour, endMin } = getTimeSlotHours(timeSlot, customTimeStart, customTimeEnd);
 
     if (timeSlot !== "all") {
@@ -73,7 +67,23 @@ const MensajesPage = () => {
     }
 
     return { startDate: fromDate.toISOString(), endDate: toDate.toISOString() };
-  }, [resumenPeriod, resumenRange, timeSlot, customTimeStart, customTimeEnd]);
+  }, [unifiedDates, timeSlot, customTimeStart, customTimeEnd]);
+
+  // Conversation list date filter (also applies time slot)
+  const convDates = useMemo(() => {
+    if (!unifiedDates.from) return { from: undefined, to: undefined };
+
+    const fromDate = new Date(unifiedDates.from);
+    const toDate = unifiedDates.to ? new Date(unifiedDates.to) : new Date();
+    const { startHour, startMin, endHour, endMin } = getTimeSlotHours(timeSlot, customTimeStart, customTimeEnd);
+
+    if (timeSlot !== "all") {
+      fromDate.setHours(startHour, startMin, 0, 0);
+      toDate.setHours(endHour, endMin, 59, 999);
+    }
+
+    return { from: fromDate.toISOString(), to: toDate.toISOString() };
+  }, [unifiedDates, timeSlot, customTimeStart, customTimeEnd]);
 
   const { resumenStats, loading: statsLoading, refetch: refetchStats } = usePipelineStats(resumenTimeFilter);
   const { counts: channelCounts, total: channelTotal } = useChannelStats();
