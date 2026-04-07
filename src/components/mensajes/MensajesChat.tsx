@@ -443,7 +443,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
             // System note — AI summary for human agent
             if (m.message_type === "system_note") {
               return (
-                <div key={m.id} className="mx-auto max-w-md">
+                <React.Fragment key={m.id}>{dateSeparator}<div className="mx-auto max-w-md">
                   <div className="bg-accent/50 border border-border rounded-xl p-4 space-y-3">
                     <div className="flex items-center gap-2">
                       <ClipboardList className="w-4 h-4 text-primary" />
