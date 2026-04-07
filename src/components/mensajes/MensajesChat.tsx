@@ -37,6 +37,14 @@ interface Props {
   onToggleContactPanel?: () => void;
 }
 
+function formatDateSeparator(date: Date): string {
+  if (isToday(date)) return "Hoy";
+  if (isYesterday(date)) return "Ayer";
+  const dayName = format(date, "EEEE", { locale: es });
+  const capitalized = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+  return `${capitalized}, ${format(date, "d 'de' MMMM yyyy", { locale: es })}`;
+}
+
 const WHATSAPP_ERROR_MAP: Record<string, string> = {
   "131042": "Problema de facturación — Revisa el método de pago en Meta Business Manager.",
   "131047": "Ventana de 24h cerrada — El cliente no ha escrito recientemente. Usa un template aprobado.",
