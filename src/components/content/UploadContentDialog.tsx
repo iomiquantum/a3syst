@@ -62,6 +62,49 @@ const sizesByPlatform: Record<string, { category: string; sizes: { label: string
   ],
 };
 
+const MAX_IMAGE_SIZE_BYTES = 4 * 1024 * 1024; // 4MB max for Instagram compatibility
+
+const compressImage = (file: File, maxBytes: number = MAX_IMAGE_SIZE_BYTES): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    if (file.type.startsWith("video/") || file.size <= maxBytes) {
+      resolve(file);
+      return;
+    }
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.onload = async () => {
+      URL.revokeObjectURL(url);
+      let quality = 0.85;
+      const canvas = document.createElement("canvas");
+      // Scale down if very large
+      let { width, height } = img;
+      const maxDim = 2048;
+      if (width > maxDim || height > maxDim) {
+        const scale = maxDim / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, width, height);
+      // Iteratively lower quality until under maxBytes
+      let blob: Blob | null = null;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        blob = await new Promise<Blob | null>(r => canvas.toBlob(r, "image/jpeg", quality));
+        if (blob && blob.size <= maxBytes) break;
+        quality -= 0.15;
+      }
+      if (!blob) { resolve(file); return; }
+      const compressed = new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" });
+      console.log(`Image compressed: ${(file.size / 1024 / 1024).toFixed(1)}MB → ${(compressed.size / 1024 / 1024).toFixed(1)}MB`);
+      resolve(compressed);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+};
+
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -386,7 +429,9 @@ Responde SOLO en JSON:
 
   const uploadFilesToStorage = async (filesToUpload: File[]): Promise<string[]> => {
     const urls: string[] = [];
-    for (const file of filesToUpload) {
+    for (let file of filesToUpload) {
+      // Compress images to avoid Instagram API rejections for large files
+      file = await compressImage(file);
       const ext = file.name.split(".").pop();
       const fileName = `${clinicId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const { error: uploadError } = await supabase.storage.from("content-media").upload(fileName, file, { contentType: file.type });
