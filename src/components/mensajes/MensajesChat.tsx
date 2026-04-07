@@ -426,7 +426,22 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
           {!loadingMsgs && messages.length === 0 && (
             <p className="text-center text-sm text-muted-foreground py-8">No hay mensajes aún</p>
           )}
-          {messages.map(m => {
+          {messages.map((m, idx) => {
+            const msgDate = startOfDay(new Date(m.created_at));
+            const prevDate = idx > 0 ? startOfDay(new Date(messages[idx - 1].created_at)) : null;
+            const showDateSep = !prevDate || msgDate.getTime() !== prevDate.getTime();
+
+            const dateSeparator = showDateSep ? (
+              <div key={`date-${m.id}`} className="flex items-center gap-3 py-2">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-[10px] font-medium text-muted-foreground bg-card px-2">
+                  {formatDateSeparator(msgDate)}
+                </span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+            ) : null;
+
+            return (<>{dateSeparator}{(() => {
             // System note — AI summary for human agent
             if (m.message_type === "system_note") {
               return (
