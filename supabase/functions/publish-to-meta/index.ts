@@ -16,10 +16,8 @@ function buildCaption(post: any): string {
 
 /** Convert Supabase storage URLs to use image transform for Instagram-safe sizes */
 function optimizeImageUrl(url: string): string {
-  const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
   if (url.includes("/storage/v1/object/public/")) {
-    // Replace /object/ with /render/image/ and add transform params
-    return url.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/") + "?width=2048&quality=80";
+    return url.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/") + "?width=1080&height=1080&resize=cover&quality=80";
   }
   return url;
 }
