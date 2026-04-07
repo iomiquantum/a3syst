@@ -324,7 +324,7 @@ serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const platforms = post.platforms || [];
+    const platforms = only_platforms?.length > 0 ? only_platforms : (post.platforms || []);
     const results: Record<string, any> = {};
     const externalIds: Record<string, string> = {};
 
