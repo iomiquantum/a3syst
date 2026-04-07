@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Search, MessageSquare, CheckSquare, Square, Archive, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -105,6 +105,10 @@ const MensajesConversationList = ({ conversations, selectedId, onSelect, searchQ
     const ids = Array.from(selectedIds);
 
     try {
+      // Get current user for audit trail
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id || "unknown";
+
       if (confirmAction === "archive") {
         const { error } = await (supabase as any)
           .from("conversations")
@@ -113,7 +117,58 @@ const MensajesConversationList = ({ conversations, selectedId, onSelect, searchQ
         if (error) throw error;
         toast.success(`${ids.length} conversación(es) archivada(s)`);
       } else if (confirmAction === "delete") {
-        // First delete related messages, then conversations
+        // 1. Fetch full conversation data for backup
+        const { data: convsToBackup, error: fetchConvErr } = await (supabase as any)
+          .from("conversations")
+          .select("*, contacts!conversations_contact_id_fkey(name, phone)")
+          .in("id", ids);
+        if (fetchConvErr) throw fetchConvErr;
+
+        // 2. Fetch all messages for these conversations
+        const { data: msgsToBackup, error: fetchMsgErr } = await supabase
+          .from("messages")
+          .select("*")
+          .in("conversation_id", ids);
+        if (fetchMsgErr) throw fetchMsgErr;
+
+        // 3. Fetch pipeline history
+        const { data: histToBackup, error: fetchHistErr } = await supabase
+          .from("conversation_pipeline_history")
+          .select("*")
+          .in("conversation_id", ids);
+        if (fetchHistErr) throw fetchHistErr;
+
+        // 4. Insert backup entries into clinic_trash
+        const clinicId = convsToBackup?.[0]?.clinic_id;
+        if (clinicId && convsToBackup) {
+          const trashEntries = convsToBackup.map((conv: any) => ({
+            clinic_id: clinicId,
+            entity_type: "conversation",
+            entity_id: conv.id,
+            entity_name: conv.contacts?.name || conv.visitor_name || "Sin nombre",
+            entity_data: {
+              conversation: conv,
+              messages: (msgsToBackup || []).filter((m: any) => m.conversation_id === conv.id),
+              pipeline_history: (histToBackup || []).filter((h: any) => h.conversation_id === conv.id),
+              deleted_by_user_id: userId,
+              deleted_by_email: user?.email || "unknown",
+              deleted_at_detail: new Date().toISOString(),
+            },
+            deleted_by: userId,
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          }));
+
+          const { error: trashErr } = await supabase
+            .from("clinic_trash")
+            .insert(trashEntries);
+          if (trashErr) {
+            console.error("Error creating backup:", trashErr);
+            // Don't block deletion if backup fails, but warn
+            toast.warning("Backup parcial — algunos datos podrían no haberse respaldado");
+          }
+        }
+
+        // 5. Now delete the actual data
         const { error: msgErr } = await supabase
           .from("messages")
           .delete()
@@ -131,7 +186,7 @@ const MensajesConversationList = ({ conversations, selectedId, onSelect, searchQ
           .delete()
           .in("id", ids);
         if (error) throw error;
-        toast.success(`${ids.length} conversación(es) eliminada(s)`);
+        toast.success(`${ids.length} conversación(es) eliminada(s) — backup guardado por 30 días`);
       }
 
       exitSelectionMode();
