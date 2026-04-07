@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Send, Bot, MoreVertical, PanelRightOpen, PanelRightClose, LayoutTemplate, Lock, ClipboardList, UserX, PhoneOff, RotateCcw, CalendarPlus, MessageSquareText, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
