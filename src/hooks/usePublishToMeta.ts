@@ -2,9 +2,15 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+interface PlatformResult {
+  success: boolean;
+  externalId?: string;
+  error?: string;
+}
+
 interface PublishResult {
   success: boolean;
-  results: Record<string, { success: boolean; externalId?: string; error?: string }>;
+  results: Record<string, PlatformResult>;
   message: string;
 }
 
@@ -23,14 +29,35 @@ export const usePublishToMeta = () => {
         return null;
       }
 
-      if (data?.success) {
-        toast.success(data.message || "¡Publicado exitosamente!");
-      } else {
-        const errors = Object.entries(data?.results || {})
-          .filter(([_, r]: any) => !r.success)
-          .map(([p, r]: any) => `${p}: ${r.error}`)
-          .join("; ");
-        toast.error(data?.message || `Error: ${errors}`);
+      const results = (data?.results || {}) as Record<string, PlatformResult>;
+      const platformNames: Record<string, string> = {
+        facebook: "Facebook",
+        instagram: "Instagram",
+      };
+
+      // Show individual per-platform toasts
+      const succeeded: string[] = [];
+      const failed: { platform: string; error: string }[] = [];
+
+      for (const [platform, result] of Object.entries(results)) {
+        const name = platformNames[platform] || platform;
+        if (result.success) {
+          succeeded.push(name);
+        } else {
+          failed.push({ platform: name, error: result.error || "Error desconocido" });
+        }
+      }
+
+      if (succeeded.length > 0) {
+        toast.success(`✅ Publicado en: ${succeeded.join(", ")}`);
+      }
+
+      for (const f of failed) {
+        toast.error(`❌ ${f.platform}: ${f.error}`, { duration: 8000 });
+      }
+
+      if (succeeded.length === 0 && failed.length === 0) {
+        toast.error(data?.message || "No se pudo publicar");
       }
 
       return data as PublishResult;
