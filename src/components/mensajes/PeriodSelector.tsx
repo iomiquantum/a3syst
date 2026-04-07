@@ -4,7 +4,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { CalendarDays } from "lucide-react";
-import { format, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, previousDay, nextDay } from "date-fns";
+import { format, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
 
@@ -30,18 +30,12 @@ export function periodToDateRange(period: Period): { from?: string; to?: string 
 }
 
 const DAY_NAMES = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"] as const;
-const DAY_MAP: Record<number, number> = { 0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 0 };
+const DAY_INDEX_TO_OFFSET = [0, 1, 2, 3, 4, 5, 6]; // Lun=0..Dom=6
 
-export function dayOfWeekToDateRange(dayIndex: number): { from: string; to: string } {
-  const targetDay = DAY_MAP[dayIndex] as 0 | 1 | 2 | 3 | 4 | 5 | 6;
+export function dayOfWeekToDateRange(dayIndex: number, weekOffset: number = 0): { from: string; to: string } {
   const now = new Date();
-  const currentDay = now.getDay();
-  let target: Date;
-  if (currentDay === targetDay) {
-    target = now;
-  } else {
-    target = previousDay(now, targetDay);
-  }
+  const weekStart = startOfWeek(subDays(now, weekOffset * 7), { weekStartsOn: 1 });
+  const target = addDays(weekStart, dayIndex);
   return {
     from: startOfDay(target).toISOString(),
     to: endOfDay(target).toISOString(),
@@ -56,6 +50,8 @@ interface Props {
   onDateRangeChange?: (r: DateRange | undefined) => void;
   selectedDayOfWeek?: number;
   onDayOfWeekChange?: (day: number) => void;
+  weekOffset?: number;
+  onWeekOffsetChange?: (offset: number) => void;
 }
 
 const PERIOD_LABELS: Record<Period, string> = {
@@ -68,7 +64,9 @@ const PERIOD_LABELS: Record<Period, string> = {
   rango: "Rango",
 };
 
-const PeriodSelector = ({ label, value, onChange, dateRange, onDateRangeChange, selectedDayOfWeek, onDayOfWeekChange }: Props) => {
+const WEEK_LABELS = ["Esta semana", "Semana anterior"] as const;
+
+const PeriodSelector = ({ label, value, onChange, dateRange, onDateRangeChange, selectedDayOfWeek, onDayOfWeekChange, weekOffset = 0, onWeekOffsetChange }: Props) => {
   const [calOpen, setCalOpen] = useState(false);
 
   return (
@@ -84,19 +82,34 @@ const PeriodSelector = ({ label, value, onChange, dateRange, onDateRangeChange, 
         </ToggleGroup>
       </div>
       {value === "dia" && (
-        <ToggleGroup
-          type="single"
-          value={selectedDayOfWeek !== undefined ? String(selectedDayOfWeek) : undefined}
-          onValueChange={v => v !== undefined && onDayOfWeekChange?.(Number(v))}
-          size="sm"
-          className="gap-0 border border-border rounded-md overflow-hidden"
-        >
-          {DAY_NAMES.map((name, i) => (
-            <ToggleGroupItem key={i} value={String(i)} className="px-2 py-1 text-[10px] font-medium rounded-none data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-              {name}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <ToggleGroup
+            type="single"
+            value={String(weekOffset)}
+            onValueChange={v => v !== undefined && onWeekOffsetChange?.(Number(v))}
+            size="sm"
+            className="gap-0 border border-border rounded-md overflow-hidden"
+          >
+            {WEEK_LABELS.map((wl, i) => (
+              <ToggleGroupItem key={i} value={String(i)} className="px-2.5 py-1 text-[10px] font-medium rounded-none data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                {wl}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          <ToggleGroup
+            type="single"
+            value={selectedDayOfWeek !== undefined ? String(selectedDayOfWeek) : undefined}
+            onValueChange={v => v !== undefined && onDayOfWeekChange?.(Number(v))}
+            size="sm"
+            className="gap-0 border border-border rounded-md overflow-hidden"
+          >
+            {DAY_NAMES.map((name, i) => (
+              <ToggleGroupItem key={i} value={String(i)} className="px-2 py-1 text-[10px] font-medium rounded-none data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                {name}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
       )}
       {value === "rango" && (
         <Popover open={calOpen} onOpenChange={setCalOpen}>

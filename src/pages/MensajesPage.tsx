@@ -33,6 +33,7 @@ const MensajesPage = () => {
   const [resumenPeriod, setResumenPeriod] = useState<Period>("hoy");
   const [resumenRange, setResumenRange] = useState<DateRange | undefined>();
   const [selectedDayOfWeek, setSelectedDayOfWeek] = useState<number>(0);
+  const [weekOffset, setWeekOffset] = useState<number>(0);
   const [timeSlot, setTimeSlot] = useState<TimeSlot>("all");
   const [customTimeStart, setCustomTimeStart] = useState("00:00");
   const [customTimeEnd, setCustomTimeEnd] = useState("23:59");
@@ -59,10 +60,10 @@ const MensajesPage = () => {
       };
     }
     if (resumenPeriod === "dia") {
-      return dayOfWeekToDateRange(selectedDayOfWeek);
+      return dayOfWeekToDateRange(selectedDayOfWeek, weekOffset);
     }
     return periodToDateRange(resumenPeriod);
-  }, [resumenPeriod, resumenRange, selectedDayOfWeek]);
+  }, [resumenPeriod, resumenRange, selectedDayOfWeek, weekOffset]);
 
   const resumenTimeFilter = useMemo<TimeFilter | undefined>(() => {
     if (!unifiedDates.from) return undefined;
@@ -221,6 +222,7 @@ const MensajesPage = () => {
             customStart={customTimeStart} customEnd={customTimeEnd}
             onCustomTimeChange={(s, e) => { setCustomTimeStart(s); setCustomTimeEnd(e); }}
             selectedDayOfWeek={selectedDayOfWeek} onDayOfWeekChange={setSelectedDayOfWeek}
+            weekOffset={weekOffset} onWeekOffsetChange={setWeekOffset}
           />
         </div>
 
