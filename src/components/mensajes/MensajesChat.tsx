@@ -678,7 +678,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                   value={input}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
-                  className="flex-1 min-h-0 text-sm resize-none py-2 overflow-y-auto"
+                  className="flex-1 min-h-[120px] text-sm resize-none py-2 overflow-y-auto"
                 />
               </div>
               <Button onClick={handleSend} disabled={!input.trim() || sending} size="icon" className="shrink-0 h-10 w-10">
