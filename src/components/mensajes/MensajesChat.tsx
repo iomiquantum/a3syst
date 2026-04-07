@@ -1,4 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import { format, isToday, isYesterday, startOfDay } from "date-fns";
+import { es } from "date-fns/locale";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Send, Bot, MoreVertical, PanelRightOpen, PanelRightClose, LayoutTemplate, Lock, ClipboardList, UserX, PhoneOff, RotateCcw, CalendarPlus, MessageSquareText, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,6 +35,14 @@ interface Props {
   onActionComplete?: () => void;
   showContactPanel?: boolean;
   onToggleContactPanel?: () => void;
+}
+
+function formatDateSeparator(date: Date): string {
+  if (isToday(date)) return "Hoy";
+  if (isYesterday(date)) return "Ayer";
+  const dayName = format(date, "EEEE", { locale: es });
+  const capitalized = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+  return `${capitalized}, ${format(date, "d 'de' MMMM yyyy", { locale: es })}`;
 }
 
 const WHATSAPP_ERROR_MAP: Record<string, string> = {
@@ -416,11 +426,24 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
           {!loadingMsgs && messages.length === 0 && (
             <p className="text-center text-sm text-muted-foreground py-8">No hay mensajes aún</p>
           )}
-          {messages.map(m => {
+          {messages.map((m, idx) => {
+            const msgDate = startOfDay(new Date(m.created_at));
+            const prevDate = idx > 0 ? startOfDay(new Date(messages[idx - 1].created_at)) : null;
+            const showDateSep = !prevDate || msgDate.getTime() !== prevDate.getTime();
+
+            const dateSeparator = showDateSep ? (
+              <div key={`date-${m.id}`} className="flex items-center gap-3 py-2">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-[10px] font-medium text-muted-foreground bg-card px-2">
+                  {formatDateSeparator(msgDate)}
+                </span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+            ) : null;
             // System note — AI summary for human agent
             if (m.message_type === "system_note") {
               return (
-                <div key={m.id} className="mx-auto max-w-md">
+                <React.Fragment key={m.id}>{dateSeparator}<div className="mx-auto max-w-md">
                   <div className="bg-accent/50 border border-border rounded-xl p-4 space-y-3">
                     <div className="flex items-center gap-2">
                       <ClipboardList className="w-4 h-4 text-primary" />
@@ -485,12 +508,12 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                     </div>
                   </div>
                 </div>
-              );
+              </React.Fragment>);
             }
 
             // Normal message bubble
             return (
-            <div key={m.id} className={cn("flex", m.direction === "outbound" ? "justify-end" : "justify-start")}>
+            <React.Fragment key={m.id}>{dateSeparator}<div className={cn("flex", m.direction === "outbound" ? "justify-end" : "justify-start")}>
               <div className={cn(
                 "max-w-[75%] rounded-xl px-3.5 py-2.5 text-sm",
                 m.direction === "outbound"
@@ -578,7 +601,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                 )}
               </div>
             </div>
-            );
+            </React.Fragment>);
           })}
 
 
