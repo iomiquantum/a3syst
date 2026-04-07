@@ -250,7 +250,7 @@ serve(async (req) => {
       });
     }
 
-    const { post_id, action } = await req.json();
+    const { post_id, action, only_platforms } = await req.json();
     if (!post_id) {
       return new Response(JSON.stringify({ error: "post_id es requerido" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
