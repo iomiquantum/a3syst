@@ -43,12 +43,16 @@ const MensajesPage = () => {
     localStorage.setItem(VIEW_MODE_KEY, viewMode);
   }, [viewMode]);
 
-  const pipelineDates = useMemo(() => {
-    if (pipelinePeriod === "rango" && pipelineRange?.from) {
-      return { from: pipelineRange.from.toISOString(), to: pipelineRange.to ? pipelineRange.to.toISOString() : undefined };
+  // Unified date range used for BOTH stats and conversation list
+  const unifiedDates = useMemo(() => {
+    if (resumenPeriod === "rango" && resumenRange?.from) {
+      return {
+        from: startOfDay(resumenRange.from).toISOString(),
+        to: resumenRange.to ? endOfDay(resumenRange.to).toISOString() : endOfDay(resumenRange.from).toISOString(),
+      };
     }
-    return periodToDateRange(pipelinePeriod);
-  }, [pipelinePeriod, pipelineRange]);
+    return periodToDateRange(resumenPeriod);
+  }, [resumenPeriod, resumenRange]);
 
   const resumenTimeFilter = useMemo<TimeFilter | undefined>(() => {
     let baseDates: { from?: string; to?: string };
