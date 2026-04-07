@@ -230,6 +230,9 @@ const MensajesPage = () => {
               onTagsChange={setSelectedTags}
               showArchived={showArchived}
               onShowArchivedChange={setShowArchived}
+              showDeleted={showDeleted}
+              onShowDeletedChange={setShowDeleted}
+              isAdmin={isAdmin}
               embudoTabs={pipelineTabs}
               activeEmbudoKey={activeTab}
               onEmbudoChange={(key) => setActiveTab(key as PipelineFilter)}
