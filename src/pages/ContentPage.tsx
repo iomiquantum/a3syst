@@ -934,8 +934,39 @@ Responde SOLO en JSON: {"title":"...","body":"...","hashtags":"#h1 #h2...","firs
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    let file = e.target.files?.[0];
     if (!file) return;
+    // Compress image if needed for Instagram compatibility
+    if (file.type.startsWith("image/") && file.size > 4 * 1024 * 1024) {
+      file = await new Promise<File>((resolve) => {
+        const img = new window.Image();
+        const url = URL.createObjectURL(file!);
+        img.onload = async () => {
+          URL.revokeObjectURL(url);
+          const canvas = document.createElement("canvas");
+          let { width, height } = img;
+          const maxDim = 2048;
+          if (width > maxDim || height > maxDim) {
+            const scale = maxDim / Math.max(width, height);
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+          }
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+          let quality = 0.85;
+          let blob: Blob | null = null;
+          for (let i = 0; i < 5; i++) {
+            blob = await new Promise<Blob | null>(r => canvas.toBlob(r, "image/jpeg", quality));
+            if (blob && blob.size <= 4 * 1024 * 1024) break;
+            quality -= 0.15;
+          }
+          resolve(blob ? new File([blob], file!.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" }) : file!);
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); resolve(file!); };
+        img.src = url;
+      });
+    }
     const ext = file.name.split(".").pop();
     const fileName = `${post.clinic_id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const { error: uploadError } = await supabase.storage.from("content-media").upload(fileName, file, { contentType: file.type });
