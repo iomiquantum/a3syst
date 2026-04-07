@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { Search, MessageSquare, CheckSquare, Square, Archive, Trash2, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Search, MessageSquare, CheckSquare, Archive, Trash2, X, Tag, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,11 +16,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ConversationCard from "./ConversationCard";
 import ActiveFilters from "./ActiveFilters";
 import type { PipelineConversation } from "@/hooks/useConversationsByPipeline";
+import { EMBUDO_STAGES } from "@/hooks/useClinicPipelineTabs";
+import { useTagStats } from "@/hooks/useTagStats";
 
 interface FilterChip {
   key: string;
@@ -49,13 +60,22 @@ const MensajesConversationList = ({ conversations, selectedId, onSelect, searchQ
   const [confirmAction, setConfirmAction] = useState<"archive" | "delete" | null>(null);
   const [bulkLoading, setBulkLoading] = useState(false);
 
-  // Sync external resets (e.g. filter clear)
+  // Bulk tag state
+  const [showTagDialog, setShowTagDialog] = useState(false);
+  const [selectedTagsForBulk, setSelectedTagsForBulk] = useState<string[]>([]);
+  const [newTagInput, setNewTagInput] = useState("");
+  const { allTags } = useTagStats();
+
+  // Bulk move pipeline state
+  const [showMoveDialog, setShowMoveDialog] = useState(false);
+  const [selectedPipelineKey, setSelectedPipelineKey] = useState<string | null>(null);
+
+  const pipelineOptions = EMBUDO_STAGES.filter(s => s.key !== "todos");
+
   useEffect(() => {
     if (searchQuery !== localQuery) setLocalQuery(searchQuery);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
-  // Exit selection mode when conversations change significantly
   useEffect(() => {
     if (selectionMode) {
       setSelectedIds(prev => {
@@ -98,14 +118,13 @@ const MensajesConversationList = ({ conversations, selectedId, onSelect, searchQ
     setSelectedIds(new Set());
   };
 
+  // ── Bulk archive / delete ──
   const handleBulkAction = async () => {
     if (!confirmAction || selectedIds.size === 0) return;
     setBulkLoading(true);
-
     const ids = Array.from(selectedIds);
 
     try {
-      // Get current user for audit trail
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id || "unknown";
 
@@ -117,28 +136,20 @@ const MensajesConversationList = ({ conversations, selectedId, onSelect, searchQ
         if (error) throw error;
         toast.success(`${ids.length} conversación(es) archivada(s)`);
       } else if (confirmAction === "delete") {
-        // 1. Fetch full conversation data for backup
         const { data: convsToBackup, error: fetchConvErr } = await (supabase as any)
           .from("conversations")
           .select("*, contacts!conversations_contact_id_fkey(name, phone)")
           .in("id", ids);
         if (fetchConvErr) throw fetchConvErr;
 
-        // 2. Fetch all messages for these conversations
         const { data: msgsToBackup, error: fetchMsgErr } = await supabase
-          .from("messages")
-          .select("*")
-          .in("conversation_id", ids);
+          .from("messages").select("*").in("conversation_id", ids);
         if (fetchMsgErr) throw fetchMsgErr;
 
-        // 3. Fetch pipeline history
         const { data: histToBackup, error: fetchHistErr } = await supabase
-          .from("conversation_pipeline_history")
-          .select("*")
-          .in("conversation_id", ids);
+          .from("conversation_pipeline_history").select("*").in("conversation_id", ids);
         if (fetchHistErr) throw fetchHistErr;
 
-        // 4. Insert backup entries into clinic_trash
         const clinicId = convsToBackup?.[0]?.clinic_id;
         if (clinicId && convsToBackup) {
           const trashEntries = convsToBackup.map((conv: any) => ({
@@ -158,33 +169,18 @@ const MensajesConversationList = ({ conversations, selectedId, onSelect, searchQ
             expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           }));
 
-          const { error: trashErr } = await supabase
-            .from("clinic_trash")
-            .insert(trashEntries);
+          const { error: trashErr } = await supabase.from("clinic_trash").insert(trashEntries);
           if (trashErr) {
             console.error("Error creating backup:", trashErr);
-            // Don't block deletion if backup fails, but warn
             toast.warning("Backup parcial — algunos datos podrían no haberse respaldado");
           }
         }
 
-        // 5. Now delete the actual data
-        const { error: msgErr } = await supabase
-          .from("messages")
-          .delete()
-          .in("conversation_id", ids);
+        const { error: msgErr } = await supabase.from("messages").delete().in("conversation_id", ids);
         if (msgErr) throw msgErr;
-
-        const { error: histErr } = await supabase
-          .from("conversation_pipeline_history")
-          .delete()
-          .in("conversation_id", ids);
+        const { error: histErr } = await supabase.from("conversation_pipeline_history").delete().in("conversation_id", ids);
         if (histErr) throw histErr;
-
-        const { error } = await supabase
-          .from("conversations")
-          .delete()
-          .in("id", ids);
+        const { error } = await supabase.from("conversations").delete().in("id", ids);
         if (error) throw error;
         toast.success(`${ids.length} conversación(es) eliminada(s) — backup guardado por 30 días`);
       }
@@ -197,6 +193,94 @@ const MensajesConversationList = ({ conversations, selectedId, onSelect, searchQ
     } finally {
       setBulkLoading(false);
       setConfirmAction(null);
+    }
+  };
+
+  // ── Bulk tag ──
+  const handleBulkTag = async () => {
+    if (selectedTagsForBulk.length === 0 || selectedIds.size === 0) return;
+    setBulkLoading(true);
+
+    const ids = Array.from(selectedIds);
+    try {
+      // Get contact_ids for the selected conversations
+      const contactIds = conversations
+        .filter(c => ids.includes(c.id))
+        .map(c => c.contact_id)
+        .filter(Boolean);
+
+      const uniqueContactIds = [...new Set(contactIds)];
+
+      // Fetch current tags for each contact
+      const { data: contacts, error: fetchErr } = await supabase
+        .from("contacts")
+        .select("id, tags")
+        .in("id", uniqueContactIds);
+      if (fetchErr) throw fetchErr;
+
+      // Update each contact's tags (merge, no duplicates)
+      for (const contact of (contacts || [])) {
+        const existing = (contact.tags as string[]) || [];
+        const merged = [...new Set([...existing, ...selectedTagsForBulk])];
+        const { error } = await supabase
+          .from("contacts")
+          .update({ tags: merged })
+          .eq("id", contact.id);
+        if (error) throw error;
+      }
+
+      toast.success(`Etiquetas aplicadas a ${uniqueContactIds.length} contacto(s)`);
+      setShowTagDialog(false);
+      setSelectedTagsForBulk([]);
+      setNewTagInput("");
+      exitSelectionMode();
+      onBulkActionComplete?.();
+    } catch (err: any) {
+      console.error("Bulk tag error:", err);
+      toast.error("Error al etiquetar: " + (err.message || "Error desconocido"));
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  // ── Bulk move pipeline ──
+  const handleBulkMove = async () => {
+    if (!selectedPipelineKey || selectedIds.size === 0) return;
+    setBulkLoading(true);
+
+    const ids = Array.from(selectedIds);
+    try {
+      const { error } = await (supabase as any)
+        .from("conversations")
+        .update({ pipeline_tab: selectedPipelineKey })
+        .in("id", ids);
+      if (error) throw error;
+
+      const label = pipelineOptions.find(p => p.key === selectedPipelineKey)?.label || selectedPipelineKey;
+      toast.success(`${ids.length} conversación(es) movida(s) a "${label}"`);
+      setShowMoveDialog(false);
+      setSelectedPipelineKey(null);
+      exitSelectionMode();
+      onBulkActionComplete?.();
+    } catch (err: any) {
+      console.error("Bulk move error:", err);
+      toast.error("Error al mover: " + (err.message || "Error desconocido"));
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const toggleBulkTag = (tag: string) => {
+    setSelectedTagsForBulk(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const addNewTag = () => {
+    const trimmed = newTagInput.trim();
+    if (trimmed && !selectedTagsForBulk.includes(trimmed)) {
+      setSelectedTagsForBulk(prev => [...prev, trimmed]);
+      setNewTagInput("");
     }
   };
 
@@ -241,36 +325,30 @@ const MensajesConversationList = ({ conversations, selectedId, onSelect, searchQ
 
       {/* Bulk action bar */}
       {selectionMode && (
-        <div className="px-3 py-2 border-b border-border bg-muted/50 flex items-center gap-2 shrink-0">
+        <div className="px-3 py-2 border-b border-border bg-muted/50 flex flex-wrap items-center gap-2 shrink-0">
           <Checkbox
             checked={conversations.length > 0 && selectedIds.size === conversations.length}
             onCheckedChange={toggleAll}
             className="w-4 h-4"
           />
-          <span className="text-xs text-muted-foreground flex-1">
+          <span className="text-xs text-muted-foreground flex-1 min-w-[100px]">
             {selectedIds.size > 0
               ? `${selectedIds.size} de ${conversations.length} seleccionada(s)`
               : `Seleccionar todas (${conversations.length})`}
           </span>
           {selectedIds.size > 0 && (
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs gap-1"
-                onClick={() => setConfirmAction("archive")}
-              >
-                <Archive className="w-3 h-3" />
-                Archivar
+            <div className="flex items-center gap-1 flex-wrap">
+              <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => setConfirmAction("archive")}>
+                <Archive className="w-3 h-3" /> Archivar
               </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="h-7 text-xs gap-1"
-                onClick={() => setConfirmAction("delete")}
-              >
-                <Trash2 className="w-3 h-3" />
-                Eliminar
+              <Button variant="destructive" size="sm" className="h-7 text-xs gap-1" onClick={() => setConfirmAction("delete")}>
+                <Trash2 className="w-3 h-3" /> Eliminar
+              </Button>
+              <Button variant="outline" size="sm" className="h-7 text-xs gap-1 border-violet-300 text-violet-700 hover:bg-violet-50 dark:border-violet-500/50 dark:text-violet-300 dark:hover:bg-violet-500/10" onClick={() => { setSelectedTagsForBulk([]); setShowTagDialog(true); }}>
+                <Tag className="w-3 h-3" /> Etiquetar
+              </Button>
+              <Button variant="outline" size="sm" className="h-7 text-xs gap-1 border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-500/50 dark:text-blue-300 dark:hover:bg-blue-500/10" onClick={() => { setSelectedPipelineKey(null); setShowMoveDialog(true); }}>
+                <ArrowUpDown className="w-3 h-3" /> Mover
               </Button>
             </div>
           )}
@@ -298,7 +376,7 @@ const MensajesConversationList = ({ conversations, selectedId, onSelect, searchQ
         )}
       </ScrollArea>
 
-      {/* Confirmation dialog */}
+      {/* Archive / Delete confirmation */}
       <AlertDialog open={confirmAction !== null} onOpenChange={(open) => !open && setConfirmAction(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -320,15 +398,143 @@ const MensajesConversationList = ({ conversations, selectedId, onSelect, searchQ
               disabled={bulkLoading}
               className={confirmAction === "delete" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
             >
-              {bulkLoading
-                ? "Procesando..."
-                : confirmAction === "archive"
-                  ? "Sí, archivar"
-                  : "Sí, eliminar"}
+              {bulkLoading ? "Procesando..." : confirmAction === "archive" ? "Sí, archivar" : "Sí, eliminar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Bulk Tag Dialog */}
+      <Dialog open={showTagDialog} onOpenChange={setShowTagDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tag className="w-4 h-4 text-violet-600" />
+              Etiquetar {selectedIds.size} conversación(es)
+            </DialogTitle>
+            <DialogDescription>
+              Las etiquetas se agregarán a los contactos de las conversaciones seleccionadas. Las etiquetas existentes se conservarán.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            {/* Selected tags */}
+            {selectedTagsForBulk.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {selectedTagsForBulk.map(tag => (
+                  <Badge
+                    key={tag}
+                    variant="default"
+                    className="text-xs gap-1 cursor-pointer bg-violet-600 hover:bg-violet-700"
+                    onClick={() => toggleBulkTag(tag)}
+                  >
+                    {tag} <X className="w-3 h-3" />
+                  </Badge>
+                ))}
+              </div>
+            )}
+
+            {/* Add new tag */}
+            <div className="flex gap-2">
+              <Input
+                placeholder="Nueva etiqueta..."
+                value={newTagInput}
+                onChange={e => setNewTagInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addNewTag())}
+                className="h-8 text-xs flex-1"
+              />
+              <Button size="sm" variant="outline" className="h-8 text-xs" onClick={addNewTag} disabled={!newTagInput.trim()}>
+                Agregar
+              </Button>
+            </div>
+
+            {/* Existing tags */}
+            {allTags.length > 0 && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5">Etiquetas existentes:</p>
+                <ScrollArea className="max-h-[180px]">
+                  <div className="flex flex-wrap gap-1.5">
+                    {allTags.map(tag => (
+                      <Badge
+                        key={tag}
+                        variant={selectedTagsForBulk.includes(tag) ? "default" : "outline"}
+                        className={`text-xs cursor-pointer transition-colors ${selectedTagsForBulk.includes(tag) ? "bg-violet-600 hover:bg-violet-700" : "hover:bg-violet-50 dark:hover:bg-violet-500/10"}`}
+                        onClick={() => toggleBulkTag(tag)}
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setShowTagDialog(false)} disabled={bulkLoading}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleBulkTag}
+              disabled={bulkLoading || selectedTagsForBulk.length === 0}
+              className="bg-violet-600 hover:bg-violet-700"
+            >
+              {bulkLoading ? "Aplicando..." : `Aplicar ${selectedTagsForBulk.length} etiqueta(s)`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Move Pipeline Dialog */}
+      <Dialog open={showMoveDialog} onOpenChange={setShowMoveDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowUpDown className="w-4 h-4 text-blue-600" />
+              Mover {selectedIds.size} conversación(es) de embudo
+            </DialogTitle>
+            <DialogDescription>
+              Selecciona la etapa del embudo a la que deseas mover las conversaciones seleccionadas. Esta acción es masiva e inmediata.
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[300px] py-2">
+            <div className="space-y-1">
+              {pipelineOptions.map(stage => (
+                <button
+                  key={stage.key}
+                  onClick={() => setSelectedPipelineKey(stage.key)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    selectedPipelineKey === stage.key
+                      ? "bg-primary/10 text-primary font-medium ring-1 ring-primary/30"
+                      : "hover:bg-muted text-foreground"
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${stage.color.split(" ")[0]}`} />
+                  <span className="flex-1 text-left truncate">{stage.label}</span>
+                  {selectedPipelineKey === stage.key && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
+
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setShowMoveDialog(false)} disabled={bulkLoading}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleBulkMove}
+              disabled={bulkLoading || !selectedPipelineKey}
+            >
+              {bulkLoading ? "Moviendo..." : `Mover a "${pipelineOptions.find(p => p.key === selectedPipelineKey)?.label || "..."}"`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
