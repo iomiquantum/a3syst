@@ -238,9 +238,23 @@ const MensajesSidebar = ({
           <label className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer">
             <Archive className="w-3.5 h-3.5 text-muted-foreground" />
             <span className="text-xs text-foreground flex-1">Archivadas</span>
-            <Switch checked={showArchived} onCheckedChange={onShowArchivedChange} className="scale-75" />
+            <Switch checked={showArchived} onCheckedChange={(v) => { onShowArchivedChange(v); if (v) onShowDeletedChange(false); }} className="scale-75" />
           </label>
         </div>
+
+        {/* Eliminados (admin only) */}
+        {isAdmin && (
+          <div>
+            <label className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer">
+              <Trash2 className="w-3.5 h-3.5 text-destructive/70" />
+              <span className="text-xs text-foreground flex-1">Eliminados</span>
+              <Switch checked={showDeleted} onCheckedChange={(v) => { onShowDeletedChange(v); if (v) onShowArchivedChange(false); }} className="scale-75" />
+            </label>
+            {showDeleted && (
+              <p className="text-[9px] text-muted-foreground px-2.5 mt-0.5">Se purgan a los 30 días</p>
+            )}
+          </div>
+        )}
       </div>
     </ScrollArea>
   );
