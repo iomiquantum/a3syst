@@ -412,8 +412,9 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
       <AppointmentBanner conversation={c} onActionComplete={onActionComplete} />
 
 
-      {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3">
+      <ResizablePanelGroup direction="vertical" className="flex-1 min-h-0">
+      <ResizablePanel defaultSize={75} minSize={30}>
+      <div ref={scrollRef} className="h-full overflow-y-auto px-4 py-3">
         <div className="space-y-3 max-w-2xl mx-auto">
           {loadingMsgs && <p className="text-center text-sm text-muted-foreground py-8">Cargando mensajes...</p>}
           {!loadingMsgs && messages.length === 0 && (
