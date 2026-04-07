@@ -30,8 +30,6 @@ const MensajesPage = () => {
   const [timeSlot, setTimeSlot] = useState<TimeSlot>("all");
   const [customTimeStart, setCustomTimeStart] = useState("00:00");
   const [customTimeEnd, setCustomTimeEnd] = useState("23:59");
-  const [pipelinePeriod, setPipelinePeriod] = useState<Period>("max");
-  const [pipelineRange, setPipelineRange] = useState<DateRange | undefined>();
   const [activeTab, setActiveTab] = useState<PipelineFilter>("todos");
   const [selectedChannel, setSelectedChannel] = useState("todos");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -45,24 +43,22 @@ const MensajesPage = () => {
     localStorage.setItem(VIEW_MODE_KEY, viewMode);
   }, [viewMode]);
 
-  const pipelineDates = useMemo(() => {
-    if (pipelinePeriod === "rango" && pipelineRange?.from) {
-      return { from: pipelineRange.from.toISOString(), to: pipelineRange.to ? pipelineRange.to.toISOString() : undefined };
+  // Unified date range used for BOTH stats and conversation list
+  const unifiedDates = useMemo(() => {
+    if (resumenPeriod === "rango" && resumenRange?.from) {
+      return {
+        from: startOfDay(resumenRange.from).toISOString(),
+        to: resumenRange.to ? endOfDay(resumenRange.to).toISOString() : endOfDay(resumenRange.from).toISOString(),
+      };
     }
-    return periodToDateRange(pipelinePeriod);
-  }, [pipelinePeriod, pipelineRange]);
+    return periodToDateRange(resumenPeriod);
+  }, [resumenPeriod, resumenRange]);
 
   const resumenTimeFilter = useMemo<TimeFilter | undefined>(() => {
-    let baseDates: { from?: string; to?: string };
-    if (resumenPeriod === "rango" && resumenRange?.from) {
-      baseDates = { from: startOfDay(resumenRange.from).toISOString(), to: resumenRange.to ? endOfDay(resumenRange.to).toISOString() : endOfDay(resumenRange.from).toISOString() };
-    } else {
-      baseDates = periodToDateRange(resumenPeriod);
-    }
-    if (!baseDates.from) return undefined;
+    if (!unifiedDates.from) return undefined;
 
-    const fromDate = new Date(baseDates.from);
-    const toDate = baseDates.to ? new Date(baseDates.to) : new Date();
+    const fromDate = new Date(unifiedDates.from);
+    const toDate = unifiedDates.to ? new Date(unifiedDates.to) : new Date();
     const { startHour, startMin, endHour, endMin } = getTimeSlotHours(timeSlot, customTimeStart, customTimeEnd);
 
     if (timeSlot !== "all") {
@@ -71,7 +67,23 @@ const MensajesPage = () => {
     }
 
     return { startDate: fromDate.toISOString(), endDate: toDate.toISOString() };
-  }, [resumenPeriod, resumenRange, timeSlot, customTimeStart, customTimeEnd]);
+  }, [unifiedDates, timeSlot, customTimeStart, customTimeEnd]);
+
+  // Conversation list date filter (also applies time slot)
+  const convDates = useMemo(() => {
+    if (!unifiedDates.from) return { from: undefined, to: undefined };
+
+    const fromDate = new Date(unifiedDates.from);
+    const toDate = unifiedDates.to ? new Date(unifiedDates.to) : new Date();
+    const { startHour, startMin, endHour, endMin } = getTimeSlotHours(timeSlot, customTimeStart, customTimeEnd);
+
+    if (timeSlot !== "all") {
+      fromDate.setHours(startHour, startMin, 0, 0);
+      toDate.setHours(endHour, endMin, 59, 999);
+    }
+
+    return { from: fromDate.toISOString(), to: toDate.toISOString() };
+  }, [unifiedDates, timeSlot, customTimeStart, customTimeEnd]);
 
   const { resumenStats, loading: statsLoading, refetch: refetchStats } = usePipelineStats(resumenTimeFilter);
   const { counts: channelCounts, total: channelTotal } = useChannelStats();
@@ -83,8 +95,8 @@ const MensajesPage = () => {
     channel: selectedChannel,
     tags: selectedTags,
     searchQuery,
-    periodStart: pipelineDates.from,
-    periodEnd: pipelineDates.to,
+    periodStart: convDates.from,
+    periodEnd: convDates.to,
     showArchived,
   });
 
