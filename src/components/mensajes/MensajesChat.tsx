@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Send, Bot, MoreVertical, PanelRightOpen, PanelRightClose, LayoutTemplate, Lock, ClipboardList, UserX, PhoneOff, RotateCcw, CalendarPlus, MessageSquareText, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -411,8 +412,9 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
       <AppointmentBanner conversation={c} onActionComplete={onActionComplete} />
 
 
-      {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3">
+      <ResizablePanelGroup direction="vertical" className="flex-1 min-h-0">
+      <ResizablePanel defaultSize={75} minSize={30}>
+      <div ref={scrollRef} className="h-full overflow-y-auto px-4 py-3">
         <div className="space-y-3 max-w-2xl mx-auto">
           {loadingMsgs && <p className="text-center text-sm text-muted-foreground py-8">Cargando mensajes...</p>}
           {!loadingMsgs && messages.length === 0 && (
@@ -586,9 +588,13 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
 
         </div>
       </div>
+      </ResizablePanel>
 
+      <ResizableHandle withHandle />
+
+      <ResizablePanel defaultSize={25} minSize={15} maxSize={60}>
       {/* Input area */}
-      <div className="px-4 py-3 border-t border-border shrink-0 space-y-2">
+      <div className="px-4 py-3 h-full overflow-y-auto space-y-2">
         {/* Autopilot banner — informational only, does NOT block input */}
         {autopilot && !isWhatsAppBlocked && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 text-xs">
@@ -596,7 +602,6 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
             <span>La IA está respondiendo esta conversación. Puedes enviar mensajes como humano sin desactivarla.</span>
           </div>
         )}
-
 
         {/* WhatsApp window BLOCKED — replace entire input with template-only mode */}
         {isWhatsAppBlocked ? (
@@ -641,8 +646,8 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
               </div>
             )}
 
-            <div className="flex items-end gap-2">
-              <div className="flex-1 flex flex-col gap-1">
+            <div className="flex items-end gap-2 flex-1 min-h-0">
+              <div className="flex-1 flex flex-col gap-1 min-h-0">
                 <ChatToolbar
                   onInsertText={handleInsertText}
                   conversationId={c.id}
@@ -654,7 +659,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                   value={input}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
-                  className="min-h-[80px] max-h-[300px] text-sm resize-y py-2"
+                  className="flex-1 min-h-[60px] text-sm resize-none py-2"
                   rows={3}
                 />
               </div>
@@ -665,6 +670,8 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
           </>
         )}
       </div>
+      </ResizablePanel>
+      </ResizablePanelGroup>
 
       <WhatsAppTemplateDialog
         open={templateDialogOpen}
