@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { MessageSquare, ArrowLeft } from "lucide-react";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import AppLayout from "@/components/AppLayout";
 import MensajesHeader, { ViewMode } from "@/components/mensajes/MensajesHeader";
 import MensajesResumen from "@/components/mensajes/MensajesResumen";
@@ -248,8 +249,8 @@ const MensajesPage = () => {
               <MensajesKanban conversations={conversations} onActionComplete={handleActionComplete} />
             </div>
           ) : (
-            <>
-              <div className="w-[280px] border-r border-border shrink-0 overflow-hidden">
+            <ResizablePanelGroup direction="horizontal" className="flex-1 min-w-0">
+              <ResizablePanel defaultSize={25} minSize={18} maxSize={45} className="overflow-hidden">
                 <MensajesConversationList
                   conversations={conversations}
                   selectedId={selectedConv?.id || null}
@@ -261,9 +262,11 @@ const MensajesPage = () => {
                   loading={convsLoading}
                   onBulkActionComplete={handleActionComplete}
                 />
-              </div>
+              </ResizablePanel>
 
-              <div className="flex-1 min-w-0 overflow-hidden relative flex">
+              <ResizableHandle withHandle />
+
+              <ResizablePanel defaultSize={75} minSize={40} className="overflow-hidden relative flex">
                 {selectedConv ? (
                   <>
                     <div className="flex-1 min-w-0 overflow-hidden">
@@ -285,7 +288,7 @@ const MensajesPage = () => {
                     )}
                   </>
                 ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
+                  <div className="h-full w-full flex flex-col items-center justify-center text-muted-foreground">
                     <MessageSquare className="w-12 h-12 mb-3 opacity-30" />
                     <p className="text-sm font-medium">Selecciona una conversación</p>
                     <p className="text-xs mt-1 max-w-xs text-center">
@@ -293,8 +296,8 @@ const MensajesPage = () => {
                     </p>
                   </div>
                 )}
-              </div>
-            </>
+              </ResizablePanel>
+            </ResizablePanelGroup>
           )}
         </div>
       </div>
