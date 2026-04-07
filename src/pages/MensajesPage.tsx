@@ -8,6 +8,7 @@ import MensajesConversationList from "@/components/mensajes/MensajesConversation
 import MensajesChat from "@/components/mensajes/MensajesChat";
 import MensajesKanban from "@/components/mensajes/MensajesKanban";
 import ContactInfoPanel from "@/components/mensajes/ContactInfoPanel";
+import DeletedConversationsPanel from "@/components/mensajes/DeletedConversationsPanel";
 import { useConversationsByPipeline, PipelineConversation, PipelineFilter } from "@/hooks/useConversationsByPipeline";
 import { usePipelineStats, TimeFilter } from "@/hooks/usePipelineStats";
 import { useChannelStats } from "@/hooks/useChannelStats";
