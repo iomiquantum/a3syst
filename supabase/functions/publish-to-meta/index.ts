@@ -172,6 +172,7 @@ async function publishToInstagram(post: any, creds: Record<string, string>): Pro
       body: JSON.stringify(containerBody),
     });
     const containerData = await containerRes.json();
+    console.log("Instagram container response:", JSON.stringify(containerData));
     if (containerData.error) return { success: false, error: containerData.error.message };
 
     // Wait for video processing
