@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Pin, CalendarPlus, Clock } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import PipelineBadge from "./PipelineBadge";
 import ChannelIcon from "@/components/messaging/ChannelIcon";
 import MessageStatusIcon from "./MessageStatusIcon";
@@ -11,6 +12,9 @@ interface Props {
   selected?: boolean;
   onClick: () => void;
   variant?: "list" | "kanban";
+  selectionMode?: boolean;
+  isChecked?: boolean;
+  onToggleCheck?: (id: string) => void;
 }
 
 function relativeTime(iso: string): string {
