@@ -60,10 +60,10 @@ const MensajesPage = () => {
       };
     }
     if (resumenPeriod === "dia") {
-      return dayOfWeekToDateRange(selectedDayOfWeek);
+      return dayOfWeekToDateRange(selectedDayOfWeek, weekOffset);
     }
     return periodToDateRange(resumenPeriod);
-  }, [resumenPeriod, resumenRange, selectedDayOfWeek]);
+  }, [resumenPeriod, resumenRange, selectedDayOfWeek, weekOffset]);
 
   const resumenTimeFilter = useMemo<TimeFilter | undefined>(() => {
     if (!unifiedDates.from) return undefined;
