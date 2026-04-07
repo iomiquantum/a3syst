@@ -317,12 +317,8 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
     return { text: `🤖 ${agentName}${stageTag}`, color: "text-violet-500" };
   };
 
-  // Auto-resize textarea
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
-    const el = e.target;
-    el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 300) + "px";
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -646,8 +642,8 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
               </div>
             )}
 
-            <div className="flex items-end gap-2 flex-1 min-h-0">
-              <div className="flex-1 flex flex-col gap-1 min-h-0">
+            <div className="flex items-stretch gap-2 flex-1 min-h-0 overflow-hidden">
+              <div className="flex-1 flex flex-col gap-1 min-h-0 overflow-hidden">
                 <ChatToolbar
                   onInsertText={handleInsertText}
                   conversationId={c.id}
@@ -659,8 +655,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                   value={input}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
-                  className="flex-1 min-h-[60px] text-sm resize-none py-2"
-                  rows={3}
+                  className="flex-1 min-h-0 text-sm resize-none py-2 overflow-y-auto"
                 />
               </div>
               <Button onClick={handleSend} disabled={!input.trim() || sending} size="icon" className="shrink-0 h-10 w-10">
