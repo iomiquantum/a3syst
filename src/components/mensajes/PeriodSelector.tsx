@@ -30,18 +30,12 @@ export function periodToDateRange(period: Period): { from?: string; to?: string 
 }
 
 const DAY_NAMES = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"] as const;
-const DAY_MAP: Record<number, number> = { 0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 0 };
+const DAY_INDEX_TO_OFFSET = [0, 1, 2, 3, 4, 5, 6]; // Lun=0..Dom=6
 
-export function dayOfWeekToDateRange(dayIndex: number): { from: string; to: string } {
-  const targetDay = DAY_MAP[dayIndex] as 0 | 1 | 2 | 3 | 4 | 5 | 6;
+export function dayOfWeekToDateRange(dayIndex: number, weekOffset: number = 0): { from: string; to: string } {
   const now = new Date();
-  const currentDay = now.getDay();
-  let target: Date;
-  if (currentDay === targetDay) {
-    target = now;
-  } else {
-    target = previousDay(now, targetDay);
-  }
+  const weekStart = startOfWeek(subDays(now, weekOffset * 7), { weekStartsOn: 1 });
+  const target = addDays(weekStart, dayIndex);
   return {
     from: startOfDay(target).toISOString(),
     to: endOfDay(target).toISOString(),
