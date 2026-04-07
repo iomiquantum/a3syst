@@ -18,6 +18,8 @@ interface Props {
   customStart?: string;
   customEnd?: string;
   onCustomTimeChange?: (start: string, end: string) => void;
+  selectedDayOfWeek?: number;
+  onDayOfWeekChange?: (day: number) => void;
 }
 
 const MensajesResumen = ({ stats, loading, period, onPeriodChange, dateRange, onDateRangeChange, timeSlot, onTimeSlotChange, customStart, customEnd, onCustomTimeChange }: Props) => {
