@@ -239,7 +239,11 @@ const MensajesPage = () => {
             />
           </div>
 
-          {viewMode === "pipeline" ? (
+          {showDeleted ? (
+            <div className="flex-1 min-w-0 overflow-hidden">
+              <DeletedConversationsPanel onRestore={handleActionComplete} />
+            </div>
+          ) : viewMode === "pipeline" ? (
             <div className="flex-1 min-w-0 overflow-hidden">
               <MensajesKanban conversations={conversations} onActionComplete={handleActionComplete} />
             </div>
