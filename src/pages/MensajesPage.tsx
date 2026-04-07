@@ -95,8 +95,8 @@ const MensajesPage = () => {
     channel: selectedChannel,
     tags: selectedTags,
     searchQuery,
-    periodStart: pipelineDates.from,
-    periodEnd: pipelineDates.to,
+    periodStart: convDates.from,
+    periodEnd: convDates.to,
     showArchived,
   });
 
