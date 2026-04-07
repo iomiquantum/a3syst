@@ -26,6 +26,8 @@ const VIEW_MODE_KEY = "mensajes-view-mode";
 
 const MensajesPage = () => {
   const isMobile = useIsMobile();
+  const { userRole, isSuperAdmin } = useClinic();
+  const isAdmin = isSuperAdmin || userRole === "admin" || userRole === "manager";
   const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem(VIEW_MODE_KEY) as ViewMode) || "buzon");
   const [resumenPeriod, setResumenPeriod] = useState<Period>("hoy");
   const [resumenRange, setResumenRange] = useState<DateRange | undefined>();
@@ -39,6 +41,7 @@ const MensajesPage = () => {
   const [selectedConv, setSelectedConv] = useState<PipelineConversation | null>(null);
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const [showArchived, setShowArchived] = useState(false);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [showContactPanel, setShowContactPanel] = useState(false);
 
   useEffect(() => {
