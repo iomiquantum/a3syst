@@ -23,6 +23,9 @@ interface Props {
   onTagsChange: (tags: string[]) => void;
   showArchived: boolean;
   onShowArchivedChange: (v: boolean) => void;
+  showDeleted: boolean;
+  onShowDeletedChange: (v: boolean) => void;
+  isAdmin: boolean;
   // Embudo
   embudoTabs: PipelineTab[];
   activeEmbudoKey: string;
