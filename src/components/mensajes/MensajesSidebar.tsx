@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Archive, ChevronDown, ChevronRight } from "lucide-react";
+import { Search, Archive, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
