@@ -104,13 +104,29 @@ const ConversationCard = ({ conversation: c, selected, onClick, variant = "list"
 
   return (
     <button
-      onClick={onClick}
+      onClick={() => {
+        if (selectionMode && onToggleCheck) {
+          onToggleCheck(c.id);
+        } else {
+          onClick();
+        }
+      }}
       className={cn(
         "w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors border-b border-border",
-        selected && "bg-muted"
+        selected && !selectionMode && "bg-muted",
+        selectionMode && isChecked && "bg-primary/5"
       )}
     >
       <div className="flex items-start gap-2.5">
+        {selectionMode && (
+          <div className="pt-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+            <Checkbox
+              checked={isChecked}
+              onCheckedChange={() => onToggleCheck?.(c.id)}
+              className="w-4 h-4"
+            />
+          </div>
+        )}
         <div className={cn("w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0", hashColor(c.contactName))}>
           {getInitials(c.contactName)}
         </div>
