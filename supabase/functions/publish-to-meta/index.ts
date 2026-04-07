@@ -195,6 +195,7 @@ async function publishToInstagram(post: any, creds: Record<string, string>): Pro
       body: JSON.stringify({ creation_id: containerData.id, access_token }),
     });
     const publishData = await publishRes.json();
+    console.log("Instagram publish response:", JSON.stringify(publishData));
     if (publishData.error) return { success: false, error: publishData.error.message };
 
     // First comment
