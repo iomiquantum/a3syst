@@ -30,8 +30,6 @@ const MensajesPage = () => {
   const [timeSlot, setTimeSlot] = useState<TimeSlot>("all");
   const [customTimeStart, setCustomTimeStart] = useState("00:00");
   const [customTimeEnd, setCustomTimeEnd] = useState("23:59");
-  const [pipelinePeriod, setPipelinePeriod] = useState<Period>("max");
-  const [pipelineRange, setPipelineRange] = useState<DateRange | undefined>();
   const [activeTab, setActiveTab] = useState<PipelineFilter>("todos");
   const [selectedChannel, setSelectedChannel] = useState("todos");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
