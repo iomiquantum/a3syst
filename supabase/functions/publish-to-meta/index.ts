@@ -14,6 +14,16 @@ function buildCaption(post: any): string {
   return caption;
 }
 
+/** Convert Supabase storage URLs to use image transform for Instagram-safe sizes */
+function optimizeImageUrl(url: string): string {
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+  if (url.includes("/storage/v1/object/public/")) {
+    // Replace /object/ with /render/image/ and add transform params
+    return url.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/") + "?width=2048&quality=80";
+  }
+  return url;
+}
+
 async function publishToFacebook(post: any, creds: Record<string, string>): Promise<{ success: boolean; externalId?: string; error?: string }> {
   const { access_token, page_id } = creds;
   if (!access_token || !page_id) return { success: false, error: "Faltan credenciales de Facebook (access_token o page_id)" };
