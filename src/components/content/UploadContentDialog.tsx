@@ -429,7 +429,9 @@ Responde SOLO en JSON:
 
   const uploadFilesToStorage = async (filesToUpload: File[]): Promise<string[]> => {
     const urls: string[] = [];
-    for (const file of filesToUpload) {
+    for (let file of filesToUpload) {
+      // Compress images to avoid Instagram API rejections for large files
+      file = await compressImage(file);
       const ext = file.name.split(".").pop();
       const fileName = `${clinicId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const { error: uploadError } = await supabase.storage.from("content-media").upload(fileName, file, { contentType: file.type });
