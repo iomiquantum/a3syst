@@ -67,7 +67,7 @@ const DatesBadge = ({ c }: { c: PipelineConversation }) => (
   </div>
 );
 
-const ConversationCard = ({ conversation: c, selected, onClick, variant = "list" }: Props) => {
+const ConversationCard = ({ conversation: c, selected, onClick, variant = "list", selectionMode, isChecked, onToggleCheck }: Props) => {
   const windowBadge = (
     <WhatsAppWindowBadge
       lastClientMessageAt={c.last_client_message_at}
