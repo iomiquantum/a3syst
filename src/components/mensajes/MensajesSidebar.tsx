@@ -73,6 +73,7 @@ const MensajesSidebar = ({
   selectedChannel, onChannelChange,
   selectedTags, onTagsChange,
   showArchived, onShowArchivedChange,
+  showDeleted, onShowDeletedChange, isAdmin,
   embudoTabs, activeEmbudoKey, onEmbudoChange,
 }: Props) => {
   const [tagSearch, setTagSearch] = useState("");
