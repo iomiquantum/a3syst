@@ -20,6 +20,8 @@ interface Props {
   onCustomTimeChange?: (start: string, end: string) => void;
   selectedDayOfWeek?: number;
   onDayOfWeekChange?: (day: number) => void;
+  weekOffset?: number;
+  onWeekOffsetChange?: (offset: number) => void;
 }
 
 const MensajesResumen = ({ stats, loading, period, onPeriodChange, dateRange, onDateRangeChange, timeSlot, onTimeSlotChange, customStart, customEnd, onCustomTimeChange, selectedDayOfWeek, onDayOfWeekChange }: Props) => {
