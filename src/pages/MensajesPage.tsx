@@ -17,6 +17,7 @@ import { useClinicPipelineTabs } from "@/hooks/useClinicPipelineTabs";
 import { Period, periodToDateRange } from "@/components/mensajes/PeriodSelector";
 import { TimeSlot, getTimeSlotHours } from "@/components/mensajes/TimeSlotSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useClinic } from "@/hooks/useClinic";
 import { Button } from "@/components/ui/button";
 import { DateRange } from "react-day-picker";
 import { startOfDay, endOfDay } from "date-fns";
