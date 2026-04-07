@@ -32,6 +32,7 @@ const MensajesPage = () => {
   const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem(VIEW_MODE_KEY) as ViewMode) || "buzon");
   const [resumenPeriod, setResumenPeriod] = useState<Period>("hoy");
   const [resumenRange, setResumenRange] = useState<DateRange | undefined>();
+  const [selectedDayOfWeek, setSelectedDayOfWeek] = useState<number>(0);
   const [timeSlot, setTimeSlot] = useState<TimeSlot>("all");
   const [customTimeStart, setCustomTimeStart] = useState("00:00");
   const [customTimeEnd, setCustomTimeEnd] = useState("23:59");
