@@ -184,6 +184,7 @@ const MensajesPage = () => {
                 activeFilters={activeFilters}
                 onRemoveFilter={handleRemoveFilter}
                 loading={convsLoading}
+                onBulkActionComplete={handleActionComplete}
               />
             )}
           </div>
