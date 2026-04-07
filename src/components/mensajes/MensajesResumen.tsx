@@ -66,7 +66,7 @@ const MensajesResumen = ({ stats, loading, period, onPeriodChange, dateRange, on
             customEnd={customEnd}
             onCustomChange={onCustomTimeChange}
           />
-          <PeriodSelector label="Resumen" value={period} onChange={onPeriodChange} dateRange={dateRange} onDateRangeChange={onDateRangeChange} />
+          <PeriodSelector label="Resumen" value={period} onChange={onPeriodChange} dateRange={dateRange} onDateRangeChange={onDateRangeChange} selectedDayOfWeek={selectedDayOfWeek} onDayOfWeekChange={onDayOfWeekChange} />
         </div>
       </div>
     </div>
