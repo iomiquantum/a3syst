@@ -50,6 +50,8 @@ interface Props {
   onDateRangeChange?: (r: DateRange | undefined) => void;
   selectedDayOfWeek?: number;
   onDayOfWeekChange?: (day: number) => void;
+  weekOffset?: number;
+  onWeekOffsetChange?: (offset: number) => void;
 }
 
 const PERIOD_LABELS: Record<Period, string> = {
