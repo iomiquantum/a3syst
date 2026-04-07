@@ -18,9 +18,11 @@ interface Props {
   customStart?: string;
   customEnd?: string;
   onCustomTimeChange?: (start: string, end: string) => void;
+  selectedDayOfWeek?: number;
+  onDayOfWeekChange?: (day: number) => void;
 }
 
-const MensajesResumen = ({ stats, loading, period, onPeriodChange, dateRange, onDateRangeChange, timeSlot, onTimeSlotChange, customStart, customEnd, onCustomTimeChange }: Props) => {
+const MensajesResumen = ({ stats, loading, period, onPeriodChange, dateRange, onDateRangeChange, timeSlot, onTimeSlotChange, customStart, customEnd, onCustomTimeChange, selectedDayOfWeek, onDayOfWeekChange }: Props) => {
   const cards = [
     { label: "Clientes únicos", value: stats.clientesUnicos, icon: Users, color: "text-violet-500", bg: "bg-violet-100 dark:bg-violet-500/20", tooltip: "Contactos únicos que enviaron al menos un mensaje en el período" },
     { label: "Nuevos", value: stats.nuevosClientes, icon: UserPlus, color: "text-emerald-500", bg: "bg-emerald-100 dark:bg-emerald-500/20", tooltip: "Contactos cuya primera conversación inició en el período" },
@@ -64,7 +66,7 @@ const MensajesResumen = ({ stats, loading, period, onPeriodChange, dateRange, on
             customEnd={customEnd}
             onCustomChange={onCustomTimeChange}
           />
-          <PeriodSelector label="Resumen" value={period} onChange={onPeriodChange} dateRange={dateRange} onDateRangeChange={onDateRangeChange} />
+          <PeriodSelector label="Resumen" value={period} onChange={onPeriodChange} dateRange={dateRange} onDateRangeChange={onDateRangeChange} selectedDayOfWeek={selectedDayOfWeek} onDayOfWeekChange={onDayOfWeekChange} />
         </div>
       </div>
     </div>

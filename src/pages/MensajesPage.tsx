@@ -15,7 +15,7 @@ import { usePipelineStats, TimeFilter } from "@/hooks/usePipelineStats";
 import { useChannelStats } from "@/hooks/useChannelStats";
 import { useTagStats } from "@/hooks/useTagStats";
 import { useClinicPipelineTabs } from "@/hooks/useClinicPipelineTabs";
-import { Period, periodToDateRange } from "@/components/mensajes/PeriodSelector";
+import { Period, periodToDateRange, dayOfWeekToDateRange } from "@/components/mensajes/PeriodSelector";
 import { TimeSlot, getTimeSlotHours } from "@/components/mensajes/TimeSlotSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useClinic } from "@/hooks/useClinic";
@@ -32,6 +32,7 @@ const MensajesPage = () => {
   const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem(VIEW_MODE_KEY) as ViewMode) || "buzon");
   const [resumenPeriod, setResumenPeriod] = useState<Period>("hoy");
   const [resumenRange, setResumenRange] = useState<DateRange | undefined>();
+  const [selectedDayOfWeek, setSelectedDayOfWeek] = useState<number>(0);
   const [timeSlot, setTimeSlot] = useState<TimeSlot>("all");
   const [customTimeStart, setCustomTimeStart] = useState("00:00");
   const [customTimeEnd, setCustomTimeEnd] = useState("23:59");
@@ -57,8 +58,11 @@ const MensajesPage = () => {
         to: resumenRange.to ? endOfDay(resumenRange.to).toISOString() : endOfDay(resumenRange.from).toISOString(),
       };
     }
+    if (resumenPeriod === "dia") {
+      return dayOfWeekToDateRange(selectedDayOfWeek);
+    }
     return periodToDateRange(resumenPeriod);
-  }, [resumenPeriod, resumenRange]);
+  }, [resumenPeriod, resumenRange, selectedDayOfWeek]);
 
   const resumenTimeFilter = useMemo<TimeFilter | undefined>(() => {
     if (!unifiedDates.from) return undefined;
@@ -216,6 +220,7 @@ const MensajesPage = () => {
             timeSlot={timeSlot} onTimeSlotChange={setTimeSlot}
             customStart={customTimeStart} customEnd={customTimeEnd}
             onCustomTimeChange={(s, e) => { setCustomTimeStart(s); setCustomTimeEnd(e); }}
+            selectedDayOfWeek={selectedDayOfWeek} onDayOfWeekChange={setSelectedDayOfWeek}
           />
         </div>
 
