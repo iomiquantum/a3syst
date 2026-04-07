@@ -602,8 +602,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                 )}
               </div>
             </div>
-            );
-            })()}</>);
+            </React.Fragment>);
           })}
 
 
