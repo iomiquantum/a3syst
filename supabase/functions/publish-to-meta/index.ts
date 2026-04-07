@@ -147,45 +147,57 @@ async function publishToInstagram(post: any, creds: Record<string, string>): Pro
       }
     }
 
-    // Single media container
-    const containerBody: any = { caption, access_token };
-    if (post.post_type === "reel") {
-      containerBody.media_type = "REELS";
-      containerBody.video_url = post.media_urls[0];
-    } else if (isVideo && post.post_type !== "story") {
-      containerBody.media_type = "VIDEO";
-      containerBody.video_url = post.media_urls[0];
-    } else if (post.post_type === "story") {
-      containerBody.media_type = "STORIES";
-      containerBody.image_url = post.media_urls[0];
-    } else {
-      // Feed post — explicitly set IMAGE type to avoid wrong placement
-      containerBody.media_type = "IMAGE";
-      containerBody.image_url = post.media_urls[0];
-    }
-
-    console.log("Instagram container request:", JSON.stringify({ post_type: post.post_type, media_type: containerBody.media_type, isVideo }));
-
-    const containerRes = await fetch(`https://graph.facebook.com/v21.0/${ig_account_id}/media`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(containerBody),
-    });
-    const containerData = await containerRes.json();
-    console.log("Instagram container response:", JSON.stringify(containerData));
-    if (containerData.error) return { success: false, error: containerData.error.message };
-
-    // Wait for video processing
-    if (isVideo || post.post_type === "reel") {
-      let attempts = 0;
-      while (attempts < 30) {
-        await new Promise(r => setTimeout(r, 3000));
-        const statusRes = await fetch(`https://graph.facebook.com/v21.0/${containerData.id}?fields=status_code&access_token=${access_token}`);
-        const statusData = await statusRes.json();
-        if (statusData.status_code === "FINISHED") break;
-        if (statusData.status_code === "ERROR") return { success: false, error: "Error procesando video en Instagram" };
-        attempts++;
+    // Single media container — with retry for transient download failures
+    const createContainer = async (retryCount = 0): Promise<any> => {
+      const containerBody: any = { caption, access_token };
+      if (post.post_type === "reel") {
+        containerBody.media_type = "REELS";
+        containerBody.video_url = post.media_urls[0];
+      } else if (isVideo && post.post_type !== "story") {
+        containerBody.media_type = "VIDEO";
+        containerBody.video_url = post.media_urls[0];
+      } else if (post.post_type === "story") {
+        containerBody.media_type = "STORIES";
+        containerBody.image_url = post.media_urls[0];
+      } else {
+        containerBody.media_type = "IMAGE";
+        containerBody.image_url = post.media_urls[0];
       }
+
+      console.log("Instagram container request:", JSON.stringify({ post_type: post.post_type, media_type: containerBody.media_type, isVideo, retry: retryCount }));
+
+      const containerRes = await fetch(`https://graph.facebook.com/v21.0/${ig_account_id}/media`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(containerBody),
+      });
+      const data = await containerRes.json();
+      console.log("Instagram container response:", JSON.stringify(data));
+
+      // Retry on "cannot retrieve media" errors (9004/2207052)
+      if (data.error && data.error.code === 9004 && retryCount < 3) {
+        console.log(`Instagram container retry ${retryCount + 1}/3 after media download failure`);
+        await new Promise(r => setTimeout(r, 5000 * (retryCount + 1)));
+        return createContainer(retryCount + 1);
+      }
+      return data;
+    };
+
+    const containerData = await createContainer();
+    if (containerData.error) return { success: false, error: containerData.error.error_user_msg || containerData.error.message };
+
+    // Wait for media processing (images AND videos)
+    let attempts = 0;
+    const maxAttempts = isVideo || post.post_type === "reel" ? 30 : 10;
+    const waitMs = isVideo || post.post_type === "reel" ? 3000 : 2000;
+    while (attempts < maxAttempts) {
+      await new Promise(r => setTimeout(r, waitMs));
+      const statusRes = await fetch(`https://graph.facebook.com/v21.0/${containerData.id}?fields=status_code&access_token=${access_token}`);
+      const statusData = await statusRes.json();
+      console.log(`Instagram status check #${attempts + 1}: ${statusData.status_code}`);
+      if (statusData.status_code === "FINISHED") break;
+      if (statusData.status_code === "ERROR") return { success: false, error: "Error procesando media en Instagram" };
+      attempts++;
     }
 
     // Publish
@@ -196,7 +208,7 @@ async function publishToInstagram(post: any, creds: Record<string, string>): Pro
     });
     const publishData = await publishRes.json();
     console.log("Instagram publish response:", JSON.stringify(publishData));
-    if (publishData.error) return { success: false, error: publishData.error.message };
+    if (publishData.error) return { success: false, error: publishData.error.error_user_msg || publishData.error.message };
 
     // First comment
     if (post.first_comment && publishData.id) {
