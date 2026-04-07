@@ -131,7 +131,7 @@ async function publishToInstagram(post: any, creds: Record<string, string>): Pro
         const itemRes = await fetch(`https://graph.facebook.com/v21.0/${ig_account_id}/media`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image_url: url, is_carousel_item: true, access_token }),
+          body: JSON.stringify({ image_url: optimizeImageUrl(url), is_carousel_item: true, access_token }),
         });
         const itemData = await itemRes.json();
         if (itemData.id) itemIds.push(itemData.id);
