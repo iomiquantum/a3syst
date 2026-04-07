@@ -440,8 +440,6 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                 <div className="flex-1 h-px bg-border" />
               </div>
             ) : null;
-
-            return (<>{dateSeparator}{(() => {
             // System note — AI summary for human agent
             if (m.message_type === "system_note") {
               return (
