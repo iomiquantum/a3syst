@@ -58,8 +58,11 @@ const MensajesPage = () => {
         to: resumenRange.to ? endOfDay(resumenRange.to).toISOString() : endOfDay(resumenRange.from).toISOString(),
       };
     }
+    if (resumenPeriod === "dia") {
+      return dayOfWeekToDateRange(selectedDayOfWeek);
+    }
     return periodToDateRange(resumenPeriod);
-  }, [resumenPeriod, resumenRange]);
+  }, [resumenPeriod, resumenRange, selectedDayOfWeek]);
 
   const resumenTimeFilter = useMemo<TimeFilter | undefined>(() => {
     if (!unifiedDates.from) return undefined;
