@@ -514,7 +514,7 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
 
             // Normal message bubble
             return (
-            <div key={m.id} className={cn("flex", m.direction === "outbound" ? "justify-end" : "justify-start")}>
+            <React.Fragment key={m.id}>{dateSeparator}<div className={cn("flex", m.direction === "outbound" ? "justify-end" : "justify-start")}>
               <div className={cn(
                 "max-w-[75%] rounded-xl px-3.5 py-2.5 text-sm",
                 m.direction === "outbound"
