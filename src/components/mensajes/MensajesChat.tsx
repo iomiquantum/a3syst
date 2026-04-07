@@ -1,4 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { format, isToday, isYesterday, startOfDay } from "date-fns";
+import { es } from "date-fns/locale";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Send, Bot, MoreVertical, PanelRightOpen, PanelRightClose, LayoutTemplate, Lock, ClipboardList, UserX, PhoneOff, RotateCcw, CalendarPlus, MessageSquareText, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
