@@ -15,7 +15,7 @@ import { usePipelineStats, TimeFilter } from "@/hooks/usePipelineStats";
 import { useChannelStats } from "@/hooks/useChannelStats";
 import { useTagStats } from "@/hooks/useTagStats";
 import { useClinicPipelineTabs } from "@/hooks/useClinicPipelineTabs";
-import { Period, periodToDateRange } from "@/components/mensajes/PeriodSelector";
+import { Period, periodToDateRange, dayOfWeekToDateRange } from "@/components/mensajes/PeriodSelector";
 import { TimeSlot, getTimeSlotHours } from "@/components/mensajes/TimeSlotSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useClinic } from "@/hooks/useClinic";
