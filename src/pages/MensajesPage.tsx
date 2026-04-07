@@ -220,6 +220,7 @@ const MensajesPage = () => {
             timeSlot={timeSlot} onTimeSlotChange={setTimeSlot}
             customStart={customTimeStart} customEnd={customTimeEnd}
             onCustomTimeChange={(s, e) => { setCustomTimeStart(s); setCustomTimeEnd(e); }}
+            selectedDayOfWeek={selectedDayOfWeek} onDayOfWeekChange={setSelectedDayOfWeek}
           />
         </div>
 
