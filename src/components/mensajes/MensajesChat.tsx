@@ -317,12 +317,8 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
     return { text: `🤖 ${agentName}${stageTag}`, color: "text-violet-500" };
   };
 
-  // Auto-resize textarea
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
-    const el = e.target;
-    el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 300) + "px";
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
