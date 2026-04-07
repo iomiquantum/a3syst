@@ -168,10 +168,10 @@ async function publishToInstagram(post: any, creds: Record<string, string>): Pro
         containerBody.video_url = post.media_urls[0];
       } else if (post.post_type === "story") {
         containerBody.media_type = "STORIES";
-        containerBody.image_url = post.media_urls[0];
+        containerBody.image_url = optimizeImageUrl(post.media_urls[0]);
       } else {
         containerBody.media_type = "IMAGE";
-        containerBody.image_url = post.media_urls[0];
+        containerBody.image_url = optimizeImageUrl(post.media_urls[0]);
       }
 
       console.log("Instagram container request:", JSON.stringify({ post_type: post.post_type, media_type: containerBody.media_type, isVideo, retry: retryCount }));
