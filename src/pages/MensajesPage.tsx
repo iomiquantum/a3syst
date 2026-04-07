@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { MessageSquare, ArrowLeft } from "lucide-react";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import AppLayout from "@/components/AppLayout";
 import MensajesHeader, { ViewMode } from "@/components/mensajes/MensajesHeader";
 import MensajesResumen from "@/components/mensajes/MensajesResumen";
