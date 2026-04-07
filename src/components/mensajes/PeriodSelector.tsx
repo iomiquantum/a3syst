@@ -64,7 +64,9 @@ const PERIOD_LABELS: Record<Period, string> = {
   rango: "Rango",
 };
 
-const PeriodSelector = ({ label, value, onChange, dateRange, onDateRangeChange, selectedDayOfWeek, onDayOfWeekChange }: Props) => {
+const WEEK_LABELS = ["Esta semana", "Semana anterior"] as const;
+
+const PeriodSelector = ({ label, value, onChange, dateRange, onDateRangeChange, selectedDayOfWeek, onDayOfWeekChange, weekOffset = 0, onWeekOffsetChange }: Props) => {
   const [calOpen, setCalOpen] = useState(false);
 
   return (
