@@ -510,7 +510,6 @@ const MensajesChat = ({ conversation: c, onBack, onActionComplete, showContactPa
                 </div>
               </React.Fragment>);
             }
-            }
 
             // Normal message bubble
             return (
