@@ -222,6 +222,7 @@ const MensajesPage = () => {
             customStart={customTimeStart} customEnd={customTimeEnd}
             onCustomTimeChange={(s, e) => { setCustomTimeStart(s); setCustomTimeEnd(e); }}
             selectedDayOfWeek={selectedDayOfWeek} onDayOfWeekChange={setSelectedDayOfWeek}
+            weekOffset={weekOffset} onWeekOffsetChange={setWeekOffset}
           />
         </div>
 
