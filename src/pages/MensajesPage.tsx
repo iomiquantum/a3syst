@@ -8,6 +8,7 @@ import MensajesConversationList from "@/components/mensajes/MensajesConversation
 import MensajesChat from "@/components/mensajes/MensajesChat";
 import MensajesKanban from "@/components/mensajes/MensajesKanban";
 import ContactInfoPanel from "@/components/mensajes/ContactInfoPanel";
+import DeletedConversationsPanel from "@/components/mensajes/DeletedConversationsPanel";
 import { useConversationsByPipeline, PipelineConversation, PipelineFilter } from "@/hooks/useConversationsByPipeline";
 import { usePipelineStats, TimeFilter } from "@/hooks/usePipelineStats";
 import { useChannelStats } from "@/hooks/useChannelStats";
@@ -16,6 +17,7 @@ import { useClinicPipelineTabs } from "@/hooks/useClinicPipelineTabs";
 import { Period, periodToDateRange } from "@/components/mensajes/PeriodSelector";
 import { TimeSlot, getTimeSlotHours } from "@/components/mensajes/TimeSlotSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useClinic } from "@/hooks/useClinic";
 import { Button } from "@/components/ui/button";
 import { DateRange } from "react-day-picker";
 import { startOfDay, endOfDay } from "date-fns";
@@ -24,6 +26,8 @@ const VIEW_MODE_KEY = "mensajes-view-mode";
 
 const MensajesPage = () => {
   const isMobile = useIsMobile();
+  const { userRole, isSuperAdmin } = useClinic();
+  const isAdmin = isSuperAdmin || userRole === "admin" || userRole === "manager";
   const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem(VIEW_MODE_KEY) as ViewMode) || "buzon");
   const [resumenPeriod, setResumenPeriod] = useState<Period>("hoy");
   const [resumenRange, setResumenRange] = useState<DateRange | undefined>();
@@ -37,6 +41,7 @@ const MensajesPage = () => {
   const [selectedConv, setSelectedConv] = useState<PipelineConversation | null>(null);
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const [showArchived, setShowArchived] = useState(false);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [showContactPanel, setShowContactPanel] = useState(false);
 
   useEffect(() => {
@@ -225,13 +230,20 @@ const MensajesPage = () => {
               onTagsChange={setSelectedTags}
               showArchived={showArchived}
               onShowArchivedChange={setShowArchived}
+              showDeleted={showDeleted}
+              onShowDeletedChange={setShowDeleted}
+              isAdmin={isAdmin}
               embudoTabs={pipelineTabs}
               activeEmbudoKey={activeTab}
               onEmbudoChange={(key) => setActiveTab(key as PipelineFilter)}
             />
           </div>
 
-          {viewMode === "pipeline" ? (
+          {showDeleted ? (
+            <div className="flex-1 min-w-0 overflow-hidden">
+              <DeletedConversationsPanel onRestore={handleActionComplete} />
+            </div>
+          ) : viewMode === "pipeline" ? (
             <div className="flex-1 min-w-0 overflow-hidden">
               <MensajesKanban conversations={conversations} onActionComplete={handleActionComplete} />
             </div>
