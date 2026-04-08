@@ -9,7 +9,7 @@ import { ClinicProvider } from "@/hooks/useClinic";
 import { BusinessLabelsProvider } from "@/hooks/useBusinessLabels";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
-import WhatsAppConfigPage from "./pages/WhatsAppConfigPage";
+
 import WhatsAppMessagesPage from "./pages/WhatsAppMessagesPage";
 import WhatsAppPage from "./pages/WhatsAppPage";
 import RegisterPage from "./pages/RegisterPage";
