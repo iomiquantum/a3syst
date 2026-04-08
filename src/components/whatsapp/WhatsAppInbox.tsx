@@ -20,6 +20,7 @@ import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
 const WhatsAppInbox = () => {
+  const navigate = useNavigate();
   const { clinicId } = useClinic();
   const { conversations, loading: loadingConvs, markAsRead } = useWhatsAppConversations(clinicId);
   const { connections } = useWhatsAppConnections();
