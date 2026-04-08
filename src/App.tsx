@@ -105,7 +105,7 @@ const App = () => (
               <Route path="/configuracion/usuarios" element={<ProtectedRoute><UsuariosPage /></ProtectedRoute>} />
               <Route path="/configuracion/ajustes" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
-               <Route path="/configuracion/whatsapp" element={<ProtectedRoute><MiCuentaPage /></ProtectedRoute>} />
+               <Route path="/configuracion/whatsapp" element={<Navigate to="/mi-cuenta?tab=integraciones" replace />} />
                <Route path="/mensajes/whatsapp" element={<ProtectedRoute><WhatsAppMessagesPage /></ProtectedRoute>} />
                <Route path="/whatsapp" element={<ProtectedRoute><WhatsAppPage /></ProtectedRoute>} />
               <Route path="/admin/usuarios" element={<ProtectedRoute><AdminUsuariosPage /></ProtectedRoute>} />
