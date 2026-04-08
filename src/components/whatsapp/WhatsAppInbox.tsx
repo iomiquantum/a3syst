@@ -13,8 +13,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Send, Search, MessageCircle, Check, CheckCheck, X,
-  Phone, ArrowLeft, Loader2,
+  Phone, ArrowLeft, Loader2, Settings,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
