@@ -17,7 +17,9 @@ import { toast } from "sonner";
 
 const MiCuentaPage = () => {
   const { user } = useAuth();
-  const { clinicName, clinicId } = useClinic();
+  const { clinicName } = useClinic();
+  const [searchParams] = useSearchParams();
+  const defaultTab = searchParams.get("tab") === "integraciones" ? "integraciones" : "perfil";
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [fullName, setFullName] = useState("");
