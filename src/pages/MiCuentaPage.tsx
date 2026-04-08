@@ -67,7 +67,7 @@ const MiCuentaPage = () => {
           <p className="text-sm text-muted-foreground mt-1">Administra tu perfil, seguridad e integraciones</p>
         </div>
 
-        <Tabs defaultValue="perfil" className="w-full">
+        <Tabs defaultValue={defaultTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="perfil" className="gap-2">
               <User className="h-4 w-4" /> Perfil
