@@ -67,7 +67,11 @@ serve(async (req) => {
       email: email.trim(),
       password,
       email_confirm: true,
-      user_metadata: { full_name: full_name.trim() },
+      user_metadata: {
+        full_name: full_name.trim(),
+        // When a clinic_id is provided, skip auto-creation of a default clinic
+        ...(clinic_id ? { skip_clinic_creation: true } : {}),
+      },
     });
 
     if (error) {
