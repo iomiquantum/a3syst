@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { User, Mail, Shield, Save, Loader2, Plug } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import SocialMediaSection from "@/components/social/SocialMediaSection";
