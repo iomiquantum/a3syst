@@ -81,9 +81,12 @@ export const useWhatsAppConnections = () => {
   };
 
   const deleteConnection = async (connectionId: string) => {
-    await (supabase as any).from("whatsapp_connections").delete().eq("id", connectionId);
-    toast.success("Conexión eliminada");
-    fetchConnections();
+    const { error } = await (supabase as any)
+      .from("whatsapp_connections")
+      .delete()
+      .eq("id", connectionId);
+    
+    if (error) throw error;
   };
 
   const updateToken = async (connectionId: string, newToken: string) => {

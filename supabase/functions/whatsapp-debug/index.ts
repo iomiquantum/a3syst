@@ -15,32 +15,50 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
 
-  const WABA_ID = "1293043446187443";
-  const PHONE_NUMBER_ID = "1015576141630486";
-
   try {
-    // Get access_token from whatsapp_connections
+    const { clinic_id } = await req.json();
+
+    if (!clinic_id) {
+      return new Response(JSON.stringify({ error: "clinic_id es requerido" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Get active connection for this clinic
     const { data: conn, error: connErr } = await supabase
       .from("whatsapp_connections")
-      .select("access_token, business_name, meta_app_id, status")
-      .eq("phone_number_id", PHONE_NUMBER_ID)
-      .single();
+      .select("id, access_token, business_name, meta_app_id, status, waba_id, phone_number_id")
+      .eq("clinic_id", clinic_id)
+      .eq("status", "active")
+      .maybeSingle();
 
     if (connErr || !conn) {
-      const msg = `No connection found for phone_number_id ${PHONE_NUMBER_ID}: ${connErr?.message}`;
+      const msg = `No hay conexión WhatsApp activa para esta clínica: ${connErr?.message || "sin registro"}`;
       console.error(msg);
-      return new Response(JSON.stringify({ error: msg }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: msg }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
+
+    const WABA_ID = conn.waba_id;
+    const PHONE_NUMBER_ID = conn.phone_number_id;
 
     const accessToken = conn.access_token || Deno.env.get("META_ACCESS_TOKEN");
     if (!accessToken) {
-      return new Response(JSON.stringify({ error: "No access_token available" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "No access_token available" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     console.log("[whatsapp-debug] Connection:", {
       business_name: conn.business_name,
       meta_app_id: conn.meta_app_id,
       status: conn.status,
+      waba_id: WABA_ID,
+      phone_number_id: PHONE_NUMBER_ID,
       has_token: Boolean(conn.access_token),
       token_preview: accessToken.substring(0, 20) + "...",
     });
@@ -74,6 +92,8 @@ Deno.serve(async (req) => {
         business_name: conn.business_name,
         meta_app_id: conn.meta_app_id,
         status: conn.status,
+        waba_id: WABA_ID,
+        phone_number_id: PHONE_NUMBER_ID,
       },
       get_before: getData,
       post_subscribe: postData,
