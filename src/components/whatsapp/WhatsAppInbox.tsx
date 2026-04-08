@@ -13,12 +13,14 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Send, Search, MessageCircle, Check, CheckCheck, X,
-  Phone, ArrowLeft, Loader2,
+  Phone, ArrowLeft, Loader2, Settings,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
 const WhatsAppInbox = () => {
+  const navigate = useNavigate();
   const { clinicId } = useClinic();
   const { conversations, loading: loadingConvs, markAsRead } = useWhatsAppConversations(clinicId);
   const { connections } = useWhatsAppConnections();
@@ -58,6 +60,9 @@ const WhatsAppInbox = () => {
                 <Badge variant="destructive" className="text-xs rounded-full">{totalUnread}</Badge>
               )}
             </h2>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/configuracion/whatsapp")} title="Configuración WhatsApp">
+              <Settings className="h-4 w-4" />
+            </Button>
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
