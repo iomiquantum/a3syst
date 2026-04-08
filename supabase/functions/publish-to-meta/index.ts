@@ -14,10 +14,10 @@ function buildCaption(post: any): string {
   return caption;
 }
 
-/** Convert Supabase storage URLs to use image transform for Instagram-safe sizes */
+/** Compress Supabase storage images without cropping — preserve original aspect ratio */
 function optimizeImageUrl(url: string): string {
   if (url.includes("/storage/v1/object/public/")) {
-    return url.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/") + "?width=1080&height=1080&resize=cover&quality=80";
+    return url.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/") + "?quality=75";
   }
   return url;
 }
