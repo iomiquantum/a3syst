@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { MessageCircle, Plus, RefreshCw, Trash2, Key, Copy, ChevronDown, ExternalLink, Info } from "lucide-react";
@@ -41,6 +42,7 @@ const WhatsAppSettings = () => {
   const [tokenDialog, setTokenDialog] = useState<{ open: boolean; connectionId: string }>({ open: false, connectionId: "" });
   const [newToken, setNewToken] = useState("");
   const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
+  const [disconnectDialog, setDisconnectDialog] = useState<{ open: boolean; connection: WhatsAppConnection | null }>({ open: false, connection: null });
 
   const handleUpdateToken = async () => {
     if (!newToken.startsWith("EAA") || newToken.length < 50) {
@@ -50,6 +52,19 @@ const WhatsAppSettings = () => {
     await updateToken(tokenDialog.connectionId, newToken);
     setTokenDialog({ open: false, connectionId: "" });
     setNewToken("");
+  };
+
+  const handleDisconnect = async () => {
+    if (!disconnectDialog.connection) return;
+    try {
+      await deleteConnection(disconnectDialog.connection.id);
+      toast.success(`WhatsApp ${disconnectDialog.connection.display_phone_number || ""} desconectado exitosamente`);
+      refetch();
+    } catch (err) {
+      toast.error("Error al desconectar WhatsApp");
+    } finally {
+      setDisconnectDialog({ open: false, connection: null });
+    }
   };
 
   const toggleDetails = (id: string) => {
@@ -108,8 +123,13 @@ const WhatsAppSettings = () => {
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setTokenDialog({ open: true, connectionId: conn.id })}>
                         <Key className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteConnection(conn.id)}>
-                        <Trash2 className="h-4 w-4" />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive border-destructive/50 hover:bg-destructive/10"
+                        onClick={() => setDisconnectDialog({ open: true, connection: conn })}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" /> Desconectar
                       </Button>
                     </div>
                   </div>
@@ -123,7 +143,6 @@ const WhatsAppSettings = () => {
                     <div>🕐 Verificado: {conn.last_verified_at ? new Date(conn.last_verified_at).toLocaleDateString() : "—"}</div>
                   </div>
 
-                  {/* Webhook setup banner for pending connections */}
                   {conn.status === "pending" && !conn.webhook_configured && (
                     <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 space-y-3">
                       <div className="flex items-start gap-2">
@@ -159,7 +178,6 @@ const WhatsAppSettings = () => {
                     </div>
                   )}
 
-                  {/* Expandable technical details */}
                   <Collapsible open={isExpanded} onOpenChange={() => toggleDetails(conn.id)}>
                     <CollapsibleTrigger asChild>
                       <Button variant="ghost" size="sm" className="text-xs text-muted-foreground h-7 px-2 gap-1">
@@ -192,6 +210,27 @@ const WhatsAppSettings = () => {
           </Card>
         </div>
       )}
+
+      {/* Disconnect confirmation dialog */}
+      <AlertDialog open={disconnectDialog.open} onOpenChange={(open) => { if (!open) setDisconnectDialog({ open: false, connection: null }); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Desconectar {disconnectDialog.connection?.display_phone_number || "este WhatsApp"}?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>Se eliminará la conexión de este número del sistema a3syst.</p>
+              <p>Las conversaciones y mensajes asociados también se eliminarán.</p>
+              <p>Esta acción no afecta tu cuenta de Meta ni el número en sí.</p>
+              <p className="font-medium text-destructive">Esta acción no se puede deshacer.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={handleDisconnect}>
+              Sí, desconectar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <WhatsAppConnectionWizard open={wizardOpen} onOpenChange={(v) => { setWizardOpen(v); if (!v) refetch(); }} />
 
