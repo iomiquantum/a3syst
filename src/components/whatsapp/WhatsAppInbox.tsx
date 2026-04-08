@@ -60,7 +60,7 @@ const WhatsAppInbox = () => {
                 <Badge variant="destructive" className="text-xs rounded-full">{totalUnread}</Badge>
               )}
             </h2>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/configuracion/whatsapp")} title="Configuración WhatsApp">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/mi-cuenta?tab=integraciones")} title="Configuración WhatsApp">
               <Settings className="h-4 w-4" />
             </Button>
           </div>

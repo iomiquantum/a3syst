@@ -3,13 +3,13 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useSessionHeartbeat } from "@/hooks/useSessionHeartbeat";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ClinicProvider } from "@/hooks/useClinic";
 import { BusinessLabelsProvider } from "@/hooks/useBusinessLabels";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
-import WhatsAppConfigPage from "./pages/WhatsAppConfigPage";
+
 import WhatsAppMessagesPage from "./pages/WhatsAppMessagesPage";
 import WhatsAppPage from "./pages/WhatsAppPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -105,7 +105,7 @@ const App = () => (
               <Route path="/configuracion/usuarios" element={<ProtectedRoute><UsuariosPage /></ProtectedRoute>} />
               <Route path="/configuracion/ajustes" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
-               <Route path="/configuracion/whatsapp" element={<ProtectedRoute><WhatsAppConfigPage /></ProtectedRoute>} />
+               <Route path="/configuracion/whatsapp" element={<Navigate to="/mi-cuenta?tab=integraciones" replace />} />
                <Route path="/mensajes/whatsapp" element={<ProtectedRoute><WhatsAppMessagesPage /></ProtectedRoute>} />
                <Route path="/whatsapp" element={<ProtectedRoute><WhatsAppPage /></ProtectedRoute>} />
               <Route path="/admin/usuarios" element={<ProtectedRoute><AdminUsuariosPage /></ProtectedRoute>} />
